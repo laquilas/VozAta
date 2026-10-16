@@ -54,14 +54,13 @@ Mic test without a session, engine-side device changes during recording.
 
 - **Branch:** `feature/08-ui-devices-levels`
 - **Status:** in progress
-- **Updated:** 2026-10-17 09:00
-- **Next step:** `Services/UiPreferences.cs` (`IUiPreferences`, JSON file in `%APPDATA%/VozAta/ui.json`)
-  with `UiPreferencesTests.cs`
+- **Updated:** 2026-10-16 12:50
+- **Next step:** `Services/Clock.cs` (`IClock`, `IUiTimer` + Avalonia implementations) and `ViewModels/LevelMeterViewModel.cs` with `LevelMeterViewModelTests.cs`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] `IUiPreferences` + JSON file store
+- [x] `IUiPreferences` + JSON file store — this commit
 - [ ] `IClock` / `IUiTimer` + `LevelMeterViewModel` (dB mapping, decay, peak-hold, no-signal)
 - [ ] `DevicesViewModel` (load, defaults, restore by name, fallback, refresh, persist)
 - [ ] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources
