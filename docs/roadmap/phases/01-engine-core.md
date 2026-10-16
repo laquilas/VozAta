@@ -61,3 +61,28 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 > Execute phase 01 of the roadmap (`docs/roadmap/phases/01-engine-core.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/01-engine-core`
+- **Status:** in progress
+- **Updated:** 2026-10-16 00:30
+- **Next step:** TDD `domain.py`: write `tests/test_domain.py` (enum values, `TranscriptSegment` jsonl round trip), see it fail, then implement the domain types from architecture §4.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section
+- [ ] `domain.py` + `tests/test_domain.py` (jsonl round trip)
+- [ ] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies
+- [ ] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests
+- [ ] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
+- [ ] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
+- [ ] `formatting.py` + `tests/test_formatting.py`
+- [ ] `language.py` + `tests/test_language.py`
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- **`ConfigError` localization**: config errors can happen before a localizer exists (`APP_LANGUAGE` may itself be invalid). `ConfigError` carries a message key and params; `str()` renders with the `en` locale and `render(localizer)` renders in any language, so no text is hard-coded.
+- **`AudioChunk`** is `frozen=True, eq=False`: dataclass equality on `np.ndarray` fields is ambiguous.
+- **Ports** are `@runtime_checkable` Protocols; `tests/fakes.py` provides fakes, and structural `isinstance` tests check them. Coverage excludes `...`-only lines (Protocol bodies).
