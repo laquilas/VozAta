@@ -129,6 +129,45 @@ public sealed class EngineProcessTests : IDisposable
         Assert.Null(fromElsewhere.Resolve("definitely-not-here-123"));
     }
 
+    [Fact]
+    public async Task Restart_stops_the_engine_it_started_and_starts_a_new_one()
+    {
+        _client.UnavailableHealthChecks = 1;
+        var engine = Engine();
+        await engine.EnsureRunningAsync();
+        _client.UnavailableHealthChecks = 1;  // the old engine is gone
+
+        var result = await engine.RestartAsync();
+
+        Assert.Equal(EngineRestartResult.Restarted, result);
+        Assert.Equal(2, _runner.Started.Count);
+        Assert.Equal((1, true), (_runner.Processes[0].Kills, _runner.Processes[0].Disposed));
+        engine.StopIfStarted();
+        Assert.Equal(1, _runner.Processes[1].Kills);
+    }
+
+    [Fact]
+    public async Task An_engine_started_elsewhere_is_not_restarted()
+    {
+        var engine = Engine();
+        await engine.EnsureRunningAsync();
+
+        Assert.Equal(EngineRestartResult.NotOwned, await engine.RestartAsync());
+        Assert.Empty(_runner.Started);
+    }
+
+    [Fact]
+    public async Task A_restart_that_cannot_start_the_engine_again_fails()
+    {
+        _client.UnavailableHealthChecks = 1;
+        var engine = Engine(TimeSpan.FromSeconds(1));
+        await engine.EnsureRunningAsync();
+        _client.UnavailableHealthChecks = 1000;
+        _runner.ExitImmediately = true;
+
+        Assert.Equal(EngineRestartResult.Failed, await engine.RestartAsync());
+    }
+
     private EngineProcess Engine(TimeSpan? timeout = null) =>
         new(
             _client,

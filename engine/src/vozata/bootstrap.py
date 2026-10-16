@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable, Mapping
+from pathlib import Path
 
 from vozata.api.container import ApiContainer
 from vozata.api.minutes_job import MinutesJob
@@ -37,6 +38,7 @@ from vozata.ports import (
     Transcriber,
 )
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
+from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
@@ -178,12 +180,17 @@ def _devices(
     return {Channel.MIC: mic, Channel.SYSTEM: system}
 
 
-def build_api_container(settings: Settings) -> ApiContainer:
-    """Everything `api.app.create_app` needs, wired with the real providers."""
+def build_api_container(settings: Settings, env_file: Path | None = None) -> ApiContainer:
+    """Everything `api.app.create_app` needs, wired with the real providers.
+
+    Sessions, minutes jobs and the language-model check read the current settings, so keys saved
+    through `PUT /settings` apply from the next session; the others need an engine restart.
+    """
     localizer = build_localizer(settings)
     labeler = build_labeler(settings, localizer)
     store = build_store(settings)
     broadcaster = EventBroadcaster()
+    settings_file = SettingsFile(env_file or Path(".env"), settings)
     shared = None
     if settings.whisper_keep_loaded:
         transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
@@ -191,7 +198,7 @@ def build_api_container(settings: Settings) -> ApiContainer:
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
         return build_session(
-            settings,
+            settings_file.current,
             observer,
             language=options.language,
             mic_device=options.mic_device,
@@ -202,11 +209,22 @@ def build_api_container(settings: Settings) -> ApiContainer:
     def minutes_generator() -> MinutesGenerator:
         if shared is not None:
             shared.release()  # VRAM rule: never Whisper and the LLM together
-        return build_minutes_generator(settings, localizer)
+        return build_minutes_generator(settings_file.current, localizer)
 
-    language_model = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
+    def llm_reachable() -> bool:
+        current = settings_file.current
+        model = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", current.llm_provider)(current)
+        try:
+            return model.is_available()
+        finally:
+            close = getattr(model, "close", None)
+            if close is not None:
+                close()
+
+    _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
     return ApiContainer(
         settings=settings,
+        settings_file=settings_file,
         localizer=localizer,
         labeler=labeler,
         store=store,
@@ -214,7 +232,7 @@ def build_api_container(settings: Settings) -> ApiContainer:
         manager=SessionManager(session_factory, store, broadcaster, labeler),
         devices=WasapiCatalog(),
         gpu_info=functools.cache(query_gpu),  # the GPU does not change while running
-        llm_reachable=language_model.is_available,
+        llm_reachable=llm_reachable,
         regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
         release_models=shared.release if shared is not None else lambda: None,
     )

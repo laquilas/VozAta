@@ -456,7 +456,12 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
         "app_language": "en",
         "devices": {"mic": "Headset Mic", "system": "Speakers [Loopback]"},
         "pauses": [],
-        "settings": {"CHUNK_SECONDS": 1.0, "WHISPER_MODEL": "tiny", "MIX_MODE": "mono"},
+        "settings": {
+            "CHUNK_MODE": "vad",
+            "CHUNK_SECONDS": 1.0,
+            "WHISPER_MODEL": "tiny",
+            "MIX_MODE": "mono",
+        },
     }
 
     rig.session.stop()

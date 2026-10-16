@@ -192,9 +192,14 @@ class Api:
         self.reachable = True
         self.regenerated: list[str] = []
         from vozata.i18n import TomlLocalizer
+        from vozata.settings_file import SettingsFile
+
+        self.env_file = tmp_path / ".env"
+        self.settings_file = SettingsFile(self.env_file, self.settings, environ={})
 
         container = ApiContainer(
             settings=self.settings,
+            settings_file=self.settings_file,
             localizer=TomlLocalizer(self.settings.app_language),
             labeler=self.labeler,
             store=self.store,

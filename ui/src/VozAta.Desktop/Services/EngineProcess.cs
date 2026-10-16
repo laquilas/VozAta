@@ -34,6 +34,15 @@ public enum EngineStartResult
     Failed,
 }
 
+public enum EngineRestartResult
+{
+    Restarted,
+
+    /// <summary>The engine was started outside the app: the user restarts it.</summary>
+    NotOwned,
+    Failed,
+}
+
 public interface IEngineProcess
 {
     /// <summary>Use a running engine, or start one and wait until `/health` answers.</summary>
@@ -41,6 +50,9 @@ public interface IEngineProcess
 
     /// <summary>Stop the engine, but only if this app started it.</summary>
     void StopIfStarted();
+
+    /// <summary>Stop the engine this app started, wait for it to exit and start it again.</summary>
+    Task<EngineRestartResult> RestartAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class EngineProcess(
@@ -86,6 +98,31 @@ public sealed class EngineProcess(
 
         StopIfStarted();
         return EngineStartResult.Failed;
+    }
+
+    public async Task<EngineRestartResult> RestartAsync(CancellationToken cancellationToken = default)
+    {
+        var process = _process;
+        if (process is null)
+        {
+            return EngineRestartResult.NotOwned;
+        }
+
+        if (!process.HasExited)
+        {
+            process.Kill();
+        }
+
+        for (var waited = TimeSpan.Zero; !process.HasExited && waited < options.StartTimeout; waited += PollInterval)
+        {
+            await _delay(PollInterval, cancellationToken);
+        }
+
+        process.Dispose();
+        _process = null;
+        return await EnsureRunningAsync(cancellationToken) == EngineStartResult.Failed
+            ? EngineRestartResult.Failed
+            : EngineRestartResult.Restarted;
     }
 
     public void StopIfStarted()

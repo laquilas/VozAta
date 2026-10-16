@@ -9,6 +9,7 @@ not_a_number = "Valor inválido \"{value}\" para {key}: era esperado um número.
 out_of_range = "Valor inválido \"{value}\" para {key}: deve estar entre {min} e {max}."
 invalid_url = "Valor inválido \"{value}\" para {key}: era esperada uma URL http:// ou https://."
 invalid_duration = "Valor inválido \"{value}\" para {key}: eram esperados segundos (0, -1, 300) ou uma duração como 5m ou 1h30m."
+unknown_key = "Configuração desconhecida: {key}."
 
 [errors.session]
 audio_unavailable = "O áudio do Windows não respondeu. Reinicie o serviço Áudio do Windows ou o PC e tente novamente."
@@ -19,6 +20,7 @@ minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a tr
 model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."
 
 [errors.api]
+settings_write_failed = "Não foi possível salvar o arquivo de configurações ({reason}). Feche programas que possam estar usando-o, como uma ferramenta de sincronização, e tente novamente."
 minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
 empty_transcript = "A sessão \"{id}\" não tem transcrição, então não há o que resumir."
 not_found = "Este endpoint não existe."

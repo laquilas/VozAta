@@ -70,6 +70,21 @@ public sealed class LocalizationResourcesTests
     }
 
     [Fact]
+    public void Every_engine_setting_has_a_label_and_help_text()
+    {
+        var example = Path.GetFullPath(Path.Combine(ResourcesFolder(), "../../../../engine/.env.example"));
+        var keys = File.ReadAllLines(example)
+            .Where(line => line.Length > 0 && char.IsAsciiLetterUpper(line[0]) && line.Contains('='))
+            .Select(line => line[..line.IndexOf('=')])
+            .ToList();
+        var english = Keys("Strings.resx");
+
+        Assert.True(keys.Count >= 30, $"read {keys.Count} keys from {example}");
+        var missing = keys.Where(key => !english.Contains($"Setting_{key}") || !english.Contains($"SettingHelp_{key}")).ToList();
+        Assert.True(missing.Count == 0, $"missing strings for {string.Join(", ", missing)}");
+    }
+
+    [Fact]
     public void Format_uses_the_current_language()
     {
         var localization = new LocalizationService();

@@ -180,6 +180,264 @@
   <data name="Loading" xml:space="preserve">
     <value>Carregando…</value>
   </data>
+  <data name="TabSettings" xml:space="preserve">
+    <value>Configurações</value>
+  </data>
+  <data name="SettingsGroup_general" xml:space="preserve">
+    <value>Geral</value>
+  </data>
+  <data name="SettingsGroup_audio" xml:space="preserve">
+    <value>Áudio</value>
+  </data>
+  <data name="SettingsGroup_segmentation" xml:space="preserve">
+    <value>Segmentação do áudio</value>
+  </data>
+  <data name="SettingsGroup_transcription" xml:space="preserve">
+    <value>Transcrição</value>
+  </data>
+  <data name="SettingsGroup_minutes" xml:space="preserve">
+    <value>Ata</value>
+  </data>
+  <data name="SettingsGroup_api" xml:space="preserve">
+    <value>Motor</value>
+  </data>
+  <data name="SettingsSave" xml:space="preserve">
+    <value>Salvar</value>
+  </data>
+  <data name="SettingsDiscard" xml:space="preserve">
+    <value>Descartar alterações</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Configurações salvas. Valem a partir da próxima gravação.</value>
+  </data>
+  <data name="SettingsRestartRequired" xml:space="preserve">
+    <value>Estas configurações valem depois que o motor reiniciar:</value>
+  </data>
+  <data name="SettingsNeedsRestart" xml:space="preserve">
+    <value>vale após reiniciar</value>
+  </data>
+  <data name="RestartEngine" xml:space="preserve">
+    <value>Reiniciar motor</value>
+  </data>
+  <data name="EngineRestarted" xml:space="preserve">
+    <value>O motor reiniciou com as novas configurações.</value>
+  </data>
+  <data name="EngineRestartManual" xml:space="preserve">
+    <value>O motor foi iniciado fora do aplicativo. Reinicie-o você mesmo para aplicar estas configurações.</value>
+  </data>
+  <data name="EngineRestartFailed" xml:space="preserve">
+    <value>O motor não voltou a iniciar. Verifique as configurações alteradas.</value>
+  </data>
+  <data name="HealthTitle" xml:space="preserve">
+    <value>Status do motor</value>
+  </data>
+  <data name="CheckAgain" xml:space="preserve">
+    <value>Verificar de novo</value>
+  </data>
+  <data name="Setting_APP_LANGUAGE" xml:space="preserve">
+    <value>Idioma da interface</value>
+  </data>
+  <data name="SettingHelp_APP_LANGUAGE" xml:space="preserve">
+    <value>Idioma do aplicativo, das mensagens do motor e dos títulos da ata.</value>
+  </data>
+  <data name="Setting_TRANSCRIPTION_LANGUAGE" xml:space="preserve">
+    <value>Idioma padrão da reunião</value>
+  </data>
+  <data name="SettingHelp_TRANSCRIPTION_LANGUAGE" xml:space="preserve">
+    <value>Idioma em que a reunião acontece, pré-selecionado na aba Gravação. Vazio segue o idioma da interface.</value>
+  </data>
+  <data name="Setting_MIC_LABEL" xml:space="preserve">
+    <value>Nome do microfone</value>
+  </data>
+  <data name="SettingHelp_MIC_LABEL" xml:space="preserve">
+    <value>Nome mostrado para o seu microfone nas transcrições. Vazio usa “Eu”.</value>
+  </data>
+  <data name="Setting_SYSTEM_LABEL" xml:space="preserve">
+    <value>Nome do áudio do sistema</value>
+  </data>
+  <data name="SettingHelp_SYSTEM_LABEL" xml:space="preserve">
+    <value>Nome mostrado para os outros participantes (áudio do sistema). Vazio usa “Outros”.</value>
+  </data>
+  <data name="Setting_OUTPUT_DIR" xml:space="preserve">
+    <value>Pasta das gravações</value>
+  </data>
+  <data name="SettingHelp_OUTPUT_DIR" xml:space="preserve">
+    <value>Pasta onde cada sessão ganha uma subpasta com áudio, transcrição e ata.</value>
+  </data>
+  <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
+    <value>Gerar ata ao parar a gravação</value>
+  </data>
+  <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
+    <value>Gera a ata com o modelo de linguagem local após cada gravação.</value>
+  </data>
+  <data name="Setting_SAMPLE_RATE" xml:space="preserve">
+    <value>Taxa de amostragem (Hz)</value>
+  </data>
+  <data name="SettingHelp_SAMPLE_RATE" xml:space="preserve">
+    <value>Taxa de amostragem interna do áudio. O Whisper exige 16000.</value>
+  </data>
+  <data name="Setting_MIX_MODE" xml:space="preserve">
+    <value>Arquivo mixado</value>
+  </data>
+  <data name="SettingHelp_MIX_MODE" xml:space="preserve">
+    <value>mixed.wav como uma faixa mono, ou estéreo com o microfone à esquerda e o áudio do sistema à direita.</value>
+  </data>
+  <data name="Setting_CHUNK_MODE" xml:space="preserve">
+    <value>Como o áudio é cortado</value>
+  </data>
+  <data name="SettingHelp_CHUNK_MODE" xml:space="preserve">
+    <value>vad corta nas pausas entre as frases (mais rápido e preciso); fixed usa janelas do tamanho abaixo.</value>
+  </data>
+  <data name="Setting_CHUNK_SECONDS" xml:space="preserve">
+    <value>Tamanho da janela (s)</value>
+  </data>
+  <data name="SettingHelp_CHUNK_SECONDS" xml:space="preserve">
+    <value>Duração de cada janela de transcrição quando o áudio é cortado em janelas fixas.</value>
+  </data>
+  <data name="Setting_VAD_THRESHOLD" xml:space="preserve">
+    <value>Limiar de detecção de fala</value>
+  </data>
+  <data name="SettingHelp_VAD_THRESHOLD" xml:space="preserve">
+    <value>Quanto o detector de voz precisa ter certeza de que um som é fala (0,01 a 0,99). Aumente em ambientes ruidosos.</value>
+  </data>
+  <data name="Setting_VAD_MIN_SILENCE_MS" xml:space="preserve">
+    <value>Pausa que encerra uma frase (ms)</value>
+  </data>
+  <data name="SettingHelp_VAD_MIN_SILENCE_MS" xml:space="preserve">
+    <value>Um silêncio pelo menos desta duração após a fala encerra um trecho.</value>
+  </data>
+  <data name="Setting_VAD_MIN_CHUNK_SECONDS" xml:space="preserve">
+    <value>Frase mais curta (s)</value>
+  </data>
+  <data name="SettingHelp_VAD_MIN_CHUNK_SECONDS" xml:space="preserve">
+    <value>Fala mais curta que isto não é enviada sozinha; junta-se à frase seguinte.</value>
+  </data>
+  <data name="Setting_VAD_MAX_CHUNK_SECONDS" xml:space="preserve">
+    <value>Frase mais longa (s)</value>
+  </data>
+  <data name="SettingHelp_VAD_MAX_CHUNK_SECONDS" xml:space="preserve">
+    <value>Fala mais longa é cortada na pausa mais longa, ou neste limite.</value>
+  </data>
+  <data name="Setting_VAD_SPEECH_PAD_MS" xml:space="preserve">
+    <value>Áudio mantido antes da fala (ms)</value>
+  </data>
+  <data name="SettingHelp_VAD_SPEECH_PAD_MS" xml:space="preserve">
+    <value>Áudio mantido antes da primeira palavra de uma frase para que ela não seja cortada.</value>
+  </data>
+  <data name="Setting_STT_PROVIDER" xml:space="preserve">
+    <value>Motor de reconhecimento de fala</value>
+  </data>
+  <data name="SettingHelp_STT_PROVIDER" xml:space="preserve">
+    <value>Provedor de fala para texto. faster_whisper roda localmente na GPU ou na CPU.</value>
+  </data>
+  <data name="Setting_WHISPER_MODEL" xml:space="preserve">
+    <value>Modelo Whisper (GPU)</value>
+  </data>
+  <data name="SettingHelp_WHISPER_MODEL" xml:space="preserve">
+    <value>Modelo usado na GPU, por exemplo large-v3-turbo ou large-v3.</value>
+  </data>
+  <data name="Setting_WHISPER_DEVICE" xml:space="preserve">
+    <value>Dispositivo de reconhecimento</value>
+  </data>
+  <data name="SettingHelp_WHISPER_DEVICE" xml:space="preserve">
+    <value>auto usa a GPU quando disponível, senão a CPU.</value>
+  </data>
+  <data name="Setting_WHISPER_COMPUTE_TYPE" xml:space="preserve">
+    <value>Tipo de cálculo na GPU</value>
+  </data>
+  <data name="SettingHelp_WHISPER_COMPUTE_TYPE" xml:space="preserve">
+    <value>Precisão numérica na GPU; int8_float16 cabe numa placa de 6 GB.</value>
+  </data>
+  <data name="Setting_WHISPER_CPU_MODEL" xml:space="preserve">
+    <value>Modelo Whisper (CPU)</value>
+  </data>
+  <data name="SettingHelp_WHISPER_CPU_MODEL" xml:space="preserve">
+    <value>Modelo menor usado quando não há GPU disponível.</value>
+  </data>
+  <data name="Setting_WHISPER_KEEP_LOADED" xml:space="preserve">
+    <value>Manter o modelo de fala carregado</value>
+  </data>
+  <data name="SettingHelp_WHISPER_KEEP_LOADED" xml:space="preserve">
+    <value>Mantém o Whisper na memória entre gravações para que a próxima transcreva de imediato. Ele ainda é liberado antes de a ata ser escrita.</value>
+  </data>
+  <data name="Setting_TAIL_MARGIN_SECONDS" xml:space="preserve">
+    <value>Margem no fim da janela (s)</value>
+  </data>
+  <data name="SettingHelp_TAIL_MARGIN_SECONDS" xml:space="preserve">
+    <value>Palavras que terminam tão perto do fim de uma janela esperam pela próxima.</value>
+  </data>
+  <data name="Setting_PAUSE_GAP_SECONDS" xml:space="preserve">
+    <value>Intervalo entre frases (s)</value>
+  </data>
+  <data name="SettingHelp_PAUSE_GAP_SECONDS" xml:space="preserve">
+    <value>Um intervalo entre palavras desta duração conta como fim de frase.</value>
+  </data>
+  <data name="Setting_MAX_CARRY_SECONDS" xml:space="preserve">
+    <value>Maior áudio carregado (s)</value>
+  </data>
+  <data name="SettingHelp_MAX_CARRY_SECONDS" xml:space="preserve">
+    <value>Fala inacabada levada à próxima janela é confirmada ao atingir esta duração.</value>
+  </data>
+  <data name="Setting_SILENCE_RMS_THRESHOLD" xml:space="preserve">
+    <value>Nível de silêncio</value>
+  </data>
+  <data name="SettingHelp_SILENCE_RMS_THRESHOLD" xml:space="preserve">
+    <value>Áudio mais baixo que isto (RMS, 0 a 1) é tratado como silêncio e não é transcrito.</value>
+  </data>
+  <data name="Setting_LIVE_PARTIALS" xml:space="preserve">
+    <value>Mostrar texto enquanto falam</value>
+  </data>
+  <data name="SettingHelp_LIVE_PARTIALS" xml:space="preserve">
+    <value>Mostra texto provisório enquanto alguém ainda fala; a linha final o substitui.</value>
+  </data>
+  <data name="Setting_PARTIAL_INTERVAL_SECONDS" xml:space="preserve">
+    <value>Intervalo do texto provisório (s)</value>
+  </data>
+  <data name="SettingHelp_PARTIAL_INTERVAL_SECONDS" xml:space="preserve">
+    <value>Tempo mínimo entre duas atualizações do texto provisório de um canal.</value>
+  </data>
+  <data name="Setting_LLM_PROVIDER" xml:space="preserve">
+    <value>Provedor do modelo da ata</value>
+  </data>
+  <data name="SettingHelp_LLM_PROVIDER" xml:space="preserve">
+    <value>Provedor do modelo de linguagem usado para escrever a ata.</value>
+  </data>
+  <data name="Setting_OLLAMA_URL" xml:space="preserve">
+    <value>Endereço do Ollama</value>
+  </data>
+  <data name="SettingHelp_OLLAMA_URL" xml:space="preserve">
+    <value>Endereço do servidor Ollama local.</value>
+  </data>
+  <data name="Setting_OLLAMA_MODEL" xml:space="preserve">
+    <value>Modelo da ata</value>
+  </data>
+  <data name="SettingHelp_OLLAMA_MODEL" xml:space="preserve">
+    <value>Modelo do Ollama que escreve a ata; ele precisa caber na memória da GPU.</value>
+  </data>
+  <data name="Setting_LLM_MAX_CHARS" xml:space="preserve">
+    <value>Maior transcrição numa passada (caracteres)</value>
+  </data>
+  <data name="SettingHelp_LLM_MAX_CHARS" xml:space="preserve">
+    <value>Transcrições mais longas são resumidas em partes e depois combinadas.</value>
+  </data>
+  <data name="Setting_OLLAMA_KEEP_ALIVE" xml:space="preserve">
+    <value>Manter o modelo da ata carregado</value>
+  </data>
+  <data name="SettingHelp_OLLAMA_KEEP_ALIVE" xml:space="preserve">
+    <value>Quanto tempo o Ollama mantém o modelo após a ata: 0 libera a GPU na hora, 5m mantém por 5 minutos.</value>
+  </data>
+  <data name="Setting_API_HOST" xml:space="preserve">
+    <value>Endereço do motor</value>
+  </data>
+  <data name="SettingHelp_API_HOST" xml:space="preserve">
+    <value>Endereço em que o motor local escuta. Nunca use 0.0.0.0: a API não tem autenticação.</value>
+  </data>
+  <data name="Setting_API_PORT" xml:space="preserve">
+    <value>Porta do motor</value>
+  </data>
+  <data name="SettingHelp_API_PORT" xml:space="preserve">
+    <value>Porta do motor local. O aplicativo precisa usar a mesma porta.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Fechar</value>
   </data>

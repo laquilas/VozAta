@@ -123,6 +123,17 @@ class SettingSchema(BaseModel):
     default: Any
     choices: list[str] | None
     secret: bool
+    group: str
+    applies: str  # "next_session" | "restart"
+
+
+class SettingsUpdate(BaseModel):
+    values: dict[str, Any]
+
+
+class SettingsUpdated(BaseModel):
+    values: dict[str, Any]
+    restart_required: list[str]
 
 
 class SettingsView(BaseModel):

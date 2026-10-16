@@ -13,6 +13,7 @@ from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
 from vozata.ports import Localizer
+from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
 
 
@@ -28,7 +29,8 @@ class DeviceCatalog(Protocol):
 
 @dataclass(frozen=True)
 class ApiContainer:
-    settings: Settings
+    settings: Settings  # as the engine started (keys that apply on restart)
+    settings_file: SettingsFile  # current settings; `PUT /settings` updates them and `.env`
     localizer: Localizer
     labeler: SpeakerLabeler
     store: SessionStore

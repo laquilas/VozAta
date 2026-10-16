@@ -336,3 +336,40 @@ def test_without_keep_loaded_sessions_load_their_own_transcriber(
     container.release_models()
 
     assert shared_seen == [None]
+
+
+def test_saved_settings_reach_the_next_session_and_the_llm_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata.api.session_manager import StartOptions
+
+    class ClosingModel(FakeLanguageModel):
+        closed = 0
+
+        def close(self) -> None:
+            ClosingModel.closed += 1
+
+    models: list[Settings] = []
+
+    def build_model(settings: Settings) -> ClosingModel:
+        models.append(settings)
+        return ClosingModel(available=True)
+
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", build_model)
+    sessions: list[Settings] = []
+    monkeypatch.setattr(
+        bootstrap, "build_session", lambda settings, observer, **kwargs: sessions.append(settings)
+    )
+    (tmp_path / ".env").write_text("LLM_PROVIDER=fake\n", encoding="utf-8")  # as at start-up
+    container = bootstrap.build_api_container(
+        _settings(tmp_path, llm_provider="fake"), env_file=tmp_path / ".env"
+    )
+
+    container.settings_file.update({"CHUNK_SECONDS": 8, "OLLAMA_MODEL": "qwen2.5:3b"})
+    container.manager._factory(FakeSessionObserver(), StartOptions())
+
+    assert sessions[0].chunk_seconds == 8.0
+    assert container.llm_reachable() is True
+    assert models[-1].ollama_model == "qwen2.5:3b"
+    assert ClosingModel.closed == 1
+    assert "CHUNK_SECONDS=8" in (tmp_path / ".env").read_text(encoding="utf-8")

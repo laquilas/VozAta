@@ -308,6 +308,8 @@ def test_settings_schema_describes_type_default_and_choices() -> None:
         "default": 5.0,
         "choices": None,
         "secret": False,
+        "group": "segmentation",
+        "applies": "next_session",
     }
     assert schema["MIX_MODE"]["choices"] == ["mono", "stereo"]
     assert schema["MIX_MODE"]["type"] == "choice"
@@ -318,6 +320,8 @@ def test_settings_schema_describes_type_default_and_choices() -> None:
         "default": 8765,
         "choices": None,
         "secret": False,
+        "group": "api",
+        "applies": "restart",
     }
     assert schema["TRANSCRIPTION_LANGUAGE"]["default"] is None
     assert schema["TRANSCRIPTION_LANGUAGE"]["choices"] == ["en", "pt", "es", "auto"]
@@ -432,3 +436,23 @@ def test_invalid_live_partial_values_raise(key: str, value: str) -> None:
         load_settings(env={key: value})
 
     assert caught.value.key == key
+
+
+def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> None:
+    from vozata.settings_fields import FIELDS, GROUPS
+
+    assert {field.group for field in FIELDS} == set(GROUPS)
+    assert {field.applies for field in FIELDS} == {"next_session", "restart"}
+    restart = {field.key for field in FIELDS if field.applies == "restart"}
+    assert restart == {
+        "API_HOST",
+        "API_PORT",
+        "STT_PROVIDER",
+        "WHISPER_MODEL",
+        "WHISPER_DEVICE",
+        "WHISPER_COMPUTE_TYPE",
+        "WHISPER_CPU_MODEL",
+        "WHISPER_KEEP_LOADED",
+        "OUTPUT_DIR",
+        "SAMPLE_RATE",
+    }

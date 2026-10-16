@@ -84,7 +84,18 @@ public sealed record SettingSchema(
     string Type,
     JsonElement Default,
     IReadOnlyList<string>? Choices,
-    bool Secret);
+    bool Secret,
+    string Group = "general",
+    string Applies = "next_session")
+{
+    /// <summary>Read once when the engine starts: saving it needs an engine restart.</summary>
+    public bool NeedsRestart => Applies == "restart";
+}
+
+/// <summary><c>PUT /settings</c> answer: the saved values and the keys that need a restart.</summary>
+public sealed record SettingsUpdateResult(
+    IReadOnlyDictionary<string, JsonElement> Values,
+    IReadOnlyList<string> RestartRequired);
 
 public sealed record EngineSettings(
     IReadOnlyDictionary<string, JsonElement> Values,

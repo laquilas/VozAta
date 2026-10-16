@@ -9,6 +9,7 @@ not_a_number = "Invalid value \"{value}\" for {key}: expected a number."
 out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {max}."
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
+unknown_key = "Unknown setting {key}."
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
@@ -19,6 +20,7 @@ minutes_failed = "The minutes could not be generated ({reason}). The recording a
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
 
 [errors.api]
+settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
 not_found = "This endpoint does not exist."

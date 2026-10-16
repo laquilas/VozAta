@@ -21,7 +21,7 @@ def _plain(value: object) -> object:
 
 
 def settings_schema() -> list[dict[str, object]]:
-    """`GET /settings` schema: key, type, default, choices and whether the key is secret."""
+    """`GET /settings` schema: key, type, default, choices, secret, page group, when it applies."""
     defaults = Settings()
     return [
         {
@@ -32,6 +32,8 @@ def settings_schema() -> list[dict[str, object]]:
             else _plain(getattr(defaults, field.attribute)),
             "choices": [choice.value for choice in field.choices] if field.choices else None,
             "secret": field.secret,
+            "group": field.group,
+            "applies": field.applies,
         }
         for field in FIELDS
     ]

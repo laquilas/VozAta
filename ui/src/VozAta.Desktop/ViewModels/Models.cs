@@ -52,6 +52,9 @@ public sealed partial class ChoiceOption(string value, string labelKey) : Observ
     public partial string Label { get; private set; } = labelKey;
 
     public void Refresh(ILocalizationService localization) => Label = localization[LabelKey];
+
+    /// <summary>What screen readers announce for the option.</summary>
+    public override string ToString() => Label;
 }
 
 /// <summary>Read-only view of the string table for XAML bindings (<c>L[Key]</c>).</summary>
