@@ -13,8 +13,19 @@ public enum MarkdownBlockKind
     Numbered,
 }
 
-/// <summary>One displayable block of the minutes.</summary>
-public sealed record MarkdownBlock(MarkdownBlockKind Kind, string Text);
+/// <summary>One displayable block of the minutes; the flags let the view pick a style.</summary>
+public sealed record MarkdownBlock(MarkdownBlockKind Kind, string Text)
+{
+    public bool IsHeading1 => Kind == MarkdownBlockKind.Heading1;
+
+    public bool IsHeading2 => Kind == MarkdownBlockKind.Heading2;
+
+    public bool IsHeading3 => Kind == MarkdownBlockKind.Heading3;
+
+    public bool IsItem => Kind is MarkdownBlockKind.Bullet or MarkdownBlockKind.Numbered;
+
+    public string Display => Kind == MarkdownBlockKind.Bullet ? $"• {Text}" : Text;
+}
 
 /// <summary>
 /// The Markdown subset our minutes prompt produces — headings, bullet and numbered items,

@@ -37,100 +37,6 @@
       </WrapPanel>
     </Border>
 
-    <!-- Controls: Start/Stop, state, elapsed time, languages -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,8">
-      <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-        <Button Classes="accent" FontSize="18" Padding="28,14"
-                Command="{Binding StartCommand}"
-                IsVisible="{Binding !IsRecording}"
-                Content="{Binding L[Start]}" />
-        <Button Classes="danger" FontSize="18" Padding="28,14"
-                AutomationProperties.Name="{Binding L[Stop]}"
-                Command="{Binding StopCommand}"
-                IsVisible="{Binding IsRecording}">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Rectangle Width="14" Height="14" Fill="White" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding L[Stop]}" />
-          </StackPanel>
-        </Button>
-        <StackPanel VerticalAlignment="Center" Spacing="2">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Ellipse Width="14" Height="14" Fill="#E53935" VerticalAlignment="Center"
-                     IsVisible="{Binding IsRecording}" />
-            <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
-          </StackPanel>
-          <TextBlock Text="{Binding Elapsed}" FontSize="22" FontFamily="Consolas, monospace" />
-          <TextBlock Text="{Binding L[ModelLoading]}" FontStyle="Italic" Foreground="#E65100"
-                     IsVisible="{Binding IsModelLoading}" />
-        </StackPanel>
-      </StackPanel>
-
-      <StackPanel Grid.Column="2" Spacing="4" MinWidth="230">
-        <TextBlock Text="{Binding L[ConversationLanguage]}" />
-        <ComboBox HorizontalAlignment="Stretch"
-                  ItemsSource="{Binding ConversationLanguages}"
-                  SelectedItem="{Binding SelectedLanguage}"
-                  IsEnabled="{Binding !IsRecording}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:ChoiceOption">
-              <TextBlock Text="{Binding Label}" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <TextBlock Text="{Binding DetectedLanguage}" FontStyle="Italic"
-                   IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <TextBlock Text="{Binding L[InterfaceLanguage]}" Margin="0,6,0,0" />
-        <ComboBox HorizontalAlignment="Stretch"
-                  ItemsSource="{Binding AppLanguages}"
-                  SelectedItem="{Binding SelectedAppLanguage}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:ChoiceOption">
-              <TextBlock Text="{Binding Label}" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-      </StackPanel>
-    </Grid>
-
-    <!-- Devices (locked while recording) and level meters -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,24,*" Margin="16,0,16,8">
-      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" x:DataType="vm:DevicesViewModel"
-            DataContext="{Binding Devices}" IsEnabled="{Binding IsEnabled}">
-        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Microphone]}"
-                   VerticalAlignment="Center" Margin="0,0,8,4" />
-        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,4"
-                  ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedMic}"
-                  DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
-        <Button Grid.Column="2" Grid.RowSpan="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                Content="⟳" Command="{Binding RefreshCommand}"
-                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}"
-                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}" />
-        <TextBlock Grid.Row="1" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SystemOutput]}"
-                   VerticalAlignment="Center" Margin="0,0,8,0" />
-        <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
-                  ItemsSource="{Binding Loopbacks}" SelectedItem="{Binding SelectedLoopback}"
-                  DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
-      </Grid>
-      <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
-        <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding MicMeter}">
-          <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-          <Panel Grid.Column="1" Height="12">
-            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#A5D6A7" />
-            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#2E7D32" Background="Transparent" />
-          </Panel>
-        </Grid>
-        <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding SystemMeter}">
-          <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-          <Panel Grid.Column="1" Height="12">
-            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#90CAF9" />
-            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#1565C0" Background="Transparent" />
-          </Panel>
-        </Grid>
-        <TextBlock Text="{Binding L[NoSystemSignal]}" Foreground="#E65100" TextWrapping="Wrap"
-                   IsVisible="{Binding SystemMeter.NoSignal}" />
-      </StackPanel>
-    </Grid>
-
     <!-- Notifications (engine errors, minutes ready) -->
     <ItemsControl DockPanel.Dock="Top" Margin="16,0" ItemsSource="{Binding Notifications}">
       <ItemsControl.ItemTemplate>
@@ -149,34 +55,137 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <!-- Live transcript -->
-    <Border Margin="16,8,16,16" BorderThickness="1" CornerRadius="4"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-      <Panel>
-        <TextBlock Text="{Binding L[TranscriptEmpty]}" Opacity="0.6" Margin="16"
-                   TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
-        <ScrollViewer views:AutoScroll.IsEnabled="True">
-          <StackPanel Margin="12">
-            <ItemsControl ItemsSource="{Binding Segments}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:TranscriptLine">
-                  <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
-                                       TextWrapping="Wrap" Margin="0,3" FontSize="15" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <!-- Interim text (phase 28): grey italic, replaced in place, removed by the segment -->
-            <ItemsControl ItemsSource="{Binding Partials}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:TranscriptLine">
-                  <TextBlock Text="{Binding Display}" Foreground="Gray" FontStyle="Italic"
-                             TextWrapping="Wrap" Margin="0,3" FontSize="15" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </ScrollViewer>
-      </Panel>
-    </Border>
+    <TabControl Margin="0,4,0,0">
+      <TabItem Header="{Binding L[TabRecording]}">
+        <DockPanel>
+          <!-- Controls: Start/Stop, state, elapsed time, languages -->
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,8">
+            <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+              <Button Classes="accent" FontSize="18" Padding="28,14"
+                      Command="{Binding StartCommand}"
+                      IsVisible="{Binding !IsRecording}"
+                      Content="{Binding L[Start]}" />
+              <Button Classes="danger" FontSize="18" Padding="28,14"
+                      AutomationProperties.Name="{Binding L[Stop]}"
+                      Command="{Binding StopCommand}"
+                      IsVisible="{Binding IsRecording}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Rectangle Width="14" Height="14" Fill="White" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding L[Stop]}" />
+                </StackPanel>
+              </Button>
+              <StackPanel VerticalAlignment="Center" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Ellipse Width="14" Height="14" Fill="#E53935" VerticalAlignment="Center"
+                           IsVisible="{Binding IsRecording}" />
+                  <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
+                </StackPanel>
+                <TextBlock Text="{Binding Elapsed}" FontSize="22" FontFamily="Consolas, monospace" />
+                <TextBlock Text="{Binding L[ModelLoading]}" FontStyle="Italic" Foreground="#E65100"
+                           IsVisible="{Binding IsModelLoading}" />
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Spacing="4" MinWidth="230">
+              <TextBlock Text="{Binding L[ConversationLanguage]}" />
+              <ComboBox HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding ConversationLanguages}"
+                        SelectedItem="{Binding SelectedLanguage}"
+                        IsEnabled="{Binding !IsRecording}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ChoiceOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="{Binding DetectedLanguage}" FontStyle="Italic"
+                         IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding L[InterfaceLanguage]}" Margin="0,6,0,0" />
+              <ComboBox HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding AppLanguages}"
+                        SelectedItem="{Binding SelectedAppLanguage}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ChoiceOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+          </Grid>
+
+          <!-- Devices (locked while recording) and level meters -->
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,24,*" Margin="16,0,16,8">
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" x:DataType="vm:DevicesViewModel"
+                  DataContext="{Binding Devices}" IsEnabled="{Binding IsEnabled}">
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Microphone]}"
+                         VerticalAlignment="Center" Margin="0,0,8,4" />
+              <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+                        ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedMic}"
+                        DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
+              <Button Grid.Column="2" Grid.RowSpan="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                      Content="⟳" Command="{Binding RefreshCommand}"
+                      ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}"
+                      AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}" />
+              <TextBlock Grid.Row="1" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SystemOutput]}"
+                         VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding Loopbacks}" SelectedItem="{Binding SelectedLoopback}"
+                        DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
+            </Grid>
+            <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+              <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding MicMeter}">
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                <Panel Grid.Column="1" Height="12">
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#A5D6A7" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#2E7D32" Background="Transparent" />
+                </Panel>
+              </Grid>
+              <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding SystemMeter}">
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                <Panel Grid.Column="1" Height="12">
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#90CAF9" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#1565C0" Background="Transparent" />
+                </Panel>
+              </Grid>
+              <TextBlock Text="{Binding L[NoSystemSignal]}" Foreground="#E65100" TextWrapping="Wrap"
+                         IsVisible="{Binding SystemMeter.NoSignal}" />
+            </StackPanel>
+          </Grid>
+
+          <!-- Live transcript -->
+          <Border Margin="16,8,16,16" BorderThickness="1" CornerRadius="4"
+                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <Panel>
+              <TextBlock Text="{Binding L[TranscriptEmpty]}" Opacity="0.6" Margin="16"
+                         TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
+              <ScrollViewer views:AutoScroll.IsEnabled="True">
+                <StackPanel Margin="12">
+                  <ItemsControl ItemsSource="{Binding Segments}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TranscriptLine">
+                        <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
+                                             TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <!-- Interim text (phase 28): grey italic, replaced in place, removed by the segment -->
+                  <ItemsControl ItemsSource="{Binding Partials}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TranscriptLine">
+                        <TextBlock Text="{Binding Display}" Foreground="Gray" FontStyle="Italic"
+                                   TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </ScrollViewer>
+            </Panel>
+          </Border>
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="{Binding L[TabHistory]}">
+        <views:HistoryView DataContext="{Binding History}" />
+      </TabItem>
+    </TabControl>
   </DockPanel>
 </Window>
