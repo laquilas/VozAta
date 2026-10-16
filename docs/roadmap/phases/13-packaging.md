@@ -58,16 +58,16 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 
 - **Branch:** `feature/13-packaging`
 - **Status:** in progress
-- **Updated:** 2026-10-17 01:55
-- **Next step:** `.github/workflows/release.yml` (tags `v*` + manual run): Python + CUDA + PyInstaller, .NET, Inno Setup via choco, `packaging/build.ps1`, smoke `vozata-engine.exe --version`, installer artifact, release upload on tags; run it by hand on the branch
+- **Updated:** 2026-10-17 02:05
+- **Next step:** run the Release workflow by hand on `feature/13-packaging` (`gh workflow run release.yml --ref feature/13-packaging`), download the installer artifact, install it silently into a scratch folder, start the app, uninstall and check recordings and `.env` are kept
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] UI: executable mode in `EngineProcess` + installed `appsettings` — `09becb1`
-- [x] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke — `09becb1`
-- [x] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md` — this commit
-- [ ] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version`
+- [x] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke — `86019c0` (GPU recording smoke pending: audio driver hang)
+- [x] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md` — `6b4c40d`
+- [x] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version` — this commit
 - [ ] Manual: CI installer → silent per-user install, app + engine start, uninstall keeps recordings
 
 ### Decisions and notes

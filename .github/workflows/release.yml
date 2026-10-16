@@ -1,0 +1,73 @@
+name: Release
+
+# Builds the Windows installer. A pushed tag v* attaches it to that tag's GitHub release
+# (tags follow the release policy: major mandatory, minor optional, patch never).
+# Run it by hand (workflow_dispatch) to build an installer artifact without a release.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version shown by the installer"
+        required: false
+        default: "0.0.0-dev"
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install engine with CUDA libraries and PyInstaller
+        run: python -m pip install -e "engine[cuda,package]"
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".TrimStart("v") } else { "${{ inputs.version }}" }
+          "value=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build engine, desktop app and installer
+        shell: pwsh
+        run: ./packaging/build.ps1 -Version "${{ steps.version.outputs.value }}" -Out build
+
+      - name: Engine smoke test
+        shell: pwsh
+        run: ./build/dist/vozata-engine/vozata-engine.exe --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VozAta-Setup-${{ steps.version.outputs.value }}
+          path: build/installer/*.exe
+          if-no-files-found: error
+
+      - name: Attach to the GitHub release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title $tag --generate-notes }
+          gh release upload $tag (Get-ChildItem build/installer/*.exe).FullName --clobber
