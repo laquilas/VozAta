@@ -52,14 +52,15 @@ Dependencies:
 
 ## Acceptance criteria
 
-- [ ] Three `CLAUDE.md` files exist and match `standards.md`.
-- [ ] `pip install -e "engine[dev]"` succeeds in `.venv`.
-- [ ] `pytest`, `ruff check`, `ruff format --check` pass from `engine/`.
-- [ ] `python -m vozata` prints the version.
-- [ ] Repository initialized as approved by the user; `__legacy__/` is tracked, `.env` and
-      `recordings/` are ignored (`git check-ignore` confirms).
-- [ ] CI workflow green (if a remote was created).
-- [ ] README status for 00 set to `done`.
+- [x] Three `CLAUDE.md` files exist and match `standards.md`.
+- [x] `pip install -e "engine[dev]"` succeeds in `.venv`.
+- [x] `pytest`, `ruff check`, `ruff format --check` pass from `engine/`.
+- [x] `python -m vozata` prints the version.
+- [x] Repository initialized as approved by the user; `__legacy__/` is tracked, `.env` and
+      `recordings/` are ignored (`git check-ignore` confirms). *Revised by the user: the repo
+      already existed, and `__legacy__/` is kept local and ignored instead of tracked.*
+- [x] CI workflow green (if a remote was created).
+- [x] README status for 00 set to `done`.
 
 ## Tests
 
@@ -77,21 +78,21 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 ## Progress
 
 - **Branch:** `feature/00-foundation`
-- **Status:** in progress
-- **Updated:** 2026-10-15 23:25
-- **Next step:** update architecture §1 environment facts, tick the acceptance criteria, set phase 00 to `done` and Progress to `ready for PR`; CI runs on the PR into `main`.
+- **Status:** ready for PR
+- **Updated:** 2026-10-15 23:40
+- **Next step:** none; open the PR (`pr-ready` → `pr-open` → `pr-review`) and merge after CI on the PR is green.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `18d4413`
 - [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `4f9dc00`
-- [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `22158ee`, untracked in the next commit
+- [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `ea76488`, `01a4fb8`
 - [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
-- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `4930cf6`
-- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `bf9fa6a`
-- [x] `engine/.env.example` with phase 01–05 keys — `f29817a`
-- [ ] `.github/workflows/ci.yml` and green CI
-- [ ] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
+- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `54af17a`
+- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `27a69c3`
+- [x] `engine/.env.example` with phase 01–05 keys — `b6ba0a4`
+- [x] `.github/workflows/ci.yml` and green CI — `6c9883a`, `04c1c80` ([run](https://github.com/laquilas/VozAta/actions/runs/38835791812))
+- [x] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
 

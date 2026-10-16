@@ -8,16 +8,16 @@ in the same branch.
 | Item | State |
 |------|-------|
 | OS | Windows 11 Pro |
-| Python | 3.13, virtualenv at repo root `.venv/` (reused by the engine — do not move it) |
+| Python | 3.13, virtualenv at repo root `.venv/` (reused by the engine — do not move it). On the reference machine `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive), because the repo lives in OneDrive |
 | Installed in `.venv` | faster-whisper 1.2, ctranslate2, nvidia-cublas-cu12, nvidia-cudnn-cu12 9, PyAudioWPatch, soxr, numpy 2 |
 | GPU | NVIDIA RTX 3050 Laptop, **6 GB VRAM** |
 | Tools | ffmpeg, git, gh, docker |
 | Missing | **.NET SDK** (install .NET 10 LTS in phase 07), Ollama CLI not on PATH (install + `ollama pull` in phase 04) |
-| Repo | not a git repository yet (phase 00) |
+| Repo | GitHub `laquilas/VozAta` (public), default branch `main`; CI on pull requests into and pushes to `main` |
 
 ### Legacy code (`__legacy__/`, read-only reference)
 
-Working prototypes on this machine. Adapt their logic; never import from them.
+Working prototypes on this machine, **not published** (git-ignored; copy them from `<prototype-workspace>/__legacy__`). Adapt their logic; never import from them.
 
 | File | Reuse |
 |------|-------|
