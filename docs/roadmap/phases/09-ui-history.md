@@ -55,15 +55,15 @@ Editing (21), search (22), speaker rename (16), action items (23), export (11).
 
 - **Branch:** `feature/09-ui-history`
 - **Status:** in progress
-- **Updated:** 2026-10-16 15:30
-- **Next step:** `ViewModels/HistoryViewModel.cs` (page of 20, load more, refresh, rows with date / duration / language / minutes / live badge, selection creates and loads a `SessionDetailViewModel`, forwards `minutes_ready` / `error`, refreshes when a session ends) with `HistoryViewModelTests.cs`
+- **Updated:** 2026-10-16 15:50
+- **Next step:** main window: Recording | History tabs in `MainWindow.axaml` (list with live badge and minutes flag, load more, detail with Transcript / Minutes tabs, regenerate, open folder / play audio), `MainViewModel.History` (load at start-up, refresh when a session starts or ends, forward `minutes_ready` / `error`, texts on language switch), `IShellService` in DI, resources
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] `IShellService` + Markdown → blocks parser — `a7e5a74`
-- [x] `SessionDetailViewModel` (transcript, minutes, regenerate, open folder / audio) — this commit
-- [ ] `HistoryViewModel` (paged list, live badge, refresh, selection)
+- [x] `SessionDetailViewModel` (transcript, minutes, regenerate, open folder / audio) — `4e63c15`
+- [x] `HistoryViewModel` (paged list, live badge, refresh, selection) — this commit
 - [ ] Main window: Recording | History navigation, event forwarding, resources, DI
 - [ ] Manual: open an old session, read minutes, play `mixed.wav`, regenerate; criteria
 
