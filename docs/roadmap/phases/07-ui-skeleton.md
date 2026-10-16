@@ -64,8 +64,8 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 - **Branch:** `feature/07-ui-skeleton`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:39
-- **Next step:** write `MainViewModelTests.cs`, then `ViewModels/MainViewModel.cs` (CommunityToolkit.Mvvm): `InitializeAsync` (ensure engine, health bar, settings defaults, UI language, event loop), state machine Idle → Starting → Recording/Paused → Finalizing → Idle from status events, `StartCommand` with the selected language, `StopCommand`, segments, detected-language badge, notifications for errors, `ConfirmCloseAsync` guard.
+- **Updated:** 2026-10-16 09:43
+- **Next step:** write `Views/MainWindow.axaml` (Start/Stop button with red recording indicator, language ComboBoxes, auto-scrolling transcript, notifications, status bar), a confirm dialog (`AvaloniaDialogService`), `appsettings.json` and the DI composition root in `App.axaml.cs` (window Closing → `ConfirmCloseAsync` → `ShutdownAsync`); then run the app manually.
 
 ### Steps
 
@@ -74,8 +74,8 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 - [x] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests — `56bb664`
 - [x] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests — `8a3c247`
 - [x] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
-      parity test, `IUiDispatcher`
-- [ ] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
+      parity test, `IUiDispatcher` — `422167e`
+- [x] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
       + tests
 - [ ] `MainWindow.axaml`, `App.axaml.cs` composition root
 - [ ] Manual: app starts the engine; Start → live lines; Stop → Finalizing → Idle; UI language
@@ -94,3 +94,7 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
   directory, then every folder above the app, so the defaults (`../.venv/...`, `../engine`) work
   from `ui/` and from `bin/Debug/net10.0/`. The engine is stopped on exit with
   `Kill(entireProcessTree)` only if the UI started it.
+- `MainViewModel` maps engine `status` events onto `RecordingState` (`done`/`idle`/`interrupted`
+  → Idle) and reads the elapsed time from them (the engine's 1 s heartbeat), so no UI timer is
+  needed. `ShutdownAsync(maxWait)` waits for finalization before stopping an engine the UI
+  started, so closing never kills the WAV/minutes step.
