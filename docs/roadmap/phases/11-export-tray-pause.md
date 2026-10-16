@@ -64,16 +64,16 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 
 - **Branch:** `feature/11-export-tray-pause`
 - **Status:** in progress
-- **Updated:** 2026-10-16 21:00
-- **Next step:** `EXPORTERS` registry in `bootstrap.py` (md / docx / pdf) in the API container + `api/routes/export.py`: `GET /sessions/{id}/export?format=` (400 `unsupported_format`, 404 unknown session, `Content-Disposition` `<id>-minutes.<ext>`) with `tests/api/test_export.py`
+- **Updated:** 2026-10-16 21:15
+- **Next step:** UI export: `IEngineClient.ExportSessionAsync(id, format)` (bytes + file name), `IFileSaver` (Avalonia `StorageProvider` save dialog) and export commands for md / docx / pdf in `SessionDetailViewModel` with tests
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] `DocumentExporter` port + Markdown exporter — `6a627f2`
 - [x] DOCX exporter (`python-docx`) — `40f139a`
-- [x] PDF exporter (`fpdf2`, bundled DejaVu Sans + license) — this commit
-- [ ] `EXPORTERS` registry + `GET /sessions/{id}/export?format=`
+- [x] PDF exporter (`fpdf2`, bundled DejaVu Sans + license) — `4615620`
+- [x] `EXPORTERS` registry + `GET /sessions/{id}/export?format=` — this commit
 - [ ] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail
 - [ ] UI pause / resume: button next to Stop, amber paused state, frozen timer
 - [ ] UI tray: `TrayViewModel` (Start, Pause–Resume, Stop, Show, Quit, state icon), minimize to tray

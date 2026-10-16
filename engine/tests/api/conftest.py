@@ -191,6 +191,7 @@ class Api:
         self.gpu = GpuInfo(True, "RTX 3050", 6144)
         self.reachable = True
         self.regenerated: list[str] = []
+        from vozata.bootstrap import EXPORTERS
         from vozata.i18n import TomlLocalizer
         from vozata.settings_file import SettingsFile
 
@@ -200,6 +201,7 @@ class Api:
         container = ApiContainer(
             settings=self.settings,
             settings_file=self.settings_file,
+            exporters={name: build() for name, build in EXPORTERS.items()},
             localizer=TomlLocalizer(self.settings.app_language),
             labeler=self.labeler,
             store=self.store,
