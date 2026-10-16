@@ -17,6 +17,7 @@ from vozata.domain import (
     AppLanguage,
     ConversationLanguage,
     MixMode,
+    WhisperDevice,
     default_conversation_language,
 )
 from vozata.i18n import TomlLocalizer
@@ -31,6 +32,16 @@ KEYS = (
     "SYSTEM_LABEL",
     "OUTPUT_DIR",
     "MIX_MODE",
+    # Transcription (phase 03)
+    "TAIL_MARGIN_SECONDS",
+    "PAUSE_GAP_SECONDS",
+    "MAX_CARRY_SECONDS",
+    "SILENCE_RMS_THRESHOLD",
+    "STT_PROVIDER",
+    "WHISPER_MODEL",
+    "WHISPER_DEVICE",
+    "WHISPER_COMPUTE_TYPE",
+    "WHISPER_CPU_MODEL",
 )
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
 
@@ -64,6 +75,16 @@ class Settings:
     system_label: str | None = None
     output_dir: Path = Path("recordings")
     mix_mode: MixMode = MixMode.MONO
+    # Transcription (phase 03)
+    tail_margin_seconds: float = 0.6
+    pause_gap_seconds: float = 0.5
+    max_carry_seconds: float = 15.0
+    silence_rms_threshold: float = 0.01
+    stt_provider: str = "faster_whisper"
+    whisper_model: str = "large-v3-turbo"
+    whisper_device: WhisperDevice = WhisperDevice.AUTO
+    whisper_compute_type: str = "int8_float16"
+    whisper_cpu_model: str = "small"
 
 
 def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = None) -> Settings:
@@ -87,6 +108,15 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         system_label=raw.get("SYSTEM_LABEL"),
         output_dir=Path(raw.get("OUTPUT_DIR", "recordings")),
         mix_mode=_choice(raw, "MIX_MODE", MixMode, MixMode.MONO),
+        tail_margin_seconds=_number(raw, "TAIL_MARGIN_SECONDS", 0.6, minimum=0, maximum=5),
+        pause_gap_seconds=_number(raw, "PAUSE_GAP_SECONDS", 0.5, minimum=0.05, maximum=5),
+        max_carry_seconds=_number(raw, "MAX_CARRY_SECONDS", 15.0, minimum=1, maximum=120),
+        silence_rms_threshold=_number(raw, "SILENCE_RMS_THRESHOLD", 0.01, minimum=0, maximum=1),
+        stt_provider=raw.get("STT_PROVIDER", "faster_whisper"),
+        whisper_model=raw.get("WHISPER_MODEL", "large-v3-turbo"),
+        whisper_device=_choice(raw, "WHISPER_DEVICE", WhisperDevice, WhisperDevice.AUTO),
+        whisper_compute_type=raw.get("WHISPER_COMPUTE_TYPE", "int8_float16"),
+        whisper_cpu_model=raw.get("WHISPER_CPU_MODEL", "small"),
     )
 
 

@@ -46,7 +46,7 @@ context**. Read only what the phase asks for.
 | 00 | [Foundation](phases/00-foundation.md) | — | done |
 | 01 | [Engine core](phases/01-engine-core.md) | 00 | done |
 | 02 | [Audio capture and files](phases/02-audio.md) | 01 | in progress |
-| 03 | [Transcription](phases/03-transcription.md) | 01 | todo |
+| 03 | [Transcription](phases/03-transcription.md) | 01 | done |
 | 04 | [Minutes generation](phases/04-minutes.md) | 01 | todo |
 | 05 | [Session and CLI (MVP)](phases/05-session-cli.md) | 02, 03, 04 | todo |
 | 06 | [Engine API](phases/06-engine-api.md) | 05 | todo |

@@ -192,14 +192,19 @@ on_chunk(chunk):
     if cut_word is None and duration >= MAX_CARRY_SECONDS: cut_word = words[-1]   # force
     if cut_word is None: pending, pending_start = audio, audio_start; return []
     committed = words up to and including cut_word
-    cut_time = midpoint(cut_word.end, next_word.start) or cut_word.end if it is the last word
+    cut_time = midpoint(cut_word.end, next_word.start)
+            or voiced_end(cut_word.end) if it is the last word   # see note below
     pending = audio[cut_time * SAMPLE_RATE :]; pending_start = audio_start + cut_time
     return [segment(committed, offset=audio_start)]
 
 flush(): transcribe pending (if any) and commit every word.
 ```
 
-Committed audio is dropped, so no text is duplicated. Re-transcribing the carried tail costs at most
+Committed audio is dropped, so no text is duplicated.
+
+Whisper word end timestamps run early. When the cut word is the last word of the window, `voiced_end` extends the
+cut through still-voiced 10 ms frames (RMS ≥ `SILENCE_RMS_THRESHOLD`), at most 0.3 s, so the tail of that word is
+not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke test: "meeting." + "eating."). Re-transcribing the carried tail costs at most
 `MAX_CARRY_SECONDS` of extra audio per window.
 
 ## 8. Data model and session folder

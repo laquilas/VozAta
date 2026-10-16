@@ -67,15 +67,17 @@ def test_fake_audio_sink_records_writes_and_finalize() -> None:
 def test_fake_transcriber_returns_queued_results_then_silence() -> None:
     word = Word(text="hi", start=0.0, end=0.2, probability=0.9)
     transcriber = FakeTranscriber([TranscriptionResult(words=(word,), language="en")])
-    samples = np.zeros(1, dtype=np.float32)
+    samples = np.ones(1, dtype=np.float32)
 
+    silent = transcriber.transcribe(np.zeros(1, dtype=np.float32), "en")
     first = transcriber.transcribe(samples, "en")
     second = transcriber.transcribe(samples, "pt", hints="Avalonia")
     transcriber.close()
 
+    assert silent.words == ()  # silence never consumes a scripted result
     assert first.words == (word,)
     assert second == TranscriptionResult(words=(), language="pt")
-    assert transcriber.calls[1][2] == "Avalonia"
+    assert transcriber.calls[2][2] == "Avalonia"
     assert transcriber.closed
 
 
