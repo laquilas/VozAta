@@ -1,7 +1,8 @@
 """Carry-over stitching of fixed windows into whole phrases (architecture §7).
 
 Fixed windows cut words and sentences. The unfinished tail of each window is carried into the next
-one and transcribed again; committed audio is dropped, so no text is duplicated.
+one and transcribed again; committed audio is dropped, so no text is duplicated. A `complete` chunk
+(cut in a pause by the VAD chunker) is committed whole.
 """
 
 from __future__ import annotations
@@ -69,6 +70,9 @@ class CarryOverStitcher:
         if not words:
             self._clear()
             return []
+        if chunk.complete:
+            self._clear()
+            return [self._segment(words, audio_start)]
         duration = len(audio) / self._settings.sample_rate
         cut = self._cut_index(words, duration)
         if cut is None:

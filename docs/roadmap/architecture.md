@@ -201,7 +201,7 @@ audio and WAV writers write silence; a `paused` marker is recorded in `session.j
 
 ## 7. Stitching algorithm (`CarryOverStitcher`)
 
-Problem: fixed `CHUNK_SECONDS` windows cut words and sentences. Solution: carry the unfinished
+Problem: fixed `CHUNK_SECONDS` windows (and forced VAD cuts) cut words and sentences. Solution: carry the unfinished
 tail audio into the next window and re-transcribe it.
 
 ```
@@ -212,6 +212,7 @@ on_chunk(chunk):
     if pending is empty and rms(audio) < SILENCE_RMS_THRESHOLD: return []        # no STT call
     result = transcriber.transcribe(audio, language, hints)
     if no words: pending = empty; return []
+    if chunk.complete: pending = empty; return [segment(words, offset=audio_start)]  # VAD cut (27)
     duration = len(audio) / SAMPLE_RATE
     safe = [w for w in words if w.end <= duration - TAIL_MARGIN_SECONDS]
     cut_word = last w in safe ending with . ? ! (or … )

@@ -59,16 +59,16 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
 
 - **Branch:** `feature/27-vad-segmentation`
 - **Status:** in progress
-- **Updated:** 2026-10-16 17:50
-- **Next step:** in `transcription/stitcher.py`, when `chunk.complete` commit every word and clear the carried audio; tests in `tests/transcription/test_stitcher.py`; architecture §7 note
+- **Updated:** 2026-10-16 18:05
+- **Next step:** add `audio/silero.py` (`SileroSpeechDetector`), the `CHUNKERS` registry in `bootstrap.py` (keyed by `ChunkMode`), a chunker factory in `SessionComponents` passed to `CapturePipeline`; architecture §6
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] Config: `CHUNK_MODE` (`vad` | `fixed`), `VAD_THRESHOLD`, `VAD_MIN_SILENCE_MS`,
       `VAD_MIN_CHUNK_SECONDS`, `VAD_MAX_CHUNK_SECONDS`, `VAD_SPEECH_PAD_MS` — `21963c2`
-- [x] Ports `Chunker` and `SpeechDetector`; `VadChunker` (fake-detector tests) — this commit
-- [ ] `AudioChunk.complete`; the stitcher commits every word of a complete chunk
+- [x] Ports `Chunker` and `SpeechDetector`; `VadChunker` (fake-detector tests) — `8fa408e`
+- [x] `AudioChunk.complete`; the stitcher commits every word of a complete chunk — this commit
 - [ ] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory
 - [ ] Manual: TTS meeting `fixed` vs `vad` (latency, WER); acceptance criteria
 

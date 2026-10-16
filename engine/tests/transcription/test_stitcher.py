@@ -245,3 +245,37 @@ def test_voiced_tail_extension_is_capped() -> None:
     stitcher.flush()
 
     assert audio_seconds(fake, 1) == pytest.approx(5.0 - 2.3)
+
+
+def complete_chunk(start: float, seconds: float = 2.0) -> AudioChunk:
+    samples = np.full(round(seconds * RATE), 0.1, dtype=np.float32)
+    return AudioChunk(Channel.MIC, start, samples, complete=True)
+
+
+def test_a_complete_chunk_commits_every_word_and_carries_nothing() -> None:
+    fake = FakeTranscriber(
+        [result(w(" no", 0.2, 0.5), w(" sentence", 0.6, 1.0), w(" end", 1.2, 1.7))]
+    )
+    stitcher = make(fake)
+
+    segments = stitcher.on_chunk(complete_chunk(start=20.0))
+    stitcher.on_chunk(chunk(start=30.0))
+
+    assert [s.text for s in segments] == ["no sentence end"]  # "end" lies in the tail margin
+    assert segments[0].end == 21.7
+    assert audio_seconds(fake, 1) == pytest.approx(5.0)  # the next chunk is transcribed alone
+    assert stitcher.flush() == []
+
+
+def test_a_complete_chunk_also_commits_audio_carried_from_a_forced_cut() -> None:
+    fake = FakeTranscriber(
+        [result(w(" carried", 0.5, 4.8)), result(w(" carried", 0.5, 4.8), w(" rest.", 5.2, 5.6))]
+    )
+    stitcher = make(fake)
+
+    assert stitcher.on_chunk(chunk(start=0.0)) == []
+    segments = stitcher.on_chunk(complete_chunk(start=5.0, seconds=1.0))
+
+    assert [s.text for s in segments] == ["carried rest."]
+    assert audio_seconds(fake, 1) == pytest.approx(6.0)
+    assert stitcher.flush() == []
