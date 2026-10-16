@@ -53,3 +53,31 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 
 > Execute phase 13 of the roadmap (`docs/roadmap/phases/13-packaging.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/13-packaging`
+- **Status:** in progress
+- **Updated:** 2026-10-17 02:05
+- **Next step:** run the Release workflow by hand on `feature/13-packaging` (`gh workflow run release.yml --ref feature/13-packaging`), download the installer artifact, install it silently into a scratch folder, start the app, uninstall and check recordings and `.env` are kept
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [x] UI: executable mode in `EngineProcess` + installed `appsettings` — `09becb1`
+- [x] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke — `86019c0` (GPU recording smoke pending: audio driver hang)
+- [x] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md` — `6b4c40d`
+- [x] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version` — this commit
+- [ ] Manual: CI installer → silent per-user install, app + engine start, uninstall keeps recordings
+
+### Decisions and notes
+
+- Per-user install (`PrivilegesRequired=lowest`, `%LOCALAPPDATA%\Programs\VozAta`): no admin
+  rights. The engine runs with `%APPDATA%\VozAta` as working directory, so it reads `.env` there;
+  the installer creates it once from `.env.example` with
+  `OUTPUT_DIR=${USERPROFILE}/Documents/VozAta` (python-dotenv expands `${VAR}`) and the
+  uninstaller keeps it and the recordings.
+- PyInstaller is an optional engine extra (`package`), not a runtime dependency. Inno Setup runs
+  in CI only (not installed on the reference machine).
+- CI is verified with a manual run of the release workflow; creating a `v*` tag (and its GitHub
+  release) follows the release policy and is left to the user.

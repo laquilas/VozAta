@@ -9,7 +9,14 @@ public sealed class EngineOptions
 
     public string PythonPath { get; set; } = "../.venv/Scripts/python.exe";
 
+    /// <summary>
+    /// Where the engine runs (and reads its <c>.env</c>). Environment variables such as
+    /// <c>%APPDATA%</c> are expanded; with <see cref="ExecutablePath"/> the folder is created.
+    /// </summary>
     public string WorkingDirectory { get; set; } = "../engine";
+
+    /// <summary>The packaged engine (<c>vozata-engine.exe</c>); when set, Python is not used.</summary>
+    public string? ExecutablePath { get; set; }
 
     /// <summary>The first start loads models, so it can take a while.</summary>
     public TimeSpan StartTimeout { get; set; } = TimeSpan.FromSeconds(60);
@@ -74,14 +81,12 @@ public sealed class EngineProcess(
             return EngineStartResult.AlreadyRunning;
         }
 
-        var python = paths.Resolve(options.PythonPath);
-        var workingDirectory = paths.Resolve(options.WorkingDirectory);
-        if (python is null || workingDirectory is null)
+        if (Command() is not var (fileName, arguments, workingDirectory))
         {
             return EngineStartResult.Failed;
         }
 
-        _process = runner.Start(python, "-m vozata serve", workingDirectory);
+        _process = runner.Start(fileName, arguments, workingDirectory);
         for (var waited = TimeSpan.Zero; waited < options.StartTimeout; waited += PollInterval)
         {
             if (_process.HasExited)
@@ -98,6 +103,26 @@ public sealed class EngineProcess(
 
         StopIfStarted();
         return EngineStartResult.Failed;
+    }
+
+    /// <summary>The installed engine executable, or Python with the source engine (development).</summary>
+    private (string FileName, string Arguments, string WorkingDirectory)? Command()
+    {
+        var workingDirectory = Environment.ExpandEnvironmentVariables(options.WorkingDirectory);
+        if (options.ExecutablePath is { Length: > 0 } executable)
+        {
+            if (paths.Resolve(executable) is not { } engine)
+            {
+                return null;
+            }
+
+            Directory.CreateDirectory(workingDirectory);
+            return (engine, "serve", Path.GetFullPath(workingDirectory));
+        }
+
+        var python = paths.Resolve(options.PythonPath);
+        var folder = paths.Resolve(workingDirectory);
+        return python is null || folder is null ? null : (python, "-m vozata serve", folder);
     }
 
     public async Task<EngineRestartResult> RestartAsync(CancellationToken cancellationToken = default)

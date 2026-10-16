@@ -61,7 +61,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 10 | [UI settings](phases/10-ui-settings.md) | 07 | done |
 | 11 | [Export, tray and pause](phases/11-export-tray-pause.md) | 08, 09 | done |
 | 12 | [External STT API](phases/12-external-stt.md) | 05 | done |
-| 13 | [Packaging](phases/13-packaging.md) | 11 | todo |
+| 13 | [Packaging](phases/13-packaging.md) | 11 | in progress (`feature/13-packaging`) |
 | 14 | [Speaker identification (post-session)](phases/14-diarization-post.md) | 05 | todo |
 | 15 | [Speaker identification (live)](phases/15-diarization-live.md) | 14, 06 | todo |
 | 16 | [UI speaker rename](phases/16-ui-speaker-rename.md) | 09, 14 | todo |

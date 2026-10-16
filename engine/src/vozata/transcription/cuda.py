@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import site
+import sys
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -19,6 +20,8 @@ def register_cuda_dlls(site_dirs: Iterable[Path] | None = None) -> None:
     """Add every existing `nvidia/<lib>/bin` folder to the DLL search path (idempotent)."""
     if site_dirs is None:
         site_dirs = [Path(p) for p in [*site.getsitepackages(), site.getusersitepackages()]]
+        if getattr(sys, "frozen", False):  # PyInstaller bundle: the DLLs ship inside it
+            site_dirs.append(Path(sys._MEIPASS))
     for root in site_dirs:
         for library in _LIBRARIES:
             folder = str(Path(root) / "nvidia" / library / "bin")

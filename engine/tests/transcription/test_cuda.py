@@ -56,3 +56,19 @@ def test_defaults_to_the_interpreter_site_packages(
     cuda.register_cuda_dlls()
 
     assert len(added) == 2
+
+
+def test_a_frozen_build_looks_inside_its_bundle(
+    site: tuple[Path, list[str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+
+    root, added = site
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(root), raising=False)
+    monkeypatch.setattr(cuda.site, "getsitepackages", lambda: [])
+    monkeypatch.setattr(cuda.site, "getusersitepackages", lambda: str(root / "none"))
+
+    cuda.register_cuda_dlls()
+
+    assert added == [str(root / "nvidia" / name / "bin") for name in ("cublas", "cudnn")]
