@@ -36,12 +36,12 @@ conversation language, and see engine / GPU / LLM status.
 
 ## Acceptance criteria
 
-- [ ] Engine tests: valid update persisted to a temp `.env` preserving comments, invalid value → 422
+- [x] Engine tests: valid update persisted to a temp `.env` preserving comments, invalid value → 422
       with the key, secrets mask round-trip, `restart_required` correct.
-- [ ] UI tests: editors generated per type, dirty tracking, save/discard, language switch applied,
+- [x] UI tests: editors generated per type, dirty tracking, save/discard, language switch applied,
       restart prompt.
-- [ ] Manual: change `CHUNK_SECONDS` to 8 in the UI → next session uses 8 s windows.
-- [ ] Resource parity test passes.
+- [x] Manual: change `CHUNK_SECONDS` to 8 in the UI → next session uses 8 s windows.
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -59,9 +59,9 @@ Vocabulary editor (19), template selection (20).
 ## Progress
 
 - **Branch:** `feature/10-ui-settings`
-- **Status:** in progress
-- **Updated:** 2026-10-16 19:30
-- **Next step:** manual check: desktop app → Settings tab, set CHUNK_MODE fixed and CHUNK_SECONDS 8, save; record a short session and check `session.json` settings show 8 s fixed windows; change WHISPER_MODEL to see the restart prompt; restore the original values; tick criteria
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 20:00
+- **Next step:** open and merge the PR (combined draft in `__pr__/feature-10-ui-settings/`)
 
 ### Steps
 
@@ -74,8 +74,8 @@ Vocabulary editor (19), template selection (20).
 - [x] `HealthViewModel` (status bar + settings page, "Check again") — `43cb574`
 - [x] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt) — `22b9e34`
 - [x] Localized label and help for every key (en / pt-BR / es) — `41e0166`
-- [x] Settings tab in the main window; app language saved; default conversation language applied — this commit
-- [ ] Manual: `CHUNK_SECONDS` = 8 in the UI → next session uses 8 s windows; criteria
+- [x] Settings tab in the main window; app language saved; default conversation language applied — `4670f4e`
+- [x] Manual: `CHUNK_SECONDS` = 8 in the UI → next session uses 8 s windows; criteria — this commit
 
 ### Decisions and notes
 
@@ -87,3 +87,19 @@ Vocabulary editor (19), template selection (20).
   as a process environment variable keeps winning over `.env` (documented behaviour of
   `config.py`).
 - The masked secret value (`********`) sent back by the UI means "unchanged".
+- **Manual check (2026-10-16, desktop app via UI Automation).** The Settings tab showed the
+  engine status card and all six groups with typed editors (edit boxes, spinners, combo boxes,
+  toggles), help texts and "applies after a restart" badges. Choosing `fixed` for "How audio is
+  cut" and 8 for "Window length (s)", then Save, wrote `CHUNK_MODE=fixed` and `CHUNK_SECONDS=8` to
+  `engine/.env` and `GET /settings` returned them; the next recording's `session.json` had
+  `"CHUNK_MODE": "fixed", "CHUNK_SECONDS": 8.0`. Changing "Recognition device" (a restart key)
+  showed "These settings apply after the engine restarts"; **Restart engine** replaced the engine
+  process in ~5 s, the app reconnected and showed "The engine restarted with the new settings".
+  `engine/.env` did not exist before the check and was deleted afterwards.
+- **Fixed during the check:** one save hit "Unexpected engine error": `set_key` replaces `.env`
+  through a temporary file, which fails while OneDrive (this repository's location) holds the
+  file — writes are now retried and a lasting lock returns `503 settings_write_failed`. UI
+  Automation read combo selections as type names — choice options now read as their label.
+- UI Automation notes for next time: `NumericUpDown` needs `RangeValuePattern.SetValue` (typing
+  into its edit box is only committed on Enter / focus loss); search a combo's own list items, not
+  the whole desktop.
