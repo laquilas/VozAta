@@ -53,7 +53,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 03 | [Transcription](phases/03-transcription.md) | 01 | done |
 | 04 | [Minutes generation](phases/04-minutes.md) | 01 | done |
 | 05 | [Session and CLI (MVP)](phases/05-session-cli.md) | 02, 03, 04 | done |
-| 06 | [Engine API](phases/06-engine-api.md) | 05 | todo |
+| 06 | [Engine API](phases/06-engine-api.md) | 05 | in progress (`feature/06-engine-api`) |
 | 07 | [UI skeleton](phases/07-ui-skeleton.md) | 06 | todo |
 | 08 | [UI devices and level meters](phases/08-ui-devices-levels.md) | 07 | todo |
 | 09 | [UI session history](phases/09-ui-history.md) | 07 | todo |

@@ -62,3 +62,31 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 
 > Execute phase 06 of the roadmap (`docs/roadmap/phases/06-engine-api.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/06-engine-api`
+- **Status:** in progress
+- **Updated:** 2026-10-16 09:05
+- **Next step:** add `fastapi` and `uvicorn[standard]` to `engine/pyproject.toml` and install;
+  add `API_HOST` / `API_PORT` and per-key field metadata (type, default, choices, secret) to
+  `config.py` with tests.
+
+### Steps
+
+- [x] Start phase: status in progress, Progress section
+- [ ] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py`
+- [ ] `api/ws.py` (`EventBroadcaster`) + tests
+- [ ] `api/session_manager.py` (`SessionManager`) + tests
+- [ ] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
+      `settings` (GET) + tests
+- [ ] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests
+- [ ] `serve` command (uvicorn; refuses `0.0.0.0`) + tests
+- [ ] Manual: `python -m vozata serve`, start/stop with `curl`, events with a WebSocket client
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- The session observer port (`SessionObserver`, phase 05) is what `SessionManager` adapts to the
+  broadcaster.
+
