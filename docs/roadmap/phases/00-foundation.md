@@ -79,20 +79,20 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** ready for PR
-- **Updated:** 2026-10-15 23:50
+- **Updated:** 2026-10-16 00:05
 - **Next step:** none; open the PR (`pr-ready` → `pr-open` → `pr-review`) and merge after CI on the PR is green.
 
 ### Steps
 
-- [x] Start phase: status `in progress`, Progress section — `18d4413`
-- [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `4f9dc00`
-- [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `ea76488`, `01a4fb8`
+- [x] Start phase: status `in progress`, Progress section — `066d350`
+- [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `f40d17a`
+- [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `093809a`, `92610d2`
 - [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
-- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `54af17a`
-- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `27a69c3`
-- [x] `engine/.env.example` with phase 01–05 keys — `b6ba0a4`
-- [x] `.github/workflows/ci.yml` and green CI — `6c9883a`, `04c1c80` ([run](https://github.com/laquilas/VozAta/actions/runs/38835791812))
-- [x] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
+- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `bc79b8f`
+- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `589d292`
+- [x] `engine/.env.example` with phase 01–05 keys — `6ca764d`
+- [x] `.github/workflows/ci.yml` and green CI — `627c4c7`, `e55d2ba` ([run](https://github.com/laquilas/VozAta/actions/runs/38835791812))
+- [x] Update architecture §1 environment facts; tick acceptance criteria; set phase `done` — `9ea2871`
 
 ### Decisions and notes
 
