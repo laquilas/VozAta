@@ -59,3 +59,31 @@ Parallel requests, streaming/realtime APIs, diarization from providers.
 
 > Execute phase 12 of the roadmap (`docs/roadmap/phases/12-external-stt.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/12-external-stt`
+- **Status:** in progress
+- **Updated:** 2026-10-16 23:20
+- **Next step:** `OPENAI_STT_URL`, `OPENAI_STT_KEY` (secret), `OPENAI_STT_MODEL` in `config.py`,
+  `settings_fields.py`, `.env.example` (with cost notes) and the UI setting labels; tests
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] Config keys (+ settings page labels and help)
+- [ ] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts)
+- [ ] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start)
+- [ ] Registry, privacy notice (CLI at session start; health shows the provider host)
+- [ ] Manual: a session against an OpenAI-compatible endpoint; criteria
+
+### Decisions and notes
+
+- No OpenAI / Groq key on the reference machine: the manual run uses a self-hosted
+  OpenAI-compatible server (in scope: "self-hosted Whisper servers") backed by faster-whisper; the
+  run against OpenAI or Groq waits for a key.
+- OpenAI's word list carries no punctuation, but the stitcher cuts on sentence-ending punctuation:
+  punctuation from the response `text` is re-attached to the matching words.
+- OpenAI returns the language as a name ("portuguese"); it is mapped to the ISO code.
+- All-zero (silent) windows return an empty result without a request (no cost); the stitcher's RMS
+  gate already skips most silence.

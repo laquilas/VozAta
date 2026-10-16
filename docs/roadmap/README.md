@@ -60,7 +60,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 09 | [UI session history](phases/09-ui-history.md) | 07 | done |
 | 10 | [UI settings](phases/10-ui-settings.md) | 07 | done |
 | 11 | [Export, tray and pause](phases/11-export-tray-pause.md) | 08, 09 | done |
-| 12 | [External STT API](phases/12-external-stt.md) | 05 | todo |
+| 12 | [External STT API](phases/12-external-stt.md) | 05 | in progress (`feature/12-external-stt`) |
 | 13 | [Packaging](phases/13-packaging.md) | 11 | todo |
 | 14 | [Speaker identification (post-session)](phases/14-diarization-post.md) | 05 | todo |
 | 15 | [Speaker identification (live)](phases/15-diarization-live.md) | 14, 06 | todo |
