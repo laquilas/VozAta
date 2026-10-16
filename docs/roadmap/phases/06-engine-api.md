@@ -67,18 +67,18 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 
 - **Branch:** `feature/06-engine-api`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:03
-- **Next step:** write `tests/api/test_health.py`, `test_settings_get.py` and `test_devices.py`, then `api/app.py` (`create_app(container)`, error handler `{"error": {code, message}}` localized, `/ws` endpoint with the initial status), `api/schemas.py`, `api/system_info.py` (nvidia-smi, 2 s timeout) and routes `health`, `devices`, `settings`.
+- **Updated:** 2026-10-16 09:08
+- **Next step:** add `bootstrap.build_api_container(settings)` (real devices on a PortAudio thread, GPU via nvidia-smi, Ollama reachability, background minutes regeneration publishing `minutes_ready`/`error`) and the `serve` command in `__main__.py` (uvicorn on API_HOST:API_PORT, refuse 0.0.0.0) with tests.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `fd671b5`
 - [x] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py` — `02a9678`
 - [x] `api/ws.py` (`EventBroadcaster`) + tests — `82005b0`
-- [x] `api/session_manager.py` (`SessionManager`) + tests
-- [ ] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
+- [x] `api/session_manager.py` (`SessionManager`) + tests — `69b6ff5`
+- [x] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
       `settings` (GET) + tests
-- [ ] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests
+- [x] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests
 - [ ] `serve` command (uvicorn; refuses `0.0.0.0`) + tests
 - [ ] Manual: `python -m vozata serve`, start/stop with `curl`, events with a WebSocket client
 - [ ] Verify; tick acceptance criteria; set phase `done`
@@ -98,3 +98,12 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
   Pause/resume/stop without a recording or paused session raise `NoActiveSessionError`
   (`409 no_active_session`). A `status` heartbeat is published every 1 s while recording/paused.
 - `RecordingSession.duration_seconds` (session clock) feeds the heartbeat and live summaries.
+- App and every 06 route landed in one commit (the app module includes all routers). Routes read
+  an `ApiContainer` from `app.state` (tests build one over fakes). Errors use the contract envelope
+  everywhere, including validation (422 `invalid_request`), unknown paths (404 `not_found`),
+  405 and unexpected errors (500 `internal_error`, details only in the log). Status codes:
+  409 `session_already_active` / `no_active_session` / `session_still_recording`,
+  404 `session_not_found` / `minutes_not_found` / `device_not_found`, 503 for device start errors
+  (code from `SessionStartError`), 500 `invalid_configuration`.
+- `SessionStore.load_transcript_with_source` gives the transcript endpoint its `source`.
+- `OllamaLanguageModel.is_available` now uses a 3 s timeout (it backs `GET /health`).

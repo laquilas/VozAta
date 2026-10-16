@@ -145,3 +145,80 @@ def manager(
 
 
 START_ERROR = SessionStartError("device_timeout", "The mic did not open")
+
+
+class FakeDevices:
+    def __init__(self) -> None:
+        from vozata.audio.devices import DeviceInfo
+
+        self.mic = DeviceInfo(9, "Headset Mic", 2, 48000, False)
+        self.loopback = DeviceInfo(10, "Speakers [Loopback]", 2, 48000, True)
+        self.has_defaults = True
+
+    def inputs(self):  # type: ignore[no-untyped-def]
+        return [self.mic]
+
+    def loopbacks(self):  # type: ignore[no-untyped-def]
+        return [self.loopback]
+
+    def default_input(self):  # type: ignore[no-untyped-def]
+        return self.mic if self.has_defaults else None
+
+    def default_loopback(self):  # type: ignore[no-untyped-def]
+        return self.loopback if self.has_defaults else None
+
+
+class Api:
+    """The real app over fakes, plus handles on the fakes for assertions."""
+
+    def __init__(self, tmp_path: Path, settings: Any = None) -> None:
+        from fastapi.testclient import TestClient
+
+        from vozata.api.app import create_app
+        from vozata.api.container import ApiContainer
+        from vozata.api.system_info import GpuInfo
+        from vozata.config import Settings
+
+        self.settings = settings or Settings(output_dir=tmp_path / "recordings")
+        self.store = SessionStore(self.settings.output_dir)
+        self.factory = SessionFactory(self.store)
+        self.broadcaster = RecordingBroadcaster()
+        self.labeler = SpeakerLabeler(FakeLocalizer())
+        self.manager = SessionManager(
+            self.factory, self.store, self.broadcaster, self.labeler, status_interval=60
+        )
+        self.devices = FakeDevices()
+        self.gpu = GpuInfo(True, "RTX 3050", 6144)
+        self.reachable = True
+        self.regenerated: list[str] = []
+        from vozata.i18n import TomlLocalizer
+
+        container = ApiContainer(
+            settings=self.settings,
+            localizer=TomlLocalizer(self.settings.app_language),
+            labeler=self.labeler,
+            store=self.store,
+            broadcaster=self.broadcaster,
+            manager=self.manager,
+            devices=self.devices,
+            gpu_info=lambda: self.gpu,
+            llm_reachable=lambda: self.reachable,
+            regenerate_minutes=self.regenerated.append,
+        )
+        self.app = create_app(container)
+        self.client = TestClient(self.app, raise_server_exceptions=False)
+
+
+@pytest.fixture
+def api(tmp_path: Path):  # type: ignore[no-untyped-def]
+    api = Api(tmp_path)
+    with api.client:
+        yield api
+    current = api.manager.current
+    if current is not None:
+        for session in api.factory.sessions:
+            if session.stop_gate is not None:
+                session.stop_gate.set()  # release a finalization a test held back
+        if current.status in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+            api.manager.stop()
+        assert api.manager.wait_until_finished(5)

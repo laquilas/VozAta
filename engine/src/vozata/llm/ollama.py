@@ -11,6 +11,7 @@ import httpx
 from vozata.ports import LanguageModelError
 
 NUM_CTX = 8192
+AVAILABILITY_TIMEOUT = 3.0  # health checks must answer quickly
 
 
 class OllamaLanguageModel:
@@ -66,7 +67,7 @@ class OllamaLanguageModel:
     def is_available(self) -> bool:
         """True when the server answers and the configured model is pulled."""
         try:
-            response = self._client.get("/api/tags")
+            response = self._client.get("/api/tags", timeout=AVAILABILITY_TIMEOUT)
             response.raise_for_status()
             names = {model["name"] for model in response.json().get("models", [])}
         except (httpx.HTTPError, RuntimeError, ValueError, KeyError, TypeError):

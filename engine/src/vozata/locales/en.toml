@@ -16,6 +16,19 @@ device_failed = "The audio device \"{device}\" could not be opened: {reason}"
 mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
 
+[errors.api]
+not_found = "This endpoint does not exist."
+method_not_allowed = "This method is not allowed on this endpoint."
+http_error = "The request failed with HTTP status {status}."
+session_already_active = "A recording is already in progress or still being finalized. Stop it, or wait until it finishes."
+no_active_session = "No recording is in progress."
+session_not_found = "Session \"{id}\" was not found."
+minutes_not_found = "Session \"{id}\" has no minutes yet."
+session_still_recording = "Session \"{id}\" is still recording; minutes are generated when it stops."
+device_not_found = "Audio device not found: {reason}"
+invalid_request = "Invalid request: {details}"
+internal_error = "Unexpected engine error. Check the engine log for details."
+
 [languages]
 en = "English"
 pt = "Portuguese"
