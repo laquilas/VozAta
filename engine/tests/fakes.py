@@ -40,7 +40,7 @@ class FakeAudioSink:
 
 
 class FakeTranscriber:
-    """Returns queued results in order, then empty results."""
+    """Returns queued results in order, then empty results; pure silence is always empty."""
 
     def __init__(self, results: list[TranscriptionResult] | None = None) -> None:
         self.results = list(results or [])
@@ -51,7 +51,7 @@ class FakeTranscriber:
         self, samples: np.ndarray, language: str | None, hints: str | None = None
     ) -> TranscriptionResult:
         self.calls.append((samples, language, hints))
-        if self.results:
+        if self.results and np.any(samples):
             return self.results.pop(0)
         return TranscriptionResult(words=(), language=language)
 

@@ -69,15 +69,15 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:15
-- **Next step:** TDD `transcription/stitcher.py`: write `tests/transcription/contract.py` and `test_stitcher.py` (every case in the acceptance criteria), see them fail, then implement `CarryOverStitcher` exactly as architecture §7 and `SegmentIds`.
+- **Updated:** 2026-10-15 23:16
+- **Next step:** TDD `output/sinks.py`: `tests/output/test_sinks.py` (console line, jsonl append + flush per segment and reopen, markdown via `render_line` + `SpeakerLabeler`, composite isolates a failing sink and closes all), see it fail, then implement.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `ff41b35`
 - [x] Config keys owned by 03 (`config.py`; `.env.example` already lists them) — `3cf51fa`
-- [x] `transcription/language_lock.py` (`LanguageLock`)
-- [ ] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite
+- [x] `transcription/language_lock.py` (`LanguageLock`) — `675f5b2`
+- [x] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite
 - [ ] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`)
 - [ ] `transcription/worker.py` (`TranscriptionWorker`)
 - [ ] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests)
@@ -90,3 +90,4 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - **Language provider**: the stitcher depends on a small protocol (`current() -> str | None`, `observe(language, speech_seconds)`); `LanguageLock` implements it. Detected languages outside en/pt/es do not count toward the lock.
 - **Model cache**: the `large-v3-turbo` cache (344 MB) looks incomplete and `small` is not cached; first runs download them with `HF_HUB_DISABLE_XET=1` (the xet protocol hung on this machine before).
 - Ranges: `TAIL_MARGIN_SECONDS` [0, 5], `PAUSE_GAP_SECONDS` [0.05, 5], `MAX_CARRY_SECONDS` [1, 120], `SILENCE_RMS_THRESHOLD` [0, 1]; `STT_PROVIDER` is validated against the registry in `bootstrap.py` (05), not here.
+- `FakeTranscriber` returns an empty result for all-zero audio without consuming a scripted result, as the transcriber contract requires.
