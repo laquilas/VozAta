@@ -55,14 +55,13 @@ Partials in the CLI console.
 
 - **Branch:** `feature/28-live-partials`
 - **Status:** in progress
-- **Updated:** 2026-10-16 22:00
-- **Next step:** add `LIVE_PARTIALS` and `PARTIAL_INTERVAL_SECONDS` to `config.py`,
-  `settings_fields.py`, `.env.example` with tests
+- **Updated:** 2026-10-16 22:10
+- **Next step:** add `buffered()` to the `Chunker` port (VadChunker, FixedWindowChunker) and `CarryOverStitcher.partial(tail)` (carry + tail, ≥ 1 s voiced, no language observation); tests
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS`
+- [x] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS` — this commit
 - [ ] Uncommitted audio: `Chunker.buffered()` (VAD and fixed) and `CarryOverStitcher.partial(tail)`
 - [ ] Worker partials when idle + pipeline wiring + `SessionObserver.on_partial` + API `partial`
 - [ ] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text
