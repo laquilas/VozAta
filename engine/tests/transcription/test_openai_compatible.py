@@ -123,6 +123,24 @@ def test_language_names_and_codes_are_normalized(language: str | None, code: str
     assert api.transcriber().transcribe(SPEECH, None).language == code
 
 
+def test_words_split_inside_a_hyphenated_token_are_merged_with_its_punctuation() -> None:
+    reply = {
+        "text": "Adiar para sexta-feira. Certo?",
+        "words": [
+            {"word": "Adiar", "start": 0.0, "end": 0.4},
+            {"word": "para", "start": 0.4, "end": 0.6},
+            {"word": "sexta", "start": 0.6, "end": 0.9},
+            {"word": "-feira", "start": 0.9, "end": 1.3},
+            {"word": "Certo", "start": 1.5, "end": 1.8},
+        ],
+    }
+
+    result = Api(httpx.Response(200, json=reply)).transcriber().transcribe(SPEECH, "pt")
+
+    assert [word.text for word in result.words] == [" Adiar", " para", " sexta-feira.", " Certo?"]
+    assert (result.words[2].start, result.words[2].end) == (0.6, 1.3)
+
+
 def test_a_word_missing_from_the_text_keeps_its_own_spelling() -> None:
     reply = {"text": "Totally different.", "words": [{"word": "hello", "start": 0, "end": 0.5}]}
 

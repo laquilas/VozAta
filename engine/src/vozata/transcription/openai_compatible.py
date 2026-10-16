@@ -130,18 +130,30 @@ def _wav(samples: np.ndarray, rate: int) -> bytes:
 
 
 def _with_punctuation(words: Sequence[dict[str, Any]], text: str) -> tuple[Word, ...]:
-    tokens = text.split()
-    position = 0
+    """Spell each word as in the text (with its punctuation); words a provider split inside one
+    text token ("sexta" + "-feira" for "sexta-feira.") become one word spanning both."""
+    tokens = [(token, _core(token)) for token in text.split()]
+    position, index = 0, 0
     result = []
-    for item in words:
-        spelled = str(item["word"]).strip()
-        core = _NOT_WORD.sub("", spelled.lower())
+    while index < len(words):
+        first = words[index]
+        spelled, last = str(first["word"]).strip(), index
         for ahead in range(position, min(position + 3, len(tokens))):  # tolerate small drifts
-            if _NOT_WORD.sub("", tokens[ahead].lower()) == core:
-                spelled, position = tokens[ahead], ahead + 1
+            token, core = tokens[ahead]
+            joined, end = _core(spelled), index
+            while core.startswith(joined) and joined != core and end + 1 < len(words):
+                end += 1
+                joined += _core(str(words[end]["word"]))
+            if joined == core and core:
+                spelled, last, position = token, end, ahead + 1
                 break
-        result.append(Word(f" {spelled}", float(item["start"]), float(item["end"]), 1.0))
+        result.append(Word(f" {spelled}", float(first["start"]), float(words[last]["end"]), 1.0))
+        index = last + 1
     return tuple(result)
+
+
+def _core(text: str) -> str:
+    return _NOT_WORD.sub("", text.lower())
 
 
 def _language_code(language: object) -> str | None:
