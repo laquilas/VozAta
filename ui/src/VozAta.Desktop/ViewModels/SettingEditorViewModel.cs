@@ -27,6 +27,9 @@ public sealed partial class SettingChoice(string value, string? labelKey) : Obse
 
     public void Refresh(ILocalizationService localization) =>
         Label = labelKey is null ? Value : localization[labelKey];
+
+    /// <summary>What screen readers announce for the option.</summary>
+    public override string ToString() => Label;
 }
 
 /// <summary>

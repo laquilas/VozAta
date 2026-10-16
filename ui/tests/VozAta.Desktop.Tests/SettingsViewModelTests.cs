@@ -235,4 +235,16 @@ public sealed class SettingsViewModelTests
         Assert.Equal(_localization["EngineUnavailable"], settings.Error);
         Assert.Empty(settings.Groups);
     }
+
+    [Fact]
+    public async Task Options_read_well_for_screen_readers()
+    {
+        var settings = await LoadedAsync();
+        var main = new ChoiceOption("pt", "LanguagePt");
+        main.Refresh(_localization);
+
+        Assert.Equal("Português (Brasil)", Editor(settings, "APP_LANGUAGE").Choices[1].ToString());
+        Assert.Equal("stereo", Editor(settings, "MIX_MODE").Choices[1].ToString());
+        Assert.Equal("Portuguese", main.ToString());
+    }
 }
