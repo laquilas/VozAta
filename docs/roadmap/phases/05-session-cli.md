@@ -70,16 +70,16 @@ HTTP API (06), UI (07+).
 
 - **Branch:** `feature/05-session-cli`
 - **Status:** in progress
-- **Updated:** 2026-10-16 08:33
-- **Next step:** write `tests/test_bootstrap.py`, then `bootstrap.py`: registries `TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS` (unknown key -> `ConfigError` invalid_choice), `build_localizer`, `build_labeler`, `build_session(settings, observer, *, language, mic_device, system_device)` (WASAPI devices + `WasapiSource` sharing one `SessionClock`), `build_minutes_generator(settings)`.
+- **Updated:** 2026-10-16 08:34
+- **Next step:** write `tests/test_cli.py`, then replace `__main__.py` with the argparse CLI: `record [--language] [--mic] [--system] [--list-devices]` (console observer with segment lines + one-line level meter, `p`+Enter toggles pause, Ctrl+C stops) and `minutes <session_dir>`; add `cli.*` locale keys in en/pt-BR/es; keep `--version`.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `faabf68`
 - [x] `GENERATE_MINUTES` config key — `e4b621d`
 - [x] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests — `2315176`
-- [x] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout
-- [ ] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
+- [x] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout — `6d855a3`
+- [x] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
       `build_minutes_generator`) + tests
 - [ ] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests
 - [ ] Manual E2E: `python -m vozata record --language pt`, then `minutes` with Ollama
