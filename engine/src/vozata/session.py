@@ -72,6 +72,7 @@ class RecordingSession:
         self._open_timeout = open_timeout
         self.status: SessionStatus | None = None
         self._paths: SessionPaths | None = None
+        self._captured: float | None = None  # recorded length, fixed once capture stops
 
     @property
     def paths(self) -> SessionPaths:
@@ -85,7 +86,9 @@ class RecordingSession:
 
     @property
     def duration_seconds(self) -> float:
-        """Session time so far (pauses included); 0 before `start()`."""
+        """Session time so far (pauses included); 0 before `start()`, fixed after capture."""
+        if self._captured is not None:
+            return self._captured
         return self._c.clock.now() if self.status is not None else 0.0
 
     def start(self) -> None:
@@ -173,7 +176,8 @@ class RecordingSession:
         for source in self._c.sources.values():
             source.stop()
         self._pipeline.stop_capture()
-        self._meta.captured(self._c.clock.now())
+        self._captured = self._c.clock.now()
+        self._meta.captured(self._captured)
         self._release_audio()
         self._set_status(SessionStatus.FINALIZING)
 
@@ -222,7 +226,7 @@ class RecordingSession:
     def _set_status(self, status: SessionStatus) -> None:
         self.status = status
         self._meta.set_status(status)
-        self._observer.on_status(status, self._c.clock.now())
+        self._observer.on_status(status, self.duration_seconds)
 
     def _start_error(self, code: str, **params: object) -> SessionStartError:
         return SessionStartError(code, self._c.localizer.t(f"errors.session.{code}", **params))

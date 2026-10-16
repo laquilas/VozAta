@@ -38,12 +38,12 @@ conversation-language selector, live transcript, health status bar, localization
 
 ## Acceptance criteria
 
-- [ ] `dotnet build` and `dotnet test` pass; `dotnet format --verify-no-changes` clean.
-- [ ] ViewModel tests: state transitions, Start sends the selected language, segments appended from
+- [x] `dotnet build` and `dotnet test` pass; `dotnet format --verify-no-changes` clean.
+- [x] ViewModel tests: state transitions, Start sends the selected language, segments appended from
       events, `language_detected` updates the badge, error handling, close-while-recording guard.
-- [ ] Client tests with a fake `HttpMessageHandler` (snake_case mapping, error envelope).
-- [ ] Resource key-parity test for the three `.resx` files.
-- [ ] Manual: launching the app starts the engine automatically; Start → live lines appear; Stop →
+- [x] Client tests with a fake `HttpMessageHandler` (snake_case mapping, error envelope).
+- [x] Resource key-parity test for the three `.resx` files.
+- [x] Manual: launching the app starts the engine automatically; Start → live lines appear; Stop →
       status goes Finalizing → Idle; switching UI language changes all visible strings.
 
 ## Tests
@@ -59,3 +59,65 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 > Execute phase 07 of the roadmap (`docs/roadmap/phases/07-ui-skeleton.md`), following
 > `docs/roadmap/README.md`. Ask me before installing the .NET SDK.
+
+## Progress
+
+- **Branch:** `feature/07-ui-skeleton`
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 10:02
+- **Next step:** open the PR (put the manual check below in its description) and merge.
+
+### Steps
+
+- [x] Start phase: status in progress, Progress section — `6ae4ec1`
+- [x] Solution scaffold, `Directory.Build.props`, CI `ui` job — `2b1ddf3`
+- [x] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests — `56bb664`
+- [x] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests — `8a3c247`
+- [x] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
+      parity test, `IUiDispatcher` — `422167e`
+- [x] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
+      + tests — `1036014`
+- [x] `MainWindow.axaml`, `App.axaml.cs` composition root — `9d85218`
+- [x] Manual: app starts the engine; Start → live lines; Stop → Finalizing → Idle; UI language
+      switch
+- [x] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- .NET SDK 10.0.402 and Avalonia templates were installed with the user's approval
+  (2026-10-16); the templates use Avalonia 12.1.4.
+
+- `.resx` files are generated from one table (all three languages side by side) by a script kept
+  out of the repo; the parity test guards against drift. `LocalizationService` raises
+  `PropertyChanged("Item[]")` so `{Binding L[Key]}` bindings refresh on a language switch.
+- `PathResolver` resolves `Engine:PythonPath` / `Engine:WorkingDirectory` against the current
+  directory, then every folder above the app, so the defaults (`../.venv/...`, `../engine`) work
+  from `ui/` and from `bin/Debug/net10.0/`. The engine is stopped on exit with
+  `Kill(entireProcessTree)` only if the UI started it.
+- `MainViewModel` maps engine `status` events onto `RecordingState` (`done`/`idle`/`interrupted`
+  → Idle) and reads the elapsed time from them (the engine's 1 s heartbeat), so no UI timer is
+  needed. `ShutdownAsync(maxWait)` waits for finalization before stopping an engine the UI
+  started, so closing never kills the WAV/minutes step.
+- **Manual check (2026-10-16)**: the app was driven through Windows UI Automation (and used by
+  hand by the user at the same time):
+  - Launch with no engine running → the app started `python -m vozata serve` itself (healthy in
+    7–11 s); status bar: engine connected, RTX 3050 6 GB, `large-v3` on auto, Ollama ready.
+  - Interface language switched to pt-BR → every visible string changed (button, labels,
+    placeholder, status bar); the meeting language list relabelled itself.
+  - Start (meeting language Português) → "Gravando", elapsed time ticking, live coloured lines
+    (`[00:00:49] Others: Todos concordam?`); Stop → "Finalizando…" → "Pronto" with the
+    "A ata está pronta" notification.
+  - Closing the window while idle closed the app and stopped the engine it had started.
+- **Fixed during the manual check**: `{Binding L[Key]}` labels did not switch language (compiled
+  indexer bindings ignore `Item[]` notifications) → `L` is now a `Strings` wrapper replaced on
+  every switch; the Stop button was announced as "Avalonia.Controls.StackPanel" to UI
+  Automation/screen readers → `AutomationProperties.Name`; Stop turned grey on hover → `danger`
+  style for every state; the engine reported clock time (finalization included) in `finalizing`
+  / `done` status events → it now reports the recorded length.
+- Speaker labels ("Me"/"Others") come from the engine's `APP_LANGUAGE`, not the UI language;
+  phase 10 (settings) will let the UI change `APP_LANGUAGE`.
+- Starting a session blocks ~20–25 s on this machine while Whisper loads (status "Iniciando…").
+- Final verification: `dotnet build` (0 warnings, warnings as errors), 58 tests, `dotnet format
+  --verify-no-changes` clean; coverage 93.6 % lines / 90.1 % branches (views, composition root,
+  real process/socket wrappers excluded with `[ExcludeFromCodeCoverage]`); engine 446 tests,
+  100 %.

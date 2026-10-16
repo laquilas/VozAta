@@ -1,0 +1,175 @@
+using VozAta.Desktop.Services;
+using VozAta.Desktop.Tests.Fakes;
+
+namespace VozAta.Desktop.Tests;
+
+public sealed class EngineProcessTests : IDisposable
+{
+    private readonly string _root = Directory.CreateTempSubdirectory("vozata-ui-").FullName;
+    private readonly FakeEngineClient _client = new();
+    private readonly FakeRunner _runner = new();
+
+    public EngineProcessTests()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "engine"));
+        Directory.CreateDirectory(Path.Combine(_root, ".venv", "Scripts"));
+        File.WriteAllText(Path.Combine(_root, ".venv", "Scripts", "python.exe"), "");
+        Directory.CreateDirectory(Path.Combine(_root, "ui"));
+    }
+
+    public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    [Fact]
+    public async Task A_running_engine_is_used_and_never_stopped()
+    {
+        var engine = Engine();
+
+        Assert.Equal(EngineStartResult.AlreadyRunning, await engine.EnsureRunningAsync());
+        engine.StopIfStarted();
+
+        Assert.Empty(_runner.Started);
+    }
+
+    [Fact]
+    public async Task A_missing_engine_is_started_and_awaited_until_healthy()
+    {
+        _client.UnavailableHealthChecks = 3;
+        var engine = Engine();
+
+        var result = await engine.EnsureRunningAsync();
+
+        Assert.Equal(EngineStartResult.Started, result);
+        var (file, arguments, directory) = _runner.Started.Single();
+        Assert.Equal(Path.Combine(_root, ".venv", "Scripts", "python.exe"), file);
+        Assert.Equal("-m vozata serve", arguments);
+        Assert.Equal(Path.Combine(_root, "engine"), directory);
+        Assert.Equal(4, _client.Calls.Count(call => call == "health"));
+    }
+
+    [Fact]
+    public async Task An_engine_started_by_the_ui_is_stopped_on_exit_once()
+    {
+        _client.UnavailableHealthChecks = 1;
+        var engine = Engine();
+        await engine.EnsureRunningAsync();
+
+        engine.StopIfStarted();
+        engine.StopIfStarted();
+
+        var process = _runner.Processes.Single();
+        Assert.Equal(1, process.Kills);
+        Assert.True(process.Disposed);
+    }
+
+    [Fact]
+    public async Task An_already_exited_process_is_not_killed()
+    {
+        _client.UnavailableHealthChecks = 1;
+        var engine = Engine();
+        await engine.EnsureRunningAsync();
+        _runner.Processes.Single().HasExited = true;
+
+        engine.StopIfStarted();
+
+        Assert.Equal(0, _runner.Processes.Single().Kills);
+    }
+
+    [Fact]
+    public async Task Start_fails_after_the_timeout_and_stops_the_process()
+    {
+        _client.UnavailableHealthChecks = int.MaxValue;
+        var engine = Engine(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(EngineStartResult.Failed, await engine.EnsureRunningAsync());
+
+        Assert.Equal(1, _runner.Processes.Single().Kills);
+        Assert.Equal(5, _client.Calls.Count(call => call == "health"));  // 1 + 4 polls of 0.5 s
+    }
+
+    [Fact]
+    public async Task Start_fails_at_once_when_the_process_exits()
+    {
+        _client.UnavailableHealthChecks = int.MaxValue;
+        _runner.ExitImmediately = true;
+        var engine = Engine();
+
+        Assert.Equal(EngineStartResult.Failed, await engine.EnsureRunningAsync());
+
+        Assert.Single(_client.Calls);
+        Assert.Equal(0, _runner.Processes.Single().Kills);
+    }
+
+    [Fact]
+    public async Task Start_fails_without_running_anything_when_paths_do_not_exist()
+    {
+        _client.UnavailableHealthChecks = 1;
+        var engine = new EngineProcess(
+            _client,
+            _runner,
+            new EngineOptions { PythonPath = "missing/python.exe" },
+            new PathResolver(Path.Combine(_root, "ui"), Path.Combine(_root, "ui")),
+            NoDelay);
+
+        Assert.Equal(EngineStartResult.Failed, await engine.EnsureRunningAsync());
+        Assert.Empty(_runner.Started);
+    }
+
+    [Fact]
+    public void Paths_resolve_from_the_current_directory_then_from_the_app_folders()
+    {
+        var bin = Directory.CreateDirectory(Path.Combine(_root, "ui", "bin", "Debug")).FullName;
+        var fromUi = new PathResolver(Path.Combine(_root, "ui"), bin);
+        var fromElsewhere = new PathResolver(Path.GetTempPath(), bin);
+        var absolute = Path.Combine(_root, "engine");
+
+        Assert.Equal(Path.Combine(_root, "engine"), fromUi.Resolve("../engine"));
+        Assert.Equal(Path.Combine(_root, "engine"), fromElsewhere.Resolve("engine"));
+        Assert.Equal(absolute, fromUi.Resolve(absolute));
+        Assert.Null(fromUi.Resolve(Path.Combine(_root, "nope")));
+        Assert.Null(fromElsewhere.Resolve("definitely-not-here-123"));
+    }
+
+    private EngineProcess Engine(TimeSpan? timeout = null) =>
+        new(
+            _client,
+            _runner,
+            new EngineOptions { StartTimeout = timeout ?? TimeSpan.FromSeconds(60) },
+            new PathResolver(Path.Combine(_root, "ui"), Path.Combine(_root, "ui")),
+            NoDelay);
+
+    private static Task NoDelay(TimeSpan wait, CancellationToken token) => Task.CompletedTask;
+
+    private sealed class FakeRunner : IProcessRunner
+    {
+        public List<(string File, string Arguments, string Directory)> Started { get; } = [];
+
+        public List<FakeProcess> Processes { get; } = [];
+
+        public bool ExitImmediately { get; set; }
+
+        public IRunningProcess Start(string fileName, string arguments, string workingDirectory)
+        {
+            Started.Add((fileName, arguments, workingDirectory));
+            var process = new FakeProcess { HasExited = ExitImmediately };
+            Processes.Add(process);
+            return process;
+        }
+    }
+
+    private sealed class FakeProcess : IRunningProcess
+    {
+        public bool HasExited { get; set; }
+
+        public int Kills { get; private set; }
+
+        public bool Disposed { get; private set; }
+
+        public void Kill()
+        {
+            Kills++;
+            HasExited = true;
+        }
+
+        public void Dispose() => Disposed = true;
+    }
+}

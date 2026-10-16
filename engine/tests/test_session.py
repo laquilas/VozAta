@@ -493,3 +493,19 @@ def test_duration_seconds_is_the_recorded_length_at_capture_stop(tmp_path: Path)
     rig.session.stop()
 
     assert rig.store.read_meta(rig.session.id)["duration_seconds"] == 63.25
+
+
+def test_status_after_capture_reports_the_recorded_length(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+    rig.clock.time = 30.0
+
+    def slow_mix(mic: Path, system: Path, destination: Path) -> None:
+        rig.clock.time = 75.0  # finalization takes time; the recording does not grow
+
+    rig.mixer.mix = slow_mix  # type: ignore[method-assign]
+    rig.session.stop()
+
+    statuses = rig.observer.of("status")
+    assert statuses[-2:] == [(SessionStatus.FINALIZING, 30.0), (SessionStatus.DONE, 30.0)]
+    assert rig.session.duration_seconds == 30.0
