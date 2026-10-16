@@ -41,15 +41,15 @@ carry-over stitcher, lock the conversation language in `auto` mode, and emit seg
 
 ## Acceptance criteria
 
-- [ ] Stitcher tests cover: sentence-end cut, pause-gap cut, no safe cut → carry, forced commit at
+- [x] Stitcher tests cover: sentence-end cut, pause-gap cut, no safe cut → carry, forced commit at
       `MAX_CARRY_SECONDS`, silence skip without STT call, `flush()`, correct absolute timestamps, no
       duplicated words across windows.
-- [ ] `LanguageLock` tests: fixed language passthrough, auto lock after 3 s majority, single callback.
-- [ ] Worker drains and flushes on stop; sink failure isolation tested.
-- [ ] `FakeTranscriber` passes the contract suite; `FasterWhisperTranscriber` passes it in a manual
+- [x] `LanguageLock` tests: fixed language passthrough, auto lock after 3 s majority, single callback.
+- [x] Worker drains and flushes on stop; sink failure isolation tested.
+- [x] `FakeTranscriber` passes the contract suite; `FasterWhisperTranscriber` passes it in a manual
       GPU smoke run (`pytest -m gpu`, skipped by default) on a short WAV from `__legacy__/gravacoes/`.
-- [ ] GPU → CPU fallback verified manually by setting `WHISPER_DEVICE=cpu`.
-- [ ] Coverage ≥ 80 %.
+- [x] GPU → CPU fallback verified manually by setting `WHISPER_DEVICE=cpu`.
+- [x] Coverage ≥ 80 %.
 
 ## Tests
 
@@ -68,9 +68,9 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 ## Progress
 
 - **Branch:** `feature/03-transcription`
-- **Status:** in progress
-- **Updated:** 2026-10-15 23:25
-- **Next step:** verify (pytest with coverage, ruff), tick the acceptance criteria, set phase 03 to `done` and Progress to `ready for PR`.
+- **Status:** ready for PR
+- **Updated:** 2026-10-15 23:26
+- **Next step:** none; open the PR and merge after CI on the PR is green.
 
 ### Steps
 
@@ -81,8 +81,8 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - [x] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`) — `798366e`
 - [x] `transcription/worker.py` (`TranscriptionWorker`) — `0d23bb9`
 - [x] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests) — `86d59f4`
-- [x] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check
-- [ ] Verify; tick acceptance criteria; set phase `done`
+- [x] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check — `91d28ad`, `246ae07`
+- [x] Verify; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
 
@@ -94,3 +94,4 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - **Stitcher fix (architecture §7 updated)**: the GPU smoke run showed Whisper's last-word end timestamp running early, so the carried tail began with the end of that word and `flush()` emitted a fragment ("meeting." then "eating."). The cut after a window's last word now extends through still-voiced 10 ms frames, capped at 0.3 s.
 - **GPU smoke result (2026-10-15, RTX 3050 6 GB)**: `WHISPER_MODEL=large-v3 WHISPER_CPU_MODEL=large-v3 HF_HUB_OFFLINE=1 pytest -m gpu`: 3 passed in 41.6 s (CUDA contract, CPU contract via `WHISPER_DEVICE=cpu`, stitched 2 s windows reproduce the sentence exactly).
 - **Model download**: this connection reached about 186 KB/s from Hugging Face, so `large-v3-turbo` (1.6 GB, the default) and `small` were not downloaded; the smoke run used the fully cached `large-v3`. Either let turbo download once (`HF_HUB_DISABLE_XET=1`) or set `WHISPER_MODEL=large-v3` in `.env`.
+- Verification: 141 tests (+3 `gpu` deselected), 100 % coverage, ruff clean.
