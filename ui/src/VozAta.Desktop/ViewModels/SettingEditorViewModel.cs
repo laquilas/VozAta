@@ -40,7 +40,10 @@ public sealed partial class SettingEditorViewModel : ObservableObject
         ["APP_LANGUAGE"] = new() { ["en"] = "AppLanguageEn", ["pt-BR"] = "AppLanguagePtBr", ["es"] = "AppLanguageEs" },
         ["TRANSCRIPTION_LANGUAGE"] = new()
         {
-            ["en"] = "LanguageEn", ["pt"] = "LanguagePt", ["es"] = "LanguageEs", ["auto"] = "LanguageAuto",
+            ["en"] = "LanguageEn",
+            ["pt"] = "LanguagePt",
+            ["es"] = "LanguageEs",
+            ["auto"] = "LanguageAuto",
         },
     };
 
