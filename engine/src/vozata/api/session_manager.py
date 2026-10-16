@@ -93,6 +93,9 @@ class _EventObserver:
     def on_minutes_ready(self, session_id: str) -> None:
         self._send("minutes_ready", {"session_id": session_id})
 
+    def on_model_loading(self, loading: bool) -> None:
+        self._send("model_loading", {"loading": loading})
+
     def on_error(self, code: str, message: str) -> None:
         self._send("error", {"code": code, "message": message})
 

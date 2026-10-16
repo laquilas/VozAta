@@ -90,6 +90,10 @@ class ConsoleObserver:
         with self._lock:
             self._print(self._t("cli.minutes_ready"))
 
+    def on_model_loading(self, loading: bool) -> None:
+        with self._lock:
+            self._print(self._t("cli.loading_model" if loading else "cli.model_ready"))
+
     def on_error(self, code: str, message: str) -> None:
         with self._lock:
             self._print(message)

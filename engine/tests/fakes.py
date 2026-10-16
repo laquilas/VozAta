@@ -177,6 +177,9 @@ class FakeSessionObserver:
     def on_minutes_ready(self, session_id: str) -> None:
         self.events.append(("minutes_ready", session_id))
 
+    def on_model_loading(self, loading: bool) -> None:
+        self.events.append(("model_loading", loading))
+
     def on_error(self, code: str, message: str) -> None:
         self.events.append(("error", code, message))
 

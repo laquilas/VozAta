@@ -60,18 +60,18 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 
 - **Branch:** `feature/26-capture-first`
 - **Status:** in progress
-- **Updated:** 2026-10-16 19:40
-- **Next step:** capture first: `SessionObserver.on_model_loading` (ports, fakes, console, API observer stub), `TranscriptionWorker` loads stitchers on its thread, `CapturePipeline` takes the transcriber factory, `RecordingSession.start` reports `recording` before the load; tests in `tests/test_session.py`, `tests/transcription/test_worker.py`
+- **Updated:** 2026-10-16 20:20
+- **Next step:** `WHISPER_KEEP_LOADED` in `serve`: a shared transcriber (`transcription/shared.py`) used by `build_api_container`'s sessions, released before session minutes and before `POST /sessions/{id}/minutes` (`MinutesJob`), closed when the API stops
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] Config: `WHISPER_KEEP_LOADED` — this commit
-- [ ] Capture first: sources open and `recording` is reported before the transcriber loads; the
+- [x] Config: `WHISPER_KEEP_LOADED` — `bf6a1c8`
+- [x] Capture first: sources open and `recording` is reported before the transcriber loads; the
       worker loads it on its thread (`SessionObserver.on_model_loading`), queued chunks are
       transcribed afterwards; a failed load reports `model_failed` and keeps recording WAVs; CLI
-      messages
-- [ ] API: `model_loading` `{loading}` event
+      messages — this commit
+- [x] API: `model_loading` `{loading}` event — same commit (the observer method is one change)
 - [ ] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
       `POST /sessions/{id}/minutes`)
 - [ ] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings

@@ -120,6 +120,10 @@ class SessionObserver(Protocol):
 
     def on_minutes_ready(self, session_id: str) -> None: ...
 
+    def on_model_loading(self, loading: bool) -> None:
+        """The speech model started (True) or finished (False) loading; capture already runs."""
+        ...
+
     def on_error(self, code: str, message: str) -> None:
         """A non-fatal error; `message` is localized."""
         ...

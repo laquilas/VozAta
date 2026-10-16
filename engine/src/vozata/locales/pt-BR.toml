@@ -16,6 +16,7 @@ device_timeout = "O dispositivo de áudio \"{device}\" não abriu em {seconds} s
 device_failed = "Não foi possível abrir o dispositivo de áudio \"{device}\": {reason}"
 mix_failed = "Não foi possível criar o mixed.wav ({reason}). As faixas do microfone e do sistema foram mantidas."
 minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a transcrição foram mantidas; tente novamente com: {command}"
+model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."
 
 [errors.api]
 minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
@@ -60,7 +61,8 @@ open_issues = "Questões em aberto"
 [cli]
 serving = "API do motor escutando em {url} (Ctrl+C para parar)."
 serve_public_host = "Recusando escutar em {host}: a API do motor não tem autenticação. Use 127.0.0.1 ou localhost em API_HOST."
-loading_model = "Carregando o modelo de reconhecimento de fala..."
+loading_model = "Carregando o modelo de reconhecimento de fala — já gravando..."
+model_ready = "Modelo de reconhecimento de fala pronto."
 recording = "Gravando em {folder}"
 controls = "Pressione p + Enter para pausar ou retomar, Ctrl+C para parar."
 paused = "Pausado: o áudio é substituído por silêncio e não é transcrito. Pressione p + Enter para retomar."

@@ -90,7 +90,6 @@ def run_record(
         session = build(
             settings, console, language=language, mic_device=mic_device, system_device=system_device
         )
-        console.say(t("cli.loading_model"))
         session.start()
     except SessionStartError as error:
         console.say(str(error))

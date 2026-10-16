@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import queue
 import threading
 from collections.abc import Callable, Iterable
@@ -12,7 +13,7 @@ from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.levels import rms_db
 from vozata.audio.wav_writer import AlignedWavWriter
 from vozata.config import Settings
-from vozata.domain import AudioChunk, Channel, TranscriptSegment
+from vozata.domain import AudioChunk, Channel, TranscriptionResult, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
 from vozata.ports import Chunker, SessionObserver, Transcriber
@@ -23,12 +24,51 @@ from vozata.transcription.worker import TranscriptionWorker
 
 ChunkerFactory = Callable[[Channel, Callable[[AudioChunk], None]], Chunker]
 
+_log = logging.getLogger(__name__)
+
 
 def _fixed_windows(settings: Settings) -> ChunkerFactory:
     def build(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> Chunker:
         return FixedWindowChunker(channel, settings.chunk_seconds, settings.sample_rate, on_chunk)
 
     return build
+
+
+class _DeferredTranscriber:
+    """The session's transcriber, loaded by the transcription worker once capture is running."""
+
+    def __init__(
+        self,
+        factory: Callable[[], Transcriber],
+        observer: SessionObserver,
+        on_failed: Callable[[Exception], None],
+    ) -> None:
+        self._factory = factory
+        self._observer = observer
+        self._on_failed = on_failed
+        self.loaded: Transcriber | None = None
+
+    def load(self) -> bool:
+        self._observer.on_model_loading(True)
+        try:
+            self.loaded = self._factory()
+        except Exception as error:
+            _log.exception("Loading the speech model failed")
+            self._on_failed(error)
+            return False
+        finally:
+            self._observer.on_model_loading(False)
+        return True
+
+    def transcribe(
+        self, samples: np.ndarray, language: str | None, hints: str | None = None
+    ) -> TranscriptionResult:
+        if self.loaded is None:
+            raise RuntimeError("The speech model is not loaded")
+        return self.loaded.transcribe(samples, language, hints)
+
+    def close(self) -> None:  # the session releases `loaded` itself
+        pass
 
 
 class _ObserverSink:
@@ -55,8 +95,11 @@ class CapturePipeline:
     """Route captured samples to WAVs and transcription; segments go to files and the observer.
 
     `receiver(channel)` is the callback for that channel's source. Samples arriving after
-    `stop_capture()` (or before `accept()`) are ignored. Chunkers come from `chunker_factory`
-    (`CHUNKERS` in `bootstrap.py`); without one, fixed `CHUNK_SECONDS` windows are used.
+    `stop_capture()` (or before `accept()`) are ignored. `start_transcription()` loads the
+    transcriber on the worker thread; chunks captured meanwhile wait in the queue. A failed load
+    calls `on_load_failed` and the audio is only written to the WAVs. Chunkers come from
+    `chunker_factory` (`CHUNKERS` in `bootstrap.py`); without one, fixed `CHUNK_SECONDS` windows
+    are used.
     """
 
     def __init__(
@@ -64,11 +107,12 @@ class CapturePipeline:
         channels: Iterable[Channel],
         paths: SessionPaths,
         settings: Settings,
-        transcriber: Transcriber,
+        transcriber_factory: Callable[[], Transcriber],
         language: LanguageLock,
         labeler: SpeakerLabeler,
         observer: SessionObserver,
         chunker_factory: ChunkerFactory | None = None,
+        on_load_failed: Callable[[Exception], None] = lambda error: None,
     ) -> None:
         self._rate = settings.sample_rate
         new_chunker = chunker_factory or _fixed_windows(settings)
@@ -89,20 +133,30 @@ class CapturePipeline:
                 _ObserverSink(observer),
             ]
         )
+        self._transcriber = _DeferredTranscriber(transcriber_factory, observer, on_load_failed)
+        transcriber = self._transcriber
         ids = SegmentIds()
         stitchers = {
             channel: CarryOverStitcher(channel, transcriber, settings, language, ids.next)
             for channel in self._tracks
         }
-        self._worker = TranscriptionWorker(chunks, stitchers, self._sink)
-        self._worker.start()
+        self._worker = TranscriptionWorker(chunks, stitchers, self._sink, load=transcriber.load)
 
     @property
     def accepting(self) -> bool:
         return self._accepting
 
+    @property
+    def transcriber(self) -> Transcriber | None:
+        """The loaded transcriber (None before or after a failed load)."""
+        return self._transcriber.loaded
+
     def accept(self) -> None:
         self._accepting = True
+
+    def start_transcription(self) -> None:
+        """Load the transcriber on the worker thread, then transcribe the queued chunks."""
+        self._worker.start()
 
     def receiver(self, channel: Channel) -> Callable[[np.ndarray, float], None]:
         track = self._tracks[channel]

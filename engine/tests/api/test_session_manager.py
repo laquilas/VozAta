@@ -249,3 +249,21 @@ def test_events_while_the_session_id_is_not_readable_have_no_session_id(
     assert broadcaster.of("error")[0][0] is None
     manager.stop()
     assert manager.wait_until_finished(5)
+
+
+def test_model_loading_is_published_true_then_false(
+    manager: SessionManager, factory: SessionFactory, broadcaster: RecordingBroadcaster
+) -> None:
+    manager.start(OPTIONS)
+    observer = factory.sessions[0].observer
+
+    observer.on_model_loading(True)
+    observer.on_model_loading(False)
+    manager.stop()
+    assert manager.wait_until_finished(5)
+
+    session_id = "20261015_202358"
+    assert broadcaster.of("model_loading") == [
+        (session_id, {"loading": True}),
+        (session_id, {"loading": False}),
+    ]
