@@ -39,6 +39,7 @@ context**. Read only what the phase asks for.
 | [architecture.md](architecture.md) | Components, ports, SOLID mapping, data flow, stitching algorithm, data model, config keys, i18n, speaker identification, VRAM ordering, environment facts |
 | [api-contract.md](api-contract.md) | Engine HTTP endpoints and WebSocket events, each tagged with the phase that implements it |
 | [standards.md](standards.md) | Coding standards; the exact content of the three `CLAUDE.md` files created in phase 00 |
+| [optimizations.md](optimizations.md) | Proposals from reviewing `streaming-translator`: VAD (pause-based) segmentation, capture-first start, live interim text, rolling context prompt, live translation (not scheduled yet) |
 
 ## Status
 
@@ -128,6 +129,8 @@ graph LR
 - Additional LLM providers (OpenAI-compatible chat, Anthropic) behind `LanguageModel`.
 - Auto-detect meeting apps (Teams / Zoom / Meet audio sessions) and suggest recording.
 - WER benchmark harness with reference recordings to tune `CHUNK_SECONDS` and models.
+- Optimizations O1–O5 from [optimizations.md](optimizations.md) (VAD segmentation, capture-first
+  start, live partials, rolling prompt, live translation) — to be turned into phases.
 
 ## Phase file template
 
