@@ -53,3 +53,9 @@ public sealed partial class ChoiceOption(string value, string labelKey) : Observ
 
     public void Refresh(ILocalizationService localization) => Label = localization[LabelKey];
 }
+
+/// <summary>Read-only view of the string table for XAML bindings (<c>L[Key]</c>).</summary>
+public sealed class Strings(ILocalizationService localization)
+{
+    public string this[string key] => localization[key];
+}

@@ -27,4 +27,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="VozAta.Desktop.Tests" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

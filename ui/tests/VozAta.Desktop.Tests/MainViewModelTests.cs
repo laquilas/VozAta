@@ -316,6 +316,19 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Switching_the_ui_language_refreshes_bindings_to_the_string_table()
+    {
+        var viewModel = await ReadyAsync();
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "es");
+
+        Assert.Contains(nameof(MainViewModel.L), changed);  // `{Binding L[Key]}` re-reads every string
+        Assert.Equal("Iniciar grabación", viewModel.L["Start"]);
+    }
+
+    [Fact]
     public async Task The_event_loop_ends_quietly_when_the_stream_completes()
     {
         var viewModel = await ReadyAsync();

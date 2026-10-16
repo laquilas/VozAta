@@ -64,8 +64,8 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 - **Branch:** `feature/07-ui-skeleton`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:43
-- **Next step:** write `Views/MainWindow.axaml` (Start/Stop button with red recording indicator, language ComboBoxes, auto-scrolling transcript, notifications, status bar), a confirm dialog (`AvaloniaDialogService`), `appsettings.json` and the DI composition root in `App.axaml.cs` (window Closing → `ConfirmCloseAsync` → `ShutdownAsync`); then run the app manually.
+- **Updated:** 2026-10-16 10:02
+- **Next step:** verify everything (build, tests, format, coverage), tick the acceptance criteria, set the phase to done and open the PR.
 
 ### Steps
 
@@ -76,9 +76,9 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 - [x] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
       parity test, `IUiDispatcher` — `422167e`
 - [x] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
-      + tests
-- [ ] `MainWindow.axaml`, `App.axaml.cs` composition root
-- [ ] Manual: app starts the engine; Start → live lines; Stop → Finalizing → Idle; UI language
+      + tests — `1036014`
+- [x] `MainWindow.axaml`, `App.axaml.cs` composition root
+- [x] Manual: app starts the engine; Start → live lines; Stop → Finalizing → Idle; UI language
       switch
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
@@ -98,3 +98,22 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
   → Idle) and reads the elapsed time from them (the engine's 1 s heartbeat), so no UI timer is
   needed. `ShutdownAsync(maxWait)` waits for finalization before stopping an engine the UI
   started, so closing never kills the WAV/minutes step.
+- **Manual check (2026-10-16)**: the app was driven through Windows UI Automation (and used by
+  hand by the user at the same time):
+  - Launch with no engine running → the app started `python -m vozata serve` itself (healthy in
+    7–11 s); status bar: engine connected, RTX 3050 6 GB, `large-v3` on auto, Ollama ready.
+  - Interface language switched to pt-BR → every visible string changed (button, labels,
+    placeholder, status bar); the meeting language list relabelled itself.
+  - Start (meeting language Português) → "Gravando", elapsed time ticking, live coloured lines
+    (`[00:00:49] Others: Todos concordam?`); Stop → "Finalizando…" → "Pronto" with the
+    "A ata está pronta" notification.
+  - Closing the window while idle closed the app and stopped the engine it had started.
+- **Fixed during the manual check**: `{Binding L[Key]}` labels did not switch language (compiled
+  indexer bindings ignore `Item[]` notifications) → `L` is now a `Strings` wrapper replaced on
+  every switch; the Stop button was announced as "Avalonia.Controls.StackPanel" to UI
+  Automation/screen readers → `AutomationProperties.Name`; Stop turned grey on hover → `danger`
+  style for every state; the engine reported clock time (finalization included) in `finalizing`
+  / `done` status events → it now reports the recorded length.
+- Speaker labels ("Me"/"Others") come from the engine's `APP_LANGUAGE`, not the UI language;
+  phase 10 (settings) will let the UI change `APP_LANGUAGE`.
+- Starting a session blocks ~20–25 s on this machine while Whisper loads (status "Iniciando…").

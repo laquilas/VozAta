@@ -1,9 +1,128 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:vm="using:VozAta.Desktop.ViewModels"
+        xmlns:views="using:VozAta.Desktop.Views"
         x:Class="VozAta.Desktop.Views.MainWindow"
-        Title="VozAta.Desktop">
-    Welcome to Avalonia!
+        x:DataType="vm:MainViewModel"
+        Title="{Binding L[AppTitle]}"
+        Width="960" Height="680" MinWidth="640" MinHeight="420">
+
+  <Window.Styles>
+    <!-- Stop stays red in every state; Fluent would otherwise grey it on hover/press -->
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="#C62828" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#B71C1C" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#8E0000" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+    <!-- Status bar: engine, GPU, speech model, minutes model -->
+    <Border DockPanel.Dock="Bottom" Padding="12,6"
+            Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+      <WrapPanel>
+        <TextBlock Text="{Binding EngineText}" Margin="0,0,24,0" />
+        <TextBlock Text="{Binding GpuText}" Margin="0,0,24,0" />
+        <TextBlock Text="{Binding SpeechText}" Margin="0,0,24,0" />
+        <TextBlock Text="{Binding MinutesText}" />
+      </WrapPanel>
+    </Border>
+
+    <!-- Controls: Start/Stop, state, elapsed time, languages -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,8">
+      <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+        <Button Classes="accent" FontSize="18" Padding="28,14"
+                Command="{Binding StartCommand}"
+                IsVisible="{Binding !IsRecording}"
+                Content="{Binding L[Start]}" />
+        <Button Classes="danger" FontSize="18" Padding="28,14"
+                AutomationProperties.Name="{Binding L[Stop]}"
+                Command="{Binding StopCommand}"
+                IsVisible="{Binding IsRecording}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Rectangle Width="14" Height="14" Fill="White" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding L[Stop]}" />
+          </StackPanel>
+        </Button>
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Width="14" Height="14" Fill="#E53935" VerticalAlignment="Center"
+                     IsVisible="{Binding IsRecording}" />
+            <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
+          </StackPanel>
+          <TextBlock Text="{Binding Elapsed}" FontSize="22" FontFamily="Consolas, monospace" />
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Spacing="4" MinWidth="230">
+        <TextBlock Text="{Binding L[ConversationLanguage]}" />
+        <ComboBox HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding ConversationLanguages}"
+                  SelectedItem="{Binding SelectedLanguage}"
+                  IsEnabled="{Binding !IsRecording}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChoiceOption">
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Text="{Binding DetectedLanguage}" FontStyle="Italic"
+                   IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="{Binding L[InterfaceLanguage]}" Margin="0,6,0,0" />
+        <ComboBox HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding AppLanguages}"
+                  SelectedItem="{Binding SelectedAppLanguage}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChoiceOption">
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+    </Grid>
+
+    <!-- Notifications (engine errors, minutes ready) -->
+    <ItemsControl DockPanel.Dock="Top" Margin="16,0" ItemsSource="{Binding Notifications}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <Border Margin="0,4" Padding="12,8" CornerRadius="4" Background="#FFF3E0" BorderBrush="#FB8C00"
+                  BorderThickness="1">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Margin="12,0,0,0"
+                      Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Dismiss]}"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DismissNotificationCommand}"
+                      CommandParameter="{Binding}" />
+              <TextBlock Text="{Binding}" Foreground="#4E342E" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- Live transcript -->
+    <Border Margin="16,8,16,16" BorderThickness="1" CornerRadius="4"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+      <Panel>
+        <TextBlock Text="{Binding L[TranscriptEmpty]}" Opacity="0.6" Margin="16"
+                   TextWrapping="Wrap" IsVisible="{Binding !Segments.Count}" />
+        <ScrollViewer views:AutoScroll.IsEnabled="True">
+          <ItemsControl ItemsSource="{Binding Segments}" Margin="12">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TranscriptLine">
+                <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
+                                     TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Panel>
+    </Border>
+  </DockPanel>
 </Window>

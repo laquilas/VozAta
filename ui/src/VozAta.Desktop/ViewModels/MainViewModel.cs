@@ -15,6 +15,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly IEngineProcess _process;
     private readonly IUiDispatcher _dispatcher;
     private readonly IDialogService _dialogs;
+    private readonly ILocalizationService _localization;
     private readonly CancellationTokenSource _stop = new();
     private TaskCompletionSource _idle = NewIdleSignal(completed: true);
     private EngineHealth? _health;
@@ -33,7 +34,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _process = process;
         _dispatcher = dispatcher;
         _dialogs = dialogs;
-        L = localization;
+        _localization = localization;
+        L = new Strings(localization);
         ConversationLanguages =
         [
             new("en", "LanguageEn"), new("pt", "LanguagePt"), new("es", "LanguageEs"), new("auto", "LanguageAuto"),
@@ -45,8 +47,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshTexts();
     }
 
-    /// <summary>Localized strings for the view: <c>{Binding L[Start]}</c>.</summary>
-    public ILocalizationService L { get; }
+    /// <summary>
+    /// Localized strings for the view: <c>{Binding L[Start]}</c>. A new instance per language switch,
+    /// because compiled indexer bindings only re-read when the source object changes.
+    /// </summary>
+    [ObservableProperty]
+    public partial Strings L { get; private set; }
 
     public IReadOnlyList<ChoiceOption> ConversationLanguages { get; }
 
@@ -86,23 +92,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool IsRecording => State is RecordingState.Recording or RecordingState.Paused;
 
-    public string StatusText => L[$"State{State}"];
+    public string StatusText => _localization[$"State{State}"];
 
     public string EngineText => EngineStatus switch
     {
-        EngineStatus.Connected => L["EngineConnected"],
-        EngineStatus.Disconnected => L["EngineDisconnected"],
-        EngineStatus.Failed => L["EngineStartFailed"],
-        _ => L["EngineStarting"],
+        EngineStatus.Connected => _localization["EngineConnected"],
+        EngineStatus.Disconnected => _localization["EngineDisconnected"],
+        EngineStatus.Failed => _localization["EngineStartFailed"],
+        _ => _localization["EngineStarting"],
     };
 
     public string GpuText => _health is null ? "" : _health.Gpu.Available
-        ? L.Format("GpuName", _health.Gpu.Name, _health.Gpu.VramTotalMb)
-        : L["GpuNone"];
+        ? _localization.Format("GpuName", _health.Gpu.Name, _health.Gpu.VramTotalMb)
+        : _localization["GpuNone"];
 
-    public string SpeechText => _health is null ? "" : L.Format("SpeechModel", _health.Stt.Model, _health.Stt.Device);
+    public string SpeechText => _health is null ? "" : _localization.Format("SpeechModel", _health.Stt.Model, _health.Stt.Device);
 
-    public string MinutesText => _health is null ? "" : L.Format(
+    public string MinutesText => _health is null ? "" : _localization.Format(
         _health.Llm.Reachable ? "MinutesReachable" : "MinutesUnreachable", _health.Llm.Model);
 
     /// <summary>Connect to (or start) the engine, load its settings, then follow its events.</summary>
@@ -112,7 +118,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (await _process.EnsureRunningAsync(_stop.Token) == EngineStartResult.Failed)
         {
             EngineStatus = EngineStatus.Failed;
-            Notify(L["EngineStartFailed"]);
+            Notify(_localization["EngineStartFailed"]);
             return;
         }
 
@@ -143,7 +149,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         var confirmed = await _dialogs.ConfirmAsync(
-            L["ConfirmCloseTitle"], L["ConfirmCloseMessage"], L["ConfirmCloseYes"], L["ConfirmCloseNo"]);
+            _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]);
         if (confirmed)
         {
             await StopAsync();
@@ -162,7 +168,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        L.PropertyChanged -= OnLanguageChanged;
+        _localization.PropertyChanged -= OnLanguageChanged;
         _stop.Dispose();
     }
 
@@ -208,9 +214,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedAppLanguageChanged(ChoiceOption? value)
     {
-        if (value is not null && value.Value != L.Language)
+        if (value is not null && value.Value != _localization.Language)
         {
-            L.SetLanguage(value.Value);
+            _localization.SetLanguage(value.Value);
         }
     }
 
@@ -248,7 +254,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 RefreshDetectedLanguage();
                 break;
             case MinutesReadyEvent:
-                Notify(L["MinutesReady"]);
+                Notify(_localization["MinutesReady"]);
                 break;
             case ErrorEvent error:
                 Notify(error.Message);
@@ -297,11 +303,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private string ErrorText(Exception error) =>
-        error is EngineUnavailableException ? L["EngineUnavailable"] : error.Message;
+        error is EngineUnavailableException ? _localization["EngineUnavailable"] : error.Message;
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs args)
     {
-        SelectedAppLanguage = AppLanguages.FirstOrDefault(option => option.Value == L.Language) ?? AppLanguages[0];
+        SelectedAppLanguage = AppLanguages.FirstOrDefault(option => option.Value == _localization.Language) ?? AppLanguages[0];
+        L = new Strings(_localization);
         RefreshTexts();
     }
 
@@ -309,7 +316,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         foreach (var option in ConversationLanguages.Concat(AppLanguages))
         {
-            option.Refresh(L);
+            option.Refresh(_localization);
         }
 
         RefreshDetectedLanguage();
@@ -323,7 +330,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void RefreshDetectedLanguage()
     {
         var option = ConversationLanguages.FirstOrDefault(language => language.Value == _detectedLanguage);
-        DetectedLanguage = option is null ? null : L.Format("DetectedLanguage", option.Label);
+        DetectedLanguage = option is null ? null : _localization.Format("DetectedLanguage", option.Label);
     }
 
     private static TaskCompletionSource NewIdleSignal(bool completed)
