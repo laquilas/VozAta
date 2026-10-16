@@ -185,3 +185,45 @@ def test_invalid_transcription_values_raise(key: str, value: str) -> None:
         load_settings(env={key: value})
 
     assert caught.value.key == key
+
+
+def test_minutes_defaults() -> None:
+    settings = load_settings(env={})
+
+    assert settings.llm_provider == "ollama"
+    assert settings.ollama_url == "http://localhost:11434"
+    assert settings.ollama_model == "qwen2.5:7b"
+    assert settings.llm_max_chars == 12000
+
+
+def test_minutes_values_are_parsed() -> None:
+    settings = load_settings(
+        env={
+            "LLM_PROVIDER": "custom",
+            "OLLAMA_URL": "https://ollama.lan:8443/",
+            "OLLAMA_MODEL": "qwen2.5:3b",
+            "LLM_MAX_CHARS": "20000",
+        }
+    )
+
+    assert settings.llm_provider == "custom"
+    assert settings.ollama_url == "https://ollama.lan:8443"  # trailing slash dropped
+    assert settings.ollama_model == "qwen2.5:3b"
+    assert settings.llm_max_chars == 20000
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "message_key"),
+    [
+        ("OLLAMA_URL", "localhost:11434", "invalid_url"),
+        ("OLLAMA_URL", "ftp://host", "invalid_url"),
+        ("LLM_MAX_CHARS", "999", "out_of_range"),
+        ("LLM_MAX_CHARS", "many", "not_a_number"),
+    ],
+)
+def test_invalid_minutes_values_raise(key: str, value: str, message_key: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert (caught.value.key, caught.value.message_key) == (key, message_key)
+    assert key in str(caught.value)
