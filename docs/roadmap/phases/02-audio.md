@@ -63,3 +63,27 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 
 > Execute phase 02 of the roadmap (`docs/roadmap/phases/02-audio.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/02-audio`
+- **Status:** in progress
+- **Updated:** 2026-10-16 01:10
+- **Next step:** TDD `audio/levels.py` and `audio/clock.py` (`tests/audio/test_levels.py`, `tests/audio/test_clock.py`), see them fail, then implement.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section
+- [ ] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`)
+- [ ] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding
+- [ ] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause
+- [ ] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config
+- [ ] `audio/devices.py` (testable with a fake PyAudio)
+- [ ] `audio/capture.py` (`WasapiSource`) + `engine/scripts/smoke_capture.py`; run the smoke check
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- **`at` in `AudioSink.write(samples, at)`** is the session time of the block's first sample. `WasapiSource` timestamps blocks in the PortAudio callback and subtracts the block duration.
+- **Chunker gap fill**: the chunker fills loopback gaps with zeros (same 0.15 s tolerance as the writer), so window `start` values follow the session clock. Pausing flushes the partial window and drops audio; windows restart at the resume time.
+- **Equal length**: `AlignedWavWriter.samples_written` lets the session (05) finalize every WAV to the longest one; `finalize` pads and never truncates.
