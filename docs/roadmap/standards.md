@@ -42,6 +42,7 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 ## Global rules
 
 - **English only** for code, comments, docs, commits, branch names, defaults and log messages.
+- Diagrams in Markdown docs use **Mermaid** code blocks (` ```mermaid `), never ASCII art or images.
 - User-facing text and LLM prompts are **never hard-coded**: they come from locale resources in
   `en` (default), `pt-BR` and `es`. Every new key is added to all three.
 - **SOLID**: depend on ports (interfaces), not concrete classes; concrete classes are wired only in
