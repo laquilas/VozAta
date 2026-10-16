@@ -6,7 +6,7 @@ import pytest
 
 from tests.fakes import FakeLocalizer
 from vozata.config import ConfigError, Settings, load_settings
-from vozata.domain import AppLanguage, ConversationLanguage
+from vozata.domain import AppLanguage, ConversationLanguage, WhisperDevice
 
 
 def test_defaults_when_nothing_is_set() -> None:
@@ -129,3 +129,59 @@ def test_process_environment_is_used_when_no_mapping_is_given(
 
 def test_explicit_supported_sample_rate_is_accepted() -> None:
     assert load_settings(env={"SAMPLE_RATE": "16000"}).sample_rate == 16000
+
+
+def test_transcription_defaults() -> None:
+    settings = load_settings(env={})
+
+    assert settings.tail_margin_seconds == 0.6
+    assert settings.pause_gap_seconds == 0.5
+    assert settings.max_carry_seconds == 15.0
+    assert settings.silence_rms_threshold == 0.01
+    assert settings.stt_provider == "faster_whisper"
+    assert settings.whisper_model == "large-v3-turbo"
+    assert settings.whisper_device is WhisperDevice.AUTO
+    assert settings.whisper_compute_type == "int8_float16"
+    assert settings.whisper_cpu_model == "small"
+
+
+def test_transcription_values_are_parsed() -> None:
+    settings = load_settings(
+        env={
+            "TAIL_MARGIN_SECONDS": "0.4",
+            "PAUSE_GAP_SECONDS": "0.8",
+            "MAX_CARRY_SECONDS": "20",
+            "SILENCE_RMS_THRESHOLD": "0.02",
+            "STT_PROVIDER": "openai_compatible",
+            "WHISPER_MODEL": "medium",
+            "WHISPER_DEVICE": "cpu",
+            "WHISPER_COMPUTE_TYPE": "float16",
+            "WHISPER_CPU_MODEL": "base",
+        }
+    )
+
+    assert (settings.tail_margin_seconds, settings.pause_gap_seconds) == (0.4, 0.8)
+    assert (settings.max_carry_seconds, settings.silence_rms_threshold) == (20.0, 0.02)
+    assert settings.stt_provider == "openai_compatible"
+    assert (settings.whisper_model, settings.whisper_cpu_model) == ("medium", "base")
+    assert settings.whisper_device is WhisperDevice.CPU
+    assert settings.whisper_compute_type == "float16"
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("TAIL_MARGIN_SECONDS", "-0.1"),
+        ("TAIL_MARGIN_SECONDS", "6"),
+        ("PAUSE_GAP_SECONDS", "0"),
+        ("MAX_CARRY_SECONDS", "0.5"),
+        ("MAX_CARRY_SECONDS", "121"),
+        ("SILENCE_RMS_THRESHOLD", "1.5"),
+        ("WHISPER_DEVICE", "tpu"),
+    ],
+)
+def test_invalid_transcription_values_raise(key: str, value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert caught.value.key == key

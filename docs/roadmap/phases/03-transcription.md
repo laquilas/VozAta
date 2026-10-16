@@ -69,13 +69,13 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
-- **Updated:** 2026-10-16 01:30
-- **Next step:** add the phase 03 config keys (`TAIL_MARGIN_SECONDS`, `PAUSE_GAP_SECONDS`, `MAX_CARRY_SECONDS`, `SILENCE_RMS_THRESHOLD`, `STT_PROVIDER`, `WHISPER_*`) to `config.py` test-first.
+- **Updated:** 2026-10-15 23:14
+- **Next step:** TDD `transcription/language_lock.py`: `tests/transcription/test_language_lock.py` (fixed passthrough, auto returns None until ≥ 3 s of speech, majority lock, single callback, unsupported languages ignored), see it fail, then implement.
 
 ### Steps
 
-- [x] Start phase: status `in progress`, Progress section
-- [ ] Config keys owned by 03 (`config.py`; `.env.example` already lists them)
+- [x] Start phase: status `in progress`, Progress section — `ff41b35`
+- [x] Config keys owned by 03 (`config.py`; `.env.example` already lists them)
 - [ ] `transcription/language_lock.py` (`LanguageLock`)
 - [ ] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite
 - [ ] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`)
@@ -89,3 +89,4 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - **No sample recording** exists in `__legacy__/gravacoes/`; the GPU smoke test uses `engine/tests/data/speech_en.wav`, synthetic speech generated with Windows TTS (SAPI writes directly to a file, no audio device).
 - **Language provider**: the stitcher depends on a small protocol (`current() -> str | None`, `observe(language, speech_seconds)`); `LanguageLock` implements it. Detected languages outside en/pt/es do not count toward the lock.
 - **Model cache**: the `large-v3-turbo` cache (344 MB) looks incomplete and `small` is not cached; first runs download them with `HF_HUB_DISABLE_XET=1` (the xet protocol hung on this machine before).
+- Ranges: `TAIL_MARGIN_SECONDS` [0, 5], `PAUSE_GAP_SECONDS` [0.05, 5], `MAX_CARRY_SECONDS` [1, 120], `SILENCE_RMS_THRESHOLD` [0, 1]; `STT_PROVIDER` is validated against the registry in `bootstrap.py` (05), not here.

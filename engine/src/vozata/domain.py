@@ -39,6 +39,12 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class WhisperDevice(StrEnum):
+    AUTO = "auto"
+    CUDA = "cuda"
+    CPU = "cpu"
+
+
 @dataclass(frozen=True, eq=False)
 class AudioChunk:
     """Float32 mono samples at the session sample rate, starting at `start`."""
