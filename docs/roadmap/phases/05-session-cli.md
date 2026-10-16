@@ -70,14 +70,13 @@ HTTP API (06), UI (07+).
 
 - **Branch:** `feature/05-session-cli`
 - **Status:** in progress
-- **Updated:** 2026-10-16 08:45
-- **Next step:** add `GENERATE_MINUTES` to `config.py` (`_flag` parser, `invalid_choice` on bad
-  values) with tests in `tests/test_config.py`.
+- **Updated:** 2026-10-16 08:07
+- **Next step:** write `tests/storage/test_session_store.py`, then `storage/session_store.py` (`SessionStore`: create, paths, atomic write_meta/read_meta, list_sessions, load_transcript precedence, discard).
 
 ### Steps
 
-- [x] Start phase: status in progress, Progress section
-- [ ] `GENERATE_MINUTES` config key
+- [x] Start phase: status in progress, Progress section — `faabf68`
+- [x] `GENERATE_MINUTES` config key
 - [ ] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests
 - [ ] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout
 - [ ] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,

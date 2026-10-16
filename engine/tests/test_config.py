@@ -237,3 +237,24 @@ def test_invalid_minutes_values_raise(key: str, value: str, message_key: str) ->
 
     assert (caught.value.key, caught.value.message_key) == (key, message_key)
     assert key in str(caught.value)
+
+
+def test_generate_minutes_defaults_to_true() -> None:
+    assert load_settings(env={}).generate_minutes is True
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("true", True), ("TRUE", True), ("1", True), ("yes", True), ("false", False), ("0", False)],
+)
+def test_generate_minutes_accepts_boolean_words(value: str, expected: bool) -> None:
+    assert load_settings(env={"GENERATE_MINUTES": value}).generate_minutes is expected
+
+
+def test_invalid_generate_minutes_names_the_allowed_values() -> None:
+    with pytest.raises(ConfigError) as error:
+        load_settings(env={"GENERATE_MINUTES": "maybe"})
+
+    assert error.value.key == "GENERATE_MINUTES"
+    assert error.value.message_key == "invalid_choice"
+    assert error.value.params == {"allowed": "true, false"}
