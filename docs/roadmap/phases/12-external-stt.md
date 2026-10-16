@@ -64,16 +64,16 @@ Parallel requests, streaming/realtime APIs, diarization from providers.
 
 - **Branch:** `feature/12-external-stt`
 - **Status:** in progress
-- **Updated:** 2026-10-17 00:05
-- **Next step:** register `openai_compatible` in `TRANSCRIBERS`; CLI `record` prints "audio is sent to <host>" at start; `GET /health` reports the provider host as the STT device so the desktop status bar names it; tests
+- **Updated:** 2026-10-17 00:20
+- **Next step:** manual check: a session with `STT_PROVIDER=openai_compatible` against a self-hosted OpenAI-compatible server (scratch FastAPI app over faster-whisper large-v3) — latency per window, transcript quality, CLI notice, health host; OpenAI / Groq run pending a key; tick criteria
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] Config keys (+ settings page labels and help) — `026e6ed`
 - [x] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts) — `687cdab`
-- [x] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start) — this commit
-- [ ] Registry, privacy notice (CLI at session start; health shows the provider host)
+- [x] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start) — `812bddf`
+- [x] Registry, privacy notice (CLI at session start; health shows the provider host) — this commit
 - [ ] Manual: a session against an OpenAI-compatible endpoint; criteria
 
 ### Decisions and notes

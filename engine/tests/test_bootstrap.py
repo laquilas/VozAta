@@ -71,6 +71,7 @@ def _settings(tmp_path: Path, **overrides: object) -> Settings:
 
 def test_registries_hold_the_default_providers() -> None:
     assert bootstrap.TRANSCRIBERS["faster_whisper"] is FasterWhisperTranscriber
+    assert bootstrap.TRANSCRIBERS["openai_compatible"].__name__ == "from_settings"
     assert bootstrap.MIXERS[MixMode.MONO] is MonoMixer
     assert bootstrap.MIXERS[MixMode.STEREO] is StereoMixer
     settings = Settings(ollama_model="qwen2.5:3b", ollama_keep_alive="10m")

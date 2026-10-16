@@ -14,6 +14,7 @@ from vozata.config import Settings
 from vozata.domain import ConversationLanguage, SessionStatus
 from vozata.ports import Localizer, SessionObserver
 from vozata.session import SessionStartError
+from vozata.transcription.openai_compatible import remote_host
 
 WAIT_SLICE = 0.2  # Windows only delivers Ctrl+C between waits
 
@@ -90,6 +91,8 @@ def run_record(
         session = build(
             settings, console, language=language, mic_device=mic_device, system_device=system_device
         )
+        if (host := remote_host(settings)) is not None:
+            console.say(t("cli.remote_stt", host=host))  # privacy: audio is about to leave
         session.start()
     except SessionStartError as error:
         console.say(str(error))

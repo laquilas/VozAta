@@ -44,11 +44,13 @@ from vozata.ports import (
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
+from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
 
 TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
+    "openai_compatible": openai_compatible.from_settings,
 }
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(

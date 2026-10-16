@@ -186,3 +186,20 @@ def test_a_build_failure_prints_the_localized_error_and_exits_1() -> None:
 
     assert code == 1
     assert out.getvalue().splitlines() == ["Windows audio did not respond."]
+
+
+def test_a_remote_speech_api_is_announced_before_recording() -> None:
+    session = _FakeSession()
+    out = io.StringIO()
+    localizer = FakeLocalizer()
+    console = ConsoleObserver(localizer, SpeakerLabeler(localizer), out)
+    settings = Settings(
+        stt_provider="openai_compatible", openai_stt_url="https://api.openai.com/v1"
+    )
+
+    run_record(
+        settings, console, localizer, _Builder(session),
+        language=None, mic_device=None, system_device=None, stdin=io.StringIO(""), wait=_interrupt,
+    )  # fmt: skip
+
+    assert out.getvalue().splitlines()[0] == "cli.remote_stt(host=api.openai.com)"

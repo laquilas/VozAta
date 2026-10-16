@@ -101,6 +101,13 @@ class OpenAICompatibleTranscriber:
         return response.json()
 
 
+def remote_host(settings: Settings) -> str | None:
+    """The host audio is sent to, or None when transcription runs on this machine."""
+    if settings.stt_provider != "openai_compatible":
+        return None
+    return urlparse(settings.openai_stt_url).hostname or settings.openai_stt_url
+
+
 def from_settings(settings: Settings) -> OpenAICompatibleTranscriber:
     """`TRANSCRIBERS["openai_compatible"]`."""
     return OpenAICompatibleTranscriber(
