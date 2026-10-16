@@ -7,9 +7,14 @@ env/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
 
 # Recordings and transcripts (meeting data; do not commit)
 gravacoes/
+recordings/
 *.wav
 
 # IDE and operating system files
@@ -24,6 +29,8 @@ __*__/
 # C# / .NET
 bin/
 obj/
+ui/**/bin/
+ui/**/obj/
 .vs/
 *.user
 *.suo

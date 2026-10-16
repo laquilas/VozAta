@@ -20,9 +20,9 @@ conversation-language selector, live transcript, health status bar, localization
 | Item | Content |
 |------|---------|
 | Prerequisite | **.NET SDK is not installed.** Ask the user, then `winget install Microsoft.DotNet.SDK.10`; `dotnet new install Avalonia.Templates` |
-| `ui/MeetingMinutes.sln` | three projects from `ui/CLAUDE.md` |
-| `MeetingMinutes.Client` | `IEngineClient` (health, devices, sessions CRUD rows tagged 06, settings GET), `EngineClient` (HttpClient, snake_case JSON), `IEngineEvents` exposing `IAsyncEnumerable<EngineEvent>` over `ClientWebSocket` with auto-reconnect + backoff; DTO records |
-| `Services/EngineProcess.cs` | `IEngineProcess`: if `/health` fails, start `{Engine:PythonPath} -m meeting_minutes serve` in `{Engine:WorkingDirectory}` (from `appsettings.json`, defaults `../.venv/Scripts/python.exe` and `../engine`), wait for health (timeout 60 s, model load), stop it on exit only if the UI started it |
+| `ui/VozAta.sln` | three projects from `ui/CLAUDE.md` |
+| `VozAta.Client` | `IEngineClient` (health, devices, sessions CRUD rows tagged 06, settings GET), `EngineClient` (HttpClient, snake_case JSON), `IEngineEvents` exposing `IAsyncEnumerable<EngineEvent>` over `ClientWebSocket` with auto-reconnect + backoff; DTO records |
+| `Services/EngineProcess.cs` | `IEngineProcess`: if `/health` fails, start `{Engine:PythonPath} -m vozata serve` in `{Engine:WorkingDirectory}` (from `appsettings.json`, defaults `../.venv/Scripts/python.exe` and `../engine`), wait for health (timeout 60 s, model load), stop it on exit only if the UI started it |
 | `ViewModels/MainViewModel.cs` | state machine `Idle → Starting → Recording → Finalizing → Idle`; `StartCommand`, `StopCommand`; elapsed time; `ConversationLanguages` (`en`, `pt`, `es`, `auto`) with default from `GET /settings` `TRANSCRIPTION_LANGUAGE`; `Segments` collection; detected-language badge |
 | `Views/MainWindow.axaml` | big Start/Stop button with a clear red recording indicator, language ComboBox, auto-scrolling transcript (`[hh:mm:ss] Label: text`, colour per speaker), status bar (engine, GPU, STT device, LLM reachable) |
 | `Resources/Strings.resx`, `Strings.pt-BR.resx`, `Strings.es.resx` + `ILocalizationService` | runtime culture switch; initial language = engine `APP_LANGUAGE` |
@@ -48,7 +48,7 @@ conversation-language selector, live transcript, health status bar, localization
 
 ## Tests
 
-`MeetingMinutes.Desktop.Tests/MainViewModelTests.cs`, `EngineClientTests.cs`,
+`VozAta.Desktop.Tests/MainViewModelTests.cs`, `EngineClientTests.cs`,
 `LocalizationResourcesTests.cs`, `EngineProcessTests.cs` (with a fake process runner).
 
 ## Out of scope

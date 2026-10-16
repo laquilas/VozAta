@@ -34,7 +34,7 @@ the terminal, pause/resume, stop with the fixed finalization order, three WAVs a
 - `session.json` updated on every status change; `language` + `language_source`
   (`selected` / `detected`) written when known.
 - Minutes failure (LLM down) must not lose anything: log, emit `on_error`, print how to retry with
-  `python -m meeting_minutes minutes <dir>`.
+  `python -m vozata minutes <dir>`.
 - `minutes <dir>` uses `load_transcript` and the language stored in `session.json`.
 - Echo, diarization, recovery and search hooks are added by later phases — keep `stop()` steps as
   small private methods so they can be extended without rewriting it.
@@ -46,7 +46,7 @@ the terminal, pause/resume, stop with the fixed finalization order, three WAVs a
       mixer, `transcriber.close()` before minutes); minutes failure keeps status `done` with an
       error event.
 - [ ] `session.json` content matches architecture §8 for a fake run.
-- [ ] Manual E2E (record in the PR): `python -m meeting_minutes record --language pt`, play a video
+- [ ] Manual E2E (record in the PR): `python -m vozata record --language pt`, play a video
       and speak for ~1 min → lines every ~`CHUNK_SECONDS`, no words cut mid-way; Ctrl+C → `mic.wav`,
       `system.wav`, `mixed.wav` equal length, `minutes.md` generated with Ollama running.
 - [ ] Changing `CHUNK_SECONDS` and `MIX_MODE` in `.env` changes behaviour without code changes.

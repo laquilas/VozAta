@@ -1,4 +1,4 @@
-# Meeting Minutes
+# VozAta
 
 Near-real-time meeting transcription (microphone + system audio) and LLM-generated meeting
 minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HTTP/WebSocket API.
@@ -11,9 +11,6 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
   `docs/roadmap/README.md`.**
 - `__legacy__/` — old prototypes. Read-only reference: never edit, never import from it.
 - `.venv/` — shared Python virtualenv at the repo root.
-
-Until `engine/CLAUDE.md` and `ui/CLAUDE.md` exist (roadmap phase 00), follow the matching sections
-of `docs/roadmap/standards.md`.
 
 ## Session workflow
 
@@ -34,11 +31,13 @@ of `docs/roadmap/standards.md`.
 ## Global rules
 
 - **English only** for code, comments, docs, commits, branch names, defaults and log messages.
+- **Line endings**: LF everywhere, enforced by `.gitattributes` (`* text=auto eol=lf`; only `.sln`,
+  `.bat` and `.cmd` use CRLF). It overrides the machine-level `core.autocrlf=true`; never commit CRLF.
 - Diagrams in Markdown docs use **Mermaid** code blocks (` ```mermaid `), never ASCII art or images.
 - User-facing text and LLM prompts are **never hard-coded**: they come from locale resources in
   `en` (default), `pt-BR` and `es`. Every new key is added to all three.
 - **SOLID**: depend on ports (interfaces), not concrete classes; concrete classes are wired only in
-  the composition root (`engine/src/meeting_minutes/bootstrap.py`, `ui/.../App.axaml.cs`); new
+  the composition root (`engine/src/vozata/bootstrap.py`, `ui/.../App.axaml.cs`); new
   providers are added through registries, not by editing orchestrators.
 - Every new class, branch and bug fix gets unit tests; diff coverage ≥ 80 %.
 - Unit tests never touch audio hardware, GPU, network or real LLMs — use fakes.

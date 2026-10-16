@@ -8,16 +8,16 @@ in the same branch.
 | Item | State |
 |------|-------|
 | OS | Windows 11 Pro |
-| Python | 3.13, virtualenv at repo root `.venv/` (reused by the engine — do not move it) |
+| Python | 3.13, virtualenv at repo root `.venv/` (reused by the engine — do not move it). On the reference machine `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive), because the repo lives in OneDrive |
 | Installed in `.venv` | faster-whisper 1.2, ctranslate2, nvidia-cublas-cu12, nvidia-cudnn-cu12 9, PyAudioWPatch, soxr, numpy 2 |
 | GPU | NVIDIA RTX 3050 Laptop, **6 GB VRAM** |
 | Tools | ffmpeg, git, gh, docker |
 | Missing | **.NET SDK** (install .NET 10 LTS in phase 07), Ollama CLI not on PATH (install + `ollama pull` in phase 04) |
-| Repo | not a git repository yet (phase 00) |
+| Repo | GitHub `laquilas/VozAta` (public), default branch `main`; CI on pull requests into and pushes to `main` |
 
 ### Legacy code (`__legacy__/`, read-only reference)
 
-Working prototypes on this machine. Adapt their logic; never import from them.
+Working prototypes on this machine, **not published** (git-ignored; copy them from `<prototype-workspace>/__legacy__`). Adapt their logic; never import from them.
 
 | File | Reuse |
 |------|-------|
@@ -34,7 +34,7 @@ docs/roadmap/               this roadmap
 engine/
   pyproject.toml
   .env.example
-  src/meeting_minutes/
+  src/vozata/
     __main__.py             CLI: record | minutes | recover | reindex | serve
     config.py               Settings (only module reading env vars)
     domain.py               dataclasses / enums (no I/O)
@@ -60,10 +60,10 @@ engine/
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
-  MeetingMinutes.sln
-  src/MeetingMinutes.Client/        IEngineClient, DTOs, WebSocket event stream
-  src/MeetingMinutes.Desktop/       Avalonia app (Views, ViewModels, Services, Resources/Strings*.resx)
-  tests/MeetingMinutes.Desktop.Tests/
+  VozAta.sln
+  src/VozAta.Client/        IEngineClient, DTOs, WebSocket event stream
+  src/VozAta.Desktop/       Avalonia app (Views, ViewModels, Services, Resources/Strings*.resx)
+  tests/VozAta.Desktop.Tests/
 ```
 
 ## 3. SOLID mapping

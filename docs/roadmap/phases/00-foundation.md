@@ -23,10 +23,10 @@ Nothing.
 | `engine/CLAUDE.md` | copy of "engine/CLAUDE.md" from `standards.md` |
 | `ui/CLAUDE.md` | copy of "ui/CLAUDE.md" from `standards.md` |
 | `.gitignore` | add `.env`, `recordings/`, `.coverage`, `htmlcov/`, `ui/**/bin/`, `ui/**/obj/`, `*.user`, `.ruff_cache/` (keep the existing `!__legacy__/` exception) |
-| `engine/pyproject.toml` | project `meeting-minutes`, `requires-python >= 3.13`, src layout, deps below, ruff + pytest + coverage config |
+| `engine/pyproject.toml` | project `vozata`, `requires-python >= 3.13`, src layout, deps below, ruff + pytest + coverage config |
 | `engine/.env.example` | keys owned by phases 01–05 (architecture §9), each with a one-line comment |
-| `engine/src/meeting_minutes/__init__.py` | `__version__ = "0.1.0"` |
-| `engine/src/meeting_minutes/__main__.py` | prints the version (replaced in phase 05) |
+| `engine/src/vozata/__init__.py` | `__version__ = "0.1.0"` |
+| `engine/src/vozata/__main__.py` | prints the version (replaced in phase 05) |
 | `engine/tests/test_smoke.py` | imports the package, checks `__version__` |
 | `.github/workflows/ci.yml` | `engine` job on `windows-latest`: setup Python 3.13, `pip install -e "engine[dev]"`, ruff check, ruff format --check, pytest |
 
@@ -52,14 +52,15 @@ Dependencies:
 
 ## Acceptance criteria
 
-- [ ] Three `CLAUDE.md` files exist and match `standards.md`.
-- [ ] `pip install -e "engine[dev]"` succeeds in `.venv`.
-- [ ] `pytest`, `ruff check`, `ruff format --check` pass from `engine/`.
-- [ ] `python -m meeting_minutes` prints the version.
-- [ ] Repository initialized as approved by the user; `__legacy__/` is tracked, `.env` and
-      `recordings/` are ignored (`git check-ignore` confirms).
-- [ ] CI workflow green (if a remote was created).
-- [ ] README status for 00 set to `done`.
+- [x] Three `CLAUDE.md` files exist and match `standards.md`.
+- [x] `pip install -e "engine[dev]"` succeeds in `.venv`.
+- [x] `pytest`, `ruff check`, `ruff format --check` pass from `engine/`.
+- [x] `python -m vozata` prints the version.
+- [x] Repository initialized as approved by the user; `__legacy__/` is tracked, `.env` and
+      `recordings/` are ignored (`git check-ignore` confirms). *Revised by the user: the repo
+      already existed, and `__legacy__/` is kept local and ignored instead of tracked.*
+- [x] CI workflow green (if a remote was created).
+- [x] README status for 00 set to `done`.
 
 ## Tests
 
@@ -73,3 +74,35 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 > Execute phase 00 of the roadmap: read `docs/roadmap/README.md` and
 > `docs/roadmap/phases/00-foundation.md` and follow them. Ask me before initializing git.
+
+## Progress
+
+- **Branch:** `feature/00-foundation`
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 00:05
+- **Next step:** none; open the PR (`pr-ready` → `pr-open` → `pr-review`) and merge after CI on the PR is green.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section — `066d350`
+- [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `f40d17a`
+- [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `093809a`, `92610d2`
+- [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
+- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `bc79b8f`
+- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `589d292`
+- [x] `engine/.env.example` with phase 01–05 keys — `6ca764d`
+- [x] `.github/workflows/ci.yml` and green CI — `627c4c7`, `e55d2ba` ([run](https://github.com/laquilas/VozAta/actions/runs/38835791812))
+- [x] Update architecture §1 environment facts; tick acceptance criteria; set phase `done` — `9ea2871`
+
+### Decisions and notes
+
+- **Git bootstrap skipped**: the repository already exists with a public remote `laquilas/VozAta` on `main`; the phase uses the normal feature-branch flow.
+- **Package name `vozata`** (user decision): product and repo are VozAta and `meeting-minutes` is generic. Docs renamed `meeting_minutes`/`meeting-minutes` → `vozata` and `MeetingMinutes` → `VozAta`. UI projects become `VozAta.*`.
+- **`.venv`** (user decision): the repo lives in OneDrive and had no venv. `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive) (Python 3.13.12 with faster-whisper 1.2.1, ctranslate2, cuBLAS/cuDNN 9, PyAudioWPatch, soxr, numpy 2) so OneDrive does not sync 2.3 GB. Recreate with `New-Item -ItemType Junction -Path .venv -Target <venv>` on a fresh clone.
+- **`__legacy__/`** (user decision, revised): kept locally (copied from `<prototype-workspace>/__legacy__`) but **not published**; it stays ignored by `__*__/`. On a fresh clone, copy it from there. The acceptance criterion "`__legacy__/` is tracked" no longer applies.
+- `pyproject.toml` has no `readme` field: setuptools refuses files outside the package root (`../README.md`).
+- `test_running_as_module_prints_version` covers `python -m vozata` through `runpy`, so the `__main__` guard counts toward coverage (100 %).
+- **CI triggers** (user decision): only `pull_request` into `main` and `push` to `main`; pushes to `feature/*` do not run CI. The first run (on `feature/**` before this change) installed and passed lint, format and tests.
+- **History rewrite** (user decision): `__legacy__/` was stripped from every commit of this branch with `git filter-branch` and the branch was force-pushed, so the prototypes never reach the public history. SHAs above are post-rewrite.
+- **Line endings** (user request): `.gitattributes` pins LF (`* text=auto eol=lf`; CRLF only for `.sln`, `.bat`, `.cmd`), overriding the machine-level `core.autocrlf=true` that produced the "LF will be replaced by CRLF" warnings. The rule is in the root `CLAUDE.md` and its copy in `standards.md`.
+- **No machine-specific paths** (user request): local paths are written as placeholders (`<local-venv>`, `<prototype-workspace>`); the branch history was rewritten to remove the real ones.

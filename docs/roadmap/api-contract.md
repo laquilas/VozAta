@@ -1,6 +1,6 @@
 # Engine API contract
 
-Single source of truth for the engine (Python, FastAPI) and the UI (`MeetingMinutes.Client`).
+Single source of truth for the engine (Python, FastAPI) and the UI (`VozAta.Client`).
 Every endpoint and event is tagged with the phase that implements it; a phase implements only its
 own rows. Changing a row requires updating both sides.
 

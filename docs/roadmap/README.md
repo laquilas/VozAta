@@ -1,4 +1,4 @@
-# Meeting Minutes — Roadmap
+# VozAta — Roadmap
 
 Near-real-time meeting transcription (microphone + system audio) with LLM-generated meeting
 minutes. A Python **engine** (capture, speech-to-text, minutes) exposes a local HTTP + WebSocket
@@ -43,7 +43,7 @@ context**. Read only what the phase asks for.
 
 | # | Phase | Depends on | Status |
 |---|-------|------------|--------|
-| 00 | [Foundation](phases/00-foundation.md) | — | todo |
+| 00 | [Foundation](phases/00-foundation.md) | — | done |
 | 01 | [Engine core](phases/01-engine-core.md) | 00 | todo |
 | 02 | [Audio capture and files](phases/02-audio.md) | 01 | todo |
 | 03 | [Transcription](phases/03-transcription.md) | 01 | todo |

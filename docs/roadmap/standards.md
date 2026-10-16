@@ -9,7 +9,7 @@ source of truth and this file is only updated together with them.
 ## Root `CLAUDE.md`
 
 ````markdown
-# Meeting Minutes
+# VozAta
 
 Near-real-time meeting transcription (microphone + system audio) and LLM-generated meeting
 minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HTTP/WebSocket API.
@@ -42,11 +42,13 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 ## Global rules
 
 - **English only** for code, comments, docs, commits, branch names, defaults and log messages.
+- **Line endings**: LF everywhere, enforced by `.gitattributes` (`* text=auto eol=lf`; only `.sln`,
+  `.bat` and `.cmd` use CRLF). It overrides the machine-level `core.autocrlf=true`; never commit CRLF.
 - Diagrams in Markdown docs use **Mermaid** code blocks (` ```mermaid `), never ASCII art or images.
 - User-facing text and LLM prompts are **never hard-coded**: they come from locale resources in
   `en` (default), `pt-BR` and `es`. Every new key is added to all three.
 - **SOLID**: depend on ports (interfaces), not concrete classes; concrete classes are wired only in
-  the composition root (`engine/src/meeting_minutes/bootstrap.py`, `ui/.../App.axaml.cs`); new
+  the composition root (`engine/src/vozata/bootstrap.py`, `ui/.../App.axaml.cs`); new
   providers are added through registries, not by editing orchestrators.
 - Every new class, branch and bug fix gets unit tests; diff coverage ≥ 80 %.
 - Unit tests never touch audio hardware, GPU, network or real LLMs — use fakes.
@@ -63,16 +65,16 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 
 ## Stack
 
-Python 3.13 · src layout `engine/src/meeting_minutes/` · virtualenv at repo root `.venv/` ·
+Python 3.13 · src layout `engine/src/vozata/` · virtualenv at repo root `.venv/` ·
 faster-whisper (CUDA via pip `nvidia-*` wheels) · PyAudioWPatch (WASAPI loopback) · soxr ·
 numpy · FastAPI + uvicorn · httpx · python-dotenv · pytest · ruff.
 
 ## Commands (run from `engine/`)
 
 - Install: `../.venv/Scripts/python -m pip install -e ".[dev]"`
-- Tests: `../.venv/Scripts/python -m pytest --cov=meeting_minutes --cov-report=term-missing`
+- Tests: `../.venv/Scripts/python -m pytest --cov=vozata --cov-report=term-missing`
 - Lint/format: `../.venv/Scripts/ruff check src tests` · `../.venv/Scripts/ruff format src tests`
-- Run: `../.venv/Scripts/python -m meeting_minutes record` · `... serve` · `... minutes <dir>`
+- Run: `../.venv/Scripts/python -m vozata record` · `... serve` · `... minutes <dir>`
 
 ## Rules
 
@@ -84,7 +86,7 @@ numpy · FastAPI + uvicorn · httpx · python-dotenv · pytest · ruff.
   `TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]]`.
 - One responsibility per module; keep files under ~200 lines.
 - User-facing strings via `Localizer.t("key", **params)`; locale files
-  `src/meeting_minutes/locales/{en,pt-BR,es}.toml`.
+  `src/vozata/locales/{en,pt-BR,es}.toml`.
 - Logging with `logging` (no `print` outside the CLI console sink).
 - Tests mirror `src/`; shared fakes in `tests/fakes.py` (`FakeTranscriber`, `FakeLanguageModel`,
   `FakeAudioSource`, `FakeDiarizer`…); HTTP clients tested with `httpx.MockTransport`; API with
@@ -121,16 +123,16 @@ System.Net.Http + System.Net.WebSockets · System.Text.Json (`SnakeCaseLower`) �
 ## Solution
 
 ```
-ui/MeetingMinutes.sln
-ui/src/MeetingMinutes.Client/          IEngineClient, EngineClient, DTOs, EngineEvent stream
-ui/src/MeetingMinutes.Desktop/         App.axaml(.cs), Views/, ViewModels/, Services/, Resources/Strings*.resx
-ui/tests/MeetingMinutes.Desktop.Tests/ ViewModel + client tests
+ui/VozAta.sln
+ui/src/VozAta.Client/          IEngineClient, EngineClient, DTOs, EngineEvent stream
+ui/src/VozAta.Desktop/         App.axaml(.cs), Views/, ViewModels/, Services/, Resources/Strings*.resx
+ui/tests/VozAta.Desktop.Tests/ ViewModel + client tests
 ```
 
 ## Commands (run from `ui/`)
 
 - Build: `dotnet build` · Test: `dotnet test` · Format: `dotnet format`
-- Run: `dotnet run --project src/MeetingMinutes.Desktop`
+- Run: `dotnet run --project src/VozAta.Desktop`
 
 ## Rules
 
