@@ -66,8 +66,8 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 - **Branch:** `feature/01-engine-core`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:54
-- **Next step:** TDD `labels.py`: write `tests/test_labels.py` (`Me`/`Eu`/`Yo`, `User 2`/`Usuário 2`/`Usuario 2`, overrides and names win, unknown ids), see it fail, then implement `SpeakerLabeler`.
+- **Updated:** 2026-10-15 22:55
+- **Next step:** TDD `formatting.py`: write `tests/test_formatting.py` (`format_timestamp` rounding down, hours beyond 24, negative clamps to 0; `render_line`), see it fail, then implement.
 
 ### Steps
 
@@ -75,8 +75,8 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - [x] `domain.py` + `tests/test_domain.py` (jsonl round trip) — `33818b1`
 - [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies — `30131cf`
 - [x] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests — `3273324`
-- [x] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
-- [ ] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
+- [x] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py` — `e80faa9`, `0734822`
+- [x] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
 - [ ] `formatting.py` + `tests/test_formatting.py`
 - [ ] `language.py` + `tests/test_language.py`
 - [ ] Verify; tick acceptance criteria; set phase `done`
