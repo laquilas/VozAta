@@ -65,3 +65,30 @@ HTTP API (06), UI (07+).
 
 > Execute phase 05 of the roadmap (`docs/roadmap/phases/05-session-cli.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/05-session-cli`
+- **Status:** in progress
+- **Updated:** 2026-10-16 08:45
+- **Next step:** add `GENERATE_MINUTES` to `config.py` (`_flag` parser, `invalid_choice` on bad
+  values) with tests in `tests/test_config.py`.
+
+### Steps
+
+- [x] Start phase: status in progress, Progress section
+- [ ] `GENERATE_MINUTES` config key
+- [ ] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests
+- [ ] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout
+- [ ] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
+      `build_minutes_generator`) + tests
+- [ ] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests
+- [ ] Manual E2E: `python -m vozata record --language pt`, then `minutes` with Ollama
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- Phase 02 found that a WASAPI device open can hang for 30 s or forever (Intel Smart Sound mic
+  driver). `RecordingSession.start()` opens each source on a worker thread with a timeout and fails
+  with a localized error instead of blocking.
+
