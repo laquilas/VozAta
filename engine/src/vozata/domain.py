@@ -39,6 +39,11 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class MixMode(StrEnum):
+    MONO = "mono"
+    STEREO = "stereo"
+
+
 class WhisperDevice(StrEnum):
     AUTO = "auto"
     CUDA = "cuda"
