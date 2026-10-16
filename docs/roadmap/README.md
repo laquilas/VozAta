@@ -21,8 +21,9 @@ context**. Read only what the phase asks for.
 4. Read **only** that phase file and the documents listed in its *Read first* section.
 5. Until phase 00 is `done`, [standards.md](standards.md) replaces the project `CLAUDE.md` files.
 6. Create the branch `feature/<NN-slug>` (e.g. `feature/03-transcription`). Its **first commit**
-   sets the phase status to `in progress` in the table below and appends the **Progress** section
-   ([template](#progress-section-template)) to the phase file, listing the planned steps.
+   sets the phase status to in progress (`feature/NN-slug`) in the table below and appends the
+   **Progress** section ([template](#progress-section-template)) to the phase file, listing the
+   planned steps.
 7. Implement with TDD; respect [standards.md](standards.md). One logical change per commit, and
    **every commit also updates Progress** (tick the step, set *Next step*, record decisions and
    blockers) and is pushed — the branch on GitHub always shows exactly where work stopped.
@@ -41,13 +42,16 @@ context**. Read only what the phase asks for.
 
 ## Status
 
+Status values: **todo** (not started) · **in progress** (`feature/NN-slug`) (work lives on that
+branch and is **not** in `main` yet: never delete the branch) · **done** (merged into `main`).
+
 | # | Phase | Depends on | Status |
 |---|-------|------------|--------|
 | 00 | [Foundation](phases/00-foundation.md) | — | done |
 | 01 | [Engine core](phases/01-engine-core.md) | 00 | done |
 | 02 | [Audio capture and files](phases/02-audio.md) | 01 | done |
 | 03 | [Transcription](phases/03-transcription.md) | 01 | done |
-| 04 | [Minutes generation](phases/04-minutes.md) | 01 | todo |
+| 04 | [Minutes generation](phases/04-minutes.md) | 01 | done |
 | 05 | [Session and CLI (MVP)](phases/05-session-cli.md) | 02, 03, 04 | todo |
 | 06 | [Engine API](phases/06-engine-api.md) | 05 | todo |
 | 07 | [UI skeleton](phases/07-ui-skeleton.md) | 06 | todo |

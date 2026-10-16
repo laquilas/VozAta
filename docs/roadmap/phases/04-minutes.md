@@ -39,13 +39,13 @@ using Ollama as the default provider.
 
 ## Acceptance criteria
 
-- [ ] Ollama client tested with `httpx.MockTransport`: request body, JSON-schema `format`,
+- [x] Ollama client tested with `httpx.MockTransport`: request body, JSON-schema `format`,
       streaming parse, timeout and HTTP errors → `LanguageModelError`, `is_available()`.
-- [ ] Generator tests: single pass under the limit, map-reduce over the limit (N map calls + 1
+- [x] Generator tests: single pass under the limit, map-reduce over the limit (N map calls + 1
       reduce), headings in the selected app language, prompt mentions both languages.
-- [ ] Manual run against a local Ollama on a sample transcript produces sensible minutes in each
+- [x] Manual run against a local Ollama on a sample transcript produces sensible minutes in each
       of en / pt-BR / es (note results in the PR).
-- [ ] Locale parity test still passes; coverage ≥ 80 %.
+- [x] Locale parity test still passes; coverage ≥ 80 %.
 
 ## Tests
 
@@ -59,3 +59,37 @@ Templates (20), action-item extraction (23), Q&A (24), triggering at session end
 
 > Execute phase 04 of the roadmap (`docs/roadmap/phases/04-minutes.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/04-minutes`
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 08:20
+- **Next step:** open the PR (put the smoke results below in its description) and merge.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section — `1b216a7`
+- [x] Config keys owned by 04 + `.env.example` note on a smaller model — `e7d1bea`
+- [x] `LanguageModelError` + `llm/ollama.py` (`OllamaLanguageModel`, tested with `httpx.MockTransport`) — `6eed588`
+- [x] Locale keys + `minutes/prompts.py` — `a4aaf3e`
+- [x] `minutes/generator.py` (`MinutesGenerator`, map-reduce) — `c7eadab`
+- [x] Manual run against a local Ollama in en / pt-BR / es
+- [x] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- `is_available()` is already part of the `LanguageModel` port (added in phase 01).
+- `LanguageModelError` lives in `ports.py` next to the port: callers catch it by port, not by provider.
+- Prompts name languages through locale keys (`languages.*`, `minutes.output_language`), so each locale names them in its own language.
+- **Ollama** 0.40.5 was installed with winget on 2026-10-16 and `qwen2.5:7b` pulled (~4.7 GB).
+- **Manual run (2026-10-16, `qwen2.5:7b`, RTX 3050 6 GB)**: `smoke_minutes.py` produced sensible
+  minutes with every heading in the app language for en / pt-BR / es (single pass 11–18 s per
+  language after an ~80 s first-load; map-reduce with `--max-chars 200` 28–42 s). Decisions
+  (beta moved from Friday to Tuesday), action items (Ana: release notes, Monday) and the open
+  macOS question were captured in most runs.
+- **7B quality quirks seen** (prompt or model tuning, later work, e.g. phase 20 templates):
+  invented a date (`03/04/2023`) in pt-BR; English weekday names leaked into pt-BR map-reduce
+  output; one es run dropped the macOS open issue and gave an inconsistent due date; the
+  `system` speaker shows as "Others". The Windows console needs `PYTHONIOENCODING=utf-8` to print
+  accented text (the first es run looked truncated because of that, not the model).

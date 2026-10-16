@@ -56,6 +56,10 @@ class AudioMixer(Protocol):
     def mix(self, mic: Path, system: Path, destination: Path) -> None: ...
 
 
+class LanguageModelError(RuntimeError):
+    """A language model could not produce a reply (unreachable, failed or malformed)."""
+
+
 @runtime_checkable
 class LanguageModel(Protocol):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str: ...

@@ -7,3 +7,29 @@ user = "User {n}"
 invalid_choice = "Invalid value \"{value}\" for {key}. Allowed values: {allowed}."
 not_a_number = "Invalid value \"{value}\" for {key}: expected a number."
 out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {max}."
+invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
+
+[languages]
+en = "English"
+pt = "Portuguese"
+es = "Spanish"
+auto = "the language spoken in the transcript"
+
+[minutes]
+output_language = "English"
+system = "You write accurate, concise meeting minutes. Use only facts stated in the transcript or notes; never invent names, dates, numbers or decisions."
+instructions = """The meeting was held in {conversation_language}. Write the minutes in {output_language}, in Markdown, with exactly these level-2 headings, in this order:
+{sections}
+List action items with their owner and due date when they were mentioned. Under a section with nothing to report, write "—"."""
+map_instructions = "This is part {part} of {total} of a meeting held in {conversation_language}. Write concise notes in {output_language} with the topics, decisions, action items (owner, due date) and open issues of this part. Use only facts from this part."
+reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
+transcript_label = "Transcript:"
+notes_label = "Notes:"
+
+[minutes.section]
+context = "Context"
+summary = "Summary"
+topics = "Topics"
+decisions = "Decisions"
+action_items = "Action items"
+open_issues = "Open issues"
