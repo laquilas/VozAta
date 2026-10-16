@@ -24,9 +24,10 @@ terms, passed to the speech-to-text model as hints and to the minutes prompt for
 |------|---------|
 | `vocabulary.py` | `VocabularyStore(path)`: read/write one term per line, `#` comments, dedupe case-insensitively; `build_hints(terms, max_chars=500) -> str | None` |
 | `session.py` / `bootstrap.py` | merge global + session terms → `session.json.vocabulary`; pass `hints` to every `transcribe` call (faster-whisper `hotwords`; OpenAI-compatible `prompt`) |
+| `transcription/context.py` | rolling context prompt ([optimizations.md](../optimizations.md) O4): per channel, the last `CONTEXT_PROMPT_CHARS` of committed text (cut on a word boundary) plus the vocabulary, passed as `initial_prompt` (`condition_on_previous_text` stays off); cleared when the language locks or after a long silence; skipped for the next chunk after a repeated segment or a very low `avg_logprob`; set `hallucination_silence_threshold` |
 | `minutes/prompts.py` | include the glossary ("use these spellings") when present |
 | API | `GET|PUT /vocabulary`; `vocabulary` field in `POST /sessions` |
-| `config.py`, `.env.example` | `VOCABULARY_FILE` (default `vocabulary.txt` next to `.env`) |
+| `config.py`, `.env.example` | `VOCABULARY_FILE` (default `vocabulary.txt` next to `.env`), `CONTEXT_PROMPT_CHARS` (200, 0 = off) |
 
 **UI**: settings tab "Vocabulary" (list editor with add/remove/import from text); on the Start
 screen an expander "Terms for this meeting" (comma or newline separated).
@@ -38,7 +39,9 @@ screen an expander "Terms for this meeting" (comma or newline separated).
 ## Acceptance criteria
 
 - [ ] Tests: store parsing (comments, blanks, duplicates), hint building and truncation order,
-      hints reach `FakeTranscriber`, glossary appears in the minutes prompt, API round trip.
+      hints reach `FakeTranscriber`, glossary appears in the minutes prompt, API round trip;
+      context prompt per channel (truncation, reset on language lock, skipped after a
+      repeated segment).
 - [ ] UI tests: editor add/remove/import, session terms sent on start.
 - [ ] Manual: a meeting mentioning an unusual name is transcribed correctly with the term and
       incorrectly without it (note in the PR).

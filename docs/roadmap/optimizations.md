@@ -2,8 +2,8 @@
 
 Review of [OzerVfonseca/streaming-translator](https://github.com/OzerVfonseca/streaming-translator)
 (commit `a94fd61`, 2026-02-24) and what VozAta should adopt, adapt or avoid. Written 2026-10-16,
-after phases 00–07; every item below is a **proposal, not scheduled** until it gets a phase file
-and a row in the [status table](README.md#status).
+after phases 00–07. The proposals are scheduled as phases (see [§4](#4-schedule)); this document
+keeps the reasoning and the design they share.
 
 > **License.** The repository has no license file (GitHub reports none), so its code is
 > "all rights reserved". VozAta reuses **ideas and techniques only**; nothing is copied verbatim.
@@ -189,7 +189,7 @@ reference project (ISO → NLLB codes) is public NLLB documentation and can be r
   re-transcribing the whole window, deduplicating by string prefix, untyped stdout JSON between
   processes.
 
-## 4. Suggested order
+## 4. Schedule
 
 ```mermaid
 graph LR
@@ -201,14 +201,14 @@ graph LR
     O1 --> O5[O5 live translation\nM-L, optional]
 ```
 
-| Order | Item | Where | Depends on |
+| Order | Item | Phase | Depends on |
 |-------|------|-------|------------|
-| 1 | O2.3 `keep_alive: 0` for Ollama | engine fix, any time | — |
-| 2 | O2 capture first / warm model | new phase (engine + small UI change) | 06, 07 |
-| 3 | O1 VAD segmentation | new phase, before 18 (echo matching gets whole phrases) | 05 |
-| 4 | O4 rolling prompt | inside phase 19 (custom vocabulary) | 19 |
-| 5 | O3 live partials | new phase (engine event + UI) | O1, 07 |
-| 6 | O5 live translation | new optional phase | 06, 07 |
+| 1 | O2.3 `keep_alive` for Ollama | [25 LLM VRAM release](phases/25-llm-vram-release.md) | 04 |
+| 2 | O2 capture first / warm model | [26 Capture first](phases/26-capture-first.md) | 06, 07 |
+| 3 | O1 VAD segmentation | [27 Pause-based segmentation](phases/27-vad-segmentation.md) (phase 18 now waits for it) | 05 |
+| 4 | O4 rolling prompt | part of [19 Custom vocabulary](phases/19-custom-vocabulary.md) | 06, 10 |
+| 5 | O3 live partials | [28 Live interim text](phases/28-live-partials.md) | 27, 07 |
+| 6 | O5 live translation | [29 Live translation](phases/29-live-translation.md) (optional) | 06, 07 |
 
 Validate O1 and O4 with numbers, not impressions: the backlog item "WER benchmark harness" (record
 the phase 05 TTS meeting once, then compare WER and speech-end-to-line latency for `fixed` vs
