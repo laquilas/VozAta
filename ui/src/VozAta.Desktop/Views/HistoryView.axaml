@@ -5,22 +5,22 @@
              x:DataType="vm:HistoryViewModel">
 
   <UserControl.Styles>
-    <Style Selector="TextBlock.h1">
+    <Style Selector="SelectableTextBlock.h1">
       <Setter Property="FontSize" Value="22" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Margin" Value="0,8,0,4" />
     </Style>
-    <Style Selector="TextBlock.h2">
+    <Style Selector="SelectableTextBlock.h2">
       <Setter Property="FontSize" Value="18" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Margin" Value="0,10,0,4" />
     </Style>
-    <Style Selector="TextBlock.h3">
+    <Style Selector="SelectableTextBlock.h3">
       <Setter Property="FontSize" Value="15" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Margin" Value="0,8,0,2" />
     </Style>
-    <Style Selector="TextBlock.item">
+    <Style Selector="SelectableTextBlock.item">
       <Setter Property="Margin" Value="16,2,0,2" />
     </Style>
     <Style Selector="Border.badge">

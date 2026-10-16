@@ -177,4 +177,16 @@ public sealed class HistoryViewModelTests
 
         Assert.Equal("Portugués", history.Rows[0].Language);
     }
+
+    [Fact]
+    public async Task Rows_read_well_for_screen_readers()
+    {
+        _client.Sessions.Add(Session(16));
+        var history = Create();
+        await history.LoadAsync();
+
+        var row = history.Rows[0];
+        Assert.Equal($"{row.Date}, 01:02:05, Portuguese", row.ToString());
+        Assert.Equal("JBL Quantum Stream", new AudioDevice(4, "JBL Quantum Stream", 48000, 1).ToString());
+    }
 }

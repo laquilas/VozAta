@@ -15,6 +15,9 @@ public sealed record SessionRow(SessionSummary Summary, string Date, string Dura
 
     /// <summary>The session being recorded (or finalized) right now.</summary>
     public bool IsLive => Summary.Status is "recording" or "paused" or "finalizing";
+
+    /// <summary>What screen readers announce for the row.</summary>
+    public override string ToString() => $"{Date}, {Duration}, {Language}";
 }
 
 /// <summary>Past sessions, newest first, a page at a time; the selected one opens in <see cref="Detail"/>.</summary>
