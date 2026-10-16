@@ -3,23 +3,21 @@ from __future__ import annotations
 import runpy
 import sys
 
+import pytest
+
 import vozata
-from vozata.__main__ import main
 
 
 def test_package_exposes_version() -> None:
     assert vozata.__version__ == "0.1.0"
 
 
-def test_main_prints_version(capsys) -> None:
-    main()
-
-    assert capsys.readouterr().out.strip() == "0.1.0"
-
-
-def test_running_as_module_prints_version(capsys, monkeypatch) -> None:
+def test_running_as_module_prints_the_version(capsys, monkeypatch) -> None:
     monkeypatch.delitem(sys.modules, "vozata.__main__", raising=False)
+    monkeypatch.setattr(sys, "argv", ["vozata", "--version"])
 
-    runpy.run_module("vozata", run_name="__main__", alter_sys=True)
+    with pytest.raises(SystemExit) as exit_:
+        runpy.run_module("vozata", run_name="__main__", alter_sys=True)
 
+    assert exit_.value.code == 0
     assert capsys.readouterr().out.strip() == "0.1.0"

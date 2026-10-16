@@ -70,8 +70,8 @@ HTTP API (06), UI (07+).
 
 - **Branch:** `feature/05-session-cli`
 - **Status:** in progress
-- **Updated:** 2026-10-16 08:34
-- **Next step:** write `tests/test_cli.py`, then replace `__main__.py` with the argparse CLI: `record [--language] [--mic] [--system] [--list-devices]` (console observer with segment lines + one-line level meter, `p`+Enter toggles pause, Ctrl+C stops) and `minutes <session_dir>`; add `cli.*` locale keys in en/pt-BR/es; keep `--version`.
+- **Updated:** 2026-10-16 08:39
+- **Next step:** manual E2E (needs the audio stack working; reboot if WASAPI lists no inputs): from engine/ run `../.venv/Scripts/python -m vozata record --language pt`, play a video and speak ~1 min, Ctrl+C; check mic/system/mixed.wav equal length and minutes.md; record the result here and in the PR.
 
 ### Steps
 
@@ -80,8 +80,8 @@ HTTP API (06), UI (07+).
 - [x] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests — `2315176`
 - [x] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout — `6d855a3`
 - [x] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
-      `build_minutes_generator`) + tests
-- [ ] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests
+      `build_minutes_generator`) + tests — `41010e8`
+- [x] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests
 - [ ] Manual E2E: `python -m vozata record --language pt`, then `minutes` with Ollama
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
