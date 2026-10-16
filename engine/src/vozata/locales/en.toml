@@ -10,6 +10,7 @@ out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
 unknown_key = "Unknown setting {key}."
+no_word_timestamps = "The speech API at {host} returned no word timestamps for model \"{value}\". Choose a model that supports timestamp_granularities=word."
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."

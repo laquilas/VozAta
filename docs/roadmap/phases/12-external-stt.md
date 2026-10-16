@@ -64,15 +64,15 @@ Parallel requests, streaming/realtime APIs, diarization from providers.
 
 - **Branch:** `feature/12-external-stt`
 - **Status:** in progress
-- **Updated:** 2026-10-16 23:50
-- **Next step:** `transcription/openai_compatible.py` (`OpenAICompatibleTranscriber`: WAV in memory, multipart fields, `verbose_json` + word granularity, punctuation re-attached, language name → code, silent windows skipped, startup probe rejecting providers without word timestamps) with `tests/transcription/test_openai_compatible.py` (contract suite on `MockTransport`)
+- **Updated:** 2026-10-17 00:05
+- **Next step:** register `openai_compatible` in `TRANSCRIBERS`; CLI `record` prints "audio is sent to <host>" at start; `GET /health` reports the provider host as the STT device so the desktop status bar names it; tests
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] Config keys (+ settings page labels and help) — `026e6ed`
-- [x] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts) — this commit
-- [ ] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start)
+- [x] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts) — `687cdab`
+- [x] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start) — this commit
 - [ ] Registry, privacy notice (CLI at session start; health shows the provider host)
 - [ ] Manual: a session against an OpenAI-compatible endpoint; criteria
 

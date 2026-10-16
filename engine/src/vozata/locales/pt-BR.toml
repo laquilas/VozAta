@@ -10,6 +10,7 @@ out_of_range = "Valor inválido \"{value}\" para {key}: deve estar entre {min} e
 invalid_url = "Valor inválido \"{value}\" para {key}: era esperada uma URL http:// ou https://."
 invalid_duration = "Valor inválido \"{value}\" para {key}: eram esperados segundos (0, -1, 300) ou uma duração como 5m ou 1h30m."
 unknown_key = "Configuração desconhecida: {key}."
+no_word_timestamps = "A API de fala em {host} não retornou marcas de tempo por palavra para o modelo \"{value}\". Escolha um modelo que suporte timestamp_granularities=word."
 
 [errors.session]
 audio_unavailable = "O áudio do Windows não respondeu. Reinicie o serviço Áudio do Windows ou o PC e tente novamente."
