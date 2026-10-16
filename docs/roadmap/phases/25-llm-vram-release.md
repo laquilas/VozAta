@@ -65,7 +65,7 @@ Keeping Whisper warm between sessions (phase 26).
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds) — next commit
+- [x] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds) — `dedb429`
 - [ ] `LanguageModel.release()` port method; Ollama sends `keep_alive` with every chat request and
       `release()` unloads with the configured value; wired in `bootstrap.py`
 - [ ] `MinutesGenerator` calls `release()` once after every job (success or failure)
