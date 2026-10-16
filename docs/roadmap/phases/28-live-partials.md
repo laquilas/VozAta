@@ -55,14 +55,14 @@ Partials in the CLI console.
 
 - **Branch:** `feature/28-live-partials`
 - **Status:** in progress
-- **Updated:** 2026-10-16 22:10
-- **Next step:** add `buffered()` to the `Chunker` port (VadChunker, FixedWindowChunker) and `CarryOverStitcher.partial(tail)` (carry + tail, ≥ 1 s voiced, no language observation); tests
+- **Updated:** 2026-10-16 22:30
+- **Next step:** worker partials: `TranscriptionWorker` gets `PartialOptions(interval, snapshot, emit, clock)`; when the queue is empty it calls `stitcher.partial(snapshot(channel))` per due channel, emits changed text, clears shown partials when a chunk yields no segment and at stop; pipeline wiring (snapshot under the track lock), `SessionObserver.on_partial`, API `partial` event; tests
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS` — this commit
-- [ ] Uncommitted audio: `Chunker.buffered()` (VAD and fixed) and `CarryOverStitcher.partial(tail)`
+- [x] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS` — `bbafe91`
+- [x] Uncommitted audio: `Chunker.buffered()` (VAD and fixed) and `CarryOverStitcher.partial(tail)` — this commit
 - [ ] Worker partials when idle + pipeline wiring + `SessionObserver.on_partial` + API `partial`
 - [ ] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text
 - [ ] Manual: text appears during a long sentence and is replaced by the final line; criteria

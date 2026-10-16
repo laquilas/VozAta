@@ -19,6 +19,7 @@ from vozata.ports import Transcriber
 
 _SENTENCE_END = (".", "?", "!", "…")
 MAX_WORD_TAIL_SECONDS = 0.3  # Whisper word ends run early; voiced audio may continue this long
+MIN_PARTIAL_SPEECH_SECONDS = 1.0  # interim text needs this much voiced audio
 _FRAME_SECONDS = 0.01
 
 
@@ -88,6 +89,25 @@ class CarryOverStitcher:
         self._pending_start = audio_start + cut_time
         return [self._segment(words[: cut + 1], audio_start)]
 
+    def partial(self, tail: AudioChunk | None) -> tuple[float, str] | None:
+        """Interim text of the carried audio plus `tail` (audio not chunked yet); commits nothing.
+
+        None without at least `MIN_PARTIAL_SPEECH_SECONDS` of voiced audio or without words. The
+        language lock is not fed: only committed text decides the conversation language.
+        """
+        parts = [self._pending] if len(self._pending) else []
+        if tail is not None:
+            parts.append(tail.samples)
+        if not parts:
+            return None
+        audio = np.concatenate(parts)
+        if self._voiced_seconds(audio) < MIN_PARTIAL_SPEECH_SECONDS:
+            return None
+        start = self._pending_start if len(self._pending) else tail.start  # type: ignore[union-attr]
+        result = self._transcriber.transcribe(audio, self._language.current(), self._hints)
+        text = "".join(word.text for word in result.words).strip()
+        return (start, text) if text else None
+
     def flush(self) -> list[TranscriptSegment]:
         """Transcribe the carried audio, if any, and commit every word."""
         if len(self._pending) == 0:
@@ -117,6 +137,12 @@ class CarryOverStitcher:
         if duration >= self._settings.max_carry_seconds:
             return len(words) - 1
         return None
+
+    def _voiced_seconds(self, audio: np.ndarray) -> float:
+        frame = round(_FRAME_SECONDS * self._settings.sample_rate)
+        frames = audio[: len(audio) // frame * frame].reshape(-1, frame).astype(np.float64)
+        rms = np.sqrt(np.mean(np.square(frames), axis=1))
+        return float(np.count_nonzero(rms >= self._settings.silence_rms_threshold)) * _FRAME_SECONDS
 
     def _voiced_end(self, audio: np.ndarray, start: float, duration: float) -> float:
         """Extend `start` through still-voiced 10 ms frames, at most `MAX_WORD_TAIL_SECONDS`."""

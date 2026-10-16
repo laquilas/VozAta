@@ -124,6 +124,7 @@ class Chunker(Protocol):             # FixedWindowChunker (01), VadChunker (27)
     paused: bool
     def feed(self, samples: np.ndarray, at: float) -> None: ...
     def flush(self) -> None: ...
+    def buffered(self) -> AudioChunk | None: ...  # copy of the audio not emitted yet (28)
 class SpeechDetector(Protocol):      # SileroSpeechDetector (27); unpadded spans in seconds
     def speech_spans(self, samples: np.ndarray) -> list[tuple[float, float]]: ...
 class LanguageModel(Protocol):
@@ -239,6 +240,9 @@ on_chunk(chunk):
     return [segment(committed, offset=audio_start)]
 
 flush(): transcribe pending (if any) and commit every word.
+
+partial(tail):  # interim text (28): pending + chunker.buffered(), ≥ 1 s voiced; commits nothing,
+                # does not feed the language lock
 ```
 
 Committed audio is dropped, so no text is duplicated.

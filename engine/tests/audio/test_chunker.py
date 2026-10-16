@@ -101,3 +101,20 @@ def test_setting_pause_twice_does_not_emit_twice(
 
     assert len(chunks) == 1
     assert chunker.paused
+
+
+def test_buffered_returns_a_copy_of_the_partial_window(
+    chunker: FixedWindowChunker, chunks: list[AudioChunk]
+) -> None:
+    assert chunker.buffered() is None
+    chunker.feed(_block(5), at=0.0)
+    chunker.feed(_block(5), at=0.5)
+    chunker.feed(_block(3, 0.5), at=1.0)
+
+    buffered = chunker.buffered()
+
+    assert buffered is not None
+    assert (buffered.start, len(buffered.samples), buffered.channel) == (1.0, 3, Channel.MIC)
+    buffered.samples[:] = 0
+    chunker.flush()
+    assert np.all(chunks[-1].samples == 0.5)

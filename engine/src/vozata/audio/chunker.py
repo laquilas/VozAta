@@ -58,6 +58,13 @@ class FixedWindowChunker:
         while self._buffered >= self._window:
             self._emit(self._window)
 
+    def buffered(self) -> AudioChunk | None:
+        """A copy of the partial window (for interim text), or None."""
+        if not self._buffered:
+            return None
+        start = (self._position - self._buffered) / self._rate
+        return AudioChunk(self._channel, start, np.concatenate(self._blocks))
+
     def flush(self) -> None:
         """Emit the partial window, if any."""
         if self._buffered:

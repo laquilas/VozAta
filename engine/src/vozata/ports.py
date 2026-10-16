@@ -13,6 +13,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from vozata.domain import (
+    AudioChunk,
     Channel,
     ConversationLanguage,
     SessionStatus,
@@ -66,6 +67,10 @@ class Chunker(Protocol):
     def feed(self, samples: np.ndarray, at: float) -> None: ...
 
     def flush(self) -> None: ...
+
+    def buffered(self) -> AudioChunk | None:
+        """A copy of the audio not emitted yet (interim text, phase 28)."""
+        ...
 
 
 @runtime_checkable

@@ -189,3 +189,27 @@ def test_both_chunkers_satisfy_the_chunker_port() -> None:
     assert isinstance(Rig().chunker, Chunker)
     assert isinstance(FixedWindowChunker(Channel.MIC, 1.0, RATE, print), Chunker)
     assert isinstance(FakeSpeechDetector(RATE), SpeechDetector)
+
+
+def test_buffered_is_a_copy_of_the_uncut_audio_in_session_time() -> None:
+    rig = Rig().silence(0.5).speech(1.5)
+
+    buffered = rig.chunker.buffered()
+
+    assert buffered is not None and buffered.channel is Channel.SYSTEM
+    end = buffered.start + len(buffered.samples) / RATE
+    assert end == pytest.approx(2.0)
+    assert np.count_nonzero(buffered.samples) == 1.5 * RATE
+    buffered.samples[:] = 0  # a copy: the chunker keeps its audio
+    rig.silence(1)
+    assert rig.speech_seconds() == [1.5]
+
+
+def test_buffered_is_none_when_everything_was_cut() -> None:
+    rig = Rig()
+    assert rig.chunker.buffered() is None
+
+    rig.speech(1.5)
+    rig.chunker.flush()
+
+    assert rig.chunker.buffered() is None

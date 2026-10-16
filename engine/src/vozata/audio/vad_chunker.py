@@ -81,6 +81,14 @@ class VadChunker:
             while self._cut():
                 pass
 
+    def buffered(self) -> AudioChunk | None:
+        """A copy of the audio not cut yet (for interim text), or None."""
+        audio = self._audio()
+        if not len(audio):
+            return None
+        start = (self._position - len(audio)) / self._rate
+        return AudioChunk(self._channel, start, audio.copy())
+
     def flush(self) -> None:
         """Emit the buffered speech, if any, as a complete chunk; drop pure silence."""
         audio = self._audio()
