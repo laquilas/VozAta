@@ -54,3 +54,38 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
 
 > Execute phase 27 of the roadmap (`docs/roadmap/phases/27-vad-segmentation.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/27-vad-segmentation`
+- **Status:** in progress
+- **Updated:** 2026-10-16 17:00
+- **Next step:** add `ChunkMode` (`domain.py`) and the `CHUNK_MODE` / `VAD_*` keys to `config.py`,
+  `settings_fields.py`, `.env.example` with tests in `tests/test_config.py`
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] Config: `CHUNK_MODE` (`vad` | `fixed`), `VAD_THRESHOLD`, `VAD_MIN_SILENCE_MS`,
+      `VAD_MIN_CHUNK_SECONDS`, `VAD_MAX_CHUNK_SECONDS`, `VAD_SPEECH_PAD_MS`
+- [ ] Ports `Chunker` and `SpeechDetector`; `VadChunker` (fake-detector tests)
+- [ ] `AudioChunk.complete`; the stitcher commits every word of a complete chunk
+- [ ] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory
+- [ ] Manual: TTS meeting `fixed` vs `vad` (latency, WER); acceptance criteria
+
+### Decisions and notes
+
+- **Raw spans from the detector, policy in the chunker.** `SileroSpeechDetector` returns unpadded
+  speech spans (`min_silence_duration_ms=100`, `speech_pad_ms=0`); `VadChunker` merges spans closer
+  than `VAD_MIN_SILENCE_MS`, applies `VAD_SPEECH_PAD_MS`, picks cuts and handles blips, so all the
+  behaviour is unit-tested with a fake detector.
+- **Complete chunks.** The stitcher holds back words ending within `TAIL_MARGIN_SECONDS` of the
+  chunk end. A pause cut ends ~0.3 s after the last word, so the last phrase would wait for the next
+  speech — losing the latency gain. `AudioChunk` gets `complete: bool = False`; `VadChunker` sets it
+  when the cut lies in a pause ≥ `VAD_MIN_SILENCE_MS`, and the stitcher then commits every word and
+  drops the rest of the chunk. Forced cuts without such a pause stay incomplete and use the normal
+  carry-over.
+- **Blips.** Speech shorter than `VAD_MIN_CHUNK_SECONDS` is not cut on its own; it joins the next
+  utterance, or leaves at the forced cut (`VAD_MAX_CHUNK_SECONDS`) / `flush()` if nobody speaks.
+- Silero (faster-whisper 1.2.1 `get_speech_timestamps`) is stateless per call and runs on CPU with
+  one ONNX thread, so one shared model serves both channels.
