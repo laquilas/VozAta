@@ -64,15 +64,15 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 
 - **Branch:** `feature/11-export-tray-pause`
 - **Status:** in progress
-- **Updated:** 2026-10-16 20:45
-- **Next step:** `export/pdf.py` (`PdfExporter` with fpdf2 and the bundled DejaVu Sans regular/bold: title, details, minutes blocks, transcript table) with `tests/export/test_pdf.py` (`%PDF` header, accented pt-BR/es text via pypdf)
+- **Updated:** 2026-10-16 21:00
+- **Next step:** `EXPORTERS` registry in `bootstrap.py` (md / docx / pdf) in the API container + `api/routes/export.py`: `GET /sessions/{id}/export?format=` (400 `unsupported_format`, 404 unknown session, `Content-Disposition` `<id>-minutes.<ext>`) with `tests/api/test_export.py`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] `DocumentExporter` port + Markdown exporter — `6a627f2`
-- [x] DOCX exporter (`python-docx`) — this commit
-- [ ] PDF exporter (`fpdf2`, bundled DejaVu Sans + license)
+- [x] DOCX exporter (`python-docx`) — `40f139a`
+- [x] PDF exporter (`fpdf2`, bundled DejaVu Sans + license) — this commit
 - [ ] `EXPORTERS` registry + `GET /sessions/{id}/export?format=`
 - [ ] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail
 - [ ] UI pause / resume: button next to Stop, amber paused state, frozen timer
