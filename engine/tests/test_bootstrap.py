@@ -13,6 +13,7 @@ from vozata.config import ConfigError, Settings
 from vozata.domain import AppLanguage, Channel, ConversationLanguage, MixMode
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
+from vozata.session import SessionStartError
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 
 MIC = DeviceInfo(9, "Headset Mic", 2, 48000, False)
@@ -20,16 +21,42 @@ LOOPBACK = DeviceInfo(10, "Speakers [Loopback]", 2, 48000, True)
 OTHER = DeviceInfo(3, "USB Mic", 1, 44100, False)
 
 
+class _FakeAudioThread:
+    instances: list[_FakeAudioThread] = []
+    fail: Exception | None = None
+
+    def __init__(self) -> None:
+        if _FakeAudioThread.fail is not None:
+            raise _FakeAudioThread.fail
+        self.pa = object()
+        self.calls = 0
+        self.closed = False
+        _FakeAudioThread.instances.append(self)
+
+    def call(self, function):  # type: ignore[no-untyped-def]
+        self.calls += 1
+        return function()
+
+    def close(self) -> None:
+        self.closed = True
+
+
 @pytest.fixture
 def devices(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     looked_up: list[int] = []
 
-    def find(device_id: int) -> DeviceInfo:
+    def find(device_id: int, pa: object) -> DeviceInfo:
+        assert pa is _FakeAudioThread.instances[-1].pa
         looked_up.append(device_id)
+        if device_id == 404:
+            raise LookupError("No audio device with id 404")
         return OTHER
 
-    monkeypatch.setattr(bootstrap, "default_input", lambda: MIC)
-    monkeypatch.setattr(bootstrap, "default_loopback", lambda: LOOPBACK)
+    _FakeAudioThread.instances = []
+    _FakeAudioThread.fail = None
+    monkeypatch.setattr(bootstrap, "PortAudioThread", _FakeAudioThread)
+    monkeypatch.setattr(bootstrap, "default_input", lambda pa: MIC)
+    monkeypatch.setattr(bootstrap, "default_loopback", lambda pa: LOOPBACK)
     monkeypatch.setattr(bootstrap, "find_device", find)
     return looked_up
 
@@ -142,3 +169,36 @@ def test_build_labeler_applies_the_configured_overrides() -> None:
 
     assert labeler.label("mic") == "Host"
     assert labeler.label("system") == "Otros"
+
+
+def test_sources_share_one_portaudio_thread_released_with_the_session(
+    tmp_path: Path, devices: list[int]
+) -> None:
+    session = bootstrap.build_session(_settings(tmp_path), FakeSessionObserver())
+
+    [audio] = _FakeAudioThread.instances
+    assert audio.calls == 2  # both device lookups ran on the PortAudio thread
+    for source in session._c.sources.values():
+        assert source._pa is audio.pa
+        assert source._call_audio == audio.call
+    session._c.release()
+    assert audio.closed
+
+
+def test_an_unknown_device_closes_the_portaudio_thread(tmp_path: Path, devices: list[int]) -> None:
+    with pytest.raises(LookupError):
+        bootstrap.build_session(_settings(tmp_path), FakeSessionObserver(), mic_device=404)
+
+    assert _FakeAudioThread.instances[-1].closed
+
+
+def test_unresponsive_windows_audio_fails_with_a_localized_start_error(
+    tmp_path: Path, devices: list[int]
+) -> None:
+    _FakeAudioThread.fail = TimeoutError("PortAudio did not answer within 20.0 s")
+
+    with pytest.raises(SessionStartError) as error:
+        bootstrap.build_session(_settings(tmp_path), FakeSessionObserver())
+
+    assert error.value.code == "audio_unavailable"
+    assert "Windows" in str(error.value)

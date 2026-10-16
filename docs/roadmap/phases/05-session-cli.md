@@ -99,3 +99,9 @@ HTTP API (06), UI (07+).
 - A session whose `auto` language never locked stores no `language` key; `minutes <dir>` then
   passes `auto` to the generator.
 - Minutes are skipped (no error) when the transcript is empty or `GENERATE_MINUTES=false`.
+- **PortAudio thread (found in the E2E run)**: with one `PyAudio` per source created on the opener
+  helper thread, the second device failed with `Unanticipated host error` (-9999). WASAPI binds
+  PortAudio to the thread that initialized it, so `audio/portaudio.py` (`PortAudioThread`) owns a
+  single `PyAudio` per session and runs every lookup/open/terminate on one long-lived thread.
+- `WasapiSource` releases its native `soxr` resampler when capture ends; objects still alive at
+  interpreter exit made nanobind print leak warnings after the CLI finished.

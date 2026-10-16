@@ -163,3 +163,27 @@ def test_p_after_the_session_ended_does_nothing() -> None:
     _Controls(session).follow(["p"])
 
     assert session.calls == []
+
+
+def test_a_build_failure_prints_the_localized_error_and_exits_1() -> None:
+    out = io.StringIO()
+    localizer = FakeLocalizer()
+    console = ConsoleObserver(localizer, SpeakerLabeler(localizer), out)
+
+    def build(*args: Any, **kwargs: Any) -> _FakeSession:
+        raise SessionStartError("audio_unavailable", "Windows audio did not respond.")
+
+    code = run_record(
+        Settings(),
+        console,
+        localizer,
+        build,
+        language=None,
+        mic_device=None,
+        system_device=None,
+        stdin=io.StringIO(""),
+        wait=_interrupt,
+    )
+
+    assert code == 1
+    assert out.getvalue().splitlines() == ["Windows audio did not respond."]

@@ -41,6 +41,7 @@ class SessionComponents:
     minutes: MinutesGenerator | None
     localizer: Localizer
     labeler: SpeakerLabeler
+    release: Callable[[], None] = lambda: None  # frees the audio backend once capture ended
 
 
 class SessionStartError(RuntimeError):
@@ -159,6 +160,7 @@ class RecordingSession:
         self._pipeline.abort()
         for source in opened:
             source.stop()
+        self._release_audio()
         self._transcriber.close()
         self._store.discard(self.id)
 
@@ -166,7 +168,14 @@ class RecordingSession:
         for source in self._c.sources.values():
             source.stop()
         self._pipeline.stop_capture()
+        self._release_audio()
         self._set_status(SessionStatus.FINALIZING)
+
+    def _release_audio(self) -> None:
+        try:
+            self._c.release()
+        except Exception:
+            _log.exception("Releasing the audio backend failed")
 
     def _finalize_audio(self) -> None:
         self._pipeline.finalize_wavs()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import threading
 import wave
 from datetime import datetime, timedelta, timezone
@@ -129,6 +130,7 @@ class _Rig:
                 minutes=MinutesGenerator(self.llm, localizer, 12000) if with_minutes else None,
                 localizer=localizer,
                 labeler=SpeakerLabeler(localizer),
+                release=lambda: self.log.entries.append("release"),
             ),
             self.observer,
             language,
@@ -247,7 +249,7 @@ def test_stop_order_finalizes_wavs_then_mixes_then_frees_the_gpu_then_writes_min
 
     rig.session.stop()
 
-    assert rig.log.entries == ["mix", "transcriber.close", "llm.generate"]
+    assert rig.log.entries == ["release", "mix", "transcriber.close", "llm.generate"]
     assert rig.mixer.lengths == (int(2.5 * RATE), int(2.5 * RATE))  # padded to the longest
     assert rig.session.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     assert rig.observer.of("minutes_ready") == [(rig.session.id,)]
@@ -444,4 +446,27 @@ def test_a_failing_transcriber_close_does_not_stop_finalization(tmp_path: Path) 
     rig.session.stop()
 
     assert rig.session.paths.minutes_md.exists()
+    assert rig.session.status is SessionStatus.DONE
+
+
+def test_the_audio_backend_is_released_after_a_failed_start(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, system=_FailingSource())
+
+    with pytest.raises(SessionStartError):
+        rig.session.start()
+
+    assert rig.log.entries == ["release", "transcriber.close"]
+
+
+def test_a_failing_release_does_not_stop_finalization(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+
+    def broken_release() -> None:
+        raise TimeoutError("PortAudio did not answer")
+
+    rig.session._c = dataclasses.replace(rig.session._c, release=broken_release)
+    rig.session.start()
+
+    rig.session.stop()
+
     assert rig.session.status is SessionStatus.DONE

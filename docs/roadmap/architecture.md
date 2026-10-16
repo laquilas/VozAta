@@ -164,10 +164,15 @@ the API runs in the asyncio loop and receives events through a thread-safe broad
 chunk queue backlog exceeds 3 chunks per channel, log a warning (transcription slower than real time).
 
 **Start**: load the transcriber, create the session folder, start the clock, then open each
-source on a helper thread with a timeout (`SOURCE_OPEN_TIMEOUT`, 20 s): a WASAPI open can hang in
+source with a timeout (`SOURCE_OPEN_TIMEOUT`, 20 s): a WASAPI open can hang in
 the driver. A source that fails or times out aborts the start (`SessionStartError` with code
 `device_timeout` / `device_failed` and a localized message), closes everything and deletes the
 empty session folder.
+
+**PortAudio thread**: WASAPI binds PortAudio's host state to the thread that initialized it (COM);
+streams opened from another thread fail with "Unanticipated host error" (-9999). `bootstrap.py`
+creates one `PortAudioThread` per session that owns the `PyAudio` instance and runs device lookups,
+stream opens and `terminate()`; the session releases it once capture has stopped.
 
 **Stop order** (fixed, enforced by `RecordingSession.stop()`):
 1. Stop sources; flush chunkers (last partial window); `status = finalizing`.

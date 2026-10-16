@@ -10,6 +10,7 @@ out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 
 [errors.session]
+audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
 device_timeout = "The audio device \"{device}\" did not open within {seconds} s. Check that it is connected and not in use by another app; if it keeps failing, restart Windows Audio or the PC."
 device_failed = "The audio device \"{device}\" could not be opened: {reason}"
 mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."

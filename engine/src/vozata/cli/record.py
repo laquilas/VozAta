@@ -86,11 +86,11 @@ def run_record(
     wait: Callable[[], None] = _wait_until_interrupted,
 ) -> int:
     t = localizer.t
-    session = build(
-        settings, console, language=language, mic_device=mic_device, system_device=system_device
-    )
-    console.say(t("cli.loading_model"))
     try:
+        session = build(
+            settings, console, language=language, mic_device=mic_device, system_device=system_device
+        )
+        console.say(t("cli.loading_model"))
         session.start()
     except SessionStartError as error:
         console.say(str(error))
