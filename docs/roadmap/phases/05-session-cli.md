@@ -70,14 +70,14 @@ HTTP API (06), UI (07+).
 
 - **Branch:** `feature/05-session-cli`
 - **Status:** in progress
-- **Updated:** 2026-10-16 08:07
-- **Next step:** write `tests/storage/test_session_store.py`, then `storage/session_store.py` (`SessionStore`: create, paths, atomic write_meta/read_meta, list_sessions, load_transcript precedence, discard).
+- **Updated:** 2026-10-16 08:08
+- **Next step:** write `tests/test_session.py`, then `session.py` (`RecordingSession` + `SessionObserver`): start (transcriber, folder, writers, chunkers, worker, sources opened with a timeout), pause/resume, stop in the architecture §6 order, `session.json` per §8.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `faabf68`
-- [x] `GENERATE_MINUTES` config key
-- [ ] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests
+- [x] `GENERATE_MINUTES` config key — `e4b621d`
+- [x] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests
 - [ ] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout
 - [ ] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
       `build_minutes_generator`) + tests

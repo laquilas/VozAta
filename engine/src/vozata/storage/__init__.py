@@ -1,0 +1,1 @@
+"""Session folders and metadata."""
