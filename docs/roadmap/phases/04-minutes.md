@@ -64,14 +64,14 @@ Templates (20), action-item extraction (23), Q&A (24), triggering at session end
 
 - **Branch:** `feature/04-minutes`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:29
-- **Next step:** TDD `llm/ollama.py`: `tests/llm/test_ollama.py` with `httpx.MockTransport` (request body, `format` schema, streaming NDJSON, HTTP error/timeout/malformed → `LanguageModelError`, `is_available`), see it fail, then add `LanguageModelError` to `ports.py` and implement.
+- **Updated:** 2026-10-15 23:30
+- **Next step:** add the minutes locale keys (`minutes.system`, `minutes.instructions`, `minutes.section.*`, `minutes.map_instructions`, `minutes.reduce_instructions`, `minutes.output_language`, `languages.*`) to the three locales, then TDD `minutes/prompts.py` (`tests/minutes/test_prompts.py`).
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `1b216a7`
-- [x] Config keys owned by 04 + `.env.example` note on a smaller model
-- [ ] `LanguageModelError` + `llm/ollama.py` (`OllamaLanguageModel`, tested with `httpx.MockTransport`)
+- [x] Config keys owned by 04 + `.env.example` note on a smaller model — `e7d1bea`
+- [x] `LanguageModelError` + `llm/ollama.py` (`OllamaLanguageModel`, tested with `httpx.MockTransport`)
 - [ ] Locale keys + `minutes/prompts.py`
 - [ ] `minutes/generator.py` (`MinutesGenerator`, map-reduce)
 - [ ] Manual run against a local Ollama in en / pt-BR / es
