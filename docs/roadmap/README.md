@@ -59,7 +59,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 08 | [UI devices and level meters](phases/08-ui-devices-levels.md) | 07 | done |
 | 09 | [UI session history](phases/09-ui-history.md) | 07 | done |
 | 10 | [UI settings](phases/10-ui-settings.md) | 07 | done |
-| 11 | [Export, tray and pause](phases/11-export-tray-pause.md) | 08, 09 | in progress (`feature/11-export-tray-pause`) |
+| 11 | [Export, tray and pause](phases/11-export-tray-pause.md) | 08, 09 | done |
 | 12 | [External STT API](phases/12-external-stt.md) | 05 | todo |
 | 13 | [Packaging](phases/13-packaging.md) | 11 | todo |
 | 14 | [Speaker identification (post-session)](phases/14-diarization-post.md) | 05 | todo |
