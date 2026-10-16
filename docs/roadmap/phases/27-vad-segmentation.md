@@ -88,7 +88,7 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
   utterance, or leaves at the forced cut (`VAD_MAX_CHUNK_SECONDS`) / `flush()` if nobody speaks.
 - Silero (faster-whisper 1.2.1 `get_speech_timestamps`) is stateless per call and runs on CPU with
   one ONNX thread, so one shared model serves both channels.
-- **Manual comparison (2026-10-16, RTX 6 GB, `large-v3`, `int8_float16`, language `pt`).** The
+- **Manual comparison (2026-10-16, RTX 3050 6 GB Laptop, `large-v3`, `int8_float16`, language `pt`).** The
   phase 05 script (9 sentences, Windows TTS voice Maria) was rebuilt as a 68.8 s meeting with
   0.65–1.5 s pauses between sentences and a −60 dBFS noise floor, then fed in 0.1 s blocks through
   the real chunker + Silero + stitcher + Whisper, one simulated worker (latency = commit time −
