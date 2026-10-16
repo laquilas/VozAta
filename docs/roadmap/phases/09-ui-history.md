@@ -33,10 +33,10 @@ files and the session folder.
 
 ## Acceptance criteria
 
-- [ ] ViewModel tests: paging, detail loading, regenerate flow (success, error event), shell calls
+- [x] ViewModel tests: paging, detail loading, regenerate flow (success, error event), shell calls
       with correct paths, empty states (no sessions, no minutes).
-- [ ] Manual: open an old session, read minutes, play `mixed.wav`, regenerate minutes.
-- [ ] Resource parity test passes.
+- [x] Manual: open an old session, read minutes, play `mixed.wav`, regenerate minutes.
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -54,9 +54,9 @@ Editing (21), search (22), speaker rename (16), action items (23), export (11).
 ## Progress
 
 - **Branch:** `feature/09-ui-history`
-- **Status:** in progress
-- **Updated:** 2026-10-16 16:20
-- **Next step:** manual check in the desktop app: History tab, open an old session with minutes, read them, play `mixed.wav`, regenerate minutes (Ollama), open folder; tick criteria
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 16:40
+- **Next step:** open and merge the PR (combined draft in `__pr__/feature-09-ui-history/`)
 
 ### Steps
 
@@ -64,8 +64,8 @@ Editing (21), search (22), speaker rename (16), action items (23), export (11).
 - [x] `IShellService` + Markdown → blocks parser — `a7e5a74`
 - [x] `SessionDetailViewModel` (transcript, minutes, regenerate, open folder / audio) — `4e63c15`
 - [x] `HistoryViewModel` (paged list, live badge, refresh, selection) — `a99fdad`
-- [x] Main window: Recording | History navigation, event forwarding, resources, DI — this commit
-- [ ] Manual: open an old session, read minutes, play `mixed.wav`, regenerate; criteria
+- [x] Main window: Recording | History navigation, event forwarding, resources, DI — `2055ea2`
+- [x] Manual: open an old session, read minutes, play `mixed.wav`, regenerate; criteria — this commit
 
 ### Decisions and notes
 
@@ -77,3 +77,14 @@ Editing (21), search (22), speaker rename (16), action items (23), export (11).
 - Live session: `status` recording / paused / finalizing gets a badge and no regenerate button;
   the list is refreshed when a session ends.
 - Regenerate is busy until `minutes_ready` or an `error` event for the same session id.
+- **Manual check (2026-10-16, desktop app via UI Automation, on a copy of real sessions).** The
+  History tab listed four sessions newest first with duration, language and the Minutes badge;
+  the 9-minute Portuguese session showed its minutes as headings, paragraphs and bullet items;
+  **Play mixed** opened `mixed.wav` in Windows Media Player; **Regenerate minutes** showed
+  "Writing the minutes…", then "Minutes are ready", `minutes.md` changed and Ollama unloaded the
+  model afterwards (phase 25). Open folder was not clicked (Explorer); its path is covered by
+  tests.
+- **Fixed during the check:** the minutes styles targeted `TextBlock` but the blocks are
+  `SelectableTextBlock`, so headings were unstyled (after the fix: headings 22 px tall vs 17 px
+  items); session rows and audio devices were exposed to screen readers as record dumps — they now
+  read "date, duration, language" and the device name (closes the phase 08 accessibility note).

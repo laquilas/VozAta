@@ -57,7 +57,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 06 | [Engine API](phases/06-engine-api.md) | 05 | done |
 | 07 | [UI skeleton](phases/07-ui-skeleton.md) | 06 | done |
 | 08 | [UI devices and level meters](phases/08-ui-devices-levels.md) | 07 | done |
-| 09 | [UI session history](phases/09-ui-history.md) | 07 | in progress (`feature/09-ui-history`) |
+| 09 | [UI session history](phases/09-ui-history.md) | 07 | done |
 | 10 | [UI settings](phases/10-ui-settings.md) | 07 | todo |
 | 11 | [Export, tray and pause](phases/11-export-tray-pause.md) | 08, 09 | todo |
 | 12 | [External STT API](phases/12-external-stt.md) | 05 | todo |
