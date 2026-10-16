@@ -280,3 +280,13 @@ def test_a_session_without_an_end_has_no_duration(api: Api) -> None:
     item = api.client.get("/sessions").json()["items"][0]
 
     assert (item["status"], item["duration_seconds"]) == ("interrupted", None)
+
+
+def test_stored_duration_wins_over_the_wall_clock_span(api: Api) -> None:
+    _recorded(api)
+    meta = api.store.read_meta(SESSION)
+    api.store.write_meta(SESSION, {**meta, "duration_seconds": 63.5})
+
+    item = api.client.get("/sessions").json()["items"][0]
+
+    assert item["duration_seconds"] == 63.5

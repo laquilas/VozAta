@@ -173,6 +173,7 @@ class RecordingSession:
         for source in self._c.sources.values():
             source.stop()
         self._pipeline.stop_capture()
+        self._meta.captured(self._c.clock.now())
         self._release_audio()
         self._set_status(SessionStatus.FINALIZING)
 

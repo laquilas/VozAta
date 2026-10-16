@@ -35,6 +35,9 @@ def session_summary(
 
 
 def _duration(meta: dict[str, Any]) -> float | None:
+    """The recorded length; older or interrupted sessions fall back to start-to-end time."""
+    if meta.get("duration_seconds") is not None:
+        return float(meta["duration_seconds"])
     started, ended = meta.get("started_at"), meta.get("ended_at")
     if not started or not ended:
         return None

@@ -75,6 +75,10 @@ class SessionMeta:
             self._meta["pauses"][-1]["end"] = at
             self._save()
 
+    def captured(self, duration_seconds: float) -> None:
+        """Recorded length (session time when capture stopped), pauses included."""
+        self._update(duration_seconds=round(duration_seconds, 3))
+
     def ended(self, at: datetime) -> None:
         self._update(ended_at=at.isoformat(timespec="seconds"))
 

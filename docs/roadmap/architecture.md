@@ -253,6 +253,7 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
   "status": "done",
   "started_at": "2026-10-15T20:23:58-03:00",
   "ended_at": "2026-10-15T21:10:02-03:00",
+  "duration_seconds": 2764.2,
   "language": "pt", "language_source": "selected",
   "app_language": "en",
   "template": "general",
@@ -278,7 +279,8 @@ transcript through `SessionStore.load_transcript(session_id)`, which returns the
 of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jsonl`. Raw capture data
 (`transcript.jsonl`, WAVs) is never rewritten after the session ends.
 
-`language` / `language_source` are written only when known: at start for a fixed language
+`duration_seconds` is the recorded length (session time when capture stopped, pauses included),
+written at stop; `ended_at` is later, after finalization. `language` / `language_source` are written only when known: at start for a fixed language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
 has neither key. `template` (20) and `vocabulary` (19) are added by their phases.
 
