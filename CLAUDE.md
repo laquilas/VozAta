@@ -12,9 +12,6 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 - `__legacy__/` — old prototypes. Read-only reference: never edit, never import from it.
 - `.venv/` — shared Python virtualenv at the repo root.
 
-Until `engine/CLAUDE.md` and `ui/CLAUDE.md` exist (roadmap phase 00), follow the matching sections
-of `docs/roadmap/standards.md`.
-
 ## Session workflow
 
 1. **Resume first**: `git fetch`, then look for unmerged `feature/*` branches (local, remote, open

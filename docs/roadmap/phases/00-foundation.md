@@ -78,16 +78,16 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:35
-- **Next step:** create the `.venv` junction (local only), then write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md` and drop the bootstrap note from root `CLAUDE.md`.
+- **Updated:** 2026-10-15 22:45
+- **Next step:** TDD the engine package: write `engine/tests/test_smoke.py` (import `vozata`, `__version__ == "0.1.0"`, `main()` prints it), see it fail, then add `pyproject.toml`, `__init__.py`, `__main__.py` and `pip install -e "engine[dev]"`.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `18d4413`
 - [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `4f9dc00`
-- [x] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries
-- [ ] Create `.venv` junction to the existing prototype venv (local only, not committed)
-- [ ] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
+- [x] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries — `22158ee`
+- [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
+- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
 - [ ] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
 - [ ] `engine/.env.example` with phase 01–05 keys
 - [ ] `.github/workflows/ci.yml` and green CI
