@@ -10,6 +10,7 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+*.egg-info/
 
 # Recordings and transcripts (meeting data; do not commit)
 gravacoes/

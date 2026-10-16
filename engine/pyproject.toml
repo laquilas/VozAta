@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vozata"
+dynamic = ["version"]
+description = "Near-real-time meeting transcription and LLM-generated meeting minutes."
+license = "MIT"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2",
+    "soxr",
+    "PyAudioWPatch; sys_platform == 'win32'",
+    "faster-whisper>=1.2",
+    "python-dotenv",
+    "httpx",
+]
+
+[project.optional-dependencies]
+cuda = ["nvidia-cublas-cu12", "nvidia-cudnn-cu12>=9,<10"]
+dev = ["pytest", "pytest-cov", "ruff"]
+
+[tool.setuptools.dynamic]
+version = { attr = "vozata.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["vozata"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

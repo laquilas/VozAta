@@ -78,8 +78,8 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:55
-- **Next step:** TDD the engine package: write `engine/tests/test_smoke.py` (import `vozata`, `__version__ == "0.1.0"`, `main()` prints it), see it fail, then add `pyproject.toml`, `__init__.py`, `__main__.py` and `pip install -e "engine[dev]"`.
+- **Updated:** 2026-10-15 23:05
+- **Next step:** write `engine/.env.example` with the keys owned by phases 01–05 (architecture §9), one comment line per key.
 
 ### Steps
 
@@ -87,8 +87,8 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `4f9dc00`
 - [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `22158ee`, untracked in the next commit
 - [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
-- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
-- [ ] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
+- [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `4930cf6`
+- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
 - [ ] `engine/.env.example` with phase 01–05 keys
 - [ ] `.github/workflows/ci.yml` and green CI
 - [ ] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
@@ -99,3 +99,5 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - **Package name `vozata`** (user decision): product and repo are VozAta and `meeting-minutes` is generic. Docs renamed `meeting_minutes`/`meeting-minutes` → `vozata` and `MeetingMinutes` → `VozAta`. UI projects become `VozAta.*`.
 - **`.venv`** (user decision): the repo lives in OneDrive and had no venv. `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive) (Python 3.13.12 with faster-whisper 1.2.1, ctranslate2, cuBLAS/cuDNN 9, PyAudioWPatch, soxr, numpy 2) so OneDrive does not sync 2.3 GB. Recreate with `New-Item -ItemType Junction -Path .venv -Target <venv>` on a fresh clone.
 - **`__legacy__/`** (user decision, revised): kept locally (copied from `<prototype-workspace>/__legacy__`) but **not published**; it stays ignored by `__*__/`. On a fresh clone, copy it from there. The acceptance criterion "`__legacy__/` is tracked" no longer applies.
+- `pyproject.toml` has no `readme` field: setuptools refuses files outside the package root (`../README.md`).
+- `test_running_as_module_prints_version` covers `python -m vozata` through `runpy`, so the `__main__` guard counts toward coverage (100 %).
