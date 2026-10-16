@@ -105,6 +105,24 @@
   <data name="ModelLoading" xml:space="preserve">
     <value>Cargando el modelo de voz — ya grabando</value>
   </data>
+  <data name="Microphone" xml:space="preserve">
+    <value>Micrófono</value>
+  </data>
+  <data name="SystemOutput" xml:space="preserve">
+    <value>Audio del sistema (salida)</value>
+  </data>
+  <data name="RefreshDevices" xml:space="preserve">
+    <value>Actualizar dispositivos</value>
+  </data>
+  <data name="SpeakerMic" xml:space="preserve">
+    <value>Yo</value>
+  </data>
+  <data name="SpeakerSystem" xml:space="preserve">
+    <value>Otros</value>
+  </data>
+  <data name="NoSystemSignal" xml:space="preserve">
+    <value>Sin sonido del audio del sistema desde hace 30 s. Revisa el dispositivo de salida predeterminado de Windows y los auriculares.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Cerrar</value>
   </data>

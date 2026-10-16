@@ -54,3 +54,57 @@ internal sealed class FakeDialogs : IDialogService
         return Task.FromResult(Answer);
     }
 }
+
+/// <summary>A clock the test moves by hand.</summary>
+internal sealed class FakeClock : IClock
+{
+    public DateTimeOffset Now { get; private set; } = new(2026, 10, 16, 9, 0, 0, TimeSpan.Zero);
+
+    public void Advance(TimeSpan by) => Now += by;
+}
+
+/// <summary>A timer the test ticks by hand.</summary>
+internal sealed class FakeTimer : IUiTimer
+{
+    private readonly List<Action> _ticks = [];
+
+    public TimeSpan? Interval { get; private set; }
+
+    public int Running => _ticks.Count;
+
+    public IDisposable Start(TimeSpan interval, Action tick)
+    {
+        Interval = interval;
+        _ticks.Add(tick);
+        return new Subscription(() => _ticks.Remove(tick));
+    }
+
+    public void Tick()
+    {
+        foreach (var tick in _ticks.ToList())
+        {
+            tick();
+        }
+    }
+
+    private sealed class Subscription(Action dispose) : IDisposable
+    {
+        public void Dispose() => dispose();
+    }
+}
+
+/// <summary>In-memory preferences; counts saves.</summary>
+internal sealed class FakePreferences : IUiPreferences
+{
+    public UiPreferencesData Data { get; set; } = new();
+
+    public int Saves { get; private set; }
+
+    public UiPreferencesData Load() => Data;
+
+    public void Save(UiPreferencesData preferences)
+    {
+        Data = preferences;
+        Saves++;
+    }
+}
