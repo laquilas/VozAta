@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <!-- Modern gradient for brand visual -->
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Dark theme background (GitHub Dark Mode standard) -->
+  <rect width="100%" height="100%" fill="#111827" rx="12"/>
+
+  <g transform="translate(0, -15)">
+    <!-- COMBINED ICON (Meeting Minutes Document + Audio Waveform) -->
+    <g fill="none" stroke="url(#brandGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Meeting Minutes / Document outline -->
+      <path d="M 370 70 L 420 70 L 450 100 L 450 210 C 450 215 445 220 440 220 L 360 220 C 355 220 350 215 350 210 L 350 80 C 350 75 355 70 370 70 Z" />
+      <path d="M 420 70 L 420 95 C 420 98 422 100 425 100 L 450 100" stroke-width="6" />
+      
+      <!-- Audio Waveform / Voice input -->
+      <path d="M 310 150 L 340 150 C 347 150 351 130 355 110 C 360 90 366 200 372 200 C 378 200 382 120 388 120 C 394 120 398 175 404 175 C 410 175 414 135 420 135 C 426 135 430 160 436 160 C 442 160 446 150 452 150 L 490 150" stroke-width="9" />
+    </g>
+
+    <!-- BRAND LOGOTYPE -->
+    <text x="400" y="320" font-family="'Segoe UI', BlinkMacSystemFont, Roboto, sans-serif" font-weight="700" font-size="64" fill="#ffffff" text-anchor="middle" letter-spacing="1">
+      Voz<tspan fill="url(#brandGradient)">Ata</tspan>
+    </text>
+
+    <!-- SUBTITLE / TAGLINE (IN ENGLISH) -->
+    <text x="400" y="360" font-family="'Segoe UI', BlinkMacSystemFont, Roboto, sans-serif" font-weight="600" font-size="16" fill="#9ca3af" text-anchor="middle" letter-spacing="6">
+      OPEN-SOURCE MEETING AI
+    </text>
+  </g>
+</svg>

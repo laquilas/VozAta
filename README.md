@@ -1,5 +1,7 @@
 # VozAta
 
+<p align="center"><img src="assets/logo.svg" alt="VozAta logo" width="480"></p>
+
 An open-source, privacy-first tool that captures microphone and meeting audio, transcribes
 multi-speaker conversations in near real time, and uses AI to generate structured meeting
 minutes (*atas*). Runs locally by default: speech-to-text on your GPU and minutes from a
