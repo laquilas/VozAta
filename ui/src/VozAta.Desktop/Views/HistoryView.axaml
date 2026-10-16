@@ -1,0 +1,146 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             x:Class="VozAta.Desktop.Views.HistoryView"
+             x:DataType="vm:HistoryViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="SelectableTextBlock.h1">
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,8,0,4" />
+    </Style>
+    <Style Selector="SelectableTextBlock.h2">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,10,0,4" />
+    </Style>
+    <Style Selector="SelectableTextBlock.h3">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,8,0,2" />
+    </Style>
+    <Style Selector="SelectableTextBlock.item">
+      <Setter Property="Margin" Value="16,2,0,2" />
+    </Style>
+    <Style Selector="Border.badge">
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="Margin" Value="6,0,0,0" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="340,12,*" Margin="16,8,16,16">
+    <!-- Session list -->
+    <DockPanel>
+      <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,0,0,6"
+              Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}"
+              Command="{Binding RefreshCommand}" />
+      <Button DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,6,0,0"
+              Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryLoadMore]}"
+              Command="{Binding LoadMoreCommand}" IsVisible="{Binding CanLoadMore}" />
+      <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                 IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <Panel>
+        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryEmpty]}"
+                   Opacity="0.6" TextWrapping="Wrap" Margin="8" IsVisible="{Binding IsEmpty}" />
+        <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:SessionRow">
+              <StackPanel Spacing="2">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding Date}" FontWeight="SemiBold" />
+                  <Border Classes="badge" Background="#E53935" IsVisible="{Binding IsLive}">
+                    <TextBlock Foreground="White" FontSize="11"
+                               Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[LiveBadge]}" />
+                  </Border>
+                  <Border Classes="badge" Background="#E3F2FD" IsVisible="{Binding HasMinutes}">
+                    <TextBlock Foreground="#1565C0" FontSize="11"
+                               Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesBadge]}" />
+                  </Border>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="12" Opacity="0.75">
+                  <TextBlock Text="{Binding Duration}" FontFamily="Consolas, monospace" />
+                  <TextBlock Text="{Binding Language}" />
+                </StackPanel>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Panel>
+    </DockPanel>
+
+    <!-- Selected session -->
+    <Panel Grid.Column="2">
+      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistorySelect]}" Opacity="0.6"
+                 Margin="8" TextWrapping="Wrap"
+                 IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNull}}" />
+      <ContentControl Content="{Binding Detail}">
+        <ContentControl.ContentTemplate>
+          <DataTemplate x:DataType="vm:SessionDetailViewModel">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+                <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" />
+                <WrapPanel>
+                  <Button Margin="0,0,8,4" Command="{Binding RegenerateMinutesCommand}"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}"
+                          IsVisible="{Binding !IsLive}" />
+                  <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="mixed"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayMixed]}" />
+                  <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="mic"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayMic]}" />
+                  <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="system"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlaySystem]}" />
+                  <Button Margin="0,0,8,4" Command="{Binding OpenFolderCommand}"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}" />
+                </WrapPanel>
+                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Regenerating]}"
+                           FontStyle="Italic" Foreground="#E65100" IsVisible="{Binding IsBusy}" />
+                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Loading]}"
+                           Opacity="0.6" IsVisible="{Binding IsLoading}" />
+                <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                           IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </StackPanel>
+              <TabControl>
+                <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabMinutes]}">
+                  <Panel>
+                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoMinutes]}"
+                               Opacity="0.6" Margin="8" TextWrapping="Wrap"
+                               IsVisible="{Binding !HasMinutes}" />
+                    <ScrollViewer>
+                      <ItemsControl ItemsSource="{Binding Blocks}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:MarkdownBlock">
+                            <SelectableTextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,2"
+                                                 Classes.h1="{Binding IsHeading1}" Classes.h2="{Binding IsHeading2}"
+                                                 Classes.h3="{Binding IsHeading3}" Classes.item="{Binding IsItem}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </Panel>
+                </TabItem>
+                <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabTranscript]}">
+                  <Panel>
+                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoTranscript]}"
+                               Opacity="0.6" Margin="8" IsVisible="{Binding !Lines.Count}" />
+                    <ScrollViewer>
+                      <ItemsControl ItemsSource="{Binding Lines}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:TranscriptLine">
+                            <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
+                                                 TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </Panel>
+                </TabItem>
+              </TabControl>
+            </DockPanel>
+          </DataTemplate>
+        </ContentControl.ContentTemplate>
+      </ContentControl>
+    </Panel>
+  </Grid>
+</UserControl>

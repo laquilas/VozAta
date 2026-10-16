@@ -18,7 +18,11 @@ public sealed record EngineHealth(
     SttStatus Stt,
     LlmStatus Llm);
 
-public sealed record AudioDevice(int Id, string Name, int SampleRate, int Channels);
+public sealed record AudioDevice(int Id, string Name, int SampleRate, int Channels)
+{
+    /// <summary>The name: what pickers and screen readers show.</summary>
+    public override string ToString() => Name;
+}
 
 public sealed record DeviceList(
     IReadOnlyList<AudioDevice> Inputs,

@@ -67,6 +67,7 @@ public partial class App : Application
         services.AddSingleton<IUiPreferences>(_ => new JsonFileUiPreferences(JsonFileUiPreferences.DefaultPath()));
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IUiTimer, AvaloniaUiTimer>();
+        services.AddSingleton<IShellService, ShellService>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

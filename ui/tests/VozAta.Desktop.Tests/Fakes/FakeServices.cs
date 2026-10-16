@@ -108,3 +108,11 @@ internal sealed class FakePreferences : IUiPreferences
         Saves++;
     }
 }
+
+/// <summary>Records the paths it was asked to open.</summary>
+internal sealed class FakeShell : IShellService
+{
+    public List<string> Opened { get; } = [];
+
+    public void Open(string path) => Opened.Add(path);
+}

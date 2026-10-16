@@ -123,6 +123,63 @@
   <data name="NoSystemSignal" xml:space="preserve">
     <value>Sin sonido del audio del sistema desde hace 30 s. Revisa el dispositivo de salida predeterminado de Windows y los auriculares.</value>
   </data>
+  <data name="TabRecording" xml:space="preserve">
+    <value>Grabación</value>
+  </data>
+  <data name="TabHistory" xml:space="preserve">
+    <value>Historial</value>
+  </data>
+  <data name="HistoryRefresh" xml:space="preserve">
+    <value>Actualizar</value>
+  </data>
+  <data name="HistoryLoadMore" xml:space="preserve">
+    <value>Cargar más</value>
+  </data>
+  <data name="HistoryEmpty" xml:space="preserve">
+    <value>Aún no hay sesiones. Tus grabaciones aparecerán aquí.</value>
+  </data>
+  <data name="HistorySelect" xml:space="preserve">
+    <value>Selecciona una sesión para leer su transcripción y su acta.</value>
+  </data>
+  <data name="LiveBadge" xml:space="preserve">
+    <value>En vivo</value>
+  </data>
+  <data name="MinutesBadge" xml:space="preserve">
+    <value>Acta</value>
+  </data>
+  <data name="TabTranscript" xml:space="preserve">
+    <value>Transcripción</value>
+  </data>
+  <data name="TabMinutes" xml:space="preserve">
+    <value>Acta</value>
+  </data>
+  <data name="NoMinutes" xml:space="preserve">
+    <value>Aún no hay acta. Usa “Generar acta de nuevo” para escribirla.</value>
+  </data>
+  <data name="NoTranscript" xml:space="preserve">
+    <value>Esta sesión no tiene transcripción.</value>
+  </data>
+  <data name="RegenerateMinutes" xml:space="preserve">
+    <value>Generar acta de nuevo</value>
+  </data>
+  <data name="Regenerating" xml:space="preserve">
+    <value>Escribiendo el acta…</value>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>Abrir carpeta</value>
+  </data>
+  <data name="PlayMixed" xml:space="preserve">
+    <value>Reproducir mezcla</value>
+  </data>
+  <data name="PlayMic" xml:space="preserve">
+    <value>Reproducir micrófono</value>
+  </data>
+  <data name="PlaySystem" xml:space="preserve">
+    <value>Reproducir audio del sistema</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Cargando…</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Cerrar</value>
   </data>

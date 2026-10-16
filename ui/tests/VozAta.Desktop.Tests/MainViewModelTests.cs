@@ -15,6 +15,7 @@ public sealed class MainViewModelTests
     private readonly FakePreferences _preferences = new();
     private readonly FakeClock _clock = new();
     private readonly FakeTimer _timer = new();
+    private readonly FakeShell _shell = new();
 
     private static readonly AudioDevice Mic = new(4, "JBL Quantum Stream", 48000, 1);
     private static readonly AudioDevice Laptop = new(1, "Microphone Array (Intel)", 48000, 2);
@@ -26,7 +27,7 @@ public sealed class MainViewModelTests
     }
 
     private MainViewModel Create() =>
-        new(_client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs, _preferences, _clock, _timer);
+        new(_client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs, _preferences, _clock, _timer, _shell);
 
     private async Task<MainViewModel> ReadyAsync()
     {
@@ -172,6 +173,63 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
 
         Assert.Equal((MainViewModel.DefaultWidth, MainViewModel.DefaultHeight), (viewModel.WindowWidth, viewModel.WindowHeight));
+    }
+
+    [Fact]
+    public async Task The_history_loads_at_start_up_and_refreshes_when_a_session_starts_and_ends()
+    {
+        _client.Sessions.Add(new SessionSummary("20261015_100000", "done", null, null, 60, "pt", true));
+
+        var viewModel = await ReadyAsync();
+        Assert.Single(viewModel.History.Rows);
+        Assert.Single(_client.ListRequests);
+
+        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.HistoryRefresh;
+        Assert.Equal(2, _client.ListRequests.Count);
+        await SendAsync(viewModel, new StatusEvent("s", "paused", 3));
+        Assert.Equal(2, _client.ListRequests.Count);  // still the same session
+        await SendAsync(viewModel, new StatusEvent("s", "done", 5));
+        await viewModel.HistoryRefresh;
+
+        Assert.Equal(3, _client.ListRequests.Count);
+    }
+
+    [Fact]
+    public async Task Minutes_and_error_events_reach_the_open_session()
+    {
+        const string id = "20261015_100000";
+        _client.Sessions.Add(new SessionSummary(id, "done", null, null, 60, "pt", false));
+        _client.Details[id] = new SessionDetail(id, "done", null, null, 60, "pt", false, [], @"C:
+");
+        _client.Transcripts[id] = new Transcript("raw", [Line("mic", "Me", 1, "Hi.")]);
+        var viewModel = await ReadyAsync();
+        viewModel.History.Selected = viewModel.History.Rows[0];
+        await viewModel.History.DetailLoading;
+        var detail = viewModel.History.Detail!;
+
+        await detail.RegenerateMinutesCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new ErrorEvent(id, "minutes_failed", "Ollama offline"));
+        Assert.Equal("Ollama offline", detail.Error);
+        await detail.RegenerateMinutesCommand.ExecuteAsync(null);
+        _client.MinutesText[id] = "# Minutes";
+        await SendAsync(viewModel, new MinutesReadyEvent(id));
+        await viewModel.HistoryRefresh;
+
+        Assert.True(detail.HasMinutes);
+        Assert.False(detail.IsBusy);
+        Assert.Contains(_localization["MinutesReady"], viewModel.Notifications);
+    }
+
+    [Fact]
+    public async Task The_history_texts_follow_the_ui_language()
+    {
+        _client.Sessions.Add(new SessionSummary("20261015_100000", "done", null, null, 60, "pt", true));
+        var viewModel = await ReadyAsync();
+
+        viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "es");
+
+        Assert.Equal("Portugués", viewModel.History.Rows[0].Language);
     }
 
     [Fact]

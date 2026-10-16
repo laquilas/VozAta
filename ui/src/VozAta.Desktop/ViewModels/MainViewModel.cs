@@ -41,7 +41,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IDialogService dialogs,
         IUiPreferences preferences,
         IClock clock,
-        IUiTimer timer)
+        IUiTimer timer,
+        IShellService shell)
     {
         _client = client;
         _events = events;
@@ -52,6 +53,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _preferences = preferences;
         _timer = timer;
         Devices = new DevicesViewModel(client, preferences);
+        History = new HistoryViewModel(client, shell, localization);
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
         var saved = preferences.Load();
@@ -81,6 +83,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public IReadOnlyList<ChoiceOption> ConversationLanguages { get; }
 
     public DevicesViewModel Devices { get; }
+
+    public HistoryViewModel History { get; }
+
+    /// <summary>The last history reload started by an event (tests await it).</summary>
+    public Task HistoryRefresh { get; private set; } = Task.CompletedTask;
 
     public LevelMeterViewModel MicMeter { get; }
 
@@ -192,6 +199,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Notify(ErrorText(error)); // recording still works with the engine's default devices
         }
+
+        await History.LoadAsync(_stop.Token);
 
         RefreshTexts();
         EventLoop = FollowEventsAsync();
@@ -327,11 +336,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case ModelLoadingEvent loading:
                 IsModelLoading = loading.Loading;
                 break;
-            case MinutesReadyEvent:
+            case MinutesReadyEvent minutes:
                 Notify(_localization["MinutesReady"]);
+                HistoryRefresh = History.OnMinutesReadyAsync(minutes.SessionId);
                 break;
             case ErrorEvent error:
                 Notify(error.Message);
+                History.OnError(error.SessionId, error.Message);
                 break;
         }
 
@@ -404,7 +415,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         var wasRecording = IsRecording;
+        var wasIdle = State == RecordingState.Idle;
         State = state;
+        if (IsRecording && !wasRecording || state == RecordingState.Idle && !wasIdle)
+        {
+            HistoryRefresh = History.LoadAsync(); // a session appeared or finished
+        }
+
         Devices.IsEnabled = state == RecordingState.Idle;
         UpdateMeters(wasRecording);
         if (state == RecordingState.Idle)
@@ -463,6 +480,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SelectedAppLanguage = AppLanguages.FirstOrDefault(option => option.Value == _localization.Language) ?? AppLanguages[0];
         L = new Strings(_localization);
         RefreshTexts();
+        History.RefreshTexts();
     }
 
     private void RefreshTexts()
