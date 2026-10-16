@@ -67,15 +67,13 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 
 - **Branch:** `feature/06-engine-api`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:05
-- **Next step:** add `fastapi` and `uvicorn[standard]` to `engine/pyproject.toml` and install;
-  add `API_HOST` / `API_PORT` and per-key field metadata (type, default, choices, secret) to
-  `config.py` with tests.
+- **Updated:** 2026-10-16 08:59
+- **Next step:** write `tests/api/test_ws.py`, then `api/ws.py` (`EventBroadcaster`: thread-safe `publish(type, session_id, data)` via `loop.call_soon_threadsafe`, per-client bounded asyncio queues, drop the oldest `level` events for slow clients, initial `status` on connect).
 
 ### Steps
 
-- [x] Start phase: status in progress, Progress section
-- [ ] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py`
+- [x] Start phase: status in progress, Progress section — `fd671b5`
+- [x] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py`
 - [ ] `api/ws.py` (`EventBroadcaster`) + tests
 - [ ] `api/session_manager.py` (`SessionManager`) + tests
 - [ ] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
@@ -90,3 +88,7 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 - The session observer port (`SessionObserver`, phase 05) is what `SessionManager` adapts to the
   broadcaster.
 
+- Settings metadata lives in `settings_fields.py` (`FIELDS`, one row per key, also the source of
+  `config.KEYS`); `settings_view.py` turns `Settings` into `GET /settings` values (secrets masked
+  as `********`) and the schema. Schema types: number, integer, string, bool, choice, url, path.
+  `TRANSCRIPTION_LANGUAGE` reports a `null` default (derived from `APP_LANGUAGE`).

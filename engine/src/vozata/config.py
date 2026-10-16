@@ -22,34 +22,10 @@ from vozata.domain import (
 )
 from vozata.i18n import TomlLocalizer
 from vozata.ports import Localizer
+from vozata.settings_fields import FIELDS
 
-KEYS = (
-    "CHUNK_SECONDS",
-    "SAMPLE_RATE",
-    "APP_LANGUAGE",
-    "TRANSCRIPTION_LANGUAGE",
-    "MIC_LABEL",
-    "SYSTEM_LABEL",
-    "OUTPUT_DIR",
-    "MIX_MODE",
-    # Transcription (phase 03)
-    "TAIL_MARGIN_SECONDS",
-    "PAUSE_GAP_SECONDS",
-    "MAX_CARRY_SECONDS",
-    "SILENCE_RMS_THRESHOLD",
-    "STT_PROVIDER",
-    "WHISPER_MODEL",
-    "WHISPER_DEVICE",
-    "WHISPER_COMPUTE_TYPE",
-    "WHISPER_CPU_MODEL",
-    # Minutes (phase 04)
-    "LLM_PROVIDER",
-    "OLLAMA_URL",
-    "OLLAMA_MODEL",
-    "LLM_MAX_CHARS",
-    # Session (phase 05)
-    "GENERATE_MINUTES",
-)
+KEYS = tuple(field.key for field in FIELDS)
+
 _TRUE = ("true", "1", "yes", "on")
 _FALSE = ("false", "0", "no", "off")
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
@@ -101,6 +77,9 @@ class Settings:
     llm_max_chars: int = 12000
     # Session (phase 05)
     generate_minutes: bool = True
+    # API (phase 06)
+    api_host: str = "127.0.0.1"
+    api_port: int = 8765
 
 
 def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = None) -> Settings:
@@ -138,6 +117,8 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
         llm_max_chars=int(_number(raw, "LLM_MAX_CHARS", 12000, minimum=1000, maximum=1_000_000)),
         generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
+        api_host=raw.get("API_HOST", "127.0.0.1"),
+        api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
     )
 
 
@@ -172,6 +153,13 @@ def _number(
     if not minimum <= value <= maximum:
         raise ConfigError(key, raw[key], "out_of_range", min=minimum, max=maximum)
     return value
+
+
+def _integer(raw: Mapping[str, str], key: str, default: int, *, minimum: int, maximum: int) -> int:
+    value = _number(raw, key, default, minimum=minimum, maximum=maximum)
+    if value != int(value):
+        raise ConfigError(key, raw[key], "out_of_range", min=minimum, max=maximum)
+    return int(value)
 
 
 def _flag(raw: Mapping[str, str], key: str, default: bool) -> bool:
