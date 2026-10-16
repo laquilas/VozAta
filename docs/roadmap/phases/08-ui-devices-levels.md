@@ -54,14 +54,14 @@ Mic test without a session, engine-side device changes during recording.
 
 - **Branch:** `feature/08-ui-devices-levels`
 - **Status:** in progress
-- **Updated:** 2026-10-16 12:50
-- **Next step:** `Services/Clock.cs` (`IClock`, `IUiTimer` + Avalonia implementations) and `ViewModels/LevelMeterViewModel.cs` with `LevelMeterViewModelTests.cs`
+- **Updated:** 2026-10-16 13:00
+- **Next step:** `ViewModels/DevicesViewModel.cs` (load `GET /devices`, restore by name then id, engine defaults, refresh, persist on change, `IsEnabled`) with `DevicesViewModelTests.cs`; `FakeEngineClient` gets scriptable devices
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] `IUiPreferences` + JSON file store — this commit
-- [ ] `IClock` / `IUiTimer` + `LevelMeterViewModel` (dB mapping, decay, peak-hold, no-signal)
+- [x] `IUiPreferences` + JSON file store — `4e579a7`
+- [x] `IClock` / `IUiTimer` + `LevelMeterViewModel` (dB mapping, decay, peak-hold, no-signal) — this commit
 - [ ] `DevicesViewModel` (load, defaults, restore by name, fallback, refresh, persist)
 - [ ] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources
 - [ ] Manual: meters move with speech and media; changing devices records from them; criteria
