@@ -2,11 +2,13 @@ name: Release
 
 # Builds the Windows installer. A pushed tag v* attaches it to that tag's GitHub release
 # (tags follow the release policy: major mandatory, minor optional, patch never).
-# Run it by hand (workflow_dispatch) to build an installer artifact without a release.
+# Pull requests that touch packaging/ and manual runs build an installer artifact without a release.
 
 on:
   push:
     tags: ["v*"]
+  pull_request:  # catch packaging breakage before merge (artifact only, no release)
+    paths: ["packaging/**", ".github/workflows/release.yml"]
   workflow_dispatch:
     inputs:
       version:
@@ -44,7 +46,9 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".TrimStart("v") } else { "${{ inputs.version }}" }
+          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".TrimStart("v") }
+                     elseif ("${{ inputs.version }}") { "${{ inputs.version }}" }
+                     else { "0.0.0-pr${{ github.event.pull_request.number }}" }
           "value=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build engine, desktop app and installer
