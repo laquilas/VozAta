@@ -17,6 +17,8 @@ from vozata.domain import AudioChunk, Channel, TranscriptSegment, Word
 from vozata.ports import Transcriber
 
 _SENTENCE_END = (".", "?", "!", "…")
+MAX_WORD_TAIL_SECONDS = 0.3  # Whisper word ends run early; voiced audio may continue this long
+_FRAME_SECONDS = 0.01
 
 
 class LanguageProvider(Protocol):
@@ -74,7 +76,10 @@ class CarryOverStitcher:
             return []
         cut_word = words[cut]
         next_word = words[cut + 1] if cut + 1 < len(words) else None
-        cut_time = (cut_word.end + next_word.start) / 2 if next_word else cut_word.end
+        if next_word is not None:
+            cut_time = (cut_word.end + next_word.start) / 2
+        else:
+            cut_time = self._voiced_end(audio, cut_word.end, duration)
         self._pending = audio[round(cut_time * self._settings.sample_rate) :]
         self._pending_start = audio_start + cut_time
         return [self._segment(words[: cut + 1], audio_start)]
@@ -108,6 +113,19 @@ class CarryOverStitcher:
         if duration >= self._settings.max_carry_seconds:
             return len(words) - 1
         return None
+
+    def _voiced_end(self, audio: np.ndarray, start: float, duration: float) -> float:
+        """Extend `start` through still-voiced 10 ms frames, at most `MAX_WORD_TAIL_SECONDS`."""
+        rate = self._settings.sample_rate
+        frame = round(_FRAME_SECONDS * rate)
+        end = start
+        limit = min(duration, start + MAX_WORD_TAIL_SECONDS)
+        while end + _FRAME_SECONDS <= limit + 1e-9:
+            first = round(end * rate)
+            if _rms(audio[first : first + frame]) < self._settings.silence_rms_threshold:
+                break
+            end += _FRAME_SECONDS
+        return end
 
     def _segment(self, words: Sequence[Word], offset: float) -> TranscriptSegment:
         absolute = tuple(

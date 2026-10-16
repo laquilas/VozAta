@@ -69,7 +69,7 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:20
+- **Updated:** 2026-10-15 23:25
 - **Next step:** generate `engine/tests/data/speech_en.wav` with Windows TTS (SAPI to file, 16 kHz mono), add `tests/transcription/test_faster_whisper_gpu.py` (marker `gpu`, skipped by default: contract suite + expected words), register the marker, run `pytest -m gpu`, then the CPU fallback with `WHISPER_DEVICE=cpu`.
 
 ### Steps
@@ -91,3 +91,4 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - **Model cache**: the `large-v3-turbo` cache (344 MB) looks incomplete and `small` is not cached; first runs download them with `HF_HUB_DISABLE_XET=1` (the xet protocol hung on this machine before).
 - Ranges: `TAIL_MARGIN_SECONDS` [0, 5], `PAUSE_GAP_SECONDS` [0.05, 5], `MAX_CARRY_SECONDS` [1, 120], `SILENCE_RMS_THRESHOLD` [0, 1]; `STT_PROVIDER` is validated against the registry in `bootstrap.py` (05), not here.
 - `FakeTranscriber` returns an empty result for all-zero audio without consuming a scripted result, as the transcriber contract requires.
+- **Stitcher fix (architecture §7 updated)**: the GPU smoke run showed Whisper's last-word end timestamp running early, so the carried tail began with the end of that word and `flush()` emitted a fragment ("meeting." then "eating."). The cut after a window's last word now extends through still-voiced 10 ms frames, capped at 0.3 s.

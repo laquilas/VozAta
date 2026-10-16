@@ -121,7 +121,7 @@ def test_commit_is_forced_once_carried_audio_reaches_the_maximum() -> None:
     stitcher.on_chunk(chunk(start=10.0))
 
     assert [s.text for s in segments] == ["x y"]
-    assert audio_seconds(fake, 2) == pytest.approx(1.0 + 5.0)  # audio after the last word
+    assert audio_seconds(fake, 2) == pytest.approx(0.7 + 5.0)  # after the last word + 0.3 s tail
 
 
 def test_silent_window_without_pending_audio_skips_the_transcriber() -> None:
@@ -218,3 +218,30 @@ def test_language_and_hints_reach_the_transcriber_and_detections_are_observed() 
     _, code, hints = fake.calls[0]
     assert (code, hints) == (None, "Avalonia")
     assert language.observed == [("pt", pytest.approx(0.8))]
+
+
+def voiced_chunk(start: float, voiced_until: float, seconds: float = 5.0) -> AudioChunk:
+    samples = np.zeros(round(seconds * RATE), dtype=np.float32)
+    samples[: round(voiced_until * RATE)] = 0.1
+    return AudioChunk(channel=Channel.MIC, start=start, samples=samples)
+
+
+def test_cut_after_the_last_word_extends_through_its_voiced_tail() -> None:
+    # Whisper word ends run early: the voice continues 0.2 s after "Done." is said to end.
+    fake = FakeTranscriber([result(w(" Done.", 0.5, 2.0))])
+    stitcher = make(fake)
+
+    stitcher.on_chunk(voiced_chunk(start=0.0, voiced_until=2.2))
+    stitcher.flush()
+
+    assert audio_seconds(fake, 1) == pytest.approx(5.0 - 2.2, abs=0.011)
+
+
+def test_voiced_tail_extension_is_capped() -> None:
+    fake = FakeTranscriber([result(w(" Done.", 0.5, 2.0))])
+    stitcher = make(fake)
+
+    stitcher.on_chunk(voiced_chunk(start=0.0, voiced_until=5.0))
+    stitcher.flush()
+
+    assert audio_seconds(fake, 1) == pytest.approx(5.0 - 2.3)
