@@ -64,16 +64,16 @@ Templates (20), action-item extraction (23), Q&A (24), triggering at session end
 
 - **Branch:** `feature/04-minutes`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:31
-- **Next step:** TDD `minutes/generator.py`: `tests/minutes/test_generator.py` (single pass under `LLM_MAX_CHARS`, segments sorted and rendered with labels, map-reduce over the limit with N map calls + 1 reduce split at segment boundaries, an oversized single line is its own part, empty transcript raises, `LanguageModelError` propagates), see it fail, then implement.
+- **Updated:** 2026-10-15 23:32
+- **Next step:** write `engine/scripts/smoke_minutes.py` (synthetic sample transcript → minutes in en / pt-BR / es through `OllamaLanguageModel`); run it once Ollama is installed and `qwen2.5:7b` pulled (waiting for the user's approval).
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `1b216a7`
 - [x] Config keys owned by 04 + `.env.example` note on a smaller model — `e7d1bea`
 - [x] `LanguageModelError` + `llm/ollama.py` (`OllamaLanguageModel`, tested with `httpx.MockTransport`) — `6eed588`
-- [x] Locale keys + `minutes/prompts.py`
-- [ ] `minutes/generator.py` (`MinutesGenerator`, map-reduce)
+- [x] Locale keys + `minutes/prompts.py` — `a4aaf3e`
+- [x] `minutes/generator.py` (`MinutesGenerator`, map-reduce)
 - [ ] Manual run against a local Ollama in en / pt-BR / es
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
