@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+
 from vozata.export.document import ExportDocument, Row, parse_blocks
 from vozata.export.markdown import MarkdownExporter
 from vozata.ports import DocumentExporter
@@ -51,3 +53,12 @@ def test_missing_minutes_are_said_in_words() -> None:
     text = MarkdownExporter().export(document(minutes=None)).decode("utf-8")
 
     assert "## Ata\n\n_Nenhuma ata foi gerada para esta sessão._\n" in text
+
+
+def test_no_details_and_no_transcript_lines() -> None:
+    bare = dataclasses.replace(document(), details=[], rows=[])
+
+    text = MarkdownExporter().export(bare).decode("utf-8")
+
+    assert text.startswith("# Reunião de 2026-10-16 09:00\n\n## Ata\n")
+    assert text.endswith("## Transcrição\n")
