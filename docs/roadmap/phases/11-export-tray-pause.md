@@ -64,14 +64,13 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 
 - **Branch:** `feature/11-export-tray-pause`
 - **Status:** in progress
-- **Updated:** 2026-10-16 20:10
-- **Next step:** `DocumentExporter` port, `export/document.py` (minutes Markdown → blocks, shared by
-  the exporters) and `export/markdown.py` with tests
+- **Updated:** 2026-10-16 20:30
+- **Next step:** `export/docx.py` (`DocxExporter`: title, details, minutes headings / bullets / numbered / paragraphs, transcript table) with `tests/export/test_docx.py` (re-open with python-docx); add `python-docx`, `fpdf2` and dev `pypdf` to `pyproject.toml`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] `DocumentExporter` port + Markdown exporter
+- [x] `DocumentExporter` port + Markdown exporter — this commit
 - [ ] DOCX exporter (`python-docx`)
 - [ ] PDF exporter (`fpdf2`, bundled DejaVu Sans + license)
 - [ ] `EXPORTERS` registry + `GET /sessions/{id}/export?format=`

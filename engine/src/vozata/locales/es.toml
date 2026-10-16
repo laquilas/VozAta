@@ -95,3 +95,14 @@ system = "id del dispositivo de loopback (predeterminado: el loopback de la sali
 list_devices = "muestra los dispositivos de audio y sale"
 minutes = "vuelve a generar el acta de una sesión grabada"
 session_dir = "carpeta de la sesión, por ejemplo recordings/20261015_202358"
+
+[export]
+title = "Reunión del {date}"
+duration = "Duración: {value}"
+language = "Idioma: {value}"
+minutes = "Acta"
+transcript = "Transcripción"
+no_minutes = "No se generó un acta para esta sesión."
+column_time = "Hora"
+column_speaker = "Hablante"
+column_text = "Texto"

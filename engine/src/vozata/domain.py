@@ -6,7 +6,7 @@ All times are seconds since session start.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -139,3 +139,36 @@ class TranscriptSegment:
 def default_conversation_language(app_language: AppLanguage) -> ConversationLanguage:
     """The spoken language assumed when none is configured (`pt-BR` -> `pt`)."""
     return ConversationLanguage(app_language.value.split("-")[0])
+
+
+# Document export (phase 11): built by `export.document`, rendered by `DocumentExporter`s.
+
+
+@dataclass(frozen=True)
+class Block:
+    """One block of the minutes: `h1`-`h3`, `p`, `bullet` or `numbered` (text includes "1.")."""
+
+    kind: str
+    text: str
+
+
+@dataclass(frozen=True)
+class Row:
+    """One transcript line: `hh:mm:ss`, speaker label, text."""
+
+    time: str
+    speaker: str
+    text: str
+
+
+@dataclass(frozen=True)
+class ExportDocument:
+    title: str
+    details: list[str]
+    minutes_title: str
+    minutes_markdown: str | None
+    minutes_blocks: list[Block]
+    no_minutes: str
+    transcript_title: str
+    columns: tuple[str, str, str]
+    rows: list[Row] = field(default_factory=list)

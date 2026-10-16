@@ -16,6 +16,7 @@ from vozata.domain import (
     AudioChunk,
     Channel,
     ConversationLanguage,
+    ExportDocument,
     SessionStatus,
     TranscriptionResult,
     TranscriptSegment,
@@ -100,6 +101,16 @@ class LanguageModel(Protocol):
     def release(self) -> None:
         """Free the model's memory (VRAM) after a job; raises `LanguageModelError` on failure."""
         ...
+
+
+@runtime_checkable
+class DocumentExporter(Protocol):
+    """Renders an `ExportDocument` (minutes + transcript) as one file format (phase 11)."""
+
+    media_type: str
+    extension: str
+
+    def export(self, document: ExportDocument) -> bytes: ...
 
 
 @runtime_checkable

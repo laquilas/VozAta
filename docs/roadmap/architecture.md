@@ -95,6 +95,8 @@ class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
     segment_id: str; channel: Channel; speaker_id: str; start: float; end: float
     text: str; words: tuple[Word, ...]
 @dataclass(frozen=True) class SpeakerTurn:     start, end, speaker_index: int
+@dataclass(frozen=True) class ExportDocument:  title, details, minutes_title, minutes_markdown, minutes_blocks: list[Block],
+                                               no_minutes, transcript_title, columns, rows: list[Row]  # localized (11)
 @dataclass(frozen=True) class ActionItem:      description, owner: str | None, due: str | None, source_segment_ids
 ```
 
@@ -137,9 +139,9 @@ class Diarizer(Protocol):
     def close(self) -> None: ...
 class SpeakerEmbedder(Protocol):
     def embed(self, samples: np.ndarray) -> np.ndarray: ...
-class DocumentExporter(Protocol):
+class DocumentExporter(Protocol):     # Markdown, DOCX, PDF (11)
     media_type: str; extension: str
-    def export(self, minutes_md: str | None, segments: Sequence[TranscriptSegment], labeler, meta) -> bytes: ...
+    def export(self, document: ExportDocument) -> bytes: ...  # built once by export.document.build_document
 class TaskExporter(Protocol):
     def export(self, items: Sequence[ActionItem], session_title: str) -> list[str]: ...  # created URLs
 class Localizer(Protocol):
