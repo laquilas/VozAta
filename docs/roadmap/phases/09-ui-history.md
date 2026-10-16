@@ -55,14 +55,13 @@ Editing (21), search (22), speaker rename (16), action items (23), export (11).
 
 - **Branch:** `feature/09-ui-history`
 - **Status:** in progress
-- **Updated:** 2026-10-16 15:00
-- **Next step:** `Services/ShellService.cs` (`IShellService`) and `ViewModels/MarkdownBlocks.cs`
-  (minutes Markdown → display blocks) with tests
+- **Updated:** 2026-10-16 15:10
+- **Next step:** `ViewModels/SessionDetailViewModel.cs` (load detail + transcript + minutes, `minutes_not_found` → no minutes, regenerate busy until `minutes_ready`/`error`, open folder/audio via `IShellService`) with `SessionDetailViewModelTests.cs`; scriptable sessions in `FakeEngineClient`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] `IShellService` + Markdown → blocks parser
+- [x] `IShellService` + Markdown → blocks parser — this commit
 - [ ] `SessionDetailViewModel` (transcript, minutes, regenerate, open folder / audio)
 - [ ] `HistoryViewModel` (paged list, live badge, refresh, selection)
 - [ ] Main window: Recording | History navigation, event forwarding, resources, DI
