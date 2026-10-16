@@ -16,6 +16,8 @@ htmlcov/
 gravacoes/
 recordings/
 *.wav
+# Synthetic test fixtures (no meeting data)
+!engine/tests/data/*.wav
 
 # IDE and operating system files
 .vscode/
