@@ -6,7 +6,7 @@ import pytest
 
 from tests.fakes import FakeLocalizer
 from vozata.config import ConfigError, Settings, load_settings
-from vozata.domain import AppLanguage, ConversationLanguage, MixMode, WhisperDevice
+from vozata.domain import AppLanguage, ChunkMode, ConversationLanguage, MixMode, WhisperDevice
 
 
 def test_defaults_when_nothing_is_set() -> None:
@@ -348,3 +348,56 @@ def test_secret_values_are_masked(monkeypatch: pytest.MonkeyPatch) -> None:
     values = settings_view.settings_values(load_settings(env={}))
 
     assert values[secret.key] == "********"
+
+
+def test_segmentation_defaults() -> None:
+    settings = load_settings(env={})
+
+    assert settings.chunk_mode is ChunkMode.VAD
+    assert settings.vad_threshold == 0.5
+    assert settings.vad_min_silence_ms == 600
+    assert settings.vad_min_chunk_seconds == 1.0
+    assert settings.vad_max_chunk_seconds == 15.0
+    assert settings.vad_speech_pad_ms == 200
+
+
+def test_segmentation_values_are_parsed() -> None:
+    settings = load_settings(
+        env={
+            "CHUNK_MODE": "fixed",
+            "VAD_THRESHOLD": "0.6",
+            "VAD_MIN_SILENCE_MS": "800",
+            "VAD_MIN_CHUNK_SECONDS": "0.5",
+            "VAD_MAX_CHUNK_SECONDS": "20",
+            "VAD_SPEECH_PAD_MS": "100",
+        }
+    )
+
+    assert settings.chunk_mode is ChunkMode.FIXED
+    assert (settings.vad_threshold, settings.vad_min_silence_ms) == (0.6, 800)
+    assert (settings.vad_min_chunk_seconds, settings.vad_max_chunk_seconds) == (0.5, 20.0)
+    assert settings.vad_speech_pad_ms == 100
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("CHUNK_MODE", "auto"),
+        ("VAD_THRESHOLD", "0"),
+        ("VAD_THRESHOLD", "1"),
+        ("VAD_MIN_SILENCE_MS", "50"),
+        ("VAD_MIN_SILENCE_MS", "5001"),
+        ("VAD_MIN_SILENCE_MS", "600.5"),
+        ("VAD_MIN_CHUNK_SECONDS", "-1"),
+        ("VAD_MIN_CHUNK_SECONDS", "6"),
+        ("VAD_MAX_CHUNK_SECONDS", "4"),
+        ("VAD_MAX_CHUNK_SECONDS", "61"),
+        ("VAD_SPEECH_PAD_MS", "-1"),
+        ("VAD_SPEECH_PAD_MS", "1001"),
+    ],
+)
+def test_invalid_segmentation_values_raise(key: str, value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert caught.value.key == key

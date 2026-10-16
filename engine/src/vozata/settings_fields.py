@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from vozata.domain import AppLanguage, ConversationLanguage, MixMode, WhisperDevice
+from vozata.domain import AppLanguage, ChunkMode, ConversationLanguage, MixMode, WhisperDevice
 
 
 @dataclass(frozen=True)
@@ -41,6 +41,13 @@ FIELDS: tuple[Field, ...] = (
     Field("WHISPER_DEVICE", "whisper_device", "choice", WhisperDevice),
     Field("WHISPER_COMPUTE_TYPE", "whisper_compute_type", "string"),
     Field("WHISPER_CPU_MODEL", "whisper_cpu_model", "string"),
+    # Pause-based segmentation (phase 27)
+    Field("CHUNK_MODE", "chunk_mode", "choice", ChunkMode),
+    Field("VAD_THRESHOLD", "vad_threshold", "number"),
+    Field("VAD_MIN_SILENCE_MS", "vad_min_silence_ms", "integer"),
+    Field("VAD_MIN_CHUNK_SECONDS", "vad_min_chunk_seconds", "number"),
+    Field("VAD_MAX_CHUNK_SECONDS", "vad_max_chunk_seconds", "number"),
+    Field("VAD_SPEECH_PAD_MS", "vad_speech_pad_ms", "integer"),
     # Minutes (phase 04)
     Field("LLM_PROVIDER", "llm_provider", "string"),
     Field("OLLAMA_URL", "ollama_url", "url"),

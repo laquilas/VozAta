@@ -16,6 +16,7 @@ from dotenv import dotenv_values
 
 from vozata.domain import (
     AppLanguage,
+    ChunkMode,
     ConversationLanguage,
     MixMode,
     WhisperDevice,
@@ -73,6 +74,13 @@ class Settings:
     whisper_device: WhisperDevice = WhisperDevice.AUTO
     whisper_compute_type: str = "int8_float16"
     whisper_cpu_model: str = "small"
+    # Pause-based segmentation (phase 27)
+    chunk_mode: ChunkMode = ChunkMode.VAD
+    vad_threshold: float = 0.5
+    vad_min_silence_ms: int = 600
+    vad_min_chunk_seconds: float = 1.0
+    vad_max_chunk_seconds: float = 15.0
+    vad_speech_pad_ms: int = 200
     # Minutes (phase 04)
     llm_provider: str = "ollama"
     ollama_url: str = "http://localhost:11434"
@@ -117,6 +125,12 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         whisper_device=_choice(raw, "WHISPER_DEVICE", WhisperDevice, WhisperDevice.AUTO),
         whisper_compute_type=raw.get("WHISPER_COMPUTE_TYPE", "int8_float16"),
         whisper_cpu_model=raw.get("WHISPER_CPU_MODEL", "small"),
+        chunk_mode=_choice(raw, "CHUNK_MODE", ChunkMode, ChunkMode.VAD),
+        vad_threshold=_number(raw, "VAD_THRESHOLD", 0.5, minimum=0.01, maximum=0.99),
+        vad_min_silence_ms=_integer(raw, "VAD_MIN_SILENCE_MS", 600, minimum=100, maximum=5000),
+        vad_min_chunk_seconds=_number(raw, "VAD_MIN_CHUNK_SECONDS", 1.0, minimum=0, maximum=5),
+        vad_max_chunk_seconds=_number(raw, "VAD_MAX_CHUNK_SECONDS", 15.0, minimum=5, maximum=60),
+        vad_speech_pad_ms=_integer(raw, "VAD_SPEECH_PAD_MS", 200, minimum=0, maximum=1000),
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),

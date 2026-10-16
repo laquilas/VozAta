@@ -39,6 +39,11 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class ChunkMode(StrEnum):
+    VAD = "vad"  # cut at pauses (phase 27)
+    FIXED = "fixed"  # CHUNK_SECONDS windows
+
+
 class MixMode(StrEnum):
     MONO = "mono"
     STEREO = "stereo"

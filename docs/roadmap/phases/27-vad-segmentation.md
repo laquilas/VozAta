@@ -59,15 +59,14 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
 
 - **Branch:** `feature/27-vad-segmentation`
 - **Status:** in progress
-- **Updated:** 2026-10-16 17:00
-- **Next step:** add `ChunkMode` (`domain.py`) and the `CHUNK_MODE` / `VAD_*` keys to `config.py`,
-  `settings_fields.py`, `.env.example` with tests in `tests/test_config.py`
+- **Updated:** 2026-10-16 17:20
+- **Next step:** add the `Chunker` and `SpeechDetector` ports (`ports.py`, fakes) and `audio/vad_chunker.py` (`VadChunker`) with fake-detector tests in `tests/audio/test_vad_chunker.py`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] Config: `CHUNK_MODE` (`vad` | `fixed`), `VAD_THRESHOLD`, `VAD_MIN_SILENCE_MS`,
-      `VAD_MIN_CHUNK_SECONDS`, `VAD_MAX_CHUNK_SECONDS`, `VAD_SPEECH_PAD_MS`
+- [x] Config: `CHUNK_MODE` (`vad` | `fixed`), `VAD_THRESHOLD`, `VAD_MIN_SILENCE_MS`,
+      `VAD_MIN_CHUNK_SECONDS`, `VAD_MAX_CHUNK_SECONDS`, `VAD_SPEECH_PAD_MS` — this commit
 - [ ] Ports `Chunker` and `SpeechDetector`; `VadChunker` (fake-detector tests)
 - [ ] `AudioChunk.complete`; the stitcher commits every word of a complete chunk
 - [ ] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory
