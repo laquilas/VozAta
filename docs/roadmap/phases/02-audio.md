@@ -68,8 +68,8 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 
 - **Branch:** `feature/02-audio`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:02
-- **Next step:** TDD `audio/devices.py` against a fake PyAudio (`tests/audio/test_devices.py`: listing inputs and loopbacks, defaults, `find_device`, missing id), see it fail, then implement.
+- **Updated:** 2026-10-15 23:04
+- **Next step:** implement `audio/capture.py` (`WasapiSource`: callback timestamps blocks, consumer thread downmixes and resamples with `soxr.ResampleStream`, overflow count); unit-test block handling with a fake clock; write `engine/scripts/smoke_capture.py` and run it for 10 s.
 
 ### Steps
 
@@ -77,8 +77,8 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - [x] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`) — `f957159`
 - [x] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding — `69a0f8c`
 - [x] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause — `cce70a1`
-- [x] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config
-- [ ] `audio/devices.py` (testable with a fake PyAudio)
+- [x] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config — `604e113`
+- [x] `audio/devices.py` (testable with a fake PyAudio)
 - [ ] `audio/capture.py` (`WasapiSource`) + `engine/scripts/smoke_capture.py`; run the smoke check
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
@@ -88,3 +88,5 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - **Chunker gap fill**: the chunker fills loopback gaps with zeros (same 0.15 s tolerance as the writer), so window `start` values follow the session clock. Pausing flushes the partial window and drops audio; windows restart at the resume time.
 - **Equal length**: `AlignedWavWriter.samples_written` lets the session (05) finalize every WAV to the longest one; `finalize` pads and never truncates.
 - `tests/` and `tests/audio/` are packages (`__init__.py`) so test modules in subfolders get unique names.
+- Device discovery lists **WASAPI** devices; `default_input()` uses WASAPI's default capture device (the system default is MME). On the reference machine: WASAPI mic id 9, default loopback id 10.
+- Device names from PortAudio can contain mis-decoded characters (seen: `Intel�`); phase 08 (device UI) should handle display names.
