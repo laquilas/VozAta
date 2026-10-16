@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -202,3 +203,31 @@ def test_unresponsive_windows_audio_fails_with_a_localized_start_error(
 
     assert error.value.code == "audio_unavailable"
     assert "Windows" in str(error.value)
+
+
+def test_build_api_container_wires_real_providers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata.api.minutes_job import MinutesJob
+    from vozata.api.session_manager import StartOptions
+    from vozata.audio.catalog import WasapiCatalog
+
+    llm = FakeLanguageModel(available=False)
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: llm)
+    built: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        bootstrap, "build_session", lambda settings, observer, **kwargs: built.append(kwargs)
+    )
+    settings = _settings(tmp_path, llm_provider="fake")
+
+    container = bootstrap.build_api_container(settings)
+
+    assert container.settings is settings
+    assert isinstance(container.devices, WasapiCatalog)
+    assert isinstance(container.regenerate_minutes, MinutesJob)
+    assert container.llm_reachable() is False
+    assert container.store.list_sessions() == []
+    container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3))
+    assert built == [{"language": None, "mic_device": 3, "system_device": None}]
+    generator = container.regenerate_minutes._build_generator()
+    assert generator._llm is llm

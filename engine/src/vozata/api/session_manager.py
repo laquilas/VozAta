@@ -1,0 +1,211 @@
+"""The API's single recording session: lifecycle, events and background finalization."""
+
+from __future__ import annotations
+
+import logging
+import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+from vozata.api.payloads import segment_payload, session_summary
+from vozata.api.ws import EventBroadcaster
+from vozata.domain import Channel, ConversationLanguage, SessionStatus, TranscriptSegment
+from vozata.labels import SpeakerLabeler
+from vozata.ports import SessionObserver
+from vozata.storage.session_store import SessionStore
+
+LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
+STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
+
+_log = logging.getLogger(__name__)
+
+
+class SessionConflictError(RuntimeError):
+    """A session is already recording, paused or finalizing (`409 session_already_active`)."""
+
+
+class NoActiveSessionError(RuntimeError):
+    """No session is recording or paused (`409 no_active_session`)."""
+
+
+class Session(Protocol):
+    status: SessionStatus | None
+
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def duration_seconds(self) -> float: ...
+
+    def start(self) -> None: ...
+
+    def pause(self) -> None: ...
+
+    def resume(self) -> None: ...
+
+    def stop(self) -> None: ...
+
+
+@dataclass(frozen=True)
+class StartOptions:
+    language: ConversationLanguage | None = None
+    mic_device: int | None = None
+    system_device: int | None = None
+
+
+SessionFactory = Callable[[SessionObserver, StartOptions], Session]
+
+
+class _EventObserver:
+    """`SessionObserver` → WebSocket envelopes; `level` throttled per channel."""
+
+    def __init__(
+        self,
+        broadcaster: EventBroadcaster,
+        labeler: SpeakerLabeler,
+        session_id: Callable[[], str | None],
+        clock: Callable[[], float],
+    ) -> None:
+        self._publish = broadcaster.publish
+        self._labeler = labeler
+        self._session_id = session_id
+        self._clock = clock
+        self._level_at: dict[Channel, float] = {}
+
+    def on_status(self, status: SessionStatus, duration_seconds: float) -> None:
+        self._send("status", {"status": status.value, "duration_seconds": duration_seconds})
+
+    def on_level(self, channel: Channel, rms_db: float) -> None:
+        now = self._clock()
+        if now - self._level_at.get(channel, float("-inf")) < LEVEL_INTERVAL:
+            return
+        self._level_at[channel] = now
+        self._send("level", {"channel": channel.value, "rms_db": rms_db})
+
+    def on_segment(self, segment: TranscriptSegment) -> None:
+        self._send("segment", segment_payload(segment, self._labeler))
+
+    def on_language_detected(self, language: ConversationLanguage) -> None:
+        self._send("language_detected", {"language": language.value})
+
+    def on_minutes_ready(self, session_id: str) -> None:
+        self._send("minutes_ready", {"session_id": session_id})
+
+    def on_error(self, code: str, message: str) -> None:
+        self._send("error", {"code": code, "message": message})
+
+    def _send(self, kind: str, data: dict[str, Any]) -> None:
+        self._publish(kind, self._session_id(), data)
+
+
+class SessionManager:
+    """Owns at most one active session (recording, paused or finalizing).
+
+    `stop()` returns at once: finalization (transcript drain, WAVs, minutes) runs on a background
+    thread and reports through `status` events.
+    """
+
+    def __init__(
+        self,
+        factory: SessionFactory,
+        store: SessionStore,
+        broadcaster: EventBroadcaster,
+        labeler: SpeakerLabeler,
+        clock: Callable[[], float] = time.monotonic,
+        status_interval: float = STATUS_INTERVAL,
+    ) -> None:
+        self._factory = factory
+        self._store = store
+        self._broadcaster = broadcaster
+        self._labeler = labeler
+        self._clock = clock
+        self._status_interval = status_interval
+        self._lock = threading.Lock()
+        self._session: Session | None = None
+        self._finished = threading.Event()
+
+    @property
+    def current(self) -> Session | None:
+        return self._session
+
+    def start(self, options: StartOptions) -> dict[str, Any]:
+        with self._lock:
+            if self._session is not None:
+                raise SessionConflictError
+            holder: list[Session] = []
+            observer = _EventObserver(
+                self._broadcaster, self._labeler, lambda: _started_id(holder), self._clock
+            )
+            session = self._factory(observer, options)
+            holder.append(session)
+            session.start()
+            self._session = session
+            self._finished.clear()
+        threading.Thread(target=self._heartbeat, args=(session,), daemon=True).start()
+        return self.summary(session)
+
+    def pause(self) -> dict[str, Any]:
+        session = self._active()
+        session.pause()
+        return self.summary(session)
+
+    def resume(self) -> dict[str, Any]:
+        session = self._active()
+        session.resume()
+        return self.summary(session)
+
+    def stop(self) -> dict[str, Any]:
+        """Begin finalization on a background thread; the summary reports `finalizing`."""
+        session = self._active()
+        summary = self.summary(session)
+        # Not a daemon: the process waits for the WAVs, transcript and minutes to be written.
+        threading.Thread(target=self._finalize, args=(session,), name="finalize").start()
+        return {**summary, "status": SessionStatus.FINALIZING.value}
+
+    def wait_until_finished(self, timeout: float | None = None) -> bool:
+        """Block until the last stopped session finished finalizing (tests, shutdown)."""
+        return self._finished.wait(timeout)
+
+    def summary(self, session: Session) -> dict[str, Any]:
+        live = session.duration_seconds if session is self._session else None
+        return session_summary(self._store, session.id, live)
+
+    def status_message(self) -> dict[str, Any]:
+        """The `status` envelope sent to a client when it connects."""
+        session = self._session
+        if session is None or session.status is None:
+            return {"type": "status", "session_id": None, "data": {"status": "idle"}}
+        data = {"status": session.status.value, "duration_seconds": session.duration_seconds}
+        return {"type": "status", "session_id": session.id, "data": data}
+
+    def _active(self) -> Session:
+        session = self._session
+        if session is None or session.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+            raise NoActiveSessionError
+        return session
+
+    def _finalize(self, session: Session) -> None:
+        try:
+            session.stop()
+        except Exception:
+            _log.exception("Finalizing session %s failed", session.id)
+        finally:
+            with self._lock:
+                self._session = None
+            self._finished.set()
+
+    def _heartbeat(self, session: Session) -> None:
+        while not self._finished.wait(self._status_interval):
+            if session.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+                return
+            data = {"status": session.status.value, "duration_seconds": session.duration_seconds}
+            self._broadcaster.publish("status", session.id, data)
+
+
+def _started_id(holder: list[Session]) -> str | None:
+    try:
+        return holder[0].id if holder else None
+    except RuntimeError:  # events before the session folder exists
+        return None

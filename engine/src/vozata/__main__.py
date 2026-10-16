@@ -7,7 +7,9 @@ import logging
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
+
+from fastapi import FastAPI
 
 from vozata import __version__, bootstrap
 from vozata.audio.devices import (
@@ -19,7 +21,8 @@ from vozata.audio.devices import (
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.minutes import run_minutes
 from vozata.cli.record import print_devices, run_record
-from vozata.config import ConfigError, load_settings
+from vozata.cli.serve import run_serve
+from vozata.config import ConfigError, Settings, load_settings
 from vozata.domain import ConversationLanguage
 from vozata.ports import Localizer
 
@@ -46,6 +49,7 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     record.add_argument("--mic", type=int, metavar="ID", help=t("cli.help.mic"))
     record.add_argument("--system", type=int, metavar="ID", help=t("cli.help.system"))
     record.add_argument("--list-devices", action="store_true", help=t("cli.help.list_devices"))
+    commands.add_parser("serve", help=t("cli.help.serve"))
     minutes = commands.add_parser("minutes", help=t("cli.help.minutes"))
     minutes.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
     return parser
@@ -70,6 +74,8 @@ def main(
     labeler = bootstrap.build_labeler(settings, localizer)
     console = ConsoleObserver(localizer, labeler, out)
     try:
+        if args.command == "serve":
+            return run_serve(settings, console, localizer, _build_app, _uvicorn_run)
         if args.command == "minutes":
             return run_minutes(
                 args.session_dir,
@@ -105,6 +111,18 @@ def main(
         return 2
     except KeyboardInterrupt:
         return 130
+
+
+def _build_app(settings: Settings) -> FastAPI:
+    from vozata.api.app import create_app
+
+    return create_app(bootstrap.build_api_container(settings))
+
+
+def _uvicorn_run(app: FastAPI, **options: Any) -> None:  # pragma: no cover - starts a server
+    import uvicorn
+
+    uvicorn.run(app, **options)
 
 
 if __name__ == "__main__":

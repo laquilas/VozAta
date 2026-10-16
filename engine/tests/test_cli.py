@@ -167,3 +167,27 @@ def test_tolerant_output_accepts_streams_without_reconfigure() -> None:
     stream = io.StringIO()
 
     assert cli.tolerant_output(stream) is stream
+
+
+def test_serve_command_runs_the_api(monkeypatch: pytest.MonkeyPatch) -> None:
+    received: list[Any] = []
+    monkeypatch.setattr(cli, "run_serve", lambda *args: received.append(args) or 0)
+
+    code, _ = _main(["serve"], env={"API_PORT": "9001"})
+
+    assert code == 0
+    settings, _console, _localizer, build_app, run = received[0]
+    assert settings.api_port == 9001
+    assert build_app is cli._build_app
+    assert run is cli._uvicorn_run
+
+
+def test_build_app_wraps_the_real_container(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from tests.api.conftest import Api
+
+    container = Api(tmp_path).app.state.container
+    monkeypatch.setattr(cli.bootstrap, "build_api_container", lambda settings: container)
+
+    app = cli._build_app(container.settings)
+
+    assert app.state.container is container

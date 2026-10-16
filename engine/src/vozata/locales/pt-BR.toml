@@ -16,6 +16,21 @@ device_failed = "Não foi possível abrir o dispositivo de áudio \"{device}\": 
 mix_failed = "Não foi possível criar o mixed.wav ({reason}). As faixas do microfone e do sistema foram mantidas."
 minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a transcrição foram mantidas; tente novamente com: {command}"
 
+[errors.api]
+minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
+empty_transcript = "A sessão \"{id}\" não tem transcrição, então não há o que resumir."
+not_found = "Este endpoint não existe."
+method_not_allowed = "Este método não é permitido neste endpoint."
+http_error = "A requisição falhou com o status HTTP {status}."
+session_already_active = "Já existe uma gravação em andamento ou sendo finalizada. Pare-a ou aguarde até que termine."
+no_active_session = "Nenhuma gravação está em andamento."
+session_not_found = "A sessão \"{id}\" não foi encontrada."
+minutes_not_found = "A sessão \"{id}\" ainda não tem ata."
+session_still_recording = "A sessão \"{id}\" ainda está gravando; a ata é gerada quando ela parar."
+device_not_found = "Dispositivo de áudio não encontrado: {reason}"
+invalid_request = "Requisição inválida: {details}"
+internal_error = "Erro inesperado no motor. Consulte o log do motor para mais detalhes."
+
 [languages]
 en = "inglês"
 pt = "português"
@@ -42,6 +57,8 @@ action_items = "Itens de ação"
 open_issues = "Questões em aberto"
 
 [cli]
+serving = "API do motor escutando em {url} (Ctrl+C para parar)."
+serve_public_host = "Recusando escutar em {host}: a API do motor não tem autenticação. Use 127.0.0.1 ou localhost em API_HOST."
 loading_model = "Carregando o modelo de reconhecimento de fala..."
 recording = "Gravando em {folder}"
 controls = "Pressione p + Enter para pausar ou retomar, Ctrl+C para parar."
@@ -64,6 +81,7 @@ loopbacks = "Áudio do sistema (loopback):"
 default = "padrão"
 
 [cli.help]
+serve = "executa a API HTTP + WebSocket local usada pelo aplicativo desktop"
 description = "Transcrição de reuniões quase em tempo real e geração de atas."
 record = "grava o microfone e o áudio do sistema com transcrição ao vivo"
 language = "idioma falado na reunião (padrão: TRANSCRIPTION_LANGUAGE)"

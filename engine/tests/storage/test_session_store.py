@@ -202,3 +202,18 @@ def test_create_uses_the_given_start_time(tmp_path: Path) -> None:
     paths = store.create(datetime(2026, 10, 15, 20, 23, 58, tzinfo=BRT))
 
     assert paths.id == "20261015_202358"
+
+
+def test_load_transcript_with_source_names_the_file_used(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    segment = _segment("mic-000001", Channel.MIC, 0.0, "a")
+
+    assert store.load_transcript_with_source(paths.id) == ("raw", [])
+
+    _write_jsonl(paths.transcript_jsonl, segment)
+    assert store.load_transcript_with_source(paths.id) == ("raw", [segment])
+    _write_jsonl(paths.diarized_jsonl, segment)
+    assert store.load_transcript_with_source(paths.id)[0] == "diarized"
+    _write_jsonl(paths.edited_jsonl, segment)
+    assert store.load_transcript_with_source(paths.id)[0] == "edited"

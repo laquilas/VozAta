@@ -124,13 +124,21 @@ class SessionStore:
 
     def load_transcript(self, session_id: str) -> list[TranscriptSegment]:
         """The best transcript: edited, then diarized, then raw (empty when none exists)."""
+        return self.load_transcript_with_source(session_id)[1]
+
+    def load_transcript_with_source(self, session_id: str) -> tuple[str, list[TranscriptSegment]]:
+        """The best transcript and its source: `edited`, `diarized` or `raw`."""
         paths = self.paths(session_id)
         if not paths.root.is_dir():
             raise SessionNotFoundError(session_id)
-        for path in (paths.edited_jsonl, paths.diarized_jsonl, paths.transcript_jsonl):
+        for source, path in (
+            ("edited", paths.edited_jsonl),
+            ("diarized", paths.diarized_jsonl),
+            ("raw", paths.transcript_jsonl),
+        ):
             if path.is_file():
-                return _read_segments(path)
-        return []
+                return source, _read_segments(path)
+        return "raw", []
 
     def discard(self, session_id: str) -> None:
         """Delete a session folder (used when a recording fails to start)."""

@@ -329,6 +329,7 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
 
     meta = rig.store.read_meta(rig.session.id)
     assert (meta["status"], meta["ended_at"]) == ("done", "2026-10-15T20:30:00-03:00")
+    assert meta["duration_seconds"] == 0.0  # recorded length, not wall time to the end
 
 
 def test_auto_language_is_stored_once_detected(tmp_path: Path) -> None:
@@ -470,3 +471,25 @@ def test_a_failing_release_does_not_stop_finalization(tmp_path: Path) -> None:
     rig.session.stop()
 
     assert rig.session.status is SessionStatus.DONE
+
+
+def test_duration_follows_the_session_clock_once_started(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+
+    assert rig.session.duration_seconds == 0.0
+
+    rig.session.start()
+    rig.clock.time = 12.5
+
+    assert rig.session.duration_seconds == 12.5
+    rig.session.stop()
+
+
+def test_duration_seconds_is_the_recorded_length_at_capture_stop(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+    rig.clock.time = 63.25
+
+    rig.session.stop()
+
+    assert rig.store.read_meta(rig.session.id)["duration_seconds"] == 63.25

@@ -164,3 +164,15 @@ def test_stream_skips_blank_lines_and_ends_when_the_body_ends() -> None:
         return httpx.Response(200, content=body.encode())
 
     assert list(model_with(handler).stream("s", "p")) == ["a", "b"]
+
+
+def test_is_available_uses_a_short_timeout() -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.extensions["timeout"])
+        return httpx.Response(200, json={"models": []})
+
+    model_with(handler).is_available()
+
+    assert seen[0]["read"] == 3.0

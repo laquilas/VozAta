@@ -258,3 +258,81 @@ def test_invalid_generate_minutes_names_the_allowed_values() -> None:
     assert error.value.key == "GENERATE_MINUTES"
     assert error.value.message_key == "invalid_choice"
     assert error.value.params == {"allowed": "true, false"}
+
+
+def test_api_defaults_and_values() -> None:
+    assert (load_settings(env={}).api_host, load_settings(env={}).api_port) == ("127.0.0.1", 8765)
+
+    settings = load_settings(env={"API_HOST": "localhost", "API_PORT": "9000"})
+
+    assert (settings.api_host, settings.api_port) == ("localhost", 9000)
+
+
+@pytest.mark.parametrize("value", ["0", "70000", "80.5"])
+def test_invalid_api_port_raises(value: str) -> None:
+    with pytest.raises(ConfigError) as error:
+        load_settings(env={"API_PORT": value})
+
+    assert error.value.key == "API_PORT"
+
+
+def test_every_key_has_exactly_one_field_description() -> None:
+    from vozata.config import KEYS
+    from vozata.settings_fields import FIELDS
+
+    assert tuple(field.key for field in FIELDS) == KEYS
+    assert len(set(KEYS)) == len(KEYS)
+    assert {"API_HOST", "API_PORT", "GENERATE_MINUTES", "MIX_MODE"} <= set(KEYS)
+
+
+def test_settings_schema_describes_type_default_and_choices() -> None:
+    from vozata.settings_view import settings_schema
+
+    schema = {item["key"]: item for item in settings_schema()}
+
+    assert schema["CHUNK_SECONDS"] == {
+        "key": "CHUNK_SECONDS",
+        "type": "number",
+        "default": 5.0,
+        "choices": None,
+        "secret": False,
+    }
+    assert schema["MIX_MODE"]["choices"] == ["mono", "stereo"]
+    assert schema["MIX_MODE"]["type"] == "choice"
+    assert schema["GENERATE_MINUTES"]["type"] == "bool"
+    assert schema["API_PORT"] == {
+        "key": "API_PORT",
+        "type": "integer",
+        "default": 8765,
+        "choices": None,
+        "secret": False,
+    }
+    assert schema["TRANSCRIPTION_LANGUAGE"]["default"] is None
+    assert schema["TRANSCRIPTION_LANGUAGE"]["choices"] == ["en", "pt", "es", "auto"]
+
+
+def test_settings_values_are_plain_json_values() -> None:
+    from vozata.settings_view import settings_values
+
+    values = settings_values(load_settings(env={"MIX_MODE": "stereo", "MIC_LABEL": "Host"}))
+
+    assert values["MIX_MODE"] == "stereo"
+    assert values["MIC_LABEL"] == "Host"
+    assert values["SYSTEM_LABEL"] is None
+    assert values["OUTPUT_DIR"] == "recordings"
+    assert values["CHUNK_SECONDS"] == 5.0
+    assert values["GENERATE_MINUTES"] is True
+    assert values["APP_LANGUAGE"] == "en"
+
+
+def test_secret_values_are_masked(monkeypatch: pytest.MonkeyPatch) -> None:
+    import dataclasses
+
+    from vozata import settings_view
+
+    secret = dataclasses.replace(settings_view.FIELDS[0], secret=True)
+    monkeypatch.setattr(settings_view, "FIELDS", (secret, *settings_view.FIELDS[1:]))
+
+    values = settings_view.settings_values(load_settings(env={}))
+
+    assert values[secret.key] == "********"
