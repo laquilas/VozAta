@@ -470,3 +470,15 @@ def test_a_failing_release_does_not_stop_finalization(tmp_path: Path) -> None:
     rig.session.stop()
 
     assert rig.session.status is SessionStatus.DONE
+
+
+def test_duration_follows_the_session_clock_once_started(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+
+    assert rig.session.duration_seconds == 0.0
+
+    rig.session.start()
+    rig.clock.time = 12.5
+
+    assert rig.session.duration_seconds == 12.5
+    rig.session.stop()

@@ -67,15 +67,15 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 
 - **Branch:** `feature/06-engine-api`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:00
-- **Next step:** write `tests/api/test_session_manager.py`, then `api/session_manager.py` (`SessionManager`: one active session -> `SessionConflictError`; observer adapter publishing contract events; `level` throttled to ~10 Hz per channel; `stop()` finalizes on a background thread and returns at once; `summary()` / `status_message()`).
+- **Updated:** 2026-10-16 09:03
+- **Next step:** write `tests/api/test_health.py`, `test_settings_get.py` and `test_devices.py`, then `api/app.py` (`create_app(container)`, error handler `{"error": {code, message}}` localized, `/ws` endpoint with the initial status), `api/schemas.py`, `api/system_info.py` (nvidia-smi, 2 s timeout) and routes `health`, `devices`, `settings`.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `fd671b5`
 - [x] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py` — `02a9678`
-- [x] `api/ws.py` (`EventBroadcaster`) + tests
-- [ ] `api/session_manager.py` (`SessionManager`) + tests
+- [x] `api/ws.py` (`EventBroadcaster`) + tests — `82005b0`
+- [x] `api/session_manager.py` (`SessionManager`) + tests
 - [ ] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
       `settings` (GET) + tests
 - [ ] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests
@@ -92,3 +92,9 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
   `config.KEYS`); `settings_view.py` turns `Settings` into `GET /settings` values (secrets masked
   as `********`) and the schema. Schema types: number, integer, string, bool, choice, url, path.
   `TRANSCRIPTION_LANGUAGE` reports a `null` default (derived from `APP_LANGUAGE`).
+- `SessionManager` treats a finalizing session as active (one GPU), so `POST /sessions` answers
+  409 until finalization ends. `stop()` answers with status `finalizing` and runs
+  `RecordingSession.stop()` on a non-daemon thread (the process waits for the files at exit).
+  Pause/resume/stop without a recording or paused session raise `NoActiveSessionError`
+  (`409 no_active_session`). A `status` heartbeat is published every 1 s while recording/paused.
+- `RecordingSession.duration_seconds` (session clock) feeds the heartbeat and live summaries.

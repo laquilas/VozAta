@@ -83,6 +83,11 @@ class RecordingSession:
     def id(self) -> str:
         return self.paths.id
 
+    @property
+    def duration_seconds(self) -> float:
+        """Session time so far (pauses included); 0 before `start()`."""
+        return self._c.clock.now() if self.status is not None else 0.0
+
     def start(self) -> None:
         """Load the transcriber, create the session folder and open every source."""
         if self._paths is not None:
