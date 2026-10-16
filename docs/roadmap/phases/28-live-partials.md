@@ -32,11 +32,11 @@ Show provisional text while someone is still speaking, replaced by the committed
 
 ## Acceptance criteria
 
-- [ ] Worker tests (fake transcriber/clock): partial only when idle, interval respected, cleared on
+- [x] Worker tests (fake transcriber/clock): partial only when idle, interval respected, cleared on
       commit, committed audio never re-sent.
-- [ ] API/WebSocket test: `partial` envelope; ViewModel test: line replaced then removed.
-- [ ] Manual: text appears while speaking a long sentence and is replaced by the final line.
-- [ ] Coverage ≥ 80 % (engine and UI).
+- [x] API/WebSocket test: `partial` envelope; ViewModel test: line replaced then removed.
+- [x] Manual: text appears while speaking a long sentence and is replaced by the final line.
+- [x] Coverage ≥ 80 % (engine and UI).
 
 ## Tests
 
@@ -54,9 +54,9 @@ Partials in the CLI console.
 ## Progress
 
 - **Branch:** `feature/28-live-partials`
-- **Status:** in progress
-- **Updated:** 2026-10-16 23:20
-- **Next step:** manual check: record a long sentence (TTS) through `serve` + a WebSocket client (or the CLI driver with an observer) and confirm `partial` events grow while speaking and the `segment` replaces them; tick acceptance criteria
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 23:50
+- **Next step:** open the PR (combined draft in `__pr__/feature-28-live-partials/`)
 
 ### Steps
 
@@ -64,8 +64,8 @@ Partials in the CLI console.
 - [x] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS` — `bbafe91`
 - [x] Uncommitted audio: `Chunker.buffered()` (VAD and fixed) and `CarryOverStitcher.partial(tail)` — `f4451ea`
 - [x] Worker partials when idle + pipeline wiring + `SessionObserver.on_partial` + API `partial` — `3d679aa`
-- [x] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text — this commit
-- [ ] Manual: text appears during a long sentence and is replaced by the final line; criteria
+- [x] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text — `23c0af2`
+- [x] Manual: text appears during a long sentence and is replaced by the final line; criteria — this commit
 
 ### Decisions and notes
 
@@ -79,3 +79,13 @@ Partials in the CLI console.
   yields no segment, and at stop; a `segment` replaces it in the UI.
 - A partial cannot be pre-empted once started: worst case it delays a newly queued chunk by one
   partial transcription (bounded by `VAD_MAX_CHUNK_SECONDS` of audio).
+- **Manual check (2026-10-16, RTX 3050 6 GB Laptop, `large-v3`, `CHUNK_MODE=vad`).** Real `serve`
+  (port 8799, minutes off), the phase 05 TTS meeting on the speakers and a WebSocket client: every
+  sentence grew in place as `partial` events about every 1.6 s while it was spoken (e.g. "Por
+  isso, proponho adiar a sua atenção." → "… adiar o lançamento da beta." → "… de sexta-feira
+  para a" → the full sentence) and the `segment` replaced it, correcting early guesses;
+  `transcript.jsonl` held only the 10 segments. `POST /sessions` answered in 0.41 s.
+- **Cost seen in the check:** a partial already running when a phrase ends delays that commit by
+  up to one partial transcription (~1.5 s here): segments arrived ~3.5 s after the speech ended
+  versus ~2.6 s in the phase 27 offline run without partials. Possible follow-up: skip a preview
+  when the uncut audio already ends in a pause (a cut is imminent), or cap the previewed audio.

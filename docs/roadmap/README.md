@@ -76,7 +76,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 25 | [LLM VRAM release](phases/25-llm-vram-release.md) | 04 | done |
 | 26 | [Capture first, load later](phases/26-capture-first.md) | 06, 07 | done |
 | 27 | [Pause-based segmentation (VAD)](phases/27-vad-segmentation.md) | 05 | done |
-| 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | in progress (`feature/28-live-partials`) |
+| 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | done |
 | 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | todo |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
