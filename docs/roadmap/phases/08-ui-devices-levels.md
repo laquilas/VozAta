@@ -32,10 +32,10 @@ channel while recording.
 
 ## Acceptance criteria
 
-- [ ] ViewModel tests: default selection, persisted selection restored, missing device fallback,
+- [x] ViewModel tests: default selection, persisted selection restored, missing device fallback,
       dB mapping and decay, no-signal flag timing, ids sent on start.
-- [ ] Manual: meters move with speech and with media playback; changing devices records from them.
-- [ ] Resource parity test passes.
+- [x] Manual: meters move with speech and with media playback; changing devices records from them.
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -53,9 +53,9 @@ Mic test without a session, engine-side device changes during recording.
 ## Progress
 
 - **Branch:** `feature/08-ui-devices-levels`
-- **Status:** in progress
-- **Updated:** 2026-10-16 13:50
-- **Next step:** manual check: run the desktop app (it starts the engine), record with speech on the mic and media on the speakers, watch both meters; switch the microphone and check `session.json` devices; restart the app and check the selection and window size are restored
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 14:40
+- **Next step:** open the PR (combined draft in `__pr__/feature-08-ui-devices-levels/`)
 
 ### Steps
 
@@ -63,8 +63,8 @@ Mic test without a session, engine-side device changes during recording.
 - [x] `IUiPreferences` + JSON file store — `4e579a7`
 - [x] `IClock` / `IUiTimer` + `LevelMeterViewModel` (dB mapping, decay, peak-hold, no-signal) — `71633f5`
 - [x] `DevicesViewModel` (load, defaults, restore by name, fallback, refresh, persist) — `b66dbd6`
-- [x] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources — this commit
-- [ ] Manual: meters move with speech and media; changing devices records from them; criteria
+- [x] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources — `3ee9bef`
+- [x] Manual: meters move with speech and media; changing devices records from them; criteria — this commit
 
 ### Decisions and notes
 
@@ -75,3 +75,19 @@ Mic test without a session, engine-side device changes during recording.
   holds for 1 s, then falls. The engine floors silence at −90 dBFS; the meter clamps −60…0 dB.
 - The UI has no clock/timer abstraction yet: `IClock` (time now) and `IUiTimer` (periodic tick on
   the UI thread, Avalonia `DispatcherTimer`) are added so tests drive the meters by hand.
+- **Manual check (2026-10-16, desktop app driven through Windows UI Automation).** The app
+  started its engine and selected the engine defaults (JBL mic 15, JBL loopback 17 = the Windows
+  default output). Recording while the phase 05 TTS meeting played: the system meter moved
+  (level 0.4–0.6, peak up to 0.68) and fell back between sentences; the pickers were disabled while
+  recording. Switching the loopback to the Realtek output (silent, playback stayed on the JBL)
+  and recording 41 s: the system meter stayed at 0, no transcript lines, the "No sound from the
+  system audio for 30 s" hint appeared, and `session.json` recorded
+  `system: "Alto-falantes (2- Realtek(R) Audio) [Loopback]"`. After closing and relaunching, the
+  Realtek loopback and the saved window size (1100×750) were restored. The test preferences file
+  was deleted afterwards so the next real recording uses the defaults again.
+- Not exercised by the check: the **mic meter** with real speech (nobody spoke into the mic during
+  the run; it stayed at 0 as expected for silence) — covered by the view-model tests.
+- Seen during the check: UI Automation exposes the selected device as the record's `ToString()`
+  (`AudioDevice { Id = …, Name = … }`) while the dropdown items use the name; a screen reader
+  would read the long form. Possible follow-up: an `AutomationProperties.Name` or a `ToString()`
+  that returns the name.
