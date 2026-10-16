@@ -68,13 +68,13 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 
 - **Branch:** `feature/02-audio`
 - **Status:** in progress
-- **Updated:** 2026-10-16 01:10
-- **Next step:** TDD `audio/levels.py` and `audio/clock.py` (`tests/audio/test_levels.py`, `tests/audio/test_clock.py`), see them fail, then implement.
+- **Updated:** 2026-10-15 23:00
+- **Next step:** TDD `audio/wav_writer.py`: write `tests/audio/test_wav_writer.py` (in-order writes, gap fill beyond 0.15 s only, overlap tolerated, pause writes silence, finalize pads and never truncates, 16-bit clip), see it fail, then implement `AlignedWavWriter`.
 
 ### Steps
 
-- [x] Start phase: status `in progress`, Progress section
-- [ ] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`)
+- [x] Start phase: status `in progress`, Progress section — `5e91877`
+- [x] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`)
 - [ ] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding
 - [ ] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause
 - [ ] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config
@@ -87,3 +87,4 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - **`at` in `AudioSink.write(samples, at)`** is the session time of the block's first sample. `WasapiSource` timestamps blocks in the PortAudio callback and subtracts the block duration.
 - **Chunker gap fill**: the chunker fills loopback gaps with zeros (same 0.15 s tolerance as the writer), so window `start` values follow the session clock. Pausing flushes the partial window and drops audio; windows restart at the resume time.
 - **Equal length**: `AlignedWavWriter.samples_written` lets the session (05) finalize every WAV to the longest one; `finalize` pads and never truncates.
+- `tests/` and `tests/audio/` are packages (`__init__.py`) so test modules in subfolders get unique names.
