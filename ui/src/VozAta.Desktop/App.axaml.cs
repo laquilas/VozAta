@@ -2,7 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VozAta.Client;
@@ -33,6 +35,7 @@ public partial class App : Application
             var window = new MainWindow { DataContext = viewModel };
             desktop.MainWindow = window;
             GuardClosing(window, viewModel);
+            AddTrayIcon(window, viewModel.Tray);
             _ = viewModel.InitializeAsync();
         }
 
@@ -71,6 +74,56 @@ public partial class App : Application
         services.AddSingleton<IFileSaver>(_ => new AvaloniaFileSaver(desktop));
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>The tray icon and menu mirror <see cref="TrayViewModel"/>; minimizing can hide the window.</summary>
+    private void AddTrayIcon(Window window, TrayViewModel tray)
+    {
+        var icons = Enum.GetValues<TrayState>().ToDictionary(
+            state => state,
+            state => new WindowIcon(AssetLoader.Open(new Uri($"avares://VozAta.Desktop/Assets/tray-{state.ToString().ToLowerInvariant()}.png"))));
+        var start = new NativeMenuItem { Command = tray.StartCommand };
+        var pauseResume = new NativeMenuItem { Command = tray.PauseResumeCommand };
+        var stop = new NativeMenuItem { Command = tray.StopCommand };
+        var show = new NativeMenuItem { Command = tray.ShowCommand };
+        var quit = new NativeMenuItem { Command = tray.QuitCommand };
+        var icon = new TrayIcon
+        {
+            Menu = [start, pauseResume, stop, new NativeMenuItemSeparator(), show, quit],
+        };
+
+        void Refresh()
+        {
+            icon.Icon = icons[tray.State];
+            icon.ToolTipText = tray.ToolTip;
+            (start.Header, pauseResume.Header, stop.Header) = (tray.StartText, tray.PauseResumeText, tray.StopText);
+            (show.Header, quit.Header) = (tray.ShowText, tray.QuitText);
+        }
+
+        void ShowWindow()
+        {
+            window.Show();
+            window.WindowState = WindowState.Normal;
+            window.Activate();
+        }
+
+        Refresh();
+        tray.PropertyChanged += (_, _) => Refresh();
+        tray.ShowRequested += ShowWindow;
+        tray.QuitRequested += () =>
+        {
+            ShowWindow();
+            window.Close(); // asks first while recording (GuardClosing)
+        };
+        icon.Clicked += (_, _) => ShowWindow();
+        window.PropertyChanged += (_, args) =>
+        {
+            if (args.Property == Window.WindowStateProperty && window.WindowState == WindowState.Minimized && tray.MinimizeToTray)
+            {
+                window.Hide();
+            }
+        };
+        TrayIcon.SetIcons(this, [icon]);
     }
 
     /// <summary>Closing asks while recording, then waits for finalization before the engine stops.</summary>

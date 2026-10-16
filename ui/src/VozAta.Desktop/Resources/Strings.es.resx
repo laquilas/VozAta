@@ -465,6 +465,21 @@
   <data name="Resume" xml:space="preserve">
     <value>Reanudar</value>
   </data>
+  <data name="TrayShow" xml:space="preserve">
+    <value>Mostrar VozAta</value>
+  </data>
+  <data name="TrayQuit" xml:space="preserve">
+    <value>Salir</value>
+  </data>
+  <data name="TrayToolTip" xml:space="preserve">
+    <value>VozAta — {0}</value>
+  </data>
+  <data name="MinimizeToTray" xml:space="preserve">
+    <value>Minimizar a la bandeja del sistema</value>
+  </data>
+  <data name="DesktopPreferences" xml:space="preserve">
+    <value>Aplicación</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Cerrar</value>
   </data>

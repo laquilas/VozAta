@@ -62,6 +62,17 @@
           </DockPanel>
         </Border>
 
+        <!-- Desktop app preferences (stored by the app, not in the engine .env) -->
+        <Border Padding="12" CornerRadius="4" BorderThickness="1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+          <StackPanel Spacing="6">
+            <TextBlock FontSize="16" FontWeight="SemiBold"
+                       Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[DesktopPreferences]}" />
+            <CheckBox IsChecked="{Binding $parent[Window].((vm:MainViewModel)DataContext).Tray.MinimizeToTray}"
+                      Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinimizeToTray]}" />
+          </StackPanel>
+        </Border>
+
         <!-- One card per group, one editor per key -->
         <ItemsControl ItemsSource="{Binding Groups}">
           <ItemsControl.ItemTemplate>

@@ -465,6 +465,21 @@
   <data name="Resume" xml:space="preserve">
     <value>Resume</value>
   </data>
+  <data name="TrayShow" xml:space="preserve">
+    <value>Show VozAta</value>
+  </data>
+  <data name="TrayQuit" xml:space="preserve">
+    <value>Quit</value>
+  </data>
+  <data name="TrayToolTip" xml:space="preserve">
+    <value>VozAta — {0}</value>
+  </data>
+  <data name="MinimizeToTray" xml:space="preserve">
+    <value>Minimize to the system tray</value>
+  </data>
+  <data name="DesktopPreferences" xml:space="preserve">
+    <value>Desktop app</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>

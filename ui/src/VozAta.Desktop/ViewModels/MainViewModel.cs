@@ -57,6 +57,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         History = new HistoryViewModel(client, shell, localization, saver);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);
+        Tray = new TrayViewModel(this, localization, preferences);
         Settings.Saved += OnSettingsSaved;
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
@@ -171,6 +172,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public HealthViewModel Health { get; }
 
     public SettingsViewModel Settings { get; }
+
+    /// <summary>The system-tray menu (built into a tray icon by the composition root).</summary>
+    public TrayViewModel Tray { get; }
 
     /// <summary>The last save of the interface language (tests await it).</summary>
     public Task LanguageSave { get; private set; } = Task.CompletedTask;
