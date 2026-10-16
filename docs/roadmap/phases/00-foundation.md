@@ -78,8 +78,8 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:10
-- **Next step:** add `.github/workflows/ci.yml` (`engine` job on `windows-latest`: Python 3.13, `pip install -e "engine[dev]"`, ruff check, ruff format --check, pytest) and watch the run until green.
+- **Updated:** 2026-10-15 23:15
+- **Next step:** confirm the CI run for `ci: add engine workflow` is green (`gh run list --branch feature/00-foundation`); fix from logs if not.
 
 ### Steps
 
@@ -89,7 +89,7 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
 - [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `4930cf6`
 - [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `bf9fa6a`
-- [x] `engine/.env.example` with phase 01–05 keys
+- [x] `engine/.env.example` with phase 01–05 keys — `f29817a`
 - [ ] `.github/workflows/ci.yml` and green CI
 - [ ] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
 
