@@ -165,3 +165,41 @@ def test_overflows_are_logged_on_stop(
     source.stop()
 
     assert "dropped 1 block(s)" in caplog.text
+
+
+def test_the_native_resampler_is_released_once_capture_ends(
+    pa: FakePyAudio, clock: FakeClock
+) -> None:
+    source = _source(pa, clock)
+    source._stream = FakeStream(None)
+    source._stop.set()
+
+    source._run()
+
+    assert source._resampler is None  # nothing native survives until interpreter shutdown
+
+
+def test_a_block_handled_after_capture_ended_raises(pa: FakePyAudio, clock: FakeClock) -> None:
+    source = _source(pa, clock)
+    source._stream = FakeStream(None)
+    source._stop.set()
+    source._run()
+
+    with pytest.raises(RuntimeError):
+        source._handle(_stereo_block(10, 0, 0), 0.1, 10)
+
+
+def test_portaudio_calls_go_through_the_given_executor(pa: FakePyAudio, clock: FakeClock) -> None:
+    executed: list[str] = []
+
+    def call_audio(function: Any) -> Any:
+        executed.append(getattr(function, "__name__", "?"))
+        return function()
+
+    source = WasapiSource(DEVICE, clock, sample_rate=16000, pa=pa, call_audio=call_audio)
+
+    source.start(lambda samples, at: None)
+    source.stop()
+
+    assert len(executed) == 2  # open, then start_stream
+    assert pa.stream is not None and pa.stream.events[:1] == ["start"]

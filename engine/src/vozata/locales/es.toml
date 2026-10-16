@@ -9,6 +9,13 @@ not_a_number = "Valor no válido \"{value}\" para {key}: se esperaba un número.
 out_of_range = "Valor no válido \"{value}\" para {key}: debe estar entre {min} y {max}."
 invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http:// o https://."
 
+[errors.session]
+audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."
+device_timeout = "El dispositivo de audio \"{device}\" no se abrió en {seconds} s. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando; si sigue fallando, reinicia Audio de Windows o el PC."
+device_failed = "No se pudo abrir el dispositivo de audio \"{device}\": {reason}"
+mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas del micrófono y del sistema."
+minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
+
 [languages]
 en = "inglés"
 pt = "portugués"
@@ -33,3 +40,35 @@ topics = "Temas"
 decisions = "Decisiones"
 action_items = "Elementos de acción"
 open_issues = "Asuntos pendientes"
+
+[cli]
+loading_model = "Cargando el modelo de reconocimiento de voz..."
+recording = "Grabando en {folder}"
+controls = "Pulsa p + Intro para pausar o reanudar, Ctrl+C para detener."
+paused = "En pausa: el audio se sustituye por silencio y no se transcribe. Pulsa p + Intro para reanudar."
+resumed = "Reanudado."
+paused_marker = "EN PAUSA"
+finalizing = "Deteniendo: terminando la transcripción, guardando el audio y redactando el acta. Espera..."
+saved = "Guardado en {folder}"
+language_detected = "Idioma detectado: {language}"
+minutes_ready = "Acta guardada en minutes.md."
+minutes_written = "Acta guardada en {path}"
+minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
+session_not_found = "No se encontró ninguna sesión en {folder}."
+empty_transcript = "La sesión en {folder} no tiene transcripción, así que no hay nada que resumir."
+device_not_found = "No se encontró el dispositivo de audio: {reason}. Ejecuta \"python -m vozata record --list-devices\" para ver los ids."
+
+[cli.devices]
+microphones = "Micrófonos:"
+loopbacks = "Audio del sistema (loopback):"
+default = "predeterminado"
+
+[cli.help]
+description = "Transcripción de reuniones casi en tiempo real y generación de actas."
+record = "graba el micrófono y el audio del sistema con transcripción en vivo"
+language = "idioma hablado en la reunión (predeterminado: TRANSCRIPTION_LANGUAGE)"
+mic = "id del micrófono (predeterminado: el micrófono predeterminado de Windows)"
+system = "id del dispositivo de loopback (predeterminado: el loopback de la salida predeterminada)"
+list_devices = "muestra los dispositivos de audio y sale"
+minutes = "vuelve a generar el acta de una sesión grabada"
+session_dir = "carpeta de la sesión, por ejemplo recordings/20261015_202358"

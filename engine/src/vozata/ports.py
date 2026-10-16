@@ -12,7 +12,13 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
-from vozata.domain import TranscriptionResult, TranscriptSegment
+from vozata.domain import (
+    Channel,
+    ConversationLanguage,
+    SessionStatus,
+    TranscriptionResult,
+    TranscriptSegment,
+)
 
 
 @runtime_checkable
@@ -72,3 +78,26 @@ class LanguageModel(Protocol):
 @runtime_checkable
 class Localizer(Protocol):
     def t(self, key: str, /, **params: object) -> str: ...
+
+
+@runtime_checkable
+class SessionObserver(Protocol):
+    """Receives recording-session events (console in phase 05, WebSocket in phase 06).
+
+    Calls arrive from capture and transcription threads; implementations must be thread-safe and
+    return quickly.
+    """
+
+    def on_status(self, status: SessionStatus, duration_seconds: float) -> None: ...
+
+    def on_level(self, channel: Channel, rms_db: float) -> None: ...
+
+    def on_segment(self, segment: TranscriptSegment) -> None: ...
+
+    def on_language_detected(self, language: ConversationLanguage) -> None: ...
+
+    def on_minutes_ready(self, session_id: str) -> None: ...
+
+    def on_error(self, code: str, message: str) -> None:
+        """A non-fatal error; `message` is localized."""
+        ...

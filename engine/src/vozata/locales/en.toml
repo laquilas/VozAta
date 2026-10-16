@@ -9,6 +9,13 @@ not_a_number = "Invalid value \"{value}\" for {key}: expected a number."
 out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {max}."
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 
+[errors.session]
+audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
+device_timeout = "The audio device \"{device}\" did not open within {seconds} s. Check that it is connected and not in use by another app; if it keeps failing, restart Windows Audio or the PC."
+device_failed = "The audio device \"{device}\" could not be opened: {reason}"
+mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
+minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
+
 [languages]
 en = "English"
 pt = "Portuguese"
@@ -33,3 +40,35 @@ topics = "Topics"
 decisions = "Decisions"
 action_items = "Action items"
 open_issues = "Open issues"
+
+[cli]
+loading_model = "Loading the speech recognition model..."
+recording = "Recording to {folder}"
+controls = "Press p + Enter to pause or resume, Ctrl+C to stop."
+paused = "Paused: the audio is replaced by silence and not transcribed. Press p + Enter to resume."
+resumed = "Resumed."
+paused_marker = "PAUSED"
+finalizing = "Stopping: finishing the transcript, saving the audio and writing the minutes. Please wait..."
+saved = "Saved to {folder}"
+language_detected = "Detected language: {language}"
+minutes_ready = "Minutes written to minutes.md."
+minutes_written = "Minutes written to {path}"
+minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
+session_not_found = "No session found in {folder}."
+empty_transcript = "The session in {folder} has no transcript, so there is nothing to summarize."
+device_not_found = "Audio device not found: {reason}. Run \"python -m vozata record --list-devices\" to see the ids."
+
+[cli.devices]
+microphones = "Microphones:"
+loopbacks = "System audio (loopback):"
+default = "default"
+
+[cli.help]
+description = "Near-real-time meeting transcription and minutes."
+record = "record the microphone and the system audio with a live transcript"
+language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"
+mic = "microphone device id (default: the Windows default microphone)"
+system = "loopback device id (default: the default output's loopback)"
+list_devices = "list the audio devices and exit"
+minutes = "generate the minutes of a recorded session again"
+session_dir = "session folder, e.g. recordings/20261015_202358"

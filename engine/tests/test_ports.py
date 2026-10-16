@@ -11,6 +11,7 @@ from tests.fakes import (
     FakeAudioSource,
     FakeLanguageModel,
     FakeLocalizer,
+    FakeSessionObserver,
     FakeTranscriber,
     FakeTranscriptSink,
 )
@@ -28,6 +29,7 @@ from vozata.domain import Channel, TranscriptionResult, TranscriptSegment, Word
         (FakeAudioMixer(), ports.AudioMixer),
         (FakeLanguageModel(), ports.LanguageModel),
         (FakeLocalizer(), ports.Localizer),
+        (FakeSessionObserver(), ports.SessionObserver),
     ],
 )
 def test_fake_satisfies_its_port(fake: object, port: type) -> None:
@@ -109,3 +111,20 @@ def test_fake_localizer_echoes_key_and_params() -> None:
 
     assert localizer.t("labels.mic") == "labels.mic"
     assert localizer.t("labels.user", n=2) == "labels.user(n=2)"
+
+
+def test_fake_audio_source_push_requires_start() -> None:
+    source = FakeAudioSource()
+
+    with pytest.raises(RuntimeError):
+        source.push(np.zeros(1, np.float32), 0.0)
+
+
+def test_fake_session_observer_groups_events_by_name() -> None:
+    observer = FakeSessionObserver()
+
+    observer.on_minutes_ready("20261015_202358")
+    observer.on_error("minutes_failed", "offline")
+
+    assert observer.of("minutes_ready") == [("20261015_202358",)]
+    assert observer.of("error") == [("minutes_failed", "offline")]

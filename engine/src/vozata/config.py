@@ -47,7 +47,11 @@ KEYS = (
     "OLLAMA_URL",
     "OLLAMA_MODEL",
     "LLM_MAX_CHARS",
+    # Session (phase 05)
+    "GENERATE_MINUTES",
 )
+_TRUE = ("true", "1", "yes", "on")
+_FALSE = ("false", "0", "no", "off")
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
 
 
@@ -95,6 +99,8 @@ class Settings:
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
     llm_max_chars: int = 12000
+    # Session (phase 05)
+    generate_minutes: bool = True
 
 
 def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = None) -> Settings:
@@ -131,6 +137,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
         llm_max_chars=int(_number(raw, "LLM_MAX_CHARS", 12000, minimum=1000, maximum=1_000_000)),
+        generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
     )
 
 
@@ -165,6 +172,15 @@ def _number(
     if not minimum <= value <= maximum:
         raise ConfigError(key, raw[key], "out_of_range", min=minimum, max=maximum)
     return value
+
+
+def _flag(raw: Mapping[str, str], key: str, default: bool) -> bool:
+    if key not in raw:
+        return default
+    value = raw[key].lower()
+    if value in _TRUE or value in _FALSE:
+        return value in _TRUE
+    raise ConfigError(key, raw[key], "invalid_choice", allowed="true, false")
 
 
 def _url(raw: Mapping[str, str], key: str, default: str) -> str:
