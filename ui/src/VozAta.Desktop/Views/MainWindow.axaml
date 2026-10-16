@@ -58,6 +58,8 @@
             <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{Binding Elapsed}" FontSize="22" FontFamily="Consolas, monospace" />
+          <TextBlock Text="{Binding L[ModelLoading]}" FontStyle="Italic" Foreground="#E65100"
+                     IsVisible="{Binding IsModelLoading}" />
         </StackPanel>
       </StackPanel>
 

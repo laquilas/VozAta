@@ -74,6 +74,7 @@ class Settings:
     whisper_device: WhisperDevice = WhisperDevice.AUTO
     whisper_compute_type: str = "int8_float16"
     whisper_cpu_model: str = "small"
+    whisper_keep_loaded: bool = False  # serve: keep the transcriber between sessions (phase 26)
     # Pause-based segmentation (phase 27)
     chunk_mode: ChunkMode = ChunkMode.VAD
     vad_threshold: float = 0.5
@@ -125,6 +126,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         whisper_device=_choice(raw, "WHISPER_DEVICE", WhisperDevice, WhisperDevice.AUTO),
         whisper_compute_type=raw.get("WHISPER_COMPUTE_TYPE", "int8_float16"),
         whisper_cpu_model=raw.get("WHISPER_CPU_MODEL", "small"),
+        whisper_keep_loaded=_flag(raw, "WHISPER_KEEP_LOADED", False),
         chunk_mode=_choice(raw, "CHUNK_MODE", ChunkMode, ChunkMode.VAD),
         vad_threshold=_number(raw, "VAD_THRESHOLD", 0.5, minimum=0.01, maximum=0.99),
         vad_min_silence_ms=_integer(raw, "VAD_MIN_SILENCE_MS", 600, minimum=100, maximum=5000),

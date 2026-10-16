@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import threading
 
 import numpy as np
 import pytest
@@ -133,3 +134,61 @@ def test_stop_without_start_still_flushes(chunks: queue.Queue[AudioChunk]) -> No
     worker.stop()
 
     assert mic.flushed
+
+
+def test_load_runs_on_the_worker_thread_before_any_chunk(
+    chunks: queue.Queue[AudioChunk], caplog: pytest.LogCaptureFixture
+) -> None:
+    mic = FakeStitcher(Channel.MIC)
+    order: list[str] = []
+    loading = threading.Event()
+    release = threading.Event()
+
+    def load() -> bool:
+        order.append(threading.current_thread().name)
+        loading.set()
+        release.wait(5)
+        return True
+
+    worker = TranscriptionWorker(chunks, {Channel.MIC: mic}, FakeTranscriptSink(), load=load)
+    worker.start()
+    assert loading.wait(5)
+    for start in range(9):  # a backlog while loading is expected, not a warning
+        chunks.put(chunk(Channel.MIC, start))
+    release.set()
+    worker.stop()
+
+    assert order == ["transcription"]
+    assert mic.seen == list(range(9))
+    assert mic.flushed
+    assert "slower than real time" not in caplog.text
+
+
+def test_a_failed_load_drops_every_chunk_and_skips_the_flush(
+    chunks: queue.Queue[AudioChunk],
+) -> None:
+    mic = FakeStitcher(Channel.MIC)
+    sink = FakeTranscriptSink()
+    chunks.put(chunk(Channel.MIC, 0))
+    worker = TranscriptionWorker(chunks, {Channel.MIC: mic}, sink, load=lambda: False)
+
+    worker.start()
+    chunks.put(chunk(Channel.MIC, 5))
+    worker.stop()
+
+    assert (mic.seen, mic.flushed, sink.segments) == ([], False, [])
+    assert chunks.empty()
+
+
+def test_stop_without_start_does_not_load_or_transcribe(chunks: queue.Queue[AudioChunk]) -> None:
+    mic = FakeStitcher(Channel.MIC)
+    loads: list[int] = []
+    chunks.put(chunk(Channel.MIC, 0))
+    worker = TranscriptionWorker(
+        chunks, {Channel.MIC: mic}, FakeTranscriptSink(), load=lambda: bool(loads.append(1))
+    )
+
+    worker.stop()
+
+    assert (loads, mic.seen, mic.flushed) == ([], [], False)
+    assert chunks.empty()

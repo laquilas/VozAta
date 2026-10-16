@@ -16,6 +16,7 @@ device_timeout = "The audio device \"{device}\" did not open within {seconds} s.
 device_failed = "The audio device \"{device}\" could not be opened: {reason}"
 mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
+model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
 
 [errors.api]
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
@@ -60,7 +61,8 @@ open_issues = "Open issues"
 [cli]
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
 serve_public_host = "Refusing to listen on {host}: the engine API has no authentication. Use 127.0.0.1 or localhost in API_HOST."
-loading_model = "Loading the speech recognition model..."
+loading_model = "Loading the speech recognition model — already recording..."
+model_ready = "Speech recognition model ready."
 recording = "Recording to {folder}"
 controls = "Press p + Enter to pause or resume, Ctrl+C to stop."
 paused = "Paused: the audio is replaced by silence and not transcribed. Press p + Enter to resume."

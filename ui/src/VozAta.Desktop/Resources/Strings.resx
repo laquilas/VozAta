@@ -102,6 +102,9 @@
   <data name="MinutesReady" xml:space="preserve">
     <value>Minutes are ready.</value>
   </data>
+  <data name="ModelLoading" xml:space="preserve">
+    <value>Loading the speech model — already recording</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>

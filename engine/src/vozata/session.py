@@ -93,10 +93,14 @@ class RecordingSession:
         return self._c.clock.now() if self.status is not None else 0.0
 
     def start(self) -> None:
-        """Load the transcriber, create the session folder and open every source."""
+        """Create the session folder and open every source, then load the transcriber.
+
+        `recording` is reported as soon as the sources are open; the speech model loads on the
+        transcription thread (`on_model_loading`) and audio captured meanwhile is transcribed
+        once it is ready.
+        """
         if self._paths is not None:
             raise RuntimeError("A session can only be started once")
-        self._transcriber = self._c.transcriber_factory()
         started_at = self._store.now()
         self._paths = self._store.create(started_at)
         self._meta = SessionMeta(self._store, self.id, started_at, self._settings, self._c)
@@ -106,16 +110,18 @@ class RecordingSession:
             self._c.sources,
             self._paths,
             self._settings,
-            self._transcriber,
+            self._c.transcriber_factory,
             self._lock,
             self._c.labeler,
             self._observer,
             self._c.chunker_factory,
+            lambda error: self._error("model_failed", reason=str(error)),
         )
         self._c.clock.start()
         self._pipeline.accept()
         self._open_sources()
         self._set_status(SessionStatus.RECORDING)
+        self._pipeline.start_transcription()
 
     def pause(self) -> None:
         if self.status is not SessionStatus.RECORDING:
@@ -171,7 +177,6 @@ class RecordingSession:
         for source in opened:
             source.stop()
         self._release_audio()
-        self._transcriber.close()
         self._store.discard(self.id)
 
     def _stop_capture(self) -> None:
@@ -199,8 +204,11 @@ class RecordingSession:
             self._error("mix_failed", reason=str(error))
 
     def _release_transcriber(self) -> None:
+        transcriber = self._pipeline.transcriber
+        if transcriber is None:
+            return
         try:
-            self._transcriber.close()
+            transcriber.close()
         except Exception:
             _log.exception("Releasing the transcriber failed")
 

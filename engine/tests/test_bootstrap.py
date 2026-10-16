@@ -18,6 +18,7 @@ from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
 from vozata.session import SessionStartError
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
+from vozata.transcription.shared import SharedTranscriber
 
 MIC = DeviceInfo(9, "Headset Mic", 2, 48000, False)
 LOOPBACK = DeviceInfo(10, "Speakers [Loopback]", 2, 48000, True)
@@ -256,6 +257,82 @@ def test_build_api_container_wires_real_providers(
     assert container.llm_reachable() is False
     assert container.store.list_sessions() == []
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3))
-    assert built == [{"language": None, "mic_device": 3, "system_device": None}]
+    assert built == [{"language": None, "mic_device": 3, "system_device": None, "shared": None}]
     generator = container.regenerate_minutes._build_generator()
     assert generator._llm is llm
+
+
+@pytest.mark.parametrize(("generate_minutes", "kept"), [(False, True), (True, False)])
+def test_a_shared_transcriber_is_leased_and_kept_only_without_minutes(
+    tmp_path: Path,
+    devices: list[int],
+    monkeypatch: pytest.MonkeyPatch,
+    generate_minutes: bool,
+    kept: bool,
+) -> None:
+    fake = FakeTranscriber()
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    settings = _settings(tmp_path, stt_provider="fake", generate_minutes=generate_minutes)
+    shared = SharedTranscriber(lambda: fake)
+
+    session = bootstrap.build_session(settings, FakeSessionObserver(), shared=shared)
+    lease = session._c.transcriber_factory()
+    lease.close()
+
+    assert shared.loaded is kept
+    assert fake.closed is not kept
+
+
+def test_the_api_container_shares_the_transcriber_when_keep_loaded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata.api.session_manager import StartOptions
+
+    fakes: list[FakeTranscriber] = []
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS,
+        "fake",
+        lambda settings: fakes.append(FakeTranscriber()) or fakes[-1],
+    )
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    shared_seen: list[object] = []
+    monkeypatch.setattr(
+        bootstrap,
+        "build_session",
+        lambda settings, observer, **kwargs: shared_seen.append(kwargs["shared"]),
+    )
+    settings = _settings(
+        tmp_path, stt_provider="fake", llm_provider="fake", whisper_keep_loaded=True
+    )
+
+    container = bootstrap.build_api_container(settings)
+    container.manager._factory(FakeSessionObserver(), StartOptions())
+    [shared] = shared_seen
+    assert isinstance(shared, SharedTranscriber)
+    shared.lease(keep=True)
+
+    container.regenerate_minutes._build_generator()  # POST /minutes frees Whisper first
+    assert not shared.loaded and fakes[0].closed
+    shared.lease(keep=True)
+    container.release_models()  # API shutdown
+    assert not shared.loaded and fakes[1].closed
+
+
+def test_without_keep_loaded_sessions_load_their_own_transcriber(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata.api.session_manager import StartOptions
+
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    shared_seen: list[object] = []
+    monkeypatch.setattr(
+        bootstrap,
+        "build_session",
+        lambda settings, observer, **kwargs: shared_seen.append(kwargs["shared"]),
+    )
+
+    container = bootstrap.build_api_container(_settings(tmp_path, llm_provider="fake"))
+    container.manager._factory(FakeSessionObserver(), StartOptions())
+    container.release_models()
+
+    assert shared_seen == [None]

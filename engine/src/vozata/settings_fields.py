@@ -41,6 +41,7 @@ FIELDS: tuple[Field, ...] = (
     Field("WHISPER_DEVICE", "whisper_device", "choice", WhisperDevice),
     Field("WHISPER_COMPUTE_TYPE", "whisper_compute_type", "string"),
     Field("WHISPER_CPU_MODEL", "whisper_cpu_model", "string"),
+    Field("WHISPER_KEEP_LOADED", "whisper_keep_loaded", "bool"),  # phase 26
     # Pause-based segmentation (phase 27)
     Field("CHUNK_MODE", "chunk_mode", "choice", ChunkMode),
     Field("VAD_THRESHOLD", "vad_threshold", "number"),

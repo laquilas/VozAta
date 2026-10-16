@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Protocol
 
 from vozata.domain import AudioChunk, Channel, TranscriptSegment
@@ -25,6 +25,10 @@ class TranscriptionWorker:
 
     The transcriber is only ever called from this thread. A failing chunk is logged and skipped.
     `stop()` drains the queue, then flushes every stitcher; the sink is closed by its owner.
+
+    `load` (optional) runs first on this thread, e.g. to load the speech model while capture is
+    already running; chunks wait in the queue meanwhile. When it returns False every chunk is
+    dropped and nothing is flushed. A worker that was never started never loads.
     """
 
     def __init__(
@@ -33,8 +37,11 @@ class TranscriptionWorker:
         stitchers: Mapping[Channel, ChunkStitcher],
         sink: TranscriptSink,
         backlog_per_channel: int = 3,
+        load: Callable[[], bool] | None = None,
     ) -> None:
         self._chunks = chunks
+        self._load = load
+        self._usable = True
         self._stitchers = stitchers
         self._sink = sink
         self._backlog_limit = backlog_per_channel * len(stitchers)
@@ -49,12 +56,16 @@ class TranscriptionWorker:
     def stop(self) -> None:
         self._stopping.set()
         if self._thread is None:
+            self._usable = self._load is None
             self._finish()
         else:
             self._thread.join()
             self._thread = None
 
     def _run(self) -> None:
+        if self._load is not None:
+            self._usable = self._load()
+            self._behind = True  # catching up on audio queued while loading is not "slow"
         while not self._stopping.is_set():
             try:
                 self._process(self._chunks.get(timeout=0.05))
@@ -68,6 +79,8 @@ class TranscriptionWorker:
                 self._process(self._chunks.get_nowait())
             except queue.Empty:
                 break
+        if not self._usable:
+            return
         for channel, stitcher in self._stitchers.items():
             try:
                 self._emit(stitcher.flush())
@@ -75,6 +88,8 @@ class TranscriptionWorker:
                 _log.exception("Flushing the %s transcription failed", channel)
 
     def _process(self, chunk: AudioChunk) -> None:
+        if not self._usable:
+            return
         self._check_backlog()
         try:
             segments = self._stitchers[chunk.channel].on_chunk(chunk)

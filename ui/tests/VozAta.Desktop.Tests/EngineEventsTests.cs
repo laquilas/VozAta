@@ -29,6 +29,9 @@ public sealed class EngineEventsTests
             new ErrorEvent("s1", "minutes_failed", "Ollama offline"),
             EngineEventParser.Parse("""{"type":"error","session_id":"s1","data":{"code":"minutes_failed","message":"Ollama offline"}}"""));
         Assert.Equal(
+            new ModelLoadingEvent("s1", true),
+            EngineEventParser.Parse("""{"type":"model_loading","session_id":"s1","data":{"loading":true}}"""));
+        Assert.Equal(
             new UnknownEvent("s1", "speakers_relabeled"),
             EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{}}"""));
     }

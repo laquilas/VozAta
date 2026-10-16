@@ -98,7 +98,6 @@ def test_records_until_ctrl_c_then_stops_and_reports_the_folder() -> None:
     assert builder.observer is not None
     folder = Path("recordings/20261015_202358")
     assert out.splitlines() == [
-        "cli.loading_model",
         f"cli.recording(folder={folder})",
         "cli.controls",
         f"cli.saved(folder={folder})",
@@ -132,7 +131,7 @@ def test_a_start_failure_prints_the_localized_error_and_exits_1() -> None:
     code, out, _ = _run(session, "", _interrupt)
 
     assert code == 1
-    assert out.splitlines() == ["cli.loading_model", "The mic did not open"]
+    assert out.splitlines() == ["The mic did not open"]
     assert session.calls == ["start"]
 
 

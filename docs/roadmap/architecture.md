@@ -149,6 +149,7 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_segment(self, segment: TranscriptSegment) -> None: ...
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
     def on_minutes_ready(self, session_id: str) -> None: ...
+    def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
 ```
 
@@ -177,11 +178,15 @@ marking those chunks `complete`; `FixedWindowChunker` cuts every `CHUNK_SECONDS`
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
 chunk queue backlog exceeds 3 chunks per channel, log a warning (transcription slower than real time).
 
-**Start**: load the transcriber, create the session folder, start the clock, then open each
+**Start** (capture first, phase 26): create the session folder, start the clock, then open each
 source with a timeout (`SOURCE_OPEN_TIMEOUT`, 20 s): a WASAPI open can hang in
 the driver. A source that fails or times out aborts the start (`SessionStartError` with code
 `device_timeout` / `device_failed` and a localized message), closes everything and deletes the
-empty session folder.
+empty session folder. Once every source is open the status is `recording` and the transcription
+worker loads the transcriber on its own thread (`on_model_loading(True/False)`, API event
+`model_loading`); chunks captured meanwhile wait in the queue and are transcribed afterwards
+(the backlog warning stays silent while catching up). A failed load reports `error`
+`model_failed`; the WAVs keep recording and the queued chunks are dropped.
 
 **PortAudio thread**: WASAPI binds PortAudio's host state to the thread that initialized it (COM);
 streams opened from another thread fail with "Unanticipated host error" (-9999). `bootstrap.py`
@@ -199,7 +204,9 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 7. `status = done`, `ended_at` set in `session.json`.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
-time; steps 4 → 5 → 6 enforce that.
+time; steps 4 → 5 → 6 enforce that. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
+`SharedTranscriber` keeps Whisper between sessions only when no minutes follow; it is unloaded
+before session minutes, before `POST /sessions/{id}/minutes` and when the API stops.
 
 **Pause/resume**: while paused, sources keep running (keeps the clock aligned) but chunkers drop
 audio and WAV writers write silence; a `paused` marker is recorded in `session.json`.

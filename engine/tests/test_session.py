@@ -110,7 +110,11 @@ class _Rig:
         system: FakeAudioSource | None = None,
         open_timeout: float = 5.0,
         chunker_factory: ChunkerFactory | None = None,
+        load_gate: threading.Event | None = None,
+        load_error: Exception | None = None,
     ) -> None:
+        self._load_gate = load_gate
+        self._load_error = load_error
         moments = [STARTED, ENDED]
         self.store = SessionStore(
             tmp_path / "recordings", now=lambda: moments.pop(0) if len(moments) > 1 else moments[0]
@@ -131,7 +135,7 @@ class _Rig:
                 sources={Channel.MIC: self.mic, Channel.SYSTEM: self.system},
                 device_names={Channel.MIC: "Headset Mic", Channel.SYSTEM: "Speakers [Loopback]"},
                 clock=self.clock,
-                transcriber_factory=lambda: self.transcriber,
+                transcriber_factory=self._load_transcriber,
                 mixer=self.mixer,
                 minutes=MinutesGenerator(self.llm, localizer, 12000) if with_minutes else None,
                 localizer=localizer,
@@ -143,6 +147,14 @@ class _Rig:
             language,
             open_timeout=open_timeout,
         )
+
+    def _load_transcriber(self) -> FakeTranscriber:
+        if self._load_gate is not None:
+            assert self._load_gate.wait(5)
+        self.log.entries.append("transcriber.load")
+        if self._load_error is not None:
+            raise self._load_error
+        return self.transcriber
 
     def wav(self, channel: Channel) -> np.ndarray:
         with wave.open(str(self.session.paths.wav(channel)), "rb") as wav:
@@ -187,6 +199,44 @@ def test_a_chunker_from_the_components_cuts_at_pauses(tmp_path: Path) -> None:
     [(segment,)] = rig.observer.of("segment")
     assert segment.text == "Hi there"
     assert len(rig.transcriber.calls) == 1  # the trailing silence never reached the transcriber
+
+
+def test_recording_starts_before_the_speech_model_has_loaded(tmp_path: Path) -> None:
+    gate = threading.Event()
+    rig = _Rig(tmp_path, results=[_words("Early", " words.")], load_gate=gate)
+
+    rig.session.start()  # returns while the model is still loading
+    assert rig.session.status is SessionStatus.RECORDING
+    assert "transcriber.load" not in rig.log.entries
+    rig.mic.push(_voice(1.0), 0.0)  # queued: transcribed once the model is ready
+    gate.set()
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    [(segment,)] = rig.observer.of("segment")
+    assert segment.text == "Early words."
+    names = [event[0] for event in rig.observer.events if event[0] != "level"]
+    assert names[:3] == ["status", "model_loading", "model_loading"]
+    assert rig.observer.of("model_loading") == [(True,), (False,)]
+
+
+def test_a_failed_model_load_reports_an_error_and_still_saves_the_audio(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Lost.")], load_error=RuntimeError("CUDA out of memory"))
+
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    assert rig.observer.of("error") == [
+        ("model_failed", "errors.session.model_failed(reason=CUDA out of memory)")
+    ]
+    assert rig.observer.of("model_loading") == [(True,), (False,)]
+    assert rig.observer.of("segment") == []
+    assert rig.transcriber.calls == []
+    assert len(rig.wav(Channel.MIC)) == RATE
+    assert rig.session.status is SessionStatus.DONE
+    assert "transcriber.close" not in rig.log.entries
 
 
 def test_levels_are_reported_for_every_block(tmp_path: Path) -> None:
@@ -279,7 +329,9 @@ def test_stop_order_finalizes_wavs_then_mixes_then_frees_the_gpu_then_writes_min
 
     rig.session.stop()
 
-    assert rig.log.entries == ["release", "mix", "transcriber.close", "llm.generate"]
+    assert "transcriber.load" in rig.log.entries  # on the worker thread, racing "release"
+    finalization = [entry for entry in rig.log.entries if entry != "transcriber.load"]
+    assert finalization == ["release", "mix", "transcriber.close", "llm.generate"]
     assert rig.mixer.lengths == (int(2.5 * RATE), int(2.5 * RATE))  # padded to the longest
     assert rig.session.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     assert rig.observer.of("minutes_ready") == [(rig.session.id,)]
@@ -435,7 +487,7 @@ def test_a_device_that_does_not_open_in_time_fails_the_start_and_cleans_up(
     assert str(error.value) == "errors.session.device_timeout(device=Headset Mic,seconds=0.05)"
     assert rig.store.list_sessions() == []
     assert not any((tmp_path / "recordings").iterdir())
-    assert rig.transcriber.closed
+    assert "transcriber.load" not in rig.log.entries  # the model loads only once recording
     assert rig.observer.of("status") == []
 
 
@@ -486,7 +538,7 @@ def test_the_audio_backend_is_released_after_a_failed_start(tmp_path: Path) -> N
     with pytest.raises(SessionStartError):
         rig.session.start()
 
-    assert rig.log.entries == ["release", "transcriber.close"]
+    assert rig.log.entries == ["release"]  # the transcriber was never loaded
 
 
 def test_a_failing_release_does_not_stop_finalization(tmp_path: Path) -> None:

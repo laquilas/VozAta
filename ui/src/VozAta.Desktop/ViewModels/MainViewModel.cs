@@ -81,6 +81,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     public partial string Elapsed { get; private set; } = "00:00:00";
 
+    /// <summary>The engine is still loading the speech model; audio is already being recorded.</summary>
+    [ObservableProperty]
+    public partial bool IsModelLoading { get; private set; }
+
     [ObservableProperty]
     public partial ChoiceOption SelectedLanguage { get; set; }
 
@@ -253,6 +257,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _detectedLanguage = detected.Language;
                 RefreshDetectedLanguage();
                 break;
+            case ModelLoadingEvent loading:
+                IsModelLoading = loading.Loading;
+                break;
             case MinutesReadyEvent:
                 Notify(_localization["MinutesReady"]);
                 break;
@@ -290,6 +297,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         State = state;
         if (state == RecordingState.Idle)
         {
+            IsModelLoading = false;
             _idle.TrySetResult();
         }
     }
