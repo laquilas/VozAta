@@ -202,6 +202,42 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Interim_text_is_one_line_per_channel_replaced_in_place_then_by_the_segment()
+    {
+        var viewModel = await ReadyAsync();
+        Assert.True(viewModel.IsTranscriptEmpty);
+
+        await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 65.2, "Bom"));
+        await SendAsync(viewModel, new PartialEvent("s", "system", "system", "Outros", 70, "Oi"));
+        await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 65.2, "Bom dia, pess"));
+
+        Assert.False(viewModel.IsTranscriptEmpty);
+        Assert.Equal(
+            [new TranscriptLine("00:01:05", "Eu", "Bom dia, pess", "mic"), new TranscriptLine("00:01:10", "Outros", "Oi", "system")],
+            viewModel.Partials);
+        await SendAsync(viewModel, new SegmentEvent("s", Line("mic", "Eu", 65.2, "Bom dia, pessoal.")));
+        Assert.Equal([new TranscriptLine("00:01:10", "Outros", "Oi", "system")], viewModel.Partials);
+        await SendAsync(viewModel, new PartialEvent("s", "system", "system", "Outros", 70, ""));
+        Assert.Empty(viewModel.Partials);
+        Assert.Single(viewModel.Segments);
+    }
+
+    [Fact]
+    public async Task Interim_text_is_cleared_when_a_session_starts_or_ends()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 1, "stale"));
+
+        await viewModel.StartCommand.ExecuteAsync(null);
+        Assert.Empty(viewModel.Partials);
+        await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 1, "Hel"));
+        await SendAsync(viewModel, new StatusEvent("s", "done", 5));
+
+        Assert.Empty(viewModel.Partials);
+        Assert.True(viewModel.IsTranscriptEmpty);
+    }
+
+    [Fact]
     public async Task Recording_starts_at_once_and_shows_the_model_loading_indicator()
     {
         var viewModel = await ReadyAsync();

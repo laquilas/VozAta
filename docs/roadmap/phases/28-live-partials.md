@@ -55,16 +55,16 @@ Partials in the CLI console.
 
 - **Branch:** `feature/28-live-partials`
 - **Status:** in progress
-- **Updated:** 2026-10-16 23:00
-- **Next step:** UI: `PartialEvent` in `EngineEvents.cs`; `MainViewModel.Partials` (one line per channel, replaced in place, removed by that channel's segment or an empty partial, cleared at start/idle); grey italic `ItemsControl` under the transcript in `MainWindow.axaml`; tests
+- **Updated:** 2026-10-16 23:20
+- **Next step:** manual check: record a long sentence (TTS) through `serve` + a WebSocket client (or the CLI driver with an observer) and confirm `partial` events grow while speaking and the `segment` replaces them; tick acceptance criteria
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS` — `bbafe91`
 - [x] Uncommitted audio: `Chunker.buffered()` (VAD and fixed) and `CarryOverStitcher.partial(tail)` — `f4451ea`
-- [x] Worker partials when idle + pipeline wiring + `SessionObserver.on_partial` + API `partial` — this commit
-- [ ] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text
+- [x] Worker partials when idle + pipeline wiring + `SessionObserver.on_partial` + API `partial` — `3d679aa`
+- [x] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text — this commit
 - [ ] Manual: text appears during a long sentence and is replaced by the final line; criteria
 
 ### Decisions and notes

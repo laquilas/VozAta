@@ -23,6 +23,10 @@ public sealed record MinutesReadyEvent(string? SessionId) : EngineEvent(SessionI
 
 public sealed record ErrorEvent(string? SessionId, string Code, string Message) : EngineEvent(SessionId);
 
+/// <summary>Interim text of a channel while someone speaks; replaced by the next segment, empty text clears it.</summary>
+public sealed record PartialEvent(string? SessionId, string Channel, string SpeakerId, string Label, double Start, string Text)
+    : EngineEvent(SessionId);
+
 /// <summary>The speech model started (true) or finished (false) loading while the session already records.</summary>
 public sealed record ModelLoadingEvent(string? SessionId, bool Loading) : EngineEvent(SessionId);
 
@@ -57,6 +61,13 @@ public static class EngineEventParser
                 "language_detected" => new LanguageDetectedEvent(
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
+                "partial" => new PartialEvent(
+                    sessionId,
+                    data.GetProperty("channel").GetString() ?? "",
+                    data.GetProperty("speaker_id").GetString() ?? "",
+                    data.GetProperty("label").GetString() ?? "",
+                    data.GetProperty("start").GetDouble(),
+                    data.GetProperty("text").GetString() ?? ""),
                 "model_loading" => new ModelLoadingEvent(sessionId, data.GetProperty("loading").GetBoolean()),
                 "error" => new ErrorEvent(
                     sessionId, data.GetProperty("code").GetString() ?? "", data.GetProperty("message").GetString() ?? ""),
