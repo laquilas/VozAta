@@ -82,6 +82,9 @@ One connection per UI. Server → client messages only (commands go through HTTP
 | `recovery_available` | 17 | `{session_ids: [str]}` | on connect, when interrupted sessions exist |
 | `action_items_ready` | 23 | `{session_id, count}` | extraction finished |
 | `answer_chunk` | 24 | `{answer_id, text}` | streamed answer token(s) |
+| `model_loading` | 26 | `{loading}` | the speech model started / finished loading while the session already records |
+| `partial` | 28 | `{channel, speaker_id, label, start, text}` | interim text of a channel; replaced by the next `segment`, empty `text` clears it |
+| `translation` | 29 | `{segment_id, language, text}` | translation of a committed segment |
 | `answer_done` | 24 | `{answer_id, citations: [{session_id, segment_id, start}]}` | answer complete |
 
 On connect the server sends one `status` message describing the current session (or

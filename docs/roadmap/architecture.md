@@ -335,6 +335,17 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `EXTRACT_ACTION_ITEMS` | `true` | 23 | extract action items after minutes |
 | `AZDO_ORG_URL` / `AZDO_PROJECT` / `AZDO_PAT` | — | 23 | Azure DevOps export |
 | `GITHUB_REPO` / `GITHUB_TOKEN` | — | 23 | GitHub Issues export |
+| `OLLAMA_KEEP_ALIVE` | `0` | 25 | how long Ollama keeps the model loaded after a minutes job |
+| `WHISPER_KEEP_LOADED` | `false` | 26 | keep the transcriber loaded between sessions in `serve` |
+| `CHUNK_MODE` | `vad` | 27 | `vad` (cut at pauses) / `fixed` (`CHUNK_SECONDS` windows) |
+| `VAD_THRESHOLD` | `0.5` | 27 | Silero speech probability threshold |
+| `VAD_MIN_SILENCE_MS` | `600` | 27 | pause that ends a chunk |
+| `VAD_MIN_CHUNK_SECONDS` / `VAD_MAX_CHUNK_SECONDS` | `1` / `15` | 27 | chunk length bounds |
+| `VAD_SPEECH_PAD_MS` | `200` | 27 | audio kept around detected speech |
+| `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
+| `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
+| `TRANSLATE_TO` / `TRANSLATION_PROVIDER` | *(empty)* / *(chosen in 29)* | 29 | live translation target (empty = off) and provider |
+| `CONTEXT_PROMPT_CHARS` | `200` | 19 | rolling context prompt length (0 = off) |
 
 Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /settings`
 (masked), and `.env` is git-ignored.

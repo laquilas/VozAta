@@ -39,7 +39,7 @@ context**. Read only what the phase asks for.
 | [architecture.md](architecture.md) | Components, ports, SOLID mapping, data flow, stitching algorithm, data model, config keys, i18n, speaker identification, VRAM ordering, environment facts |
 | [api-contract.md](api-contract.md) | Engine HTTP endpoints and WebSocket events, each tagged with the phase that implements it |
 | [standards.md](standards.md) | Coding standards; the exact content of the three `CLAUDE.md` files created in phase 00 |
-| [optimizations.md](optimizations.md) | Proposals from reviewing `streaming-translator`: VAD (pause-based) segmentation, capture-first start, live interim text, rolling context prompt, live translation (not scheduled yet) |
+| [optimizations.md](optimizations.md) | Review of `streaming-translator` and the design behind phases 25–29 and the context prompt in 19 |
 
 ## Status
 
@@ -66,16 +66,21 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 15 | [Speaker identification (live)](phases/15-diarization-live.md) | 14, 06 | todo |
 | 16 | [UI speaker rename](phases/16-ui-speaker-rename.md) | 09, 14 | todo |
 | 17 | [Crash recovery](phases/17-crash-recovery.md) | 06 | todo |
-| 18 | [Echo dedupe](phases/18-echo-dedupe.md) | 05 | todo |
+| 18 | [Echo dedupe](phases/18-echo-dedupe.md) | 05, 27 | todo |
 | 19 | [Custom vocabulary](phases/19-custom-vocabulary.md) | 06, 10 | todo |
 | 20 | [Minutes templates](phases/20-minutes-templates.md) | 04, 07 | todo |
 | 21 | [Editable transcript](phases/21-editable-transcript.md) | 09 | todo |
 | 22 | [Cross-session search](phases/22-search.md) | 09 | todo |
 | 23 | [Action items export](phases/23-action-items.md) | 04, 09 | todo |
 | 24 | [Ask the meeting](phases/24-ask-the-meeting.md) | 09, 22 | todo |
+| 25 | [LLM VRAM release](phases/25-llm-vram-release.md) | 04 | todo |
+| 26 | [Capture first, load later](phases/26-capture-first.md) | 06, 07 | todo |
+| 27 | [Pause-based segmentation (VAD)](phases/27-vad-segmentation.md) | 05 | todo |
+| 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | todo |
+| 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | todo |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
-12 / 14 / 17 / 18 · 20 / 21 / 22.
+12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29.
 
 **Milestones**
 - **M1 — CLI MVP** (00–05): record, live transcript in the terminal, three WAVs, minutes.
@@ -83,6 +88,8 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 - **M3 — Distribution** (12–13): external STT option and installer.
 - **M4 — Intelligence** (14–24): speakers, recovery, echo dedupe, vocabulary, templates, editing,
   search, action items, Q&A.
+- **M5 — Live quality** (25–29, from [optimizations.md](optimizations.md)): GPU release after
+  minutes, instant start, pause-based segmentation, live interim text, live translation.
 
 ## Dependency graph
 
@@ -99,6 +106,7 @@ graph LR
   P05 --> P12[12 External STT]
   P05 --> P14[14 Diarization post]
   P05 --> P18[18 Echo dedupe]
+  P27 --> P18
   P06 --> P07[07 UI skeleton]
   P06 --> P15[15 Diarization live]
   P06 --> P17[17 Crash recovery]
@@ -121,6 +129,14 @@ graph LR
   P04 --> P23
   P22 --> P24[24 Ask the meeting]
   P09 --> P24
+  P04 --> P25[25 LLM VRAM release]
+  P06 --> P26[26 Capture first]
+  P07 --> P26
+  P05 --> P27[27 VAD segmentation]
+  P27 --> P28[28 Live partials]
+  P07 --> P28
+  P06 --> P29[29 Live translation]
+  P07 --> P29
 ```
 
 ## Backlog (not scheduled)
@@ -129,8 +145,6 @@ graph LR
 - Additional LLM providers (OpenAI-compatible chat, Anthropic) behind `LanguageModel`.
 - Auto-detect meeting apps (Teams / Zoom / Meet audio sessions) and suggest recording.
 - WER benchmark harness with reference recordings to tune `CHUNK_SECONDS` and models.
-- Optimizations O1–O5 from [optimizations.md](optimizations.md) (VAD segmentation, capture-first
-  start, live partials, rolling prompt, live translation) — to be turned into phases.
 
 ## Phase file template
 

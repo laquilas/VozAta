@@ -8,7 +8,7 @@ mic segments.
 
 ## Depends on
 
-05
+05, 27 (pause-based chunks make echoed phrases line up)
 
 ## Read first
 
