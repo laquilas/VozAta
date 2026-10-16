@@ -8,3 +8,28 @@ invalid_choice = "Valor inválido \"{value}\" para {key}. Valores permitidos: {a
 not_a_number = "Valor inválido \"{value}\" para {key}: era esperado um número."
 out_of_range = "Valor inválido \"{value}\" para {key}: deve estar entre {min} e {max}."
 invalid_url = "Valor inválido \"{value}\" para {key}: era esperada uma URL http:// ou https://."
+
+[languages]
+en = "inglês"
+pt = "português"
+es = "espanhol"
+auto = "o idioma falado na transcrição"
+
+[minutes]
+output_language = "português do Brasil"
+system = "Você escreve atas de reunião precisas e concisas. Use apenas fatos presentes na transcrição ou nas notas; nunca invente nomes, datas, números ou decisões."
+instructions = """A reunião foi conduzida em {conversation_language}. Escreva a ata em {output_language}, em Markdown, com exatamente estes títulos de nível 2, nesta ordem:
+{sections}
+Liste os itens de ação com responsável e prazo quando tiverem sido mencionados. Em uma seção sem conteúdo, escreva "—"."""
+map_instructions = "Esta é a parte {part} de {total} de uma reunião conduzida em {conversation_language}. Escreva notas concisas em {output_language} com os tópicos, decisões, itens de ação (responsável, prazo) e questões em aberto desta parte. Use apenas fatos desta parte."
+reduce_instructions = "Estas são notas de partes consecutivas de uma mesma reunião conduzida em {conversation_language}. Combine-as na ata da reunião."
+transcript_label = "Transcrição:"
+notes_label = "Notas:"
+
+[minutes.section]
+context = "Contexto"
+summary = "Resumo"
+topics = "Tópicos"
+decisions = "Decisões"
+action_items = "Itens de ação"
+open_issues = "Questões em aberto"
