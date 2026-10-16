@@ -43,8 +43,15 @@ internal sealed class FakeEngineClient : IEngineClient
         return Task.FromResult(Health);
     }
 
-    public Task<DeviceList> GetDevicesAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(new DeviceList([], [], null, null));
+    public DeviceList Devices { get; set; } = new([], [], null, null);
+
+    public Exception? DevicesError { get; set; }
+
+    public Task<DeviceList> GetDevicesAsync(CancellationToken cancellationToken = default)
+    {
+        Calls.Add("devices");
+        return DevicesError is null ? Task.FromResult(Devices) : Task.FromException<DeviceList>(DevicesError);
+    }
 
     public Task<SessionSummary> StartSessionAsync(
         StartSessionRequest request, CancellationToken cancellationToken = default)
