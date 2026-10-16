@@ -57,14 +57,15 @@ Keeping Whisper warm between sessions (phase 26).
 
 - **Branch:** `feature/25-llm-vram-release`
 - **Status:** in progress
-- **Updated:** 2026-10-16 15:00
-- **Next step:** add `OLLAMA_KEEP_ALIVE` to `config.py`, `settings_fields.py`, `.env.example` with
-  tests in `tests/test_config.py`
+- **Updated:** 2026-10-16 15:20
+- **Next step:** add `release()` to the `LanguageModel` port (`ports.py`, `FakeLanguageModel`,
+  architecture §5); make `OllamaLanguageModel` send `keep_alive` and implement `release()`;
+  pass `settings.ollama_keep_alive` in `bootstrap.py`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds)
+- [x] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds) — next commit
 - [ ] `LanguageModel.release()` port method; Ollama sends `keep_alive` with every chat request and
       `release()` unloads with the configured value; wired in `bootstrap.py`
 - [ ] `MinutesGenerator` calls `release()` once after every job (success or failure)

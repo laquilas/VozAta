@@ -6,6 +6,7 @@ Each roadmap phase adds the keys it owns. Invalid values fail fast with a `Confi
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -29,6 +30,8 @@ KEYS = tuple(field.key for field in FIELDS)
 _TRUE = ("true", "1", "yes", "on")
 _FALSE = ("false", "0", "no", "off")
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
+# Ollama `keep_alive`: whole seconds (`0`, `-1`, `300`) or a Go duration (`5m`, `1h30m`, `250ms`).
+_DURATION = re.compile(r"-?\d+|-?(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+")
 
 
 class ConfigError(ValueError):
@@ -75,6 +78,8 @@ class Settings:
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
     llm_max_chars: int = 12000
+    # LLM VRAM release (phase 25)
+    ollama_keep_alive: str = "0"
     # Session (phase 05)
     generate_minutes: bool = True
     # API (phase 06)
@@ -116,6 +121,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
         llm_max_chars=int(_number(raw, "LLM_MAX_CHARS", 12000, minimum=1000, maximum=1_000_000)),
+        ollama_keep_alive=_duration(raw, "OLLAMA_KEEP_ALIVE", "0"),
         generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
@@ -176,6 +182,13 @@ def _url(raw: Mapping[str, str], key: str, default: str) -> str:
     if not value.startswith(("http://", "https://")):
         raise ConfigError(key, value, "invalid_url")
     return value.rstrip("/")
+
+
+def _duration(raw: Mapping[str, str], key: str, default: str) -> str:
+    value = raw.get(key, default)
+    if not _DURATION.fullmatch(value):
+        raise ConfigError(key, value, "invalid_duration")
+    return value
 
 
 def _sample_rate(raw: Mapping[str, str]) -> int:
