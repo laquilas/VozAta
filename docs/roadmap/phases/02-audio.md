@@ -68,16 +68,16 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 
 - **Branch:** `feature/02-audio`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:01
-- **Next step:** TDD `audio/mixer.py` + `MIX_MODE`: write `tests/audio/test_mixer.py` (mono sum and clip, stereo L/R, different lengths, multi-block streaming, mismatched formats) and a `MIX_MODE` config test, see them fail, then implement.
+- **Updated:** 2026-10-15 23:02
+- **Next step:** TDD `audio/devices.py` against a fake PyAudio (`tests/audio/test_devices.py`: listing inputs and loopbacks, defaults, `find_device`, missing id), see it fail, then implement.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `5e91877`
 - [x] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`) — `f957159`
 - [x] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding — `69a0f8c`
-- [x] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause
-- [ ] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config
+- [x] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause — `cce70a1`
+- [x] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config
 - [ ] `audio/devices.py` (testable with a fake PyAudio)
 - [ ] `audio/capture.py` (`WasapiSource`) + `engine/scripts/smoke_capture.py`; run the smoke check
 - [ ] Verify; tick acceptance criteria; set phase `done`

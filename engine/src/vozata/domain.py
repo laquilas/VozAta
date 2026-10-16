@@ -39,6 +39,11 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class MixMode(StrEnum):
+    MONO = "mono"
+    STEREO = "stereo"
+
+
 @dataclass(frozen=True, eq=False)
 class AudioChunk:
     """Float32 mono samples at the session sample rate, starting at `start`."""

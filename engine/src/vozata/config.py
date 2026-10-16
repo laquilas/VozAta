@@ -13,7 +13,12 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
-from vozata.domain import AppLanguage, ConversationLanguage, default_conversation_language
+from vozata.domain import (
+    AppLanguage,
+    ConversationLanguage,
+    MixMode,
+    default_conversation_language,
+)
 from vozata.i18n import TomlLocalizer
 from vozata.ports import Localizer
 
@@ -25,6 +30,7 @@ KEYS = (
     "MIC_LABEL",
     "SYSTEM_LABEL",
     "OUTPUT_DIR",
+    "MIX_MODE",
 )
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
 
@@ -57,6 +63,7 @@ class Settings:
     mic_label: str | None = None
     system_label: str | None = None
     output_dir: Path = Path("recordings")
+    mix_mode: MixMode = MixMode.MONO
 
 
 def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = None) -> Settings:
@@ -79,6 +86,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         mic_label=raw.get("MIC_LABEL"),
         system_label=raw.get("SYSTEM_LABEL"),
         output_dir=Path(raw.get("OUTPUT_DIR", "recordings")),
+        mix_mode=_choice(raw, "MIX_MODE", MixMode, MixMode.MONO),
     )
 
 
