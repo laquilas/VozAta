@@ -14,7 +14,7 @@ from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.ports import AudioMixer, AudioSource, Localizer, SessionObserver, Transcriber
 from vozata.session_meta import SessionMeta
-from vozata.session_pipeline import CapturePipeline
+from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.storage.session_store import SessionPaths, SessionStore
 from vozata.transcription.language_lock import LanguageLock
 
@@ -42,6 +42,7 @@ class SessionComponents:
     localizer: Localizer
     labeler: SpeakerLabeler
     release: Callable[[], None] = lambda: None  # frees the audio backend once capture ended
+    chunker_factory: ChunkerFactory | None = None  # None: fixed CHUNK_SECONDS windows
 
 
 class SessionStartError(RuntimeError):
@@ -109,6 +110,7 @@ class RecordingSession:
             self._lock,
             self._c.labeler,
             self._observer,
+            self._c.chunker_factory,
         )
         self._c.clock.start()
         self._pipeline.accept()

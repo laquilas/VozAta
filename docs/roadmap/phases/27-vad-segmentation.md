@@ -59,8 +59,8 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
 
 - **Branch:** `feature/27-vad-segmentation`
 - **Status:** in progress
-- **Updated:** 2026-10-16 18:05
-- **Next step:** add `audio/silero.py` (`SileroSpeechDetector`), the `CHUNKERS` registry in `bootstrap.py` (keyed by `ChunkMode`), a chunker factory in `SessionComponents` passed to `CapturePipeline`; architecture §6
+- **Updated:** 2026-10-16 18:40
+- **Next step:** manual comparison: play the phase 05 TTS meeting on the speakers and record it once with `CHUNK_MODE=fixed` and once with `CHUNK_MODE=vad` (env overrides from memory); compare WER against the script and speech-end-to-line latency; record both in Progress and the PR
 
 ### Steps
 
@@ -68,8 +68,8 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
 - [x] Config: `CHUNK_MODE` (`vad` | `fixed`), `VAD_THRESHOLD`, `VAD_MIN_SILENCE_MS`,
       `VAD_MIN_CHUNK_SECONDS`, `VAD_MAX_CHUNK_SECONDS`, `VAD_SPEECH_PAD_MS` — `21963c2`
 - [x] Ports `Chunker` and `SpeechDetector`; `VadChunker` (fake-detector tests) — `8fa408e`
-- [x] `AudioChunk.complete`; the stitcher commits every word of a complete chunk — this commit
-- [ ] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory
+- [x] `AudioChunk.complete`; the stitcher commits every word of a complete chunk — `59ea83e`
+- [x] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory — this commit
 - [ ] Manual: TTS meeting `fixed` vs `vad` (latency, WER); acceptance criteria
 
 ### Decisions and notes

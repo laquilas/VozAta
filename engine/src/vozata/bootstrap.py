@@ -15,17 +15,27 @@ from vozata.api.system_info import query_gpu
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
 from vozata.audio.catalog import WasapiCatalog
+from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.clock import SessionClock
 from vozata.audio.devices import DeviceInfo, default_input, default_loopback, find_device
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.portaudio import PortAudioThread
+from vozata.audio.silero import SileroSpeechDetector
+from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
-from vozata.domain import Channel, ConversationLanguage, MixMode
+from vozata.domain import AudioChunk, Channel, ChunkMode, ConversationLanguage, MixMode
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
-from vozata.ports import AudioMixer, LanguageModel, Localizer, SessionObserver, Transcriber
+from vozata.ports import (
+    AudioMixer,
+    Chunker,
+    LanguageModel,
+    Localizer,
+    SessionObserver,
+    Transcriber,
+)
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.storage.session_store import SessionStore
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
@@ -36,6 +46,29 @@ TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(
         settings.ollama_url, settings.ollama_model, settings.ollama_keep_alive
+    ),
+}
+
+
+def _vad_chunker(
+    settings: Settings, channel: Channel, on_chunk: Callable[[AudioChunk], None]
+) -> Chunker:
+    return VadChunker(
+        channel,
+        settings.sample_rate,
+        on_chunk,
+        SileroSpeechDetector(settings.sample_rate, settings.vad_threshold),
+        min_silence=settings.vad_min_silence_ms / 1000,
+        min_chunk=settings.vad_min_chunk_seconds,
+        max_chunk=settings.vad_max_chunk_seconds,
+        speech_pad=settings.vad_speech_pad_ms / 1000,
+    )
+
+
+CHUNKERS: dict[ChunkMode, Callable[[Settings, Channel, Callable[[AudioChunk], None]], Chunker]] = {
+    ChunkMode.VAD: _vad_chunker,
+    ChunkMode.FIXED: lambda settings, channel, on_chunk: FixedWindowChunker(
+        channel, settings.chunk_seconds, settings.sample_rate, on_chunk
     ),
 }
 MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
@@ -113,6 +146,7 @@ def build_session(
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
         release=audio.close,
+        chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
     )
     return RecordingSession(
         settings,

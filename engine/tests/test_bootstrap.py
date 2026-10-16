@@ -8,10 +8,12 @@ import pytest
 from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
 from vozata import bootstrap
 from vozata.audio.capture import WasapiSource
+from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.devices import DeviceInfo
 from vozata.audio.mixer import MonoMixer, StereoMixer
+from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
-from vozata.domain import AppLanguage, Channel, ConversationLanguage, MixMode
+from vozata.domain import AppLanguage, Channel, ChunkMode, ConversationLanguage, MixMode
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
 from vozata.session import SessionStartError
@@ -93,9 +95,33 @@ def test_build_session_uses_the_default_devices_and_settings(
     }
     assert isinstance(components.mixer, MonoMixer)
     assert isinstance(components.minutes, MinutesGenerator)
+    assert components.chunker_factory is not None
+    assert isinstance(components.chunker_factory(Channel.MIC, lambda chunk: None), VadChunker)
     assert session._language is ConversationLanguage.ES
     assert devices == []
     assert not (tmp_path / "recordings").exists()  # nothing is created before start()
+
+
+@pytest.mark.parametrize(
+    ("mode", "kind"), [(ChunkMode.VAD, VadChunker), (ChunkMode.FIXED, FixedWindowChunker)]
+)
+def test_chunkers_registry_builds_the_configured_chunker(mode: ChunkMode, kind: type) -> None:
+    chunks: list[object] = []
+    chunker = bootstrap.CHUNKERS[mode](Settings(), Channel.SYSTEM, chunks.append)
+
+    assert isinstance(chunker, kind)
+    assert set(bootstrap.CHUNKERS) == set(ChunkMode)
+
+
+def test_build_session_uses_fixed_windows_when_configured(
+    tmp_path: Path, devices: list[int]
+) -> None:
+    settings = _settings(tmp_path, chunk_mode=ChunkMode.FIXED)
+
+    factory = bootstrap.build_session(settings, FakeSessionObserver())._c.chunker_factory
+
+    assert factory is not None
+    assert isinstance(factory(Channel.MIC, lambda chunk: None), FixedWindowChunker)
 
 
 def test_build_session_honours_explicit_devices_language_and_mix_mode(

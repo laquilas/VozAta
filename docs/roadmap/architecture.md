@@ -158,15 +158,20 @@ Ports are added by the phase that first needs them; the list above is the target
 
 ```
 WasapiSource(mic) ─┬─> AlignedWavWriter → mic.wav
-                   └─> FixedWindowChunker ─┐
+                   └─> Chunker (vad | fixed) ─┐
 WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
-                   └─> FixedWindowChunker ─┴─> Queue[AudioChunk]
+                   └─> Chunker (vad | fixed) ─┴─> Queue[AudioChunk]
                                                └─> TranscriptionWorker (single thread, one GPU)
                                                     └─> CarryOverStitcher (one per channel)
                                                          └─> Transcriber
                                                     └─> [EchoFilter] → [LiveSpeakerTagger]
                                                     └─> CompositeSink → Console | Jsonl | Markdown | WebSocket
 ```
+
+**Chunkers**: `CHUNKERS[CHUNK_MODE]` in `bootstrap.py` builds one per channel through
+`SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
+(`SileroSpeechDetector`, CPU) every 0.25 s and cuts in the middle of pauses ≥ `VAD_MIN_SILENCE_MS`,
+marking those chunks `complete`; `FixedWindowChunker` cuts every `CHUNK_SECONDS`.
 
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
