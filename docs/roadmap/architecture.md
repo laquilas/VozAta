@@ -85,8 +85,10 @@ class Channel(StrEnum): MIC = "mic"; SYSTEM = "system"
 class SessionStatus(StrEnum): RECORDING, PAUSED, FINALIZING, DONE, INTERRUPTED  # lowercase values
 class AppLanguage(StrEnum): EN = "en"; PT_BR = "pt-BR"; ES = "es"
 class ConversationLanguage(StrEnum): EN = "en"; PT = "pt"; ES = "es"; AUTO = "auto"
+class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 
 @dataclass(frozen=True) class AudioChunk:      channel, start: float, samples: np.ndarray  # float32 mono, SAMPLE_RATE
+                                               complete: bool = False  # ends in a pause (27)
 @dataclass(frozen=True) class Word:            text, start, end, probability
 @dataclass(frozen=True) class TranscriptionResult: words: tuple[Word, ...], language: str | None
 @dataclass(frozen=True) class TranscriptSegment:
@@ -118,6 +120,12 @@ class TranscriptSink(Protocol):
     def close(self) -> None: ...
 class AudioMixer(Protocol):
     def mix(self, mic: Path, system: Path, destination: Path) -> None: ...
+class Chunker(Protocol):             # FixedWindowChunker (01), VadChunker (27)
+    paused: bool
+    def feed(self, samples: np.ndarray, at: float) -> None: ...
+    def flush(self) -> None: ...
+class SpeechDetector(Protocol):      # SileroSpeechDetector (27); unpadded spans in seconds
+    def speech_spans(self, samples: np.ndarray) -> list[tuple[float, float]]: ...
 class LanguageModel(Protocol):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str: ...
     def stream(self, system: str, prompt: str) -> Iterator[str]: ...

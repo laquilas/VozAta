@@ -57,11 +57,15 @@ class WhisperDevice(StrEnum):
 
 @dataclass(frozen=True, eq=False)
 class AudioChunk:
-    """Float32 mono samples at the session sample rate, starting at `start`."""
+    """Float32 mono samples at the session sample rate, starting at `start`.
+
+    `complete` chunks end in a pause (VAD cut): the stitcher commits all of their words.
+    """
 
     channel: Channel
     start: float
     samples: np.ndarray
+    complete: bool = False
 
 
 @dataclass(frozen=True)

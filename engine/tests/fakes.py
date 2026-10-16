@@ -115,6 +115,23 @@ class FakeLanguageModel:
         self.releases += 1
 
 
+class FakeSpeechDetector:
+    """Every non-zero sample is speech; spans are runs of them, in seconds. Counts calls."""
+
+    def __init__(self, sample_rate: int) -> None:
+        self.sample_rate = sample_rate
+        self.calls: list[int] = []  # length of every analysed buffer
+
+    def speech_spans(self, samples: np.ndarray) -> list[tuple[float, float]]:
+        self.calls.append(len(samples))
+        voiced = np.concatenate(([0], (samples != 0).astype(np.int8), [0]))
+        edges = np.flatnonzero(np.diff(voiced))
+        return [
+            (start / self.sample_rate, end / self.sample_rate)
+            for start, end in zip(edges[::2], edges[1::2], strict=True)
+        ]
+
+
 class FakeLocalizer:
     """Echoes the key with its params, e.g. `labels.user(n=2)`."""
 
