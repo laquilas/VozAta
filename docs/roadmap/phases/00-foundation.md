@@ -78,8 +78,8 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:15
-- **Next step:** confirm the CI run for `ci: add engine workflow` is green (`gh run list --branch feature/00-foundation`); fix from logs if not.
+- **Updated:** 2026-10-15 23:25
+- **Next step:** update architecture §1 environment facts, tick the acceptance criteria, set phase 00 to `done` and Progress to `ready for PR`; CI runs on the PR into `main`.
 
 ### Steps
 
@@ -101,3 +101,5 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - **`__legacy__/`** (user decision, revised): kept locally (copied from `<prototype-workspace>/__legacy__`) but **not published**; it stays ignored by `__*__/`. On a fresh clone, copy it from there. The acceptance criterion "`__legacy__/` is tracked" no longer applies.
 - `pyproject.toml` has no `readme` field: setuptools refuses files outside the package root (`../README.md`).
 - `test_running_as_module_prints_version` covers `python -m vozata` through `runpy`, so the `__main__` guard counts toward coverage (100 %).
+- **CI triggers** (user decision): only `pull_request` into `main` and `push` to `main`; pushes to `feature/*` do not run CI. The first run (on `feature/**` before this change) installed and passed lint, format and tests.
+- **History rewrite** (user decision): `__legacy__/` was stripped from every commit of this branch with `git filter-branch` and the branch was force-pushed, so the prototypes never reach the public history. SHAs above are post-rewrite.
