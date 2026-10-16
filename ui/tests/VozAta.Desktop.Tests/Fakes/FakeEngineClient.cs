@@ -119,9 +119,16 @@ internal sealed class FakeEngineClient : IEngineClient
         return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
     }
 
+    public Exception? SettingsError { get; set; }
+
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
         Calls.Add("settings");
+        if (SettingsError is not null)
+        {
+            return Task.FromException<EngineSettings>(SettingsError);
+        }
+
         var values = SettingValues.ToDictionary(
             pair => pair.Key, pair => JsonSerializer.SerializeToElement(pair.Value));
         return Task.FromResult(new EngineSettings(values, Schema));
