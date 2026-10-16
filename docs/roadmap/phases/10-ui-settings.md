@@ -60,8 +60,8 @@ Vocabulary editor (19), template selection (20).
 
 - **Branch:** `feature/10-ui-settings`
 - **Status:** in progress
-- **Updated:** 2026-10-16 18:40
-- **Next step:** resources: `Setting_<KEY>` and `SettingHelp_<KEY>` for all 35 keys, `SettingsGroup_<group>` and the page texts in en / pt-BR / es, plus a test that every schema key has both strings
+- **Updated:** 2026-10-16 19:00
+- **Next step:** settings tab: `Views/SettingsView.axaml` (health card with Check again, groups of editors by kind, restart badge, per-key errors, Save / Discard, restart prompt), `MainViewModel.Settings` (load at start-up, `Saved` applies APP_LANGUAGE / TRANSCRIPTION_LANGUAGE / labels, interface selector saves APP_LANGUAGE), DI
 
 ### Steps
 
@@ -72,8 +72,8 @@ Vocabulary editor (19), template selection (20).
       current settings — `ba6ed5e`
 - [x] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync` — `53e1470`
 - [x] `HealthViewModel` (status bar + settings page, "Check again") — `43cb574`
-- [x] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt) — this commit
-- [ ] Localized label and help for every key (en / pt-BR / es)
+- [x] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt) — `22b9e34`
+- [x] Localized label and help for every key (en / pt-BR / es) — this commit
 - [ ] Settings tab in the main window; app language saved; default conversation language applied
 - [ ] Manual: `CHUNK_SECONDS` = 8 in the UI → next session uses 8 s windows; criteria
 

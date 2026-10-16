@@ -180,6 +180,264 @@
   <data name="Loading" xml:space="preserve">
     <value>Loading…</value>
   </data>
+  <data name="TabSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsGroup_general" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="SettingsGroup_audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="SettingsGroup_segmentation" xml:space="preserve">
+    <value>Audio segmentation</value>
+  </data>
+  <data name="SettingsGroup_transcription" xml:space="preserve">
+    <value>Transcription</value>
+  </data>
+  <data name="SettingsGroup_minutes" xml:space="preserve">
+    <value>Minutes</value>
+  </data>
+  <data name="SettingsGroup_api" xml:space="preserve">
+    <value>Engine</value>
+  </data>
+  <data name="SettingsSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SettingsDiscard" xml:space="preserve">
+    <value>Discard changes</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Settings saved. They apply from the next recording.</value>
+  </data>
+  <data name="SettingsRestartRequired" xml:space="preserve">
+    <value>These settings apply after the engine restarts:</value>
+  </data>
+  <data name="SettingsNeedsRestart" xml:space="preserve">
+    <value>applies after a restart</value>
+  </data>
+  <data name="RestartEngine" xml:space="preserve">
+    <value>Restart engine</value>
+  </data>
+  <data name="EngineRestarted" xml:space="preserve">
+    <value>The engine restarted with the new settings.</value>
+  </data>
+  <data name="EngineRestartManual" xml:space="preserve">
+    <value>The engine was started outside the app. Restart it yourself to apply these settings.</value>
+  </data>
+  <data name="EngineRestartFailed" xml:space="preserve">
+    <value>The engine did not start again. Check the settings you changed.</value>
+  </data>
+  <data name="HealthTitle" xml:space="preserve">
+    <value>Engine status</value>
+  </data>
+  <data name="CheckAgain" xml:space="preserve">
+    <value>Check again</value>
+  </data>
+  <data name="Setting_APP_LANGUAGE" xml:space="preserve">
+    <value>Interface language</value>
+  </data>
+  <data name="SettingHelp_APP_LANGUAGE" xml:space="preserve">
+    <value>Language of the app, the engine messages and the minutes headings.</value>
+  </data>
+  <data name="Setting_TRANSCRIPTION_LANGUAGE" xml:space="preserve">
+    <value>Default meeting language</value>
+  </data>
+  <data name="SettingHelp_TRANSCRIPTION_LANGUAGE" xml:space="preserve">
+    <value>Language the meeting is held in, preselected on the Recording tab. Empty follows the interface language.</value>
+  </data>
+  <data name="Setting_MIC_LABEL" xml:space="preserve">
+    <value>Microphone speaker name</value>
+  </data>
+  <data name="SettingHelp_MIC_LABEL" xml:space="preserve">
+    <value>Name shown for your microphone in transcripts. Empty uses “Me”.</value>
+  </data>
+  <data name="Setting_SYSTEM_LABEL" xml:space="preserve">
+    <value>System audio speaker name</value>
+  </data>
+  <data name="SettingHelp_SYSTEM_LABEL" xml:space="preserve">
+    <value>Name shown for the other participants (system audio). Empty uses “Others”.</value>
+  </data>
+  <data name="Setting_OUTPUT_DIR" xml:space="preserve">
+    <value>Recordings folder</value>
+  </data>
+  <data name="SettingHelp_OUTPUT_DIR" xml:space="preserve">
+    <value>Folder where each session gets its own subfolder with audio, transcript and minutes.</value>
+  </data>
+  <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
+    <value>Write minutes when recording stops</value>
+  </data>
+  <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
+    <value>Generate the minutes with the local language model after each recording.</value>
+  </data>
+  <data name="Setting_SAMPLE_RATE" xml:space="preserve">
+    <value>Sample rate (Hz)</value>
+  </data>
+  <data name="SettingHelp_SAMPLE_RATE" xml:space="preserve">
+    <value>Internal audio sample rate. Whisper requires 16000.</value>
+  </data>
+  <data name="Setting_MIX_MODE" xml:space="preserve">
+    <value>Mixed file</value>
+  </data>
+  <data name="SettingHelp_MIX_MODE" xml:space="preserve">
+    <value>mixed.wav as one mono track, or stereo with the microphone left and the system audio right.</value>
+  </data>
+  <data name="Setting_CHUNK_MODE" xml:space="preserve">
+    <value>How audio is cut</value>
+  </data>
+  <data name="SettingHelp_CHUNK_MODE" xml:space="preserve">
+    <value>vad cuts at the pauses between phrases (faster and more accurate); fixed uses windows of the length below.</value>
+  </data>
+  <data name="Setting_CHUNK_SECONDS" xml:space="preserve">
+    <value>Window length (s)</value>
+  </data>
+  <data name="SettingHelp_CHUNK_SECONDS" xml:space="preserve">
+    <value>Length of each transcription window when audio is cut in fixed windows.</value>
+  </data>
+  <data name="Setting_VAD_THRESHOLD" xml:space="preserve">
+    <value>Speech detection threshold</value>
+  </data>
+  <data name="SettingHelp_VAD_THRESHOLD" xml:space="preserve">
+    <value>How sure the voice detector must be that a sound is speech (0.01 to 0.99). Raise it for noisy rooms.</value>
+  </data>
+  <data name="Setting_VAD_MIN_SILENCE_MS" xml:space="preserve">
+    <value>Pause that ends a phrase (ms)</value>
+  </data>
+  <data name="SettingHelp_VAD_MIN_SILENCE_MS" xml:space="preserve">
+    <value>A silence at least this long after speech ends a chunk.</value>
+  </data>
+  <data name="Setting_VAD_MIN_CHUNK_SECONDS" xml:space="preserve">
+    <value>Shortest phrase (s)</value>
+  </data>
+  <data name="SettingHelp_VAD_MIN_CHUNK_SECONDS" xml:space="preserve">
+    <value>Speech shorter than this is not sent alone; it joins the next phrase.</value>
+  </data>
+  <data name="Setting_VAD_MAX_CHUNK_SECONDS" xml:space="preserve">
+    <value>Longest phrase (s)</value>
+  </data>
+  <data name="SettingHelp_VAD_MAX_CHUNK_SECONDS" xml:space="preserve">
+    <value>Longer speech is cut at its longest pause, or at this limit.</value>
+  </data>
+  <data name="Setting_VAD_SPEECH_PAD_MS" xml:space="preserve">
+    <value>Audio kept before speech (ms)</value>
+  </data>
+  <data name="SettingHelp_VAD_SPEECH_PAD_MS" xml:space="preserve">
+    <value>Audio kept before the first word of a phrase so it is not clipped.</value>
+  </data>
+  <data name="Setting_STT_PROVIDER" xml:space="preserve">
+    <value>Speech recognition engine</value>
+  </data>
+  <data name="SettingHelp_STT_PROVIDER" xml:space="preserve">
+    <value>Speech-to-text provider. faster_whisper runs locally on your GPU or CPU.</value>
+  </data>
+  <data name="Setting_WHISPER_MODEL" xml:space="preserve">
+    <value>Whisper model (GPU)</value>
+  </data>
+  <data name="SettingHelp_WHISPER_MODEL" xml:space="preserve">
+    <value>Model used on the GPU, e.g. large-v3-turbo or large-v3.</value>
+  </data>
+  <data name="Setting_WHISPER_DEVICE" xml:space="preserve">
+    <value>Recognition device</value>
+  </data>
+  <data name="SettingHelp_WHISPER_DEVICE" xml:space="preserve">
+    <value>auto uses the GPU when available, otherwise the CPU.</value>
+  </data>
+  <data name="Setting_WHISPER_COMPUTE_TYPE" xml:space="preserve">
+    <value>GPU compute type</value>
+  </data>
+  <data name="SettingHelp_WHISPER_COMPUTE_TYPE" xml:space="preserve">
+    <value>Numeric precision on the GPU; int8_float16 fits a 6 GB card.</value>
+  </data>
+  <data name="Setting_WHISPER_CPU_MODEL" xml:space="preserve">
+    <value>Whisper model (CPU)</value>
+  </data>
+  <data name="SettingHelp_WHISPER_CPU_MODEL" xml:space="preserve">
+    <value>Smaller model used when no GPU is available.</value>
+  </data>
+  <data name="Setting_WHISPER_KEEP_LOADED" xml:space="preserve">
+    <value>Keep the speech model loaded</value>
+  </data>
+  <data name="SettingHelp_WHISPER_KEEP_LOADED" xml:space="preserve">
+    <value>Keep Whisper in memory between recordings so the next one transcribes at once. It is still released before minutes are written.</value>
+  </data>
+  <data name="Setting_TAIL_MARGIN_SECONDS" xml:space="preserve">
+    <value>Window tail margin (s)</value>
+  </data>
+  <data name="SettingHelp_TAIL_MARGIN_SECONDS" xml:space="preserve">
+    <value>Words ending this close to the end of a window wait for the next one.</value>
+  </data>
+  <data name="Setting_PAUSE_GAP_SECONDS" xml:space="preserve">
+    <value>Phrase gap (s)</value>
+  </data>
+  <data name="SettingHelp_PAUSE_GAP_SECONDS" xml:space="preserve">
+    <value>A gap between words this long counts as the end of a phrase.</value>
+  </data>
+  <data name="Setting_MAX_CARRY_SECONDS" xml:space="preserve">
+    <value>Longest carried audio (s)</value>
+  </data>
+  <data name="SettingHelp_MAX_CARRY_SECONDS" xml:space="preserve">
+    <value>Unfinished speech carried to the next window is committed once it reaches this length.</value>
+  </data>
+  <data name="Setting_SILENCE_RMS_THRESHOLD" xml:space="preserve">
+    <value>Silence level</value>
+  </data>
+  <data name="SettingHelp_SILENCE_RMS_THRESHOLD" xml:space="preserve">
+    <value>Audio quieter than this (RMS, 0 to 1) is treated as silence and not transcribed.</value>
+  </data>
+  <data name="Setting_LIVE_PARTIALS" xml:space="preserve">
+    <value>Show text while people speak</value>
+  </data>
+  <data name="SettingHelp_LIVE_PARTIALS" xml:space="preserve">
+    <value>Show provisional text while someone is still speaking; the final line replaces it.</value>
+  </data>
+  <data name="Setting_PARTIAL_INTERVAL_SECONDS" xml:space="preserve">
+    <value>Provisional text interval (s)</value>
+  </data>
+  <data name="SettingHelp_PARTIAL_INTERVAL_SECONDS" xml:space="preserve">
+    <value>Minimum time between two updates of the provisional text of a channel.</value>
+  </data>
+  <data name="Setting_LLM_PROVIDER" xml:space="preserve">
+    <value>Minutes model provider</value>
+  </data>
+  <data name="SettingHelp_LLM_PROVIDER" xml:space="preserve">
+    <value>Language-model provider used to write the minutes.</value>
+  </data>
+  <data name="Setting_OLLAMA_URL" xml:space="preserve">
+    <value>Ollama address</value>
+  </data>
+  <data name="SettingHelp_OLLAMA_URL" xml:space="preserve">
+    <value>Address of the local Ollama server.</value>
+  </data>
+  <data name="Setting_OLLAMA_MODEL" xml:space="preserve">
+    <value>Minutes model</value>
+  </data>
+  <data name="SettingHelp_OLLAMA_MODEL" xml:space="preserve">
+    <value>Ollama model that writes the minutes; it must fit in your GPU memory.</value>
+  </data>
+  <data name="Setting_LLM_MAX_CHARS" xml:space="preserve">
+    <value>Longest transcript in one pass (characters)</value>
+  </data>
+  <data name="SettingHelp_LLM_MAX_CHARS" xml:space="preserve">
+    <value>Longer transcripts are summarized in parts first, then combined.</value>
+  </data>
+  <data name="Setting_OLLAMA_KEEP_ALIVE" xml:space="preserve">
+    <value>Keep the minutes model loaded</value>
+  </data>
+  <data name="SettingHelp_OLLAMA_KEEP_ALIVE" xml:space="preserve">
+    <value>How long Ollama keeps the model after the minutes: 0 frees the GPU at once, 5m keeps it 5 minutes.</value>
+  </data>
+  <data name="Setting_API_HOST" xml:space="preserve">
+    <value>Engine address</value>
+  </data>
+  <data name="SettingHelp_API_HOST" xml:space="preserve">
+    <value>Address the local engine listens on. Never use 0.0.0.0: the API has no authentication.</value>
+  </data>
+  <data name="Setting_API_PORT" xml:space="preserve">
+    <value>Engine port</value>
+  </data>
+  <data name="SettingHelp_API_PORT" xml:space="preserve">
+    <value>Port of the local engine. The desktop app must use the same port.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>
