@@ -59,3 +59,33 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 > Execute phase 07 of the roadmap (`docs/roadmap/phases/07-ui-skeleton.md`), following
 > `docs/roadmap/README.md`. Ask me before installing the .NET SDK.
+
+## Progress
+
+- **Branch:** `feature/07-ui-skeleton`
+- **Status:** in progress
+- **Updated:** 2026-10-16 09:25
+- **Next step:** scaffold `ui/VozAta.sln` (classic `.sln`) with `src/VozAta.Client`,
+  `src/VozAta.Desktop` (Avalonia 12) and `tests/VozAta.Desktop.Tests` (xUnit);
+  `Directory.Build.props` (nullable, warnings as errors); add the `ui` CI job.
+
+### Steps
+
+- [x] Start phase: status in progress, Progress section
+- [ ] Solution scaffold, `Directory.Build.props`, CI `ui` job
+- [ ] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests
+- [ ] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests
+- [ ] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
+      parity test, `IUiDispatcher`
+- [ ] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
+      + tests
+- [ ] `MainWindow.axaml`, `App.axaml.cs` composition root
+- [ ] Manual: app starts the engine; Start → live lines; Stop → Finalizing → Idle; UI language
+      switch
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- .NET SDK 10.0.402 and Avalonia templates were installed with the user's approval
+  (2026-10-16); the templates use Avalonia 12.1.4.
+
