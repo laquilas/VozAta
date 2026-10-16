@@ -168,6 +168,44 @@ public sealed class EngineProcessTests : IDisposable
         Assert.Equal(EngineRestartResult.Failed, await engine.RestartAsync());
     }
 
+    [Fact]
+    public async Task An_installed_engine_runs_its_executable_in_an_expanded_working_folder()
+    {
+        _client.UnavailableHealthChecks = 1;
+        var exe = Path.Combine(_root, "app", "engine", "vozata-engine.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(exe)!);
+        File.WriteAllText(exe, "");
+        Environment.SetEnvironmentVariable("VOZATA_TEST_DATA", Path.Combine(_root, "data"));
+        var engine = Installed("%VOZATA_TEST_DATA%/VozAta");
+
+        var result = await engine.EnsureRunningAsync();
+
+        Assert.Equal(EngineStartResult.Started, result);
+        var (file, arguments, directory) = _runner.Started.Single();
+        Assert.Equal((exe, "serve"), (file, arguments));
+        Assert.Equal(Path.GetFullPath(Path.Combine(_root, "data", "VozAta")), directory);
+        Assert.True(Directory.Exists(directory));  // created for the engine's .env and logs
+    }
+
+    [Fact]
+    public async Task A_missing_installed_engine_fails_without_falling_back_to_python()
+    {
+        _client.UnavailableHealthChecks = 1;
+
+        var result = await Installed(Path.Combine(_root, "data")).EnsureRunningAsync();
+
+        Assert.Equal(EngineStartResult.Failed, result);
+        Assert.Empty(_runner.Started);
+    }
+
+    private EngineProcess Installed(string workingDirectory) =>
+        new(
+            _client,
+            _runner,
+            new EngineOptions { ExecutablePath = "engine/vozata-engine.exe", WorkingDirectory = workingDirectory },
+            new PathResolver(Path.Combine(_root, "elsewhere"), Path.Combine(_root, "app")),
+            NoDelay);
+
     private EngineProcess Engine(TimeSpan? timeout = null) =>
         new(
             _client,

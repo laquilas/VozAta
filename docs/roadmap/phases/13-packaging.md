@@ -58,15 +58,13 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 
 - **Branch:** `feature/13-packaging`
 - **Status:** in progress
-- **Updated:** 2026-10-17 01:00
-- **Next step:** UI executable mode: `EngineOptions.ExecutablePath` (run `vozata-engine.exe serve`
-  instead of Python), working directory with environment variables (`%APPDATA%\VozAta`, created
-  if missing), `appsettings.Installed.json`; tests in `EngineProcessTests.cs`
+- **Updated:** 2026-10-17 01:15
+- **Next step:** engine: `register_cuda_dlls` also searches the PyInstaller bundle (`sys._MEIPASS`); `packaging/engine.spec` + `packaging/engine_main.py`; `package` extra with pyinstaller; build locally and run `vozata-engine.exe --version` and a GPU transcription smoke
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] UI: executable mode in `EngineProcess` + installed `appsettings`
+- [x] UI: executable mode in `EngineProcess` + installed `appsettings` — this commit
 - [ ] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke
 - [ ] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md`
 - [ ] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version`
