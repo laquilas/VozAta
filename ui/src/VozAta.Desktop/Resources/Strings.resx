@@ -105,6 +105,24 @@
   <data name="ModelLoading" xml:space="preserve">
     <value>Loading the speech model — already recording</value>
   </data>
+  <data name="Microphone" xml:space="preserve">
+    <value>Microphone</value>
+  </data>
+  <data name="SystemOutput" xml:space="preserve">
+    <value>System audio (output)</value>
+  </data>
+  <data name="RefreshDevices" xml:space="preserve">
+    <value>Refresh devices</value>
+  </data>
+  <data name="SpeakerMic" xml:space="preserve">
+    <value>Me</value>
+  </data>
+  <data name="SpeakerSystem" xml:space="preserve">
+    <value>Others</value>
+  </data>
+  <data name="NoSystemSignal" xml:space="preserve">
+    <value>No sound from the system audio for 30 s. Check the Windows default output device and your headphones.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>

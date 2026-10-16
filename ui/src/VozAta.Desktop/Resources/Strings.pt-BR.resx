@@ -105,6 +105,24 @@
   <data name="ModelLoading" xml:space="preserve">
     <value>Carregando o modelo de fala — já gravando</value>
   </data>
+  <data name="Microphone" xml:space="preserve">
+    <value>Microfone</value>
+  </data>
+  <data name="SystemOutput" xml:space="preserve">
+    <value>Áudio do sistema (saída)</value>
+  </data>
+  <data name="RefreshDevices" xml:space="preserve">
+    <value>Atualizar dispositivos</value>
+  </data>
+  <data name="SpeakerMic" xml:space="preserve">
+    <value>Eu</value>
+  </data>
+  <data name="SpeakerSystem" xml:space="preserve">
+    <value>Outros</value>
+  </data>
+  <data name="NoSystemSignal" xml:space="preserve">
+    <value>Nenhum som do áudio do sistema há 30 s. Verifique o dispositivo de saída padrão do Windows e os fones de ouvido.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Fechar</value>
   </data>

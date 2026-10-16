@@ -12,9 +12,21 @@ public sealed class MainViewModelTests
     private readonly FakeEngineProcess _process = new();
     private readonly FakeDialogs _dialogs = new();
     private readonly LocalizationService _localization = new();
+    private readonly FakePreferences _preferences = new();
+    private readonly FakeClock _clock = new();
+    private readonly FakeTimer _timer = new();
+
+    private static readonly AudioDevice Mic = new(4, "JBL Quantum Stream", 48000, 1);
+    private static readonly AudioDevice Laptop = new(1, "Microphone Array (Intel)", 48000, 2);
+    private static readonly AudioDevice Speakers = new(7, "Speakers [Loopback]", 48000, 2);
+
+    public MainViewModelTests()
+    {
+        _client.Devices = new DeviceList([Laptop, Mic], [Speakers], DefaultInputId: 4, DefaultLoopbackId: 7);
+    }
 
     private MainViewModel Create() =>
-        new(_client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs);
+        new(_client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs, _preferences, _clock, _timer);
 
     private async Task<MainViewModel> ReadyAsync()
     {
@@ -57,6 +69,109 @@ public sealed class MainViewModelTests
         Assert.Equal("Motor conectado", viewModel.EngineText);
         Assert.True(viewModel.StartCommand.CanExecute(null));
         Assert.Equal(RecordingState.Idle, viewModel.State);
+    }
+
+    [Fact]
+    public async Task Initialization_loads_the_devices_and_the_meter_labels()
+    {
+        _client.SettingValues["MIC_LABEL"] = "Host";
+
+        var viewModel = await ReadyAsync();
+
+        Assert.Equal([Laptop, Mic], viewModel.Devices.Inputs);
+        Assert.Equal((Mic, Speakers), (viewModel.Devices.SelectedMic, viewModel.Devices.SelectedLoopback));
+        Assert.Equal(("Host", "Others"), (viewModel.MicMeter.Label, viewModel.SystemMeter.Label));
+        viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
+        Assert.Equal(("Host", "Outros"), (viewModel.MicMeter.Label, viewModel.SystemMeter.Label));
+    }
+
+    [Fact]
+    public async Task A_device_list_failure_is_shown_and_recording_still_uses_the_engine_defaults()
+    {
+        _client.DevicesError = FakeEngineClient.ApiError("devices_failed", "WASAPI did not answer.");
+
+        var viewModel = await ReadyAsync();
+        await viewModel.StartCommand.ExecuteAsync(null);
+
+        Assert.Contains("WASAPI did not answer.", viewModel.Notifications);
+        Assert.Equal(new StartSessionRequest(null, null, "pt"), _client.StartRequests.Single());
+    }
+
+    [Fact]
+    public async Task Start_sends_the_selected_devices_and_locks_them_while_recording()
+    {
+        var viewModel = await ReadyAsync();
+        viewModel.Devices.SelectedMic = Laptop;
+
+        await viewModel.StartCommand.ExecuteAsync(null);
+
+        var request = _client.StartRequests.Single();
+        Assert.Equal((1, 7), (request.MicDeviceId, request.SystemDeviceId));
+        Assert.False(viewModel.Devices.IsEnabled);
+        await SendAsync(viewModel, new StatusEvent("s", "done", 3));
+        Assert.True(viewModel.Devices.IsEnabled);
+    }
+
+    [Fact]
+    public async Task Level_events_drive_the_meters_and_the_timer_runs_only_while_recording()
+    {
+        var viewModel = await ReadyAsync();
+        Assert.Equal(0, _timer.Running);
+        await viewModel.StartCommand.ExecuteAsync(null);
+        Assert.Equal(1, _timer.Running);
+
+        await SendAsync(viewModel, new LevelEvent("s", "mic", -15));
+        await SendAsync(viewModel, new LevelEvent("s", "system", -30));
+        Assert.Equal((0.75, 0.5), (viewModel.MicMeter.Level, viewModel.SystemMeter.Level));
+        await SendAsync(viewModel, new LevelEvent("s", "mic", -60));
+        _clock.Advance(TimeSpan.FromSeconds(0.2));
+        _timer.Tick();
+        Assert.True(viewModel.MicMeter.Level < 0.75);
+
+        await SendAsync(viewModel, new StatusEvent("s", "done", 3));
+        Assert.Equal(0, _timer.Running);
+        Assert.Equal(0, viewModel.MicMeter.Level);
+    }
+
+    [Fact]
+    public async Task Silent_system_audio_shows_the_no_signal_hint_but_not_while_paused()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.StartCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new StatusEvent("s", "paused", 1));
+
+        _clock.Advance(TimeSpan.FromSeconds(31));
+        _timer.Tick();
+        Assert.False(viewModel.SystemMeter.NoSignal);
+        await SendAsync(viewModel, new StatusEvent("s", "recording", 32));
+        _clock.Advance(TimeSpan.FromSeconds(30));
+        _timer.Tick();
+
+        Assert.True(viewModel.SystemMeter.NoSignal);
+        Assert.False(viewModel.MicMeter.NoSignal);
+    }
+
+    [Fact]
+    public async Task The_window_size_is_restored_and_saved_on_shutdown()
+    {
+        _preferences.Data = new UiPreferencesData(WindowWidth: 1200, WindowHeight: 820);
+        var viewModel = await ReadyAsync();
+        Assert.Equal((1200d, 820d), (viewModel.WindowWidth, viewModel.WindowHeight));
+
+        viewModel.Devices.SelectedMic = Laptop;
+        viewModel.WindowWidth = 1000;
+        await viewModel.ShutdownAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal((1000d, 820d), (_preferences.Data.WindowWidth, _preferences.Data.WindowHeight));
+        Assert.Equal(new DeviceChoice(1, "Microphone Array (Intel)"), _preferences.Data.Mic);  // kept
+    }
+
+    [Fact]
+    public async Task Without_saved_preferences_the_window_uses_its_default_size()
+    {
+        var viewModel = await ReadyAsync();
+
+        Assert.Equal((MainViewModel.DefaultWidth, MainViewModel.DefaultHeight), (viewModel.WindowWidth, viewModel.WindowHeight));
     }
 
     [Fact]

@@ -92,3 +92,19 @@ internal sealed class FakeTimer : IUiTimer
         public void Dispose() => dispose();
     }
 }
+
+/// <summary>In-memory preferences; counts saves.</summary>
+internal sealed class FakePreferences : IUiPreferences
+{
+    public UiPreferencesData Data { get; set; } = new();
+
+    public int Saves { get; private set; }
+
+    public UiPreferencesData Load() => Data;
+
+    public void Save(UiPreferencesData preferences)
+    {
+        Data = preferences;
+        Saves++;
+    }
+}

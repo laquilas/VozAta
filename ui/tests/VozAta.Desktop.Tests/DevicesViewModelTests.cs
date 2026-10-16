@@ -120,19 +120,4 @@ public sealed class DevicesViewModelTests
 
         await Assert.ThrowsAsync<EngineUnavailableException>(() => Create().LoadAsync());
     }
-
-    private sealed class FakePreferences : IUiPreferences
-    {
-        public UiPreferencesData Data { get; set; } = new();
-
-        public int Saves { get; private set; }
-
-        public UiPreferencesData Load() => Data;
-
-        public void Save(UiPreferencesData preferences)
-        {
-            Data = preferences;
-            Saves++;
-        }
-    }
 }

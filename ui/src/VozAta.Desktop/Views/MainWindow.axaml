@@ -2,10 +2,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:VozAta.Desktop.ViewModels"
         xmlns:views="using:VozAta.Desktop.Views"
+        xmlns:client="using:VozAta.Client"
         x:Class="VozAta.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="{Binding L[AppTitle]}"
-        Width="960" Height="680" MinWidth="640" MinHeight="420">
+        Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}"
+        MinWidth="640" MinHeight="420">
 
   <Window.Styles>
     <!-- Stop stays red in every state; Fluent would otherwise grey it on hover/press -->
@@ -87,6 +89,45 @@
             </DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
+      </StackPanel>
+    </Grid>
+
+    <!-- Devices (locked while recording) and level meters -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,24,*" Margin="16,0,16,8">
+      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" x:DataType="vm:DevicesViewModel"
+            DataContext="{Binding Devices}" IsEnabled="{Binding IsEnabled}">
+        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Microphone]}"
+                   VerticalAlignment="Center" Margin="0,0,8,4" />
+        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+                  ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedMic}"
+                  DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
+        <Button Grid.Column="2" Grid.RowSpan="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                Content="⟳" Command="{Binding RefreshCommand}"
+                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}"
+                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}" />
+        <TextBlock Grid.Row="1" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SystemOutput]}"
+                   VerticalAlignment="Center" Margin="0,0,8,0" />
+        <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding Loopbacks}" SelectedItem="{Binding SelectedLoopback}"
+                  DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
+      </Grid>
+      <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding MicMeter}">
+          <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+          <Panel Grid.Column="1" Height="12">
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#A5D6A7" />
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#2E7D32" Background="Transparent" />
+          </Panel>
+        </Grid>
+        <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding SystemMeter}">
+          <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+          <Panel Grid.Column="1" Height="12">
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#90CAF9" />
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#1565C0" Background="Transparent" />
+          </Panel>
+        </Grid>
+        <TextBlock Text="{Binding L[NoSystemSignal]}" Foreground="#E65100" TextWrapping="Wrap"
+                   IsVisible="{Binding SystemMeter.NoSignal}" />
       </StackPanel>
     </Grid>
 

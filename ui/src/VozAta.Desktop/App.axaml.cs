@@ -64,6 +64,9 @@ public partial class App : Application
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IDialogService>(_ => new AvaloniaDialogService(desktop));
+        services.AddSingleton<IUiPreferences>(_ => new JsonFileUiPreferences(JsonFileUiPreferences.DefaultPath()));
+        services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IUiTimer, AvaloniaUiTimer>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

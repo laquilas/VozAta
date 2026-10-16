@@ -54,16 +54,16 @@ Mic test without a session, engine-side device changes during recording.
 
 - **Branch:** `feature/08-ui-devices-levels`
 - **Status:** in progress
-- **Updated:** 2026-10-16 13:20
-- **Next step:** wire `MainViewModel` (`Devices`, `MicMeter`, `SystemMeter`, timer, labels from settings, ids on start, window size) and `MainWindow.axaml` (pickers, meters, no-signal hint); `.resx` keys; `App.axaml.cs` DI; tests in `MainViewModelTests.cs`
+- **Updated:** 2026-10-16 13:50
+- **Next step:** manual check: run the desktop app (it starts the engine), record with speech on the mic and media on the speakers, watch both meters; switch the microphone and check `session.json` devices; restart the app and check the selection and window size are restored
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] `IUiPreferences` + JSON file store — `4e579a7`
 - [x] `IClock` / `IUiTimer` + `LevelMeterViewModel` (dB mapping, decay, peak-hold, no-signal) — `71633f5`
-- [x] `DevicesViewModel` (load, defaults, restore by name, fallback, refresh, persist) — this commit
-- [ ] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources
+- [x] `DevicesViewModel` (load, defaults, restore by name, fallback, refresh, persist) — `b66dbd6`
+- [x] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources — this commit
 - [ ] Manual: meters move with speech and media; changing devices records from them; criteria
 
 ### Decisions and notes
