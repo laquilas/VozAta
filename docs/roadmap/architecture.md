@@ -204,7 +204,9 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 7. `status = done`, `ended_at` set in `session.json`.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
-time; steps 4 → 5 → 6 enforce that.
+time; steps 4 → 5 → 6 enforce that. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
+`SharedTranscriber` keeps Whisper between sessions only when no minutes follow; it is unloaded
+before session minutes, before `POST /sessions/{id}/minutes` and when the API stops.
 
 **Pause/resume**: while paused, sources keep running (keeps the clock aligned) but chunkers drop
 audio and WAV writers write silence; a `paused` marker is recorded in `session.json`.

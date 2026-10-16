@@ -60,8 +60,8 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 
 - **Branch:** `feature/26-capture-first`
 - **Status:** in progress
-- **Updated:** 2026-10-16 20:20
-- **Next step:** `WHISPER_KEEP_LOADED` in `serve`: a shared transcriber (`transcription/shared.py`) used by `build_api_container`'s sessions, released before session minutes and before `POST /sessions/{id}/minutes` (`MinutesJob`), closed when the API stops
+- **Updated:** 2026-10-16 20:50
+- **Next step:** UI: `ModelLoadingEvent` in `EngineEvents.cs` (parser + test), `MainViewModel.ModelLoadingText` shown next to the elapsed time in `MainWindow.axaml`, cleared on idle; `ModelLoading` string in the three `.resx`; tests in `MainViewModelTests.cs` / `EngineEventsTests.cs`
 
 ### Steps
 
@@ -70,10 +70,10 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 - [x] Capture first: sources open and `recording` is reported before the transcriber loads; the
       worker loads it on its thread (`SessionObserver.on_model_loading`), queued chunks are
       transcribed afterwards; a failed load reports `model_failed` and keeps recording WAVs; CLI
-      messages — this commit
+      messages — `a5eefc8`
 - [x] API: `model_loading` `{loading}` event — same commit (the observer method is one change)
-- [ ] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
-      `POST /sessions/{id}/minutes`)
+- [x] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
+      `POST /sessions/{id}/minutes`) — this commit
 - [ ] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings
 - [ ] Manual: speak right after Start → first words in the transcript; acceptance criteria
 

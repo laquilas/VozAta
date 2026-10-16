@@ -39,6 +39,7 @@ from vozata.ports import (
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.storage.session_store import SessionStore
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
+from vozata.transcription.shared import SharedTranscriber
 
 TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
@@ -111,11 +112,14 @@ def build_session(
     language: ConversationLanguage | None = None,
     mic_device: int | None = None,
     system_device: int | None = None,
+    shared: SharedTranscriber | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
     Devices default to the WASAPI default microphone and the default output's loopback. Every
-    PortAudio call runs on one `PortAudioThread`, closed by the session when capture ends.
+    PortAudio call runs on one `PortAudioThread`, closed by the session when capture ends. With a
+    `shared` transcriber (`WHISPER_KEEP_LOADED`) the model stays loaded after the session unless
+    minutes follow (VRAM rule).
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -140,7 +144,11 @@ def build_session(
         },
         device_names={channel: device.name for channel, device in devices.items()},
         clock=clock,
-        transcriber_factory=lambda: transcriber(settings),
+        transcriber_factory=(
+            (lambda: transcriber(settings))
+            if shared is None
+            else functools.partial(shared.lease, keep=minutes is None)
+        ),
         mixer=MIXERS[settings.mix_mode](),
         minutes=minutes,
         localizer=localizer,
@@ -176,6 +184,10 @@ def build_api_container(settings: Settings) -> ApiContainer:
     labeler = build_labeler(settings, localizer)
     store = build_store(settings)
     broadcaster = EventBroadcaster()
+    shared = None
+    if settings.whisper_keep_loaded:
+        transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
+        shared = SharedTranscriber(lambda: transcriber(settings))
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
         return build_session(
@@ -184,7 +196,13 @@ def build_api_container(settings: Settings) -> ApiContainer:
             language=options.language,
             mic_device=options.mic_device,
             system_device=options.system_device,
+            shared=shared,
         )
+
+    def minutes_generator() -> MinutesGenerator:
+        if shared is not None:
+            shared.release()  # VRAM rule: never Whisper and the LLM together
+        return build_minutes_generator(settings, localizer)
 
     language_model = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
     return ApiContainer(
@@ -197,11 +215,6 @@ def build_api_container(settings: Settings) -> ApiContainer:
         devices=WasapiCatalog(),
         gpu_info=functools.cache(query_gpu),  # the GPU does not change while running
         llm_reachable=language_model.is_available,
-        regenerate_minutes=MinutesJob(
-            store,
-            lambda: build_minutes_generator(settings, localizer),
-            labeler,
-            broadcaster,
-            localizer,
-        ),
+        regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
+        release_models=shared.release if shared is not None else lambda: None,
     )

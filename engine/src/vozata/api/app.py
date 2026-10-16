@@ -22,6 +22,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         container.broadcaster.bind(asyncio.get_running_loop())
         yield
+        container.release_models()
 
     app = FastAPI(title="VozAta engine", version=__version__, lifespan=lifespan)
     app.state.container = container

@@ -38,3 +38,4 @@ class ApiContainer:
     gpu_info: Callable[[], GpuInfo]
     llm_reachable: Callable[[], bool]
     regenerate_minutes: Callable[[str], None]  # runs in the background, then `minutes_ready`
+    release_models: Callable[[], None] = lambda: None  # at shutdown (kept Whisper, phase 26)

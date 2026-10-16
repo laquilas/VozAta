@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
+
+from fastapi.testclient import TestClient
+
 from tests.api.conftest import Api
+from vozata.api.app import create_app
 from vozata.domain import Channel, TranscriptSegment
 
 SESSION = "20261015_202358"
@@ -77,3 +82,15 @@ def test_a_client_gone_before_the_first_send_is_cleaned_up(api: Api) -> None:
     asyncio.run(route.endpoint(GoneSocket()))
 
     assert api.broadcaster._clients == set()
+
+
+def test_models_are_released_when_the_api_shuts_down(api: Api) -> None:
+    released: list[bool] = []
+    container = dataclasses.replace(
+        api.app.state.container, release_models=lambda: released.append(True)
+    )
+
+    with TestClient(create_app(container)):
+        assert released == []
+
+    assert released == [True]
