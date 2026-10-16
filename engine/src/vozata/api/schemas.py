@@ -123,6 +123,8 @@ class SettingSchema(BaseModel):
     default: Any
     choices: list[str] | None
     secret: bool
+    group: str
+    applies: str  # "next_session" | "restart"
 
 
 class SettingsView(BaseModel):

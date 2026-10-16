@@ -60,14 +60,13 @@ Vocabulary editor (19), template selection (20).
 
 - **Branch:** `feature/10-ui-settings`
 - **Status:** in progress
-- **Updated:** 2026-10-16 16:50
-- **Next step:** `settings_fields.Field` gets `group` and `applies` (`next_session` | `restart`),
-  exposed in the `GET /settings` schema; tests; api-contract
+- **Updated:** 2026-10-16 17:00
+- **Next step:** `vozata/settings_file.py` (`SettingsFile`: current settings, `update(values)` validates with `load_settings`, writes changed keys with `set_key`, skips the secret mask, returns restart keys) + `PUT /settings` + container/bootstrap wiring; tests in `tests/test_settings_file.py`, `tests/api/test_settings_put.py`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] Schema: `group` and `applies` per key
+- [x] Schema: `group` and `applies` per key — this commit
 - [ ] Engine: `SettingsFile` (validate, persist with `set_key`, secrets mask, restart keys) +
       `PUT /settings` (422 `invalid_setting` with `key`); sessions / minutes / LLM check read the
       current settings

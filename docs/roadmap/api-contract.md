@@ -31,7 +31,7 @@ own rows. Changing a row requires updating both sides.
 | GET | `/sessions/{id}/minutes` | 06 | — | `{markdown}` or `404 minutes_not_found` |
 | POST | `/sessions/{id}/minutes` | 06 | `{template?}` | `202`; result via `minutes_ready` |
 | GET | `/sessions/{id}/export` | 11 | `?format=md\|docx\|pdf` | file download |
-| GET | `/settings` | 06 | — | `{values: {KEY: value}, schema: [{key, type, default, choices?, secret}]}` (secrets masked) |
+| GET | `/settings` | 06 | — | `{values: {KEY: value}, schema: [{key, type, default, choices?, secret, group, applies}]}` (secrets masked; `group` = settings page section, `applies` = `next_session` \| `restart`, phase 10) |
 | PUT | `/settings` | 10 | `{values: {KEY: value}}` | `{values, restart_required: [KEY]}` — validated by `config.py`, persisted to `.env` |
 | POST | `/sessions/{id}/recover` | 17 | — | `202`; finalizes an `interrupted` session |
 | PUT | `/sessions/{id}/speakers` | 16 | `{speakers: {"system:1": {"name": "Alice"}}}` | `{speakers}` |

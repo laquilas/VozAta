@@ -24,6 +24,8 @@ def test_settings_returns_every_key_with_its_schema(api: Api) -> None:
         "default": "mono",
         "choices": ["mono", "stereo"],
         "secret": False,
+        "group": "audio",
+        "applies": "next_session",
     }
 
 
