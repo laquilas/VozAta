@@ -39,12 +39,12 @@ settings, localization, speaker labels and formatting helpers.
 
 ## Acceptance criteria
 
-- [ ] All modules above exist with type hints; no I/O in `domain.py`.
-- [ ] Invalid config values raise `ConfigError` naming the key and allowed values.
-- [ ] Key-parity test passes for the three locales.
-- [ ] `SpeakerLabeler` returns `Me`/`Eu`/`Yo` and `User 2`/`Usuário 2`/`Usuario 2` per language;
+- [x] All modules above exist with type hints; no I/O in `domain.py`.
+- [x] Invalid config values raise `ConfigError` naming the key and allowed values.
+- [x] Key-parity test passes for the three locales.
+- [x] `SpeakerLabeler` returns `Me`/`Eu`/`Yo` and `User 2`/`Usuário 2`/`Usuario 2` per language;
       overrides and names win over defaults.
-- [ ] Coverage ≥ 80 %; ruff clean.
+- [x] Coverage ≥ 80 %; ruff clean.
 
 ## Tests
 
@@ -61,3 +61,32 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 > Execute phase 01 of the roadmap (`docs/roadmap/phases/01-engine-core.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/01-engine-core`
+- **Status:** ready for PR
+- **Updated:** 2026-10-15 22:56
+- **Next step:** none; open the PR (`pr-ready` → `pr-open` → `pr-review`) and merge after CI on the PR is green.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section — `7e96b07`
+- [x] `domain.py` + `tests/test_domain.py` (jsonl round trip) — `33818b1`
+- [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies — `30131cf`
+- [x] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests — `3273324`
+- [x] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py` — `e80faa9`, `0734822`
+- [x] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py` — `579fab8`
+- [x] `formatting.py` + `tests/test_formatting.py` — `07e3044`
+- [x] `language.py` + `tests/test_language.py` — `4e98e96`
+- [x] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- **`ConfigError` localization**: config errors can happen before a localizer exists (`APP_LANGUAGE` may itself be invalid). `ConfigError` carries a message key and params; `str()` renders with the `en` locale and `render(localizer)` renders in any language, so no text is hard-coded.
+- **`AudioChunk`** is `frozen=True, eq=False`: dataclass equality on `np.ndarray` fields is ambiguous.
+- **Ports** are `@runtime_checkable` Protocols; `tests/fakes.py` provides fakes, and structural `isinstance` tests check them. Coverage excludes `...`-only lines (Protocol bodies).
+- `pyproject.toml` sets pytest `pythonpath = ["."]` so tests import shared fakes as `tests.fakes`.
+- **`Localizer.t(key, /, **params)`**: `key` is positional-only so a placeholder may itself be called `key` (config errors use `{key}`); architecture §5 updated.
+- `load_settings()` without arguments reads `.env` in the working directory, then the process environment on top; with an `env` mapping, only `env_file` (if given) sits underneath it. Empty values mean "not set".
+- Verification: 86 tests, 100 % coverage, ruff check and format clean.

@@ -27,6 +27,9 @@ version = { attr = "vozata.__version__" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+vozata = ["locales/*.toml"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py313"
@@ -36,6 +39,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.coverage.run]
 source = ["vozata"]
@@ -44,3 +48,5 @@ branch = true
 [tool.coverage.report]
 fail_under = 80
 show_missing = true
+# Protocol method bodies.
+exclude_also = ['^\s*\.\.\.$']

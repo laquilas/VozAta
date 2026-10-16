@@ -98,6 +98,9 @@ class ConversationLanguage(StrEnum): EN = "en"; PT = "pt"; ES = "es"; AUTO = "au
 
 All times are **seconds since session start** (float).
 
+Helpers: `default_conversation_language(app_language)` maps `APP_LANGUAGE` to the default spoken
+language (`pt-BR` → `pt`). `AudioChunk` uses identity equality (`eq=False`) because of its array field.
+
 ## 5. Ports (`ports.py`)
 
 ```python
@@ -130,7 +133,7 @@ class DocumentExporter(Protocol):
 class TaskExporter(Protocol):
     def export(self, items: Sequence[ActionItem], session_title: str) -> list[str]: ...  # created URLs
 class Localizer(Protocol):
-    def t(self, key: str, **params: object) -> str: ...
+    def t(self, key: str, /, **params: object) -> str: ...  # key is positional-only
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
