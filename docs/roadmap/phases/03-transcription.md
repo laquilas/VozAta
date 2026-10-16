@@ -69,16 +69,16 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:16
-- **Next step:** TDD `output/sinks.py`: `tests/output/test_sinks.py` (console line, jsonl append + flush per segment and reopen, markdown via `render_line` + `SpeakerLabeler`, composite isolates a failing sink and closes all), see it fail, then implement.
+- **Updated:** 2026-10-15 23:17
+- **Next step:** TDD `transcription/worker.py`: `tests/transcription/test_worker.py` (routes chunks by channel to stitchers and emits segments, stop drains the queue then flushes, a transcription error is logged and the worker continues, backlog warning once above 3 chunks per channel), see it fail, then implement.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `ff41b35`
 - [x] Config keys owned by 03 (`config.py`; `.env.example` already lists them) — `3cf51fa`
 - [x] `transcription/language_lock.py` (`LanguageLock`) — `675f5b2`
-- [x] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite
-- [ ] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`)
+- [x] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite — `e0cdaa3`
+- [x] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`)
 - [ ] `transcription/worker.py` (`TranscriptionWorker`)
 - [ ] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests)
 - [ ] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check
