@@ -50,3 +50,33 @@ Partials in the CLI console.
 
 > Execute phase 28 of the roadmap (`docs/roadmap/phases/28-live-partials.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/28-live-partials`
+- **Status:** in progress
+- **Updated:** 2026-10-16 22:00
+- **Next step:** add `LIVE_PARTIALS` and `PARTIAL_INTERVAL_SECONDS` to `config.py`,
+  `settings_fields.py`, `.env.example` with tests
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] Config: `LIVE_PARTIALS`, `PARTIAL_INTERVAL_SECONDS`
+- [ ] Uncommitted audio: `Chunker.buffered()` (VAD and fixed) and `CarryOverStitcher.partial(tail)`
+- [ ] Worker partials when idle + pipeline wiring + `SessionObserver.on_partial` + API `partial`
+- [ ] UI: `PartialEvent`, one grey italic line per channel; en / pt-BR / es if any text
+- [ ] Manual: text appears during a long sentence and is replaced by the final line; criteria
+
+### Decisions and notes
+
+- Uncommitted audio of a channel = the stitcher's carry + a copy of the chunker's current buffer
+  (`Chunker.buffered()`, taken under the pipeline's per-track lock). With the queue empty, every
+  emitted chunk is already processed, so this is exactly the audio not committed yet.
+- "≥ 1 s of speech" is measured as voiced 10 ms frames (RMS ≥ `SILENCE_RMS_THRESHOLD`), so it
+  works for both chunkers; the VAD chunker's idle buffer (≤ 1 s of silence) never qualifies.
+- Partials go through a separate callback (never the transcript sinks); they do not feed the
+  language lock. A shown partial is cleared with an empty `partial` when its channel's chunk
+  yields no segment, and at stop; a `segment` replaces it in the UI.
+- A partial cannot be pre-empted once started: worst case it delays a newly queued chunk by one
+  partial transcription (bounded by `VAD_MAX_CHUNK_SECONDS` of audio).
