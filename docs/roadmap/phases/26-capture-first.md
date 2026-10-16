@@ -36,12 +36,12 @@ model loaded between sessions. Origin: [optimizations.md](../optimizations.md) O
 
 ## Acceptance criteria
 
-- [ ] Session tests: `recording` before the transcriber factory returns; every chunk queued during
+- [x] Session tests: `recording` before the transcriber factory returns; every chunk queued during
       the load is transcribed; a failing load reports `error` and still produces WAVs.
-- [ ] API test: `model_loading` true then false, in order, around the load.
-- [ ] ViewModel test: loading indicator shown and hidden; Start → Recording without waiting.
-- [x] Manual: speak right after pressing Start → the first words appear in the transcript. — this commit
-- [ ] Coverage ≥ 80 % (engine and UI).
+- [x] API test: `model_loading` true then false, in order, around the load.
+- [x] ViewModel test: loading indicator shown and hidden; Start → Recording without waiting.
+- [x] Manual: speak right after pressing Start → the first words appear in the transcript.
+- [x] Coverage ≥ 80 % (engine and UI).
 
 ## Tests
 
@@ -59,7 +59,7 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 ## Progress
 
 - **Branch:** `feature/26-capture-first`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-16 21:30
 - **Next step:** open the PR (combined draft in `__pr__/feature-26-capture-first/`)
 
@@ -75,7 +75,7 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 - [x] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
       `POST /sessions/{id}/minutes`) — `0ca4226`
 - [x] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings — `f82d747`
-- [ ] Manual: speak right after Start → first words in the transcript; acceptance criteria
+- [x] Manual: speak right after Start → first words in the transcript; acceptance criteria — `0cf5857`
 
 ### Decisions and notes
 
@@ -88,3 +88,11 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
   the worker does not consume chunks until then.
 - Failed load: `error` `model_failed`, chunks are dropped, WAVs keep recording; the session stops
   normally (transcribing later from the WAVs is out of scope).
+- **Manual check (2026-10-16, RTX 3050 6 GB Laptop, `large-v3`).** `python -m vozata record
+  --language pt` with the phase 05 TTS meeting played 1 s after the session folder reported
+  `recording`: `recording` came 0.8 s after `main()` was called; the CLI printed "Loading the
+  speech recognition model — already recording..." and later "... ready"; all 9 sentences were
+  transcribed, including the first two, spoken while Whisper was still loading (the load alone
+  takes 10.7 s here with a warm file cache, ~20–25 s cold).
+- Pre-existing, not changed here: the CLI stop message mentions minutes even with
+  `GENERATE_MINUTES=false` (also noted in phase 27).
