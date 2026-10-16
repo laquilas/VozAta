@@ -55,14 +55,14 @@ Editing (21), search (22), speaker rename (16), action items (23), export (11).
 
 - **Branch:** `feature/09-ui-history`
 - **Status:** in progress
-- **Updated:** 2026-10-16 15:10
-- **Next step:** `ViewModels/SessionDetailViewModel.cs` (load detail + transcript + minutes, `minutes_not_found` → no minutes, regenerate busy until `minutes_ready`/`error`, open folder/audio via `IShellService`) with `SessionDetailViewModelTests.cs`; scriptable sessions in `FakeEngineClient`
+- **Updated:** 2026-10-16 15:30
+- **Next step:** `ViewModels/HistoryViewModel.cs` (page of 20, load more, refresh, rows with date / duration / language / minutes / live badge, selection creates and loads a `SessionDetailViewModel`, forwards `minutes_ready` / `error`, refreshes when a session ends) with `HistoryViewModelTests.cs`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] `IShellService` + Markdown → blocks parser — this commit
-- [ ] `SessionDetailViewModel` (transcript, minutes, regenerate, open folder / audio)
+- [x] `IShellService` + Markdown → blocks parser — `a7e5a74`
+- [x] `SessionDetailViewModel` (transcript, minutes, regenerate, open folder / audio) — this commit
 - [ ] `HistoryViewModel` (paged list, live badge, refresh, selection)
 - [ ] Main window: Recording | History navigation, event forwarding, resources, DI
 - [ ] Manual: open an old session, read minutes, play `mixed.wav`, regenerate; criteria

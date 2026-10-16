@@ -73,21 +73,51 @@ internal sealed class FakeEngineClient : IEngineClient
         return StopError is null ? Task.FromResult(Summary("finalizing")) : Task.FromException<SessionSummary>(StopError);
     }
 
+    /// <summary>Every session, newest first (paged by <see cref="ListSessionsAsync"/>).</summary>
+    public List<SessionSummary> Sessions { get; } = [];
+
+    public Dictionary<string, SessionDetail> Details { get; } = [];
+
+    public Dictionary<string, Transcript> Transcripts { get; } = [];
+
+    /// <summary>Minutes per session; a missing entry answers 404 <c>minutes_not_found</c>.</summary>
+    public Dictionary<string, string> MinutesText { get; } = [];
+
+    public List<(int Limit, int Offset)> ListRequests { get; } = [];
+
+    public List<string> Regenerated { get; } = [];
+
+    public Exception? ListError { get; set; }
+
+    public Exception? DetailError { get; set; }
+
+    public Exception? RegenerateError { get; set; }
+
     public Task<SessionPage> ListSessionsAsync(
-        int limit = 50, int offset = 0, CancellationToken cancellationToken = default) =>
-        Task.FromResult(new SessionPage([], 0));
+        int limit = 50, int offset = 0, CancellationToken cancellationToken = default)
+    {
+        ListRequests.Add((limit, offset));
+        return ListError is null
+            ? Task.FromResult(new SessionPage([.. Sessions.Skip(offset).Take(limit)], Sessions.Count))
+            : Task.FromException<SessionPage>(ListError);
+    }
 
     public Task<SessionDetail> GetSessionAsync(string id, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
+        DetailError is null ? Task.FromResult(Details[id]) : Task.FromException<SessionDetail>(DetailError);
 
     public Task<Transcript> GetTranscriptAsync(string id, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
+        Task.FromResult(Transcripts.GetValueOrDefault(id) ?? new Transcript("raw", []));
 
     public Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
+        MinutesText.TryGetValue(id, out var markdown)
+            ? Task.FromResult(new Minutes(markdown))
+            : Task.FromException<Minutes>(new EngineApiException(HttpStatusCode.NotFound, "minutes_not_found", "No minutes yet."));
 
-    public Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
+    public Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default)
+    {
+        Regenerated.Add(id);
+        return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
+    }
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
