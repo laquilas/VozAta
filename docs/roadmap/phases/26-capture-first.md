@@ -55,3 +55,37 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 
 > Execute phase 26 of the roadmap (`docs/roadmap/phases/26-capture-first.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/26-capture-first`
+- **Status:** in progress
+- **Updated:** 2026-10-16 19:30
+- **Next step:** add `WHISPER_KEEP_LOADED` (`false`) to `config.py`, `settings_fields.py`,
+  `.env.example` with tests
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] Config: `WHISPER_KEEP_LOADED`
+- [ ] Capture first: sources open and `recording` is reported before the transcriber loads; the
+      worker loads it on its thread (`SessionObserver.on_model_loading`), queued chunks are
+      transcribed afterwards; a failed load reports `model_failed` and keeps recording WAVs; CLI
+      messages
+- [ ] API: `model_loading` `{loading}` event
+- [ ] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
+      `POST /sessions/{id}/minutes`)
+- [ ] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings
+- [ ] Manual: speak right after Start → first words in the transcript; acceptance criteria
+
+### Decisions and notes
+
+- New observer method `SessionObserver.on_model_loading(loading: bool)` (architecture §5): the
+  session already reports everything through the observer, so the API event and the CLI message
+  come from it without new plumbing.
+- The transcriber is loaded by `TranscriptionWorker` on its own thread after the sources are open
+  (spec order); `CapturePipeline` takes the transcriber **factory** instead of an instance and
+  builds the stitchers once it is loaded. The backlog warning cannot fire before the load because
+  the worker does not consume chunks until then.
+- Failed load: `error` `model_failed`, chunks are dropped, WAVs keep recording; the session stops
+  normally (transcribing later from the WAVs is out of scope).
