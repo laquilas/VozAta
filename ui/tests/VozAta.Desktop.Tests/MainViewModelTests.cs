@@ -200,7 +200,8 @@ public sealed class MainViewModelTests
     {
         const string id = "20261015_100000";
         _client.Sessions.Add(new SessionSummary(id, "done", null, null, 60, "pt", false));
-        _client.Details[id] = new SessionDetail(id, "done", null, null, 60, "pt", false, [], @"C:");
+        _client.Details[id] = new SessionDetail(id, "done", null, null, 60, "pt", false, [], @"C:
+");
         _client.Transcripts[id] = new Transcript("raw", [Line("mic", "Me", 1, "Hi.")]);
         var viewModel = await ReadyAsync();
         viewModel.History.Selected = viewModel.History.Rows[0];
