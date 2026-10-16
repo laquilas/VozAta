@@ -41,16 +41,16 @@ the terminal, pause/resume, stop with the fixed finalization order, three WAVs a
 
 ## Acceptance criteria
 
-- [ ] Session tests with fake sources/transcriber/LLM verify: start → segments reach observer and
+- [x] Session tests with fake sources/transcriber/LLM verify: start → segments reach observer and
       jsonl/md files; pause drops chunks and writes silence; stop order (writers finalized before
       mixer, `transcriber.close()` before minutes); minutes failure keeps status `done` with an
       error event.
-- [ ] `session.json` content matches architecture §8 for a fake run.
-- [ ] Manual E2E (record in the PR): `python -m vozata record --language pt`, play a video
+- [x] `session.json` content matches architecture §8 for a fake run.
+- [x] Manual E2E (record in the PR): `python -m vozata record --language pt`, play a video
       and speak for ~1 min → lines every ~`CHUNK_SECONDS`, no words cut mid-way; Ctrl+C → `mic.wav`,
       `system.wav`, `mixed.wav` equal length, `minutes.md` generated with Ollama running.
-- [ ] Changing `CHUNK_SECONDS` and `MIX_MODE` in `.env` changes behaviour without code changes.
-- [ ] Coverage ≥ 80 %.
+- [x] Changing `CHUNK_SECONDS` and `MIX_MODE` in `.env` changes behaviour without code changes.
+- [x] Coverage ≥ 80 %.
 
 ## Tests
 
@@ -69,9 +69,9 @@ HTTP API (06), UI (07+).
 ## Progress
 
 - **Branch:** `feature/05-session-cli`
-- **Status:** in progress
-- **Updated:** 2026-10-16 08:39
-- **Next step:** manual E2E (needs the audio stack working; reboot if WASAPI lists no inputs): from engine/ run `../.venv/Scripts/python -m vozata record --language pt`, play a video and speak ~1 min, Ctrl+C; check mic/system/mixed.wav equal length and minutes.md; record the result here and in the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 08:54
+- **Next step:** open the PR (put the E2E results below in its description) and merge.
 
 ### Steps
 
@@ -81,9 +81,9 @@ HTTP API (06), UI (07+).
 - [x] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout — `6d855a3`
 - [x] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
       `build_minutes_generator`) + tests — `41010e8`
-- [x] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests
-- [ ] Manual E2E: `python -m vozata record --language pt`, then `minutes` with Ollama
-- [ ] Verify; tick acceptance criteria; set phase `done`
+- [x] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests — `21d40cb`
+- [x] Manual E2E: `python -m vozata record --language pt`, then `minutes` with Ollama
+- [x] Verify; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
 
@@ -105,3 +105,17 @@ HTTP API (06), UI (07+).
   single `PyAudio` per session and runs every lookup/open/terminate on one long-lived thread.
 - `WasapiSource` releases its native `soxr` resampler when capture ends; objects still alive at
   interpreter exit made nanobind print leak warnings after the CLI finished.
+- **Manual E2E (2026-10-16)**: the real `python -m vozata record` ran end to end (`main()` driven
+  by a script that stops it with a real `KeyboardInterrupt`, like Ctrl+C), recording the USB mic
+  (JBL Quantum Stream) and the Realtek loopback while a ~58 s Portuguese meeting (Windows TTS,
+  voice Maria) played on the speakers and a person spoke at the mic; `WHISPER_MODEL=large-v3`
+  (the default turbo model is not fully downloaded on this machine).
+  - `--language pt`: a line every ~5 s per channel, whole sentences, no words cut; `mic.wav`,
+    `system.wav`, `mixed.wav` all 64.096 s; `minutes.md` written by Ollama `qwen2.5:7b`.
+  - `--language auto`: Portuguese detected and stored (`language_source: detected`); WAVs 63.900 s.
+  - `CHUNK_SECONDS=3 MIX_MODE=stereo GENERATE_MINUTES=false` from the environment: 2-channel
+    `mixed.wav`, `CHUNK_SECONDS: 3.0` in `session.json`, no `minutes.md`.
+  - `python -m vozata minutes <dir>` with `APP_LANGUAGE=pt-BR` rewrote the minutes in Portuguese.
+  - The first run lost the opening "Bom dia a todos." on both channels: the speakers clipped the
+    start of playback (the source file has it; later runs captured it).
+  - The mic also transcribes what the speakers play (echo); phase 18 removes those duplicates.
