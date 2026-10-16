@@ -64,15 +64,13 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 - **Branch:** `feature/07-ui-skeleton`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:25
-- **Next step:** scaffold `ui/VozAta.sln` (classic `.sln`) with `src/VozAta.Client`,
-  `src/VozAta.Desktop` (Avalonia 12) and `tests/VozAta.Desktop.Tests` (xUnit);
-  `Directory.Build.props` (nullable, warnings as errors); add the `ui` CI job.
+- **Updated:** 2026-10-16 09:33
+- **Next step:** in `src/VozAta.Client`: DTO records for every 06 shape, `EngineJson` (SnakeCaseLower options), `IEngineClient` / `EngineClient` (HttpClient) and `EngineApiException` from the error envelope; tests with a fake `HttpMessageHandler` in `tests/VozAta.Desktop.Tests/EngineClientTests.cs`.
 
 ### Steps
 
-- [x] Start phase: status in progress, Progress section
-- [ ] Solution scaffold, `Directory.Build.props`, CI `ui` job
+- [x] Start phase: status in progress, Progress section — `6ae4ec1`
+- [x] Solution scaffold, `Directory.Build.props`, CI `ui` job
 - [ ] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests
 - [ ] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests
 - [ ] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
