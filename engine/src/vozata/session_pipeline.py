@@ -15,11 +15,20 @@ from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
-from vozata.ports import SessionObserver, Transcriber
+from vozata.ports import Chunker, SessionObserver, Transcriber
 from vozata.storage.session_store import SessionPaths
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 from vozata.transcription.worker import TranscriptionWorker
+
+ChunkerFactory = Callable[[Channel, Callable[[AudioChunk], None]], Chunker]
+
+
+def _fixed_windows(settings: Settings) -> ChunkerFactory:
+    def build(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> Chunker:
+        return FixedWindowChunker(channel, settings.chunk_seconds, settings.sample_rate, on_chunk)
+
+    return build
 
 
 class _ObserverSink:
@@ -36,7 +45,7 @@ class _ObserverSink:
 class _Track:
     """One channel's writer and chunker; the lock serializes capture writes and pause toggles."""
 
-    def __init__(self, writer: AlignedWavWriter, chunker: FixedWindowChunker) -> None:
+    def __init__(self, writer: AlignedWavWriter, chunker: Chunker) -> None:
         self.writer = writer
         self.chunker = chunker
         self.lock = threading.Lock()
@@ -46,7 +55,8 @@ class CapturePipeline:
     """Route captured samples to WAVs and transcription; segments go to files and the observer.
 
     `receiver(channel)` is the callback for that channel's source. Samples arriving after
-    `stop_capture()` (or before `accept()`) are ignored.
+    `stop_capture()` (or before `accept()`) are ignored. Chunkers come from `chunker_factory`
+    (`CHUNKERS` in `bootstrap.py`); without one, fixed `CHUNK_SECONDS` windows are used.
     """
 
     def __init__(
@@ -58,15 +68,17 @@ class CapturePipeline:
         language: LanguageLock,
         labeler: SpeakerLabeler,
         observer: SessionObserver,
+        chunker_factory: ChunkerFactory | None = None,
     ) -> None:
         self._rate = settings.sample_rate
+        new_chunker = chunker_factory or _fixed_windows(settings)
         self._observer = observer
         self._accepting = False
         chunks: queue.Queue[AudioChunk] = queue.Queue()
         self._tracks = {
             channel: _Track(
                 AlignedWavWriter(paths.wav(channel), self._rate),
-                FixedWindowChunker(channel, settings.chunk_seconds, self._rate, chunks.put),
+                new_chunker(channel, chunks.put),
             )
             for channel in channels
         }

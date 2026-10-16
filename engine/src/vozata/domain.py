@@ -39,6 +39,11 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class ChunkMode(StrEnum):
+    VAD = "vad"  # cut at pauses (phase 27)
+    FIXED = "fixed"  # CHUNK_SECONDS windows
+
+
 class MixMode(StrEnum):
     MONO = "mono"
     STEREO = "stereo"
@@ -52,11 +57,15 @@ class WhisperDevice(StrEnum):
 
 @dataclass(frozen=True, eq=False)
 class AudioChunk:
-    """Float32 mono samples at the session sample rate, starting at `start`."""
+    """Float32 mono samples at the session sample rate, starting at `start`.
+
+    `complete` chunks end in a pause (VAD cut): the stitcher commits all of their words.
+    """
 
     channel: Channel
     start: float
     samples: np.ndarray
+    complete: bool = False
 
 
 @dataclass(frozen=True)

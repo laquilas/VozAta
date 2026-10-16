@@ -85,8 +85,10 @@ class Channel(StrEnum): MIC = "mic"; SYSTEM = "system"
 class SessionStatus(StrEnum): RECORDING, PAUSED, FINALIZING, DONE, INTERRUPTED  # lowercase values
 class AppLanguage(StrEnum): EN = "en"; PT_BR = "pt-BR"; ES = "es"
 class ConversationLanguage(StrEnum): EN = "en"; PT = "pt"; ES = "es"; AUTO = "auto"
+class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 
 @dataclass(frozen=True) class AudioChunk:      channel, start: float, samples: np.ndarray  # float32 mono, SAMPLE_RATE
+                                               complete: bool = False  # ends in a pause (27)
 @dataclass(frozen=True) class Word:            text, start, end, probability
 @dataclass(frozen=True) class TranscriptionResult: words: tuple[Word, ...], language: str | None
 @dataclass(frozen=True) class TranscriptSegment:
@@ -118,6 +120,12 @@ class TranscriptSink(Protocol):
     def close(self) -> None: ...
 class AudioMixer(Protocol):
     def mix(self, mic: Path, system: Path, destination: Path) -> None: ...
+class Chunker(Protocol):             # FixedWindowChunker (01), VadChunker (27)
+    paused: bool
+    def feed(self, samples: np.ndarray, at: float) -> None: ...
+    def flush(self) -> None: ...
+class SpeechDetector(Protocol):      # SileroSpeechDetector (27); unpadded spans in seconds
+    def speech_spans(self, samples: np.ndarray) -> list[tuple[float, float]]: ...
 class LanguageModel(Protocol):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str: ...
     def stream(self, system: str, prompt: str) -> Iterator[str]: ...
@@ -150,15 +158,20 @@ Ports are added by the phase that first needs them; the list above is the target
 
 ```
 WasapiSource(mic) ─┬─> AlignedWavWriter → mic.wav
-                   └─> FixedWindowChunker ─┐
+                   └─> Chunker (vad | fixed) ─┐
 WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
-                   └─> FixedWindowChunker ─┴─> Queue[AudioChunk]
+                   └─> Chunker (vad | fixed) ─┴─> Queue[AudioChunk]
                                                └─> TranscriptionWorker (single thread, one GPU)
                                                     └─> CarryOverStitcher (one per channel)
                                                          └─> Transcriber
                                                     └─> [EchoFilter] → [LiveSpeakerTagger]
                                                     └─> CompositeSink → Console | Jsonl | Markdown | WebSocket
 ```
+
+**Chunkers**: `CHUNKERS[CHUNK_MODE]` in `bootstrap.py` builds one per channel through
+`SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
+(`SileroSpeechDetector`, CPU) every 0.25 s and cuts in the middle of pauses ≥ `VAD_MIN_SILENCE_MS`,
+marking those chunks `complete`; `FixedWindowChunker` cuts every `CHUNK_SECONDS`.
 
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
@@ -193,7 +206,7 @@ audio and WAV writers write silence; a `paused` marker is recorded in `session.j
 
 ## 7. Stitching algorithm (`CarryOverStitcher`)
 
-Problem: fixed `CHUNK_SECONDS` windows cut words and sentences. Solution: carry the unfinished
+Problem: fixed `CHUNK_SECONDS` windows (and forced VAD cuts) cut words and sentences. Solution: carry the unfinished
 tail audio into the next window and re-transcribe it.
 
 ```
@@ -204,6 +217,7 @@ on_chunk(chunk):
     if pending is empty and rms(audio) < SILENCE_RMS_THRESHOLD: return []        # no STT call
     result = transcriber.transcribe(audio, language, hints)
     if no words: pending = empty; return []
+    if chunk.complete: pending = empty; return [segment(words, offset=audio_start)]  # VAD cut (27)
     duration = len(audio) / SAMPLE_RATE
     safe = [w for w in words if w.end <= duration - TAIL_MARGIN_SECONDS]
     cut_word = last w in safe ending with . ? ! (or … )

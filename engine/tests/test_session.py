@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import threading
 import wave
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -15,11 +16,14 @@ from tests.fakes import (
     FakeLanguageModel,
     FakeLocalizer,
     FakeSessionObserver,
+    FakeSpeechDetector,
     FakeTranscriber,
 )
 from vozata.audio.levels import rms_db
+from vozata.audio.vad_chunker import VadChunker
 from vozata.config import Settings
 from vozata.domain import (
+    AudioChunk,
     Channel,
     ConversationLanguage,
     SessionStatus,
@@ -30,6 +34,7 @@ from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.ports import LanguageModelError
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
+from vozata.session_pipeline import ChunkerFactory
 from vozata.storage.session_store import SessionStore
 
 RATE = 16000
@@ -104,6 +109,7 @@ class _Rig:
         mic: FakeAudioSource | None = None,
         system: FakeAudioSource | None = None,
         open_timeout: float = 5.0,
+        chunker_factory: ChunkerFactory | None = None,
     ) -> None:
         moments = [STARTED, ENDED]
         self.store = SessionStore(
@@ -131,6 +137,7 @@ class _Rig:
                 localizer=localizer,
                 labeler=SpeakerLabeler(localizer),
                 release=lambda: self.log.entries.append("release"),
+                chunker_factory=chunker_factory,
             ),
             self.observer,
             language,
@@ -157,6 +164,29 @@ def test_segments_reach_the_observer_and_the_transcript_files(tmp_path: Path) ->
     assert (
         paths.transcript_md.read_text(encoding="utf-8") == "[00:00:00] labels.mic: Hello world.\n"
     )
+
+
+def test_a_chunker_from_the_components_cuts_at_pauses(tmp_path: Path) -> None:
+    channels: list[Channel] = []
+
+    def vad(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> VadChunker:
+        channels.append(channel)
+        detector = FakeSpeechDetector(RATE)
+        return VadChunker(
+            channel, RATE, on_chunk, detector,
+            min_silence=0.6, min_chunk=0.5, max_chunk=15, speech_pad=0.2,
+        )  # fmt: skip
+
+    rig = _Rig(tmp_path, results=[_words("Hi", " there")], chunker_factory=vad)
+    rig.session.start()
+    rig.mic.push(np.concatenate((_voice(1.0), _voice(1.0, 0.0))), 0.0)
+    rig.clock.time = 2.0
+    rig.session.stop()
+
+    assert sorted(channels) == sorted([Channel.MIC, Channel.SYSTEM])
+    [(segment,)] = rig.observer.of("segment")
+    assert segment.text == "Hi there"
+    assert len(rig.transcriber.calls) == 1  # the trailing silence never reached the transcriber
 
 
 def test_levels_are_reported_for_every_block(tmp_path: Path) -> None:

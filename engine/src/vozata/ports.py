@@ -58,6 +58,24 @@ class TranscriptSink(Protocol):
 
 
 @runtime_checkable
+class Chunker(Protocol):
+    """Cuts one channel's captured audio into `AudioChunk`s (fixed windows or pauses)."""
+
+    paused: bool  # pausing emits the buffered audio and drops audio until resumed
+
+    def feed(self, samples: np.ndarray, at: float) -> None: ...
+
+    def flush(self) -> None: ...
+
+
+@runtime_checkable
+class SpeechDetector(Protocol):
+    def speech_spans(self, samples: np.ndarray) -> list[tuple[float, float]]:
+        """Unpadded (start, end) seconds of speech in `samples`, in order."""
+        ...
+
+
+@runtime_checkable
 class AudioMixer(Protocol):
     def mix(self, mic: Path, system: Path, destination: Path) -> None: ...
 
