@@ -20,8 +20,10 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 2. Otherwise read `docs/roadmap/README.md`; pick the phase (first `todo` with all dependencies
    `done`, or the one the user names).
 3. Read only that phase file and the documents in its *Read first* section.
-4. Branch `feature/<NN-slug>`. The first commit sets the phase to `in progress` in the README table
-   and adds the **Progress** section to the phase file (template in `docs/roadmap/README.md`).
+4. Branch `feature/<NN-slug>`. The first commit sets the phase to in progress (`feature/<NN-slug>`)
+   in the README table and adds the **Progress** section to the phase file (template in
+   `docs/roadmap/README.md`). Never delete a branch whose phase is in progress: its work is not in
+   `main` yet.
 5. Implement with TDD; one logical change per commit. Every commit also updates **Progress** (tick
    the step, set *Next step*) and is pushed, so a session cut short can be resumed.
 6. Tick the phase acceptance criteria and set its status to `done` in the README table.
