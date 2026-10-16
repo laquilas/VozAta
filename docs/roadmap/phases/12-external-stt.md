@@ -64,14 +64,14 @@ Parallel requests, streaming/realtime APIs, diarization from providers.
 
 - **Branch:** `feature/12-external-stt`
 - **Status:** in progress
-- **Updated:** 2026-10-16 23:35
-- **Next step:** `transcription/retry.py` (`send_with_retry`: 429 / 5xx / timeouts and connection errors, `Retry-After` seconds, 3 attempts, exponential backoff, clear error) with `tests/transcription/test_retry.py`
+- **Updated:** 2026-10-16 23:50
+- **Next step:** `transcription/openai_compatible.py` (`OpenAICompatibleTranscriber`: WAV in memory, multipart fields, `verbose_json` + word granularity, punctuation re-attached, language name → code, silent windows skipped, startup probe rejecting providers without word timestamps) with `tests/transcription/test_openai_compatible.py` (contract suite on `MockTransport`)
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] Config keys (+ settings page labels and help) — this commit
-- [ ] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts)
+- [x] Config keys (+ settings page labels and help) — `026e6ed`
+- [x] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts) — this commit
 - [ ] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start)
 - [ ] Registry, privacy notice (CLI at session start; health shows the provider host)
 - [ ] Manual: a session against an OpenAI-compatible endpoint; criteria
