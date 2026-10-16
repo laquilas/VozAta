@@ -1,0 +1,42 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Recordings and transcripts (meeting data; do not commit)
+gravacoes/
+*.wav
+
+# IDE and operating system files
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Temporary directories and generated files
+__*__/
+
+# C# / .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Build outputs
+dist/
+build/
+*.spec
+
+# Logs
+*.log
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
