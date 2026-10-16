@@ -35,10 +35,10 @@ CPU fallback). Origin: [optimizations.md](../optimizations.md) O2.3.
 
 ## Acceptance criteria
 
-- [ ] `MockTransport` tests: request bodies carry `keep_alive`; single pass and map-reduce release
+- [x] `MockTransport` tests: request bodies carry `keep_alive`; single pass and map-reduce release
       the model only on the last call.
-- [ ] Manual: after `python -m vozata minutes <dir>`, `ollama ps` lists no loaded model.
-- [ ] Coverage ≥ 80 %.
+- [x] Manual: after `python -m vozata minutes <dir>`, `ollama ps` lists no loaded model.
+- [x] Coverage ≥ 80 %.
 
 ## Tests
 
@@ -56,10 +56,9 @@ Keeping Whisper warm between sessions (phase 26).
 ## Progress
 
 - **Branch:** `feature/25-llm-vram-release`
-- **Status:** in progress
-- **Updated:** 2026-10-16 16:00
-- **Next step:** manual check — with Ollama running, `python -m vozata minutes <session dir>`, then
-  `ollama ps` must list no model; tick the acceptance criteria and set the phase to `done`
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 16:20
+- **Next step:** open the PR (combined draft in `__pr__/feature-25-llm-vram-release/`)
 
 ### Steps
 
@@ -67,8 +66,8 @@ Keeping Whisper warm between sessions (phase 26).
 - [x] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds) — `dedb429`
 - [x] `LanguageModel.release()` port method; Ollama sends `keep_alive` with every chat request and
       `release()` unloads with the configured value; wired in `bootstrap.py` — `668501e`
-- [x] `MinutesGenerator` calls `release()` once after every job (success or failure) — this commit
-- [ ] Manual check: `ollama ps` empty after `python -m vozata minutes <dir>`; acceptance criteria
+- [x] `MinutesGenerator` calls `release()` once after every job (success or failure) — `1df6538`
+- [x] Manual check: `ollama ps` empty after `python -m vozata minutes <dir>`; acceptance criteria
 
 ### Decisions and notes
 
@@ -77,3 +76,7 @@ Keeping Whisper warm between sessions (phase 26).
   `release()` posts an empty chat (`messages: []`) with `keep_alive = OLLAMA_KEEP_ALIVE`, which is
   Ollama's documented way to unload. Calling it from a `finally` frees the GPU even when a map
   step fails, which `last=True` would not.
+- Manual check (2026-10-16, Ollama 0.40.5, `qwen2.5:7b`, copy of session `20261016_095109`):
+  during the job `ollama ps` showed the model with *UNTIL 4 minutes from now* (job keep-alive);
+  right after `python -m vozata minutes` it listed no model. Engine suite: 471 passed, 100 %
+  coverage.
