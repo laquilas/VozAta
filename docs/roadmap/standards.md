@@ -42,6 +42,8 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 ## Global rules
 
 - **English only** for code, comments, docs, commits, branch names, defaults and log messages.
+- **Line endings**: LF everywhere, enforced by `.gitattributes` (`* text=auto eol=lf`; only `.sln`,
+  `.bat` and `.cmd` use CRLF). It overrides the machine-level `core.autocrlf=true`; never commit CRLF.
 - Diagrams in Markdown docs use **Mermaid** code blocks (` ```mermaid `), never ASCII art or images.
 - User-facing text and LLM prompts are **never hard-coded**: they come from locale resources in
   `en` (default), `pt-BR` and `es`. Every new key is added to all three.

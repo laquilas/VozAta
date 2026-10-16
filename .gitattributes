@@ -1,0 +1,13 @@
+# Normalize line endings: the repository and working tree use LF on every platform.
+# Overrides the machine-level core.autocrlf setting.
+* text=auto eol=lf
+
+# Windows-only formats keep CRLF.
+*.sln text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets.
+*.png binary
+*.ico binary
+*.wav binary

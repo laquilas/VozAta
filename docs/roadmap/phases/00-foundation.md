@@ -79,7 +79,7 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** ready for PR
-- **Updated:** 2026-10-15 23:40
+- **Updated:** 2026-10-15 23:50
 - **Next step:** none; open the PR (`pr-ready` → `pr-open` → `pr-review`) and merge after CI on the PR is green.
 
 ### Steps
@@ -104,3 +104,5 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - `test_running_as_module_prints_version` covers `python -m vozata` through `runpy`, so the `__main__` guard counts toward coverage (100 %).
 - **CI triggers** (user decision): only `pull_request` into `main` and `push` to `main`; pushes to `feature/*` do not run CI. The first run (on `feature/**` before this change) installed and passed lint, format and tests.
 - **History rewrite** (user decision): `__legacy__/` was stripped from every commit of this branch with `git filter-branch` and the branch was force-pushed, so the prototypes never reach the public history. SHAs above are post-rewrite.
+- **Line endings** (user request): `.gitattributes` pins LF (`* text=auto eol=lf`; CRLF only for `.sln`, `.bat`, `.cmd`), overriding the machine-level `core.autocrlf=true` that produced the "LF will be replaced by CRLF" warnings. The rule is in the root `CLAUDE.md` and its copy in `standards.md`.
+- **No machine-specific paths** (user request): local paths are written as placeholders (`<local-venv>`, `<prototype-workspace>`); the branch history was rewritten to remove the real ones.
