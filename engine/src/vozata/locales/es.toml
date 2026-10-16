@@ -9,6 +9,12 @@ not_a_number = "Valor no válido \"{value}\" para {key}: se esperaba un número.
 out_of_range = "Valor no válido \"{value}\" para {key}: debe estar entre {min} y {max}."
 invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http:// o https://."
 
+[errors.session]
+device_timeout = "El dispositivo de audio \"{device}\" no se abrió en {seconds} s. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando; si sigue fallando, reinicia Audio de Windows o el PC."
+device_failed = "No se pudo abrir el dispositivo de audio \"{device}\": {reason}"
+mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas del micrófono y del sistema."
+minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
+
 [languages]
 en = "inglés"
 pt = "portugués"

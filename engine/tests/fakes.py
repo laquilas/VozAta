@@ -7,21 +7,34 @@ from pathlib import Path
 
 import numpy as np
 
-from vozata.domain import TranscriptionResult, TranscriptSegment
+from vozata.domain import (
+    Channel,
+    ConversationLanguage,
+    SessionStatus,
+    TranscriptionResult,
+    TranscriptSegment,
+)
 
 
 class FakeAudioSource:
-    """Delivers pre-recorded blocks when started."""
+    """Delivers pre-recorded blocks when started; `push` delivers more while running."""
 
     def __init__(self, blocks: list[tuple[np.ndarray, float]] | None = None) -> None:
         self.blocks = blocks or []
         self.started = False
         self.stopped = False
+        self._on_samples: Callable[[np.ndarray, float], None] | None = None
 
     def start(self, on_samples: Callable[[np.ndarray, float], None]) -> None:
         self.started = True
+        self._on_samples = on_samples
         for samples, at in self.blocks:
             on_samples(samples, at)
+
+    def push(self, samples: np.ndarray, at: float) -> None:
+        if self._on_samples is None:
+            raise RuntimeError("FakeAudioSource.push() before start()")
+        self._on_samples(samples, at)
 
     def stop(self) -> None:
         self.stopped = True
@@ -106,3 +119,45 @@ class FakeLocalizer:
             return key
         args = ",".join(f"{name}={value}" for name, value in sorted(params.items()))
         return f"{key}({args})"
+
+
+class FakeClock:
+    """A session clock the test moves by hand."""
+
+    def __init__(self) -> None:
+        self.started = False
+        self.time = 0.0
+
+    def start(self) -> None:
+        self.started = True
+
+    def now(self) -> float:
+        return self.time
+
+
+class FakeSessionObserver:
+    """Records every event as `(name, *args)`; `segments` and `errors` for quick asserts."""
+
+    def __init__(self) -> None:
+        self.events: list[tuple] = []
+
+    def on_status(self, status: SessionStatus, duration_seconds: float) -> None:
+        self.events.append(("status", status, duration_seconds))
+
+    def on_level(self, channel: Channel, rms_db: float) -> None:
+        self.events.append(("level", channel, rms_db))
+
+    def on_segment(self, segment: TranscriptSegment) -> None:
+        self.events.append(("segment", segment))
+
+    def on_language_detected(self, language: ConversationLanguage) -> None:
+        self.events.append(("language_detected", language))
+
+    def on_minutes_ready(self, session_id: str) -> None:
+        self.events.append(("minutes_ready", session_id))
+
+    def on_error(self, code: str, message: str) -> None:
+        self.events.append(("error", code, message))
+
+    def of(self, name: str) -> list[tuple]:
+        return [event[1:] for event in self.events if event[0] == name]

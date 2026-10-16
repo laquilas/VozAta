@@ -9,6 +9,12 @@ not_a_number = "Invalid value \"{value}\" for {key}: expected a number."
 out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {max}."
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 
+[errors.session]
+device_timeout = "The audio device \"{device}\" did not open within {seconds} s. Check that it is connected and not in use by another app; if it keeps failing, restart Windows Audio or the PC."
+device_failed = "The audio device \"{device}\" could not be opened: {reason}"
+mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
+minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
+
 [languages]
 en = "English"
 pt = "Portuguese"

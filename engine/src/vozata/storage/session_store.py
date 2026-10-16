@@ -73,9 +73,9 @@ class SessionStore:
         self._root = output_dir
         self.now = now
 
-    def create(self) -> SessionPaths:
-        """A new, empty session folder named after the local start time."""
-        base = self.now().strftime("%Y%m%d_%H%M%S")
+    def create(self, started_at: datetime | None = None) -> SessionPaths:
+        """A new, empty session folder named after the start time (default: now)."""
+        base = (started_at or self.now()).strftime("%Y%m%d_%H%M%S")
         self._root.mkdir(parents=True, exist_ok=True)
         suffix = 1
         while True:

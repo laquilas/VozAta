@@ -194,3 +194,11 @@ def test_failed_write_meta_keeps_the_old_file_and_removes_the_temp_file(tmp_path
 
     assert store.read_meta(paths.id) == {"status": "recording"}
     assert [item.name for item in paths.root.iterdir()] == ["session.json"]
+
+
+def test_create_uses_the_given_start_time(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path, now=_clock(datetime(2030, 1, 1)))
+
+    paths = store.create(datetime(2026, 10, 15, 20, 23, 58, tzinfo=BRT))
+
+    assert paths.id == "20261015_202358"

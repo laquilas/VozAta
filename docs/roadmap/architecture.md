@@ -134,6 +134,13 @@ class TaskExporter(Protocol):
     def export(self, items: Sequence[ActionItem], session_title: str) -> list[str]: ...  # created URLs
 class Localizer(Protocol):
     def t(self, key: str, /, **params: object) -> str: ...  # key is positional-only
+class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06); called from worker threads
+    def on_status(self, status: SessionStatus, duration_seconds: float) -> None: ...
+    def on_level(self, channel: Channel, rms_db: float) -> None: ...
+    def on_segment(self, segment: TranscriptSegment) -> None: ...
+    def on_language_detected(self, language: ConversationLanguage) -> None: ...
+    def on_minutes_ready(self, session_id: str) -> None: ...
+    def on_error(self, code: str, message: str) -> None: ...  # message is localized
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
@@ -155,6 +162,12 @@ WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
 chunk queue backlog exceeds 3 chunks per channel, log a warning (transcription slower than real time).
+
+**Start**: load the transcriber, create the session folder, start the clock, then open each
+source on a helper thread with a timeout (`SOURCE_OPEN_TIMEOUT`, 20 s): a WASAPI open can hang in
+the driver. A source that fails or times out aborts the start (`SessionStartError` with code
+`device_timeout` / `device_failed` and a localized message), closes everything and deletes the
+empty session folder.
 
 **Stop order** (fixed, enforced by `RecordingSession.stop()`):
 1. Stop sources; flush chunkers (last partial window); `status = finalizing`.
@@ -259,6 +272,10 @@ Segments in `transcript.edited.jsonl` (21) may also carry `"edited": true` (then
 transcript through `SessionStore.load_transcript(session_id)`, which returns the first existing file
 of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jsonl`. Raw capture data
 (`transcript.jsonl`, WAVs) is never rewritten after the session ends.
+
+`language` / `language_source` are written only when known: at start for a fixed language
+(`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
+has neither key. `template` (20) and `vocabulary` (19) are added by their phases.
 
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
 Display labels are **never** stored in raw data; they are resolved from `speaker_id` +

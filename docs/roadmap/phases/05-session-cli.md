@@ -70,15 +70,15 @@ HTTP API (06), UI (07+).
 
 - **Branch:** `feature/05-session-cli`
 - **Status:** in progress
-- **Updated:** 2026-10-16 08:08
-- **Next step:** write `tests/test_session.py`, then `session.py` (`RecordingSession` + `SessionObserver`): start (transcriber, folder, writers, chunkers, worker, sources opened with a timeout), pause/resume, stop in the architecture §6 order, `session.json` per §8.
+- **Updated:** 2026-10-16 08:33
+- **Next step:** write `tests/test_bootstrap.py`, then `bootstrap.py`: registries `TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS` (unknown key -> `ConfigError` invalid_choice), `build_localizer`, `build_labeler`, `build_session(settings, observer, *, language, mic_device, system_device)` (WASAPI devices + `WasapiSource` sharing one `SessionClock`), `build_minutes_generator(settings)`.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `faabf68`
 - [x] `GENERATE_MINUTES` config key — `e4b621d`
-- [x] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests
-- [ ] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout
+- [x] `storage/session_store.py` (`SessionStore`, `SessionPaths`) + tests — `2315176`
+- [x] `session.py` (`RecordingSession`, `SessionObserver`) + tests; sources open with a timeout
 - [ ] `bootstrap.py` (`TRANSCRIBERS`, `LANGUAGE_MODELS`, `MIXERS`, `build_session`,
       `build_minutes_generator`) + tests
 - [ ] `__main__.py` CLI (`record`, `minutes`, console observer + level meter) + locale keys + tests
@@ -91,3 +91,11 @@ HTTP API (06), UI (07+).
   driver). `RecordingSession.start()` opens each source on a worker thread with a timeout and fails
   with a localized error instead of blocking.
 
+- `RecordingSession` is split by responsibility: `session.py` (state, stop order, mixer,
+  transcriber release, minutes), `session_pipeline.py` (`CapturePipeline`: writers, chunkers,
+  worker, sinks), `session_meta.py` (`SessionMeta`, thread-safe `session.json`) and
+  `audio/opener.py` (`open_with_timeout`, 20 s default).
+- `SessionObserver` is a port in `ports.py` (phase 06 implements it for the WebSocket).
+- A session whose `auto` language never locked stores no `language` key; `minutes <dir>` then
+  passes `auto` to the generator.
+- Minutes are skipped (no error) when the transcript is empty or `GENERATE_MINUTES=false`.
