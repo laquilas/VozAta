@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+import time
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from vozata.domain import AudioChunk, Channel, TranscriptSegment
@@ -19,6 +21,19 @@ class ChunkStitcher(Protocol):
 
     def flush(self) -> list[TranscriptSegment]: ...
 
+    def partial(self, tail: AudioChunk | None) -> tuple[float, str] | None: ...
+
+
+@dataclass(frozen=True)
+class PartialOptions:
+    """Interim text (phase 28): `snapshot(channel)` is the audio not chunked yet; `emit` sends
+    `(channel, start, text)`, an empty text clearing the channel's line."""
+
+    interval: float
+    snapshot: Callable[[Channel], AudioChunk | None]
+    emit: Callable[[Channel, float, str], None]
+    clock: Callable[[], float] = field(default=time.monotonic)
+
 
 class TranscriptionWorker:
     """Consume `AudioChunk`s, route them to their channel's stitcher and emit segments.
@@ -29,6 +44,10 @@ class TranscriptionWorker:
     `load` (optional) runs first on this thread, e.g. to load the speech model while capture is
     already running; chunks wait in the queue meanwhile. When it returns False every chunk is
     dropped and nothing is flushed. A worker that was never started never loads.
+
+    With `partials`, an idle worker (empty queue) previews each channel's uncommitted audio at
+    most once per `interval` and sends the text when it changed. A shown partial is cleared when
+    its channel's next chunk commits nothing, and at stop; a committed segment replaces it.
     """
 
     def __init__(
@@ -38,12 +57,16 @@ class TranscriptionWorker:
         sink: TranscriptSink,
         backlog_per_channel: int = 3,
         load: Callable[[], bool] | None = None,
+        partials: PartialOptions | None = None,
     ) -> None:
         self._chunks = chunks
         self._load = load
         self._usable = True
         self._stitchers = stitchers
         self._sink = sink
+        self._partials = partials
+        self._previewed_at: dict[Channel, float] = {}
+        self._shown: dict[Channel, str] = {}
         self._backlog_limit = backlog_per_channel * len(stitchers)
         self._behind = False
         self._stopping = threading.Event()
@@ -70,7 +93,7 @@ class TranscriptionWorker:
             try:
                 self._process(self._chunks.get(timeout=0.05))
             except queue.Empty:
-                continue
+                self._preview()
         self._finish()
 
     def _finish(self) -> None:
@@ -86,6 +109,8 @@ class TranscriptionWorker:
                 self._emit(stitcher.flush())
             except Exception:
                 _log.exception("Flushing the %s transcription failed", channel)
+        for channel in list(self._shown):
+            self._clear(channel, 0.0)
 
     def _process(self, chunk: AudioChunk) -> None:
         if not self._usable:
@@ -97,6 +122,35 @@ class TranscriptionWorker:
             _log.exception("Transcribing %s at %.1f s failed", chunk.channel, chunk.start)
             return
         self._emit(segments)
+        if segments:
+            self._shown.pop(chunk.channel, None)  # the segment replaces the partial
+        elif chunk.channel in self._shown:
+            self._clear(chunk.channel, chunk.start)
+
+    def _preview(self) -> None:
+        options = self._partials
+        if options is None or not self._usable:
+            return
+        for channel, stitcher in self._stitchers.items():
+            if not self._chunks.empty():
+                return  # committed work first
+            now = options.clock()
+            if now - self._previewed_at.get(channel, float("-inf")) < options.interval:
+                continue
+            self._previewed_at[channel] = now
+            try:
+                preview = stitcher.partial(options.snapshot(channel))
+            except Exception:
+                _log.exception("Interim text for %s failed", channel)
+                continue
+            if preview is not None and preview[1] != self._shown.get(channel):
+                self._shown[channel] = preview[1]
+                options.emit(channel, *preview)
+
+    def _clear(self, channel: Channel, start: float) -> None:
+        del self._shown[channel]
+        assert self._partials is not None  # only partials are ever shown
+        self._partials.emit(channel, start, "")
 
     def _emit(self, segments: list[TranscriptSegment]) -> None:
         for segment in segments:

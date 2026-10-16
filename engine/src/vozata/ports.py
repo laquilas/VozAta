@@ -125,6 +125,10 @@ class SessionObserver(Protocol):
 
     def on_minutes_ready(self, session_id: str) -> None: ...
 
+    def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
+        """Interim text of a channel (phase 28); empty `text` clears it. Never written to files."""
+        ...
+
     def on_model_loading(self, loading: bool) -> None:
         """The speech model started (True) or finished (False) loading; capture already runs."""
         ...

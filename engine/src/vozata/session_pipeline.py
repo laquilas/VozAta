@@ -20,7 +20,7 @@ from vozata.ports import Chunker, SessionObserver, Transcriber
 from vozata.storage.session_store import SessionPaths
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
-from vozata.transcription.worker import TranscriptionWorker
+from vozata.transcription.worker import PartialOptions, TranscriptionWorker
 
 ChunkerFactory = Callable[[Channel, Callable[[AudioChunk], None]], Chunker]
 
@@ -140,7 +140,18 @@ class CapturePipeline:
             channel: CarryOverStitcher(channel, transcriber, settings, language, ids.next)
             for channel in self._tracks
         }
-        self._worker = TranscriptionWorker(chunks, stitchers, self._sink, load=transcriber.load)
+        partials = None
+        if settings.live_partials:
+            partials = PartialOptions(
+                settings.partial_interval_seconds,
+                self._uncut_audio,
+                lambda channel, start, text: observer.on_partial(
+                    channel, channel.value, start, text
+                ),
+            )
+        self._worker = TranscriptionWorker(
+            chunks, stitchers, self._sink, load=transcriber.load, partials=partials
+        )
 
     @property
     def accepting(self) -> bool:
@@ -170,6 +181,12 @@ class CapturePipeline:
             self._observer.on_level(channel, rms_db(samples))
 
         return on_samples
+
+    def _uncut_audio(self, channel: Channel) -> AudioChunk | None:
+        """The chunker's audio not emitted yet (interim text); taken under the track lock."""
+        track = self._tracks[channel]
+        with track.lock:
+            return track.chunker.buffered()
 
     def set_paused(self, paused: bool) -> None:
         """Paused: WAVs get silence, chunkers drop audio (their partial window is emitted)."""

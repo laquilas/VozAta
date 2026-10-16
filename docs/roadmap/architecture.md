@@ -151,6 +151,7 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
     def on_minutes_ready(self, session_id: str) -> None: ...
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
+    def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
 ```
 
@@ -174,6 +175,13 @@ WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
 `SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
 (`SileroSpeechDetector`, CPU) every 0.25 s and cuts in the middle of pauses ≥ `VAD_MIN_SILENCE_MS`,
 marking those chunks `complete`; `FixedWindowChunker` cuts every `CHUNK_SECONDS`.
+
+**Interim text** (phase 28, `LIVE_PARTIALS`): when the chunk queue is empty, the worker previews
+each channel's uncommitted audio (stitcher carry + `Chunker.buffered()`, copied under the track
+lock) at most once per `PARTIAL_INTERVAL_SECONDS`, only with ≥ 1 s of voiced audio, and sends
+changed text through `on_partial` (API `partial`), never to the transcript files. A segment
+replaces it; an empty `partial` clears it when the channel's next chunk commits nothing, and at
+stop.
 
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
