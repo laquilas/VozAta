@@ -58,15 +58,15 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 
 - **Branch:** `feature/13-packaging`
 - **Status:** in progress
-- **Updated:** 2026-10-17 01:15
-- **Next step:** engine: `register_cuda_dlls` also searches the PyInstaller bundle (`sys._MEIPASS`); `packaging/engine.spec` + `packaging/engine_main.py`; `package` extra with pyinstaller; build locally and run `vozata-engine.exe --version` and a GPU transcription smoke
+- **Updated:** 2026-10-17 01:55
+- **Next step:** `.github/workflows/release.yml` (tags `v*` + manual run): Python + CUDA + PyInstaller, .NET, Inno Setup via choco, `packaging/build.ps1`, smoke `vozata-engine.exe --version`, installer artifact, release upload on tags; run it by hand on the branch
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] UI: executable mode in `EngineProcess` + installed `appsettings` — this commit
-- [ ] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke
-- [ ] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md`
+- [x] UI: executable mode in `EngineProcess` + installed `appsettings` — `09becb1`
+- [x] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke — `09becb1`
+- [x] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md` — this commit
 - [ ] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version`
 - [ ] Manual: CI installer → silent per-user install, app + engine start, uninstall keeps recordings
 
