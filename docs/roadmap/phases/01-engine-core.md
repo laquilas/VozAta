@@ -66,14 +66,14 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 - **Branch:** `feature/01-engine-core`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:50
-- **Next step:** TDD `ports.py`: write `tests/fakes.py` and `tests/test_ports.py` (each fake satisfies its `@runtime_checkable` port), see it fail, then add the seven ports and exclude `...` lines from coverage.
+- **Updated:** 2026-10-15 22:51
+- **Next step:** TDD `i18n.py`: write `tests/test_i18n.py` (key parity across the three locales, placeholders, `en` fallback, strict mode), see it fail, then add `TomlLocalizer`, the locale files and `package-data` in `pyproject.toml`.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `7e96b07`
-- [x] `domain.py` + `tests/test_domain.py` (jsonl round trip)
-- [ ] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies
+- [x] `domain.py` + `tests/test_domain.py` (jsonl round trip) — `33818b1`
+- [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies
 - [ ] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests
 - [ ] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
 - [ ] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
@@ -86,3 +86,4 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - **`ConfigError` localization**: config errors can happen before a localizer exists (`APP_LANGUAGE` may itself be invalid). `ConfigError` carries a message key and params; `str()` renders with the `en` locale and `render(localizer)` renders in any language, so no text is hard-coded.
 - **`AudioChunk`** is `frozen=True, eq=False`: dataclass equality on `np.ndarray` fields is ambiguous.
 - **Ports** are `@runtime_checkable` Protocols; `tests/fakes.py` provides fakes, and structural `isinstance` tests check them. Coverage excludes `...`-only lines (Protocol bodies).
+- `pyproject.toml` sets pytest `pythonpath = ["."]` so tests import shared fakes as `tests.fakes`.
