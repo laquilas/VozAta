@@ -53,3 +53,33 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 
 > Execute phase 13 of the roadmap (`docs/roadmap/phases/13-packaging.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/13-packaging`
+- **Status:** in progress
+- **Updated:** 2026-10-17 01:00
+- **Next step:** UI executable mode: `EngineOptions.ExecutablePath` (run `vozata-engine.exe serve`
+  instead of Python), working directory with environment variables (`%APPDATA%\VozAta`, created
+  if missing), `appsettings.Installed.json`; tests in `EngineProcessTests.cs`
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] UI: executable mode in `EngineProcess` + installed `appsettings`
+- [ ] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke
+- [ ] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md`
+- [ ] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version`
+- [ ] Manual: CI installer → silent per-user install, app + engine start, uninstall keeps recordings
+
+### Decisions and notes
+
+- Per-user install (`PrivilegesRequired=lowest`, `%LOCALAPPDATA%\Programs\VozAta`): no admin
+  rights. The engine runs with `%APPDATA%\VozAta` as working directory, so it reads `.env` there;
+  the installer creates it once from `.env.example` with
+  `OUTPUT_DIR=${USERPROFILE}/Documents/VozAta` (python-dotenv expands `${VAR}`) and the
+  uninstaller keeps it and the recordings.
+- PyInstaller is an optional engine extra (`package`), not a runtime dependency. Inno Setup runs
+  in CI only (not installed on the reference machine).
+- CI is verified with a manual run of the release workflow; creating a `v*` tag (and its GitHub
+  release) follows the release policy and is left to the user.
