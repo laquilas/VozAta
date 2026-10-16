@@ -59,6 +59,10 @@ jobs:
         shell: pwsh
         run: ./build/dist/vozata-engine/vozata-engine.exe --version
 
+      - name: Install test (install, app starts the engine, uninstall keeps data)
+        shell: pwsh
+        run: ./packaging/install-test.ps1 -Setup (Get-ChildItem build/installer/*.exe).FullName
+
       - uses: actions/upload-artifact@v4
         with:
           name: VozAta-Setup-${{ steps.version.outputs.value }}
