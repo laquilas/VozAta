@@ -7,9 +7,13 @@ env/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Recordings and transcripts (meeting data; do not commit)
 gravacoes/
+recordings/
 *.wav
 
 # IDE and operating system files
@@ -20,10 +24,13 @@ desktop.ini
 
 # Temporary directories and generated files
 __*__/
+!__legacy__/
 
 # C# / .NET
 bin/
 obj/
+ui/**/bin/
+ui/**/obj/
 .vs/
 *.user
 *.suo

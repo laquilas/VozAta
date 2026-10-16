@@ -78,14 +78,14 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:10
-- **Next step:** copy `__legacy__/` from the prototype workspace and extend `.gitignore` (step 2 of the plan).
+- **Updated:** 2026-10-15 22:35
+- **Next step:** create the `.venv` junction (local only), then write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md` and drop the bootstrap note from root `CLAUDE.md`.
 
 ### Steps
 
-- [x] Start phase: status `in progress`, Progress section
-- [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md)
-- [ ] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries
+- [x] Start phase: status `in progress`, Progress section — `18d4413`
+- [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `4f9dc00`
+- [x] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries
 - [ ] Create `.venv` junction to the existing prototype venv (local only, not committed)
 - [ ] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
 - [ ] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
