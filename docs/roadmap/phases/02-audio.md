@@ -68,14 +68,14 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 
 - **Branch:** `feature/02-audio`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:00
-- **Next step:** TDD `audio/wav_writer.py`: write `tests/audio/test_wav_writer.py` (in-order writes, gap fill beyond 0.15 s only, overlap tolerated, pause writes silence, finalize pads and never truncates, 16-bit clip), see it fail, then implement `AlignedWavWriter`.
+- **Updated:** 2026-10-15 23:01
+- **Next step:** TDD `audio/chunker.py`: write `tests/audio/test_chunker.py` (window starts, gap fill, flush of the partial window, pause flushes and drops, resume restarts windows), see it fail, then implement `FixedWindowChunker`.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `5e91877`
-- [x] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`)
-- [ ] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding
+- [x] `audio/levels.py` (`rms_db`) + `audio/clock.py` (`SessionClock`) — `f957159`
+- [x] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding
 - [ ] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause
 - [ ] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config
 - [ ] `audio/devices.py` (testable with a fake PyAudio)
