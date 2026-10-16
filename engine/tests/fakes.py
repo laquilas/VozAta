@@ -99,6 +99,7 @@ class FakeLanguageModel:
         self.replies = list(replies or [])
         self.available = available
         self.prompts: list[tuple[str, str, dict | None]] = []
+        self.releases = 0
 
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         self.prompts.append((system, prompt, json_schema))
@@ -109,6 +110,9 @@ class FakeLanguageModel:
 
     def is_available(self) -> bool:
         return self.available
+
+    def release(self) -> None:
+        self.releases += 1
 
 
 class FakeLocalizer:

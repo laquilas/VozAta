@@ -34,7 +34,9 @@ TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
 }
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
-    "ollama": lambda settings: OllamaLanguageModel(settings.ollama_url, settings.ollama_model),
+    "ollama": lambda settings: OllamaLanguageModel(
+        settings.ollama_url, settings.ollama_model, settings.ollama_keep_alive
+    ),
 }
 MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,

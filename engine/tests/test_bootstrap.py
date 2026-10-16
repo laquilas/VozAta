@@ -70,8 +70,10 @@ def test_registries_hold_the_default_providers() -> None:
     assert bootstrap.TRANSCRIBERS["faster_whisper"] is FasterWhisperTranscriber
     assert bootstrap.MIXERS[MixMode.MONO] is MonoMixer
     assert bootstrap.MIXERS[MixMode.STEREO] is StereoMixer
-    model = bootstrap.LANGUAGE_MODELS["ollama"](Settings(ollama_model="qwen2.5:3b"))
+    settings = Settings(ollama_model="qwen2.5:3b", ollama_keep_alive="10m")
+    model = bootstrap.LANGUAGE_MODELS["ollama"](settings)
     assert isinstance(model, OllamaLanguageModel)
+    assert model.keep_alive == "10m"
     model.close()
 
 
