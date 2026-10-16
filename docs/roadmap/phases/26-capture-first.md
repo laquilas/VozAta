@@ -40,7 +40,7 @@ model loaded between sessions. Origin: [optimizations.md](../optimizations.md) O
       the load is transcribed; a failing load reports `error` and still produces WAVs.
 - [ ] API test: `model_loading` true then false, in order, around the load.
 - [ ] ViewModel test: loading indicator shown and hidden; Start → Recording without waiting.
-- [ ] Manual: speak right after pressing Start → the first words appear in the transcript.
+- [x] Manual: speak right after pressing Start → the first words appear in the transcript. — this commit
 - [ ] Coverage ≥ 80 % (engine and UI).
 
 ## Tests
@@ -60,8 +60,8 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 
 - **Branch:** `feature/26-capture-first`
 - **Status:** in progress
-- **Updated:** 2026-10-16 21:10
-- **Next step:** manual check: `python -m vozata record` with the TTS meeting played right after Start (env overrides from memory) → the first sentence is transcribed; time from Start to `recording`; then `serve` + WebSocket shows `model_loading` true/false; tick acceptance criteria
+- **Updated:** 2026-10-16 21:30
+- **Next step:** open the PR (combined draft in `__pr__/feature-26-capture-first/`)
 
 ### Steps
 
@@ -74,7 +74,7 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 - [x] API: `model_loading` `{loading}` event — same commit (the observer method is one change)
 - [x] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
       `POST /sessions/{id}/minutes`) — `0ca4226`
-- [x] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings — this commit
+- [x] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings — `f82d747`
 - [ ] Manual: speak right after Start → first words in the transcript; acceptance criteria
 
 ### Decisions and notes
