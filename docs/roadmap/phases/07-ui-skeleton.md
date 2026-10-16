@@ -64,15 +64,15 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 - **Branch:** `feature/07-ui-skeleton`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:35
-- **Next step:** in `VozAta.Client`: typed `EngineEvent` records + parser for the WebSocket envelope, `IEngineEvents` (`IAsyncEnumerable<EngineEvent>` over a `ClientWebSocket` behind an `IEventSocketConnector`, auto-reconnect with backoff 0.5 s → 10 s, `ConnectionChanged` events); tests with a fake connector in `EngineEventsTests.cs`.
+- **Updated:** 2026-10-16 09:37
+- **Next step:** in `VozAta.Desktop/Services`: `IUiDispatcher` (+ Avalonia impl), `IEngineProcess` / `EngineProcess` with an `IProcessRunner` (health check, start `python -m vozata serve`, wait up to 60 s, stop only if started), `ILocalizationService` over `Resources/Strings*.resx` (en, pt-BR, es; runtime switch) + `EngineProcessTests.cs`, `LocalizationResourcesTests.cs`.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `6ae4ec1`
 - [x] Solution scaffold, `Directory.Build.props`, CI `ui` job — `2b1ddf3`
-- [x] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests
-- [ ] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests
+- [x] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests — `56bb664`
+- [x] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests
 - [ ] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
       parity test, `IUiDispatcher`
 - [ ] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
