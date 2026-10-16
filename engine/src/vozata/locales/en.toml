@@ -9,6 +9,7 @@ not_a_number = "Invalid value \"{value}\" for {key}: expected a number."
 out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {max}."
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
+unknown_key = "Unknown setting {key}."
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."

@@ -60,16 +60,16 @@ Vocabulary editor (19), template selection (20).
 
 - **Branch:** `feature/10-ui-settings`
 - **Status:** in progress
-- **Updated:** 2026-10-16 17:00
-- **Next step:** `vozata/settings_file.py` (`SettingsFile`: current settings, `update(values)` validates with `load_settings`, writes changed keys with `set_key`, skips the secret mask, returns restart keys) + `PUT /settings` + container/bootstrap wiring; tests in `tests/test_settings_file.py`, `tests/api/test_settings_put.py`
+- **Updated:** 2026-10-16 17:30
+- **Next step:** UI client: `UpdateSettingsAsync` (`PUT /settings`, `SettingsUpdateResult`, `EngineApiException.Key`), `SettingSchema.Group/Applies`, `IEngineProcess.RestartAsync`; tests in `EngineClientTests.cs` / `EngineProcessTests.cs`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [x] Schema: `group` and `applies` per key — this commit
-- [ ] Engine: `SettingsFile` (validate, persist with `set_key`, secrets mask, restart keys) +
+- [x] Schema: `group` and `applies` per key — `06fe8ca`
+- [x] Engine: `SettingsFile` (validate, persist with `set_key`, secrets mask, restart keys) +
       `PUT /settings` (422 `invalid_setting` with `key`); sessions / minutes / LLM check read the
-      current settings
+      current settings — this commit
 - [ ] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync`
 - [ ] `HealthViewModel` (status bar + settings page, "Check again")
 - [ ] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt)

@@ -50,6 +50,7 @@ class SessionMeta:
             "devices": {channel.value: names[channel] for channel in Channel if channel in names},
             "pauses": [],
             "settings": {
+                "CHUNK_MODE": settings.chunk_mode.value,
                 "CHUNK_SECONDS": settings.chunk_seconds,
                 "WHISPER_MODEL": settings.whisper_model,
                 "MIX_MODE": settings.mix_mode.value,

@@ -9,6 +9,7 @@ not_a_number = "Valor no válido \"{value}\" para {key}: se esperaba un número.
 out_of_range = "Valor no válido \"{value}\" para {key}: debe estar entre {min} y {max}."
 invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http:// o https://."
 invalid_duration = "Valor no válido \"{value}\" para {key}: se esperaban segundos (0, -1, 300) o una duración como 5m o 1h30m."
+unknown_key = "Configuración desconocida: {key}."
 
 [errors.session]
 audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."

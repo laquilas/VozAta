@@ -127,6 +127,15 @@ class SettingSchema(BaseModel):
     applies: str  # "next_session" | "restart"
 
 
+class SettingsUpdate(BaseModel):
+    values: dict[str, Any]
+
+
+class SettingsUpdated(BaseModel):
+    values: dict[str, Any]
+    restart_required: list[str]
+
+
 class SettingsView(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 

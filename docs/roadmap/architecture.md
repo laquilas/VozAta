@@ -295,7 +295,7 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
   "vocabulary": ["Avalonia", "N5 Sensors"],
   "devices": {"mic": "Headset Microphone", "system": "Headphones [Loopback]"},
   "pauses": [{"start": 120.5, "end": 180.0}],
-  "settings": {"CHUNK_SECONDS": 5, "WHISPER_MODEL": "large-v3-turbo", "MIX_MODE": "mono"}
+  "settings": {"CHUNK_MODE": "vad", "CHUNK_SECONDS": 5, "WHISPER_MODEL": "large-v3-turbo", "MIX_MODE": "mono"}
 }
 ```
 

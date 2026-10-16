@@ -16,7 +16,8 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health", response_model=Health)
 def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
-    settings = c.settings
+    settings = c.settings  # speech-to-text keys apply on restart
+    current = c.settings_file.current
     gpu = c.gpu_info()
     return Health(
         version=__version__,
@@ -27,8 +28,8 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
             device=settings.whisper_device.value,
         ),
         llm=LlmStatus(
-            provider=settings.llm_provider,
-            model=settings.ollama_model,
+            provider=current.llm_provider,
+            model=current.ollama_model,
             reachable=c.llm_reachable(),
         ),
     )
