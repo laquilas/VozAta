@@ -55,3 +55,36 @@ Vocabulary editor (19), template selection (20).
 
 > Execute phase 10 of the roadmap (`docs/roadmap/phases/10-ui-settings.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/10-ui-settings`
+- **Status:** in progress
+- **Updated:** 2026-10-16 16:50
+- **Next step:** `settings_fields.Field` gets `group` and `applies` (`next_session` | `restart`),
+  exposed in the `GET /settings` schema; tests; api-contract
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] Schema: `group` and `applies` per key
+- [ ] Engine: `SettingsFile` (validate, persist with `set_key`, secrets mask, restart keys) +
+      `PUT /settings` (422 `invalid_setting` with `key`); sessions / minutes / LLM check read the
+      current settings
+- [ ] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync`
+- [ ] `HealthViewModel` (status bar + settings page, "Check again")
+- [ ] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt)
+- [ ] Localized label and help for every key (en / pt-BR / es)
+- [ ] Settings tab in the main window; app language saved; default conversation language applied
+- [ ] Manual: `CHUNK_SECONDS` = 8 in the UI → next session uses 8 s windows; criteria
+
+### Decisions and notes
+
+- Most keys apply to the **next session** without a restart: the API keeps the current settings in
+  a `SettingsFile` that sessions, minutes jobs and the LLM health check read. Keys read once at
+  start-up need an engine restart: `API_HOST`, `API_PORT`, `STT_PROVIDER`, `WHISPER_*`,
+  `OUTPUT_DIR`, `SAMPLE_RATE`.
+- `.env` is updated key by key with `dotenv.set_key` (comments and order kept). A value also set
+  as a process environment variable keeps winning over `.env` (documented behaviour of
+  `config.py`).
+- The masked secret value (`********`) sent back by the UI means "unchanged".
