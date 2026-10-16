@@ -75,6 +75,10 @@ class Settings:
     whisper_compute_type: str = "int8_float16"
     whisper_cpu_model: str = "small"
     whisper_keep_loaded: bool = False  # serve: keep the transcriber between sessions (phase 26)
+    # External STT API (phase 12)
+    openai_stt_url: str = "https://api.openai.com/v1"
+    openai_stt_key: str | None = None
+    openai_stt_model: str = "whisper-1"
     # Pause-based segmentation (phase 27)
     chunk_mode: ChunkMode = ChunkMode.VAD
     vad_threshold: float = 0.5
@@ -130,6 +134,9 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         whisper_compute_type=raw.get("WHISPER_COMPUTE_TYPE", "int8_float16"),
         whisper_cpu_model=raw.get("WHISPER_CPU_MODEL", "small"),
         whisper_keep_loaded=_flag(raw, "WHISPER_KEEP_LOADED", False),
+        openai_stt_url=_url(raw, "OPENAI_STT_URL", "https://api.openai.com/v1"),
+        openai_stt_key=raw.get("OPENAI_STT_KEY"),
+        openai_stt_model=raw.get("OPENAI_STT_MODEL", "whisper-1"),
         chunk_mode=_choice(raw, "CHUNK_MODE", ChunkMode, ChunkMode.VAD),
         vad_threshold=_number(raw, "VAD_THRESHOLD", 0.5, minimum=0.01, maximum=0.99),
         vad_min_silence_ms=_integer(raw, "VAD_MIN_SILENCE_MS", 600, minimum=100, maximum=5000),

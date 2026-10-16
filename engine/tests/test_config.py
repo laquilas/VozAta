@@ -456,3 +456,36 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "OUTPUT_DIR",
         "SAMPLE_RATE",
     }
+
+
+def test_external_stt_defaults_values_and_secret_mask() -> None:
+    from vozata.settings_view import settings_values
+
+    defaults = load_settings(env={})
+    assert (defaults.openai_stt_url, defaults.openai_stt_key, defaults.openai_stt_model) == (
+        "https://api.openai.com/v1",
+        None,
+        "whisper-1",
+    )
+    assert settings_values(defaults)["OPENAI_STT_KEY"] is None  # nothing to mask
+
+    settings = load_settings(
+        env={
+            "OPENAI_STT_URL": "https://api.groq.com/openai/v1/",
+            "OPENAI_STT_KEY": "gsk_secret",
+            "OPENAI_STT_MODEL": "whisper-large-v3",
+        }
+    )
+    assert settings.openai_stt_url == "https://api.groq.com/openai/v1"
+    assert (settings.openai_stt_key, settings.openai_stt_model) == (
+        "gsk_secret",
+        "whisper-large-v3",
+    )
+    assert settings_values(settings)["OPENAI_STT_KEY"] == "********"
+
+
+def test_an_invalid_external_stt_url_is_rejected() -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"OPENAI_STT_URL": "api.openai.com"})
+
+    assert (caught.value.key, caught.value.message_key) == ("OPENAI_STT_URL", "invalid_url")

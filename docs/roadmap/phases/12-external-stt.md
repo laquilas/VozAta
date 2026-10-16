@@ -64,14 +64,13 @@ Parallel requests, streaming/realtime APIs, diarization from providers.
 
 - **Branch:** `feature/12-external-stt`
 - **Status:** in progress
-- **Updated:** 2026-10-16 23:20
-- **Next step:** `OPENAI_STT_URL`, `OPENAI_STT_KEY` (secret), `OPENAI_STT_MODEL` in `config.py`,
-  `settings_fields.py`, `.env.example` (with cost notes) and the UI setting labels; tests
+- **Updated:** 2026-10-16 23:35
+- **Next step:** `transcription/retry.py` (`send_with_retry`: 429 / 5xx / timeouts and connection errors, `Retry-After` seconds, 3 attempts, exponential backoff, clear error) with `tests/transcription/test_retry.py`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] Config keys (+ settings page labels and help)
+- [x] Config keys (+ settings page labels and help) — this commit
 - [ ] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts)
 - [ ] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start)
 - [ ] Registry, privacy notice (CLI at session start; health shows the provider host)

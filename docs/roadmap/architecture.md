@@ -354,7 +354,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `LLM_MAX_CHARS` | `12000` | 04 | above this, map-reduce summarization |
 | `GENERATE_MINUTES` | `true` | 05 | generate minutes at stop |
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8765` | 06 | never bind to 0.0.0.0 |
-| `OPENAI_STT_URL` / `OPENAI_STT_KEY` / `OPENAI_STT_MODEL` | — | 12 | external STT |
+| `OPENAI_STT_URL` / `OPENAI_STT_KEY` / `OPENAI_STT_MODEL` | `https://api.openai.com/v1` / *(empty)* / `whisper-1` | 12 | OpenAI-style `/audio/transcriptions` provider (`STT_PROVIDER=openai_compatible`); the key is secret |
 | `DIARIZATION_ENABLED` | `false` | 14 | |
 | `DIARIZATION_PROVIDER` | `pyannote` | 14 | |
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
