@@ -1,0 +1,97 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace VozAta.Client;
+
+// Shapes of docs/roadmap/api-contract.md (rows tagged 06). JSON uses snake_case (EngineJson).
+
+public sealed record GpuStatus(bool Available, string? Name, int? VramTotalMb);
+
+public sealed record SttStatus(string Provider, string Model, string Device);
+
+public sealed record LlmStatus(string Provider, string Model, bool Reachable);
+
+public sealed record EngineHealth(
+    string Engine,
+    string Version,
+    GpuStatus Gpu,
+    SttStatus Stt,
+    LlmStatus Llm);
+
+public sealed record AudioDevice(int Id, string Name, int SampleRate, int Channels);
+
+public sealed record DeviceList(
+    IReadOnlyList<AudioDevice> Inputs,
+    IReadOnlyList<AudioDevice> Loopbacks,
+    int? DefaultInputId,
+    int? DefaultLoopbackId);
+
+public sealed record StartSessionRequest(
+    int? MicDeviceId = null,
+    int? SystemDeviceId = null,
+    string? Language = null);
+
+public sealed record SessionSummary(
+    string Id,
+    string Status,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? EndedAt,
+    double? DurationSeconds,
+    string? Language,
+    bool HasMinutes);
+
+public sealed record SessionPage(IReadOnlyList<SessionSummary> Items, int Total);
+
+public sealed record SessionDetail(
+    string Id,
+    string Status,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? EndedAt,
+    double? DurationSeconds,
+    string? Language,
+    bool HasMinutes,
+    IReadOnlyList<string> Files,
+    string Folder)
+{
+    /// <summary>Every other `session.json` field (devices, pauses, settings...).</summary>
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement>? Metadata { get; init; }
+}
+
+public sealed record Word(string Text, double Start, double End, double Probability);
+
+public sealed record Segment(
+    string SegmentId,
+    string Channel,
+    string SpeakerId,
+    string Label,
+    double Start,
+    double End,
+    string Text,
+    bool Edited,
+    IReadOnlyList<Word> Words);
+
+public sealed record Transcript(string Source, IReadOnlyList<Segment> Segments);
+
+public sealed record Minutes(string Markdown);
+
+public sealed record SettingSchema(
+    string Key,
+    string Type,
+    JsonElement Default,
+    IReadOnlyList<string>? Choices,
+    bool Secret);
+
+public sealed record EngineSettings(
+    IReadOnlyDictionary<string, JsonElement> Values,
+    IReadOnlyList<SettingSchema> Schema)
+{
+    /// <summary>A setting as text (null when unset or not a string/number/bool).</summary>
+    public string? GetString(string key) =>
+        Values.TryGetValue(key, out var value) ? value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => value.GetRawText(),
+            _ => null,
+        } : null;
+}

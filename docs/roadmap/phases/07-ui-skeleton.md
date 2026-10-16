@@ -64,14 +64,14 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 - **Branch:** `feature/07-ui-skeleton`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:33
-- **Next step:** in `src/VozAta.Client`: DTO records for every 06 shape, `EngineJson` (SnakeCaseLower options), `IEngineClient` / `EngineClient` (HttpClient) and `EngineApiException` from the error envelope; tests with a fake `HttpMessageHandler` in `tests/VozAta.Desktop.Tests/EngineClientTests.cs`.
+- **Updated:** 2026-10-16 09:35
+- **Next step:** in `VozAta.Client`: typed `EngineEvent` records + parser for the WebSocket envelope, `IEngineEvents` (`IAsyncEnumerable<EngineEvent>` over a `ClientWebSocket` behind an `IEventSocketConnector`, auto-reconnect with backoff 0.5 s → 10 s, `ConnectionChanged` events); tests with a fake connector in `EngineEventsTests.cs`.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `6ae4ec1`
-- [x] Solution scaffold, `Directory.Build.props`, CI `ui` job
-- [ ] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests
+- [x] Solution scaffold, `Directory.Build.props`, CI `ui` job — `2b1ddf3`
+- [x] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests
 - [ ] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests
 - [ ] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
       parity test, `IUiDispatcher`
