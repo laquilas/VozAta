@@ -38,12 +38,12 @@ conversation-language selector, live transcript, health status bar, localization
 
 ## Acceptance criteria
 
-- [ ] `dotnet build` and `dotnet test` pass; `dotnet format --verify-no-changes` clean.
-- [ ] ViewModel tests: state transitions, Start sends the selected language, segments appended from
+- [x] `dotnet build` and `dotnet test` pass; `dotnet format --verify-no-changes` clean.
+- [x] ViewModel tests: state transitions, Start sends the selected language, segments appended from
       events, `language_detected` updates the badge, error handling, close-while-recording guard.
-- [ ] Client tests with a fake `HttpMessageHandler` (snake_case mapping, error envelope).
-- [ ] Resource key-parity test for the three `.resx` files.
-- [ ] Manual: launching the app starts the engine automatically; Start → live lines appear; Stop →
+- [x] Client tests with a fake `HttpMessageHandler` (snake_case mapping, error envelope).
+- [x] Resource key-parity test for the three `.resx` files.
+- [x] Manual: launching the app starts the engine automatically; Start → live lines appear; Stop →
       status goes Finalizing → Idle; switching UI language changes all visible strings.
 
 ## Tests
@@ -63,9 +63,9 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 ## Progress
 
 - **Branch:** `feature/07-ui-skeleton`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-16 10:02
-- **Next step:** verify everything (build, tests, format, coverage), tick the acceptance criteria, set the phase to done and open the PR.
+- **Next step:** open the PR (put the manual check below in its description) and merge.
 
 ### Steps
 
@@ -77,10 +77,10 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
       parity test, `IUiDispatcher` — `422167e`
 - [x] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
       + tests — `1036014`
-- [x] `MainWindow.axaml`, `App.axaml.cs` composition root
+- [x] `MainWindow.axaml`, `App.axaml.cs` composition root — `9d85218`
 - [x] Manual: app starts the engine; Start → live lines; Stop → Finalizing → Idle; UI language
       switch
-- [ ] Verify; tick acceptance criteria; set phase `done`
+- [x] Verify; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
 
@@ -117,3 +117,7 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 - Speaker labels ("Me"/"Others") come from the engine's `APP_LANGUAGE`, not the UI language;
   phase 10 (settings) will let the UI change `APP_LANGUAGE`.
 - Starting a session blocks ~20–25 s on this machine while Whisper loads (status "Iniciando…").
+- Final verification: `dotnet build` (0 warnings, warnings as errors), 58 tests, `dotnet format
+  --verify-no-changes` clean; coverage 93.6 % lines / 90.1 % branches (views, composition root,
+  real process/socket wrappers excluded with `[ExcludeFromCodeCoverage]`); engine 446 tests,
+  100 %.
