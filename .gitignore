@@ -49,3 +49,5 @@ build/
 .env
 .env.*
 !.env.example
+# the engine build spec is source (phase 13)
+!packaging/engine.spec
