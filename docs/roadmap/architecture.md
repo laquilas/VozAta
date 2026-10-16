@@ -98,6 +98,9 @@ class ConversationLanguage(StrEnum): EN = "en"; PT = "pt"; ES = "es"; AUTO = "au
 
 All times are **seconds since session start** (float).
 
+Helpers: `default_conversation_language(app_language)` maps `APP_LANGUAGE` to the default spoken
+language (`pt-BR` → `pt`). `AudioChunk` uses identity equality (`eq=False`) because of its array field.
+
 ## 5. Ports (`ports.py`)
 
 ```python
