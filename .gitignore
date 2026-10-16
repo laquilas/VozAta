@@ -24,7 +24,6 @@ desktop.ini
 
 # Temporary directories and generated files
 __*__/
-!__legacy__/
 
 # C# / .NET
 bin/

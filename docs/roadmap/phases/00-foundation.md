@@ -78,14 +78,14 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:45
+- **Updated:** 2026-10-15 22:55
 - **Next step:** TDD the engine package: write `engine/tests/test_smoke.py` (import `vozata`, `__version__ == "0.1.0"`, `main()` prints it), see it fail, then add `pyproject.toml`, `__init__.py`, `__main__.py` and `pip install -e "engine[dev]"`.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `18d4413`
 - [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md) — `4f9dc00`
-- [x] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries — `22158ee`
+- [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `22158ee`, untracked in the next commit
 - [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
 - [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
 - [ ] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
@@ -98,4 +98,4 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - **Git bootstrap skipped**: the repository already exists with a public remote `laquilas/VozAta` on `main`; the phase uses the normal feature-branch flow.
 - **Package name `vozata`** (user decision): product and repo are VozAta and `meeting-minutes` is generic. Docs renamed `meeting_minutes`/`meeting-minutes` → `vozata` and `MeetingMinutes` → `VozAta`. UI projects become `VozAta.*`.
 - **`.venv`** (user decision): the repo lives in OneDrive and had no venv. `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive) (Python 3.13.12 with faster-whisper 1.2.1, ctranslate2, cuBLAS/cuDNN 9, PyAudioWPatch, soxr, numpy 2) so OneDrive does not sync 2.3 GB. Recreate with `New-Item -ItemType Junction -Path .venv -Target <venv>` on a fresh clone.
-- **`__legacy__/`** (user decision): copied from `<prototype-workspace>/__legacy__` (4 files, no recordings, no secrets) and tracked in the public repo.
+- **`__legacy__/`** (user decision, revised): kept locally (copied from `<prototype-workspace>/__legacy__`) but **not published**; it stays ignored by `__*__/`. On a fresh clone, copy it from there. The acceptance criterion "`__legacy__/` is tracked" no longer applies.
