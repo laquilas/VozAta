@@ -78,8 +78,8 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:05
-- **Next step:** write `engine/.env.example` with the keys owned by phases 01–05 (architecture §9), one comment line per key.
+- **Updated:** 2026-10-15 23:10
+- **Next step:** add `.github/workflows/ci.yml` (`engine` job on `windows-latest`: Python 3.13, `pip install -e "engine[dev]"`, ruff check, ruff format --check, pytest) and watch the run until green.
 
 ### Steps
 
@@ -88,8 +88,8 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 - [x] Copy `__legacy__/` prototypes locally (ignored, not published); add the remaining ignore entries — `22158ee`, untracked in the next commit
 - [x] Create `.venv` junction to the existing prototype venv (local only, not committed)
 - [x] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md` — `4930cf6`
-- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
-- [ ] `engine/.env.example` with phase 01–05 keys
+- [x] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py` — `bf9fa6a`
+- [x] `engine/.env.example` with phase 01–05 keys
 - [ ] `.github/workflows/ci.yml` and green CI
 - [ ] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
 
