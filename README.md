@@ -1,5 +1,7 @@
 # VozAta
 
+<p align="center"><img src="assets/logo.svg" alt="VozAta logo" width="480"></p>
+
 An open-source, privacy-first tool that captures microphone and meeting audio, transcribes
 multi-speaker conversations in near real time, and uses AI to generate structured meeting
 minutes (*atas*). Runs locally by default: speech-to-text on your GPU and minutes from a
@@ -24,11 +26,15 @@ local LLM.
 
 ## Architecture
 
-```
-┌────────────────────────┐   HTTP + WebSocket   ┌──────────────────────────────────────┐
-│ Desktop UI (Avalonia,  │ ───────────────────▶ │ Engine (Python)                      │
-│ C# / .NET)             │ ◀─────────────────── │ capture → STT → transcript → minutes │
-└────────────────────────┘    live events       └──────────────────────────────────────┘
+```mermaid
+flowchart LR
+  UI["Desktop UI<br/>(Avalonia, C# / .NET)"]
+  subgraph Engine["Engine (Python)"]
+    direction LR
+    CAP[Audio capture<br/>mic + system] --> STT[Speech-to-text] --> TR[Transcript] --> MIN[Minutes<br/>local LLM]
+  end
+  UI -- "HTTP commands" --> Engine
+  Engine -- "WebSocket live events" --> UI
 ```
 
 - **`engine/`**: a Python engine that does the audio capture, speech-to-text, minutes generation,
