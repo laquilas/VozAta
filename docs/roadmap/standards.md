@@ -25,12 +25,18 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
 
 ## Session workflow
 
-1. Read `docs/roadmap/README.md`; pick the phase (first `todo` with all dependencies `done`, or the
-   one the user names).
-2. Read only that phase file and the documents in its *Read first* section.
-3. Branch `feature/<NN-slug>`; implement with TDD; one logical change per commit.
-4. Tick the phase acceptance criteria and update its status in the README table.
-5. Shared contract changes (config keys, endpoints, events, data model) go into
+1. **Resume first**: `git fetch`, then look for unmerged `feature/*` branches (local, remote, open
+   PRs). If one exists, check it out, check `git status` for uncommitted work, read the phase
+   file's **Progress** section and continue from its *Next step*.
+2. Otherwise read `docs/roadmap/README.md`; pick the phase (first `todo` with all dependencies
+   `done`, or the one the user names).
+3. Read only that phase file and the documents in its *Read first* section.
+4. Branch `feature/<NN-slug>`. The first commit sets the phase to `in progress` in the README table
+   and adds the **Progress** section to the phase file (template in `docs/roadmap/README.md`).
+5. Implement with TDD; one logical change per commit. Every commit also updates **Progress** (tick
+   the step, set *Next step*) and is pushed, so a session cut short can be resumed.
+6. Tick the phase acceptance criteria and set its status to `done` in the README table.
+7. Shared contract changes (config keys, endpoints, events, data model) go into
    `docs/roadmap/architecture.md` / `docs/roadmap/api-contract.md` in the same branch.
 
 ## Global rules

@@ -11,15 +11,24 @@ context**. Read only what the phase asks for.
 ## How to run a session
 
 1. Read this README (you are here).
-2. Pick the **first phase with status `todo` whose dependencies are all `done`** (or the phase the
+2. **Resume before starting anything new.** A session can end at any time (tokens run out, the PC
+   shuts down), so the work in progress lives on its feature branch, not in `main`. Run
+   `git fetch`, then look for unmerged phase branches (`git branch -a --list "*feature/*"`,
+   `gh pr list`). If one exists: check it out, run `git status` for uncommitted work, read the
+   phase file's **Progress** section and continue from its *Next step*. Skip steps 3–6.
+3. Pick the **first phase with status `todo` whose dependencies are all `done`** (or the phase the
    user names). Phases in the same parallel group can run in separate sessions at the same time.
-3. Read **only** that phase file and the documents listed in its *Read first* section.
-4. Until phase 00 is `done`, [standards.md](standards.md) replaces the project `CLAUDE.md` files.
-5. Create the branch `feature/<NN-slug>` (e.g. `feature/03-transcription`).
-6. Implement with TDD; respect [standards.md](standards.md).
-7. Tick every acceptance criterion in the phase file, then set the phase status to `done` in the
-   table below (and `in progress` while working on it).
-8. If the phase changes a shared contract (config key, endpoint, event, data-model field), update
+4. Read **only** that phase file and the documents listed in its *Read first* section.
+5. Until phase 00 is `done`, [standards.md](standards.md) replaces the project `CLAUDE.md` files.
+6. Create the branch `feature/<NN-slug>` (e.g. `feature/03-transcription`). Its **first commit**
+   sets the phase status to `in progress` in the table below and appends the **Progress** section
+   ([template](#progress-section-template)) to the phase file, listing the planned steps.
+7. Implement with TDD; respect [standards.md](standards.md). One logical change per commit, and
+   **every commit also updates Progress** (tick the step, set *Next step*, record decisions and
+   blockers) and is pushed — the branch on GitHub always shows exactly where work stopped.
+8. Tick every acceptance criterion in the phase file, then set the phase status to `done` in the
+   table below and the Progress status to `ready for PR`.
+9. If the phase changes a shared contract (config key, endpoint, event, data-model field), update
    [architecture.md](architecture.md) or [api-contract.md](api-contract.md) in the same branch.
 
 ## Shared documents
@@ -120,4 +129,29 @@ graph LR
 
 Every file in `phases/` has the same sections: **Goal · Depends on · Read first · Scope ·
 Design notes · Acceptance criteria · Tests · Out of scope · Kickoff prompt**. The kickoff prompt is
-the message to paste into a fresh session to start the phase.
+the message to paste into a fresh session to start the phase. While the phase is being worked on,
+it also has a **Progress** section at the end.
+
+## Progress section template
+
+Appended to the phase file by the first commit of the phase branch and updated by every commit
+after it. It is the hand-off note for the next session, so *Next step* must be specific enough to
+continue without any other context.
+
+```markdown
+## Progress
+
+- **Branch:** `feature/NN-slug`
+- **Status:** in progress | blocked | ready for PR
+- **Updated:** YYYY-MM-DD HH:MM
+- **Next step:** <the exact next action, e.g. "make test_stitch_overlap pass in stitching.py">
+
+### Steps
+
+- [x] <step> — `<short sha>`
+- [ ] <step>
+
+### Decisions and notes
+
+- <deviations from the plan, assumptions, blockers, anything the next session must know>
+```
