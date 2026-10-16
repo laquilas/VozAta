@@ -19,10 +19,10 @@ Ship a Windows installer containing the engine (no Python needed) and the deskto
 
 | Item | Content |
 |------|---------|
-| `packaging/engine.spec` | PyInstaller **onedir** build of `meeting_minutes serve` → `meeting-minutes-engine.exe`; data files: locales, templates, fonts; hidden imports for faster-whisper / ctranslate2 / PyAudioWPatch; CUDA DLLs from the `nvidia-*` wheels included |
-| UI publish | `dotnet publish src/MeetingMinutes.Desktop -c Release -r win-x64 --self-contained -p:PublishSingleFile=true` |
+| `packaging/engine.spec` | PyInstaller **onedir** build of `vozata serve` → `vozata-engine.exe`; data files: locales, templates, fonts; hidden imports for faster-whisper / ctranslate2 / PyAudioWPatch; CUDA DLLs from the `nvidia-*` wheels included |
+| UI publish | `dotnet publish src/VozAta.Desktop -c Release -r win-x64 --self-contained -p:PublishSingleFile=true` |
 | UI config | `appsettings.json` in the installed app points `Engine:ExecutablePath` to the bundled engine (extend `IEngineProcess` to run an executable instead of Python) |
-| `packaging/installer.iss` | Inno Setup script: installs both, Start-menu shortcut, `.env` created from `.env.example` in `%APPDATA%/MeetingMinutes/` on first run, uninstaller keeps recordings |
+| `packaging/installer.iss` | Inno Setup script: installs both, Start-menu shortcut, `.env` created from `.env.example` in `%APPDATA%/VozAta/` on first run, uninstaller keeps recordings |
 | `.github/workflows/release.yml` | on tag `v*`: build engine + UI + installer, attach to the GitHub release |
 | `docs/INSTALL.md` | requirements (NVIDIA driver for GPU, optional Ollama), first run (Whisper model downloads to the Hugging Face cache, ~1.6 GB), troubleshooting |
 
@@ -30,7 +30,7 @@ Ship a Windows installer containing the engine (no Python needed) and the deskto
 
 - Whisper models are **not** bundled; first run downloads them (show progress in the engine log /
   UI status).
-- `OUTPUT_DIR` default for installed builds: `%USERPROFILE%/Documents/MeetingMinutes`.
+- `OUTPUT_DIR` default for installed builds: `%USERPROFILE%/Documents/VozAta`.
 - Installer size is dominated by CUDA DLLs (~1 GB); document a CPU-only build variant flag.
 
 ## Acceptance criteria
@@ -43,7 +43,7 @@ Ship a Windows installer containing the engine (no Python needed) and the deskto
 
 ## Tests
 
-`IEngineProcess` executable-mode unit tests; CI smoke step runs `meeting-minutes-engine.exe --version`.
+`IEngineProcess` executable-mode unit tests; CI smoke step runs `vozata-engine.exe --version`.
 
 ## Out of scope
 

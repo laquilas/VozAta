@@ -1,4 +1,4 @@
-# Meeting Minutes — Roadmap
+# VozAta — Roadmap
 
 Near-real-time meeting transcription (microphone + system audio) with LLM-generated meeting
 minutes. A Python **engine** (capture, speech-to-text, minutes) exposes a local HTTP + WebSocket

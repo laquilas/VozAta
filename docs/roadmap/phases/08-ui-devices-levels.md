@@ -19,7 +19,7 @@ channel while recording.
 | Item | Content |
 |------|---------|
 | `ViewModels/DevicesViewModel.cs` | loads `GET /devices`; `SelectedMic`, `SelectedLoopback` (defaults from the engine); refresh command; remembers the selection |
-| `Services/UiPreferences.cs` | `IUiPreferences` persisted to `%APPDATA%/MeetingMinutes/ui.json` (device ids, window size); missing devices fall back to defaults |
+| `Services/UiPreferences.cs` | `IUiPreferences` persisted to `%APPDATA%/VozAta/ui.json` (device ids, window size); missing devices fall back to defaults |
 | `ViewModels/LevelMeterViewModel.cs` | maps `rms_db` (−60…0 dB) to 0…1 with peak-hold and decay; "no signal" flag when the system channel stays below −60 dB for 30 s while recording |
 | `Views/` | device ComboBoxes (disabled while recording) and two horizontal meters labelled with the localized speaker labels |
 | `MainViewModel` | passes the selected device ids to `POST /sessions` |

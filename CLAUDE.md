@@ -1,4 +1,4 @@
-# Meeting Minutes
+# VozAta
 
 Near-real-time meeting transcription (microphone + system audio) and LLM-generated meeting
 minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HTTP/WebSocket API.
@@ -38,7 +38,7 @@ of `docs/roadmap/standards.md`.
 - User-facing text and LLM prompts are **never hard-coded**: they come from locale resources in
   `en` (default), `pt-BR` and `es`. Every new key is added to all three.
 - **SOLID**: depend on ports (interfaces), not concrete classes; concrete classes are wired only in
-  the composition root (`engine/src/meeting_minutes/bootstrap.py`, `ui/.../App.axaml.cs`); new
+  the composition root (`engine/src/vozata/bootstrap.py`, `ui/.../App.axaml.cs`); new
   providers are added through registries, not by editing orchestrators.
 - Every new class, branch and bug fix gets unit tests; diff coverage ≥ 80 %.
 - Unit tests never touch audio hardware, GPU, network or real LLMs — use fakes.

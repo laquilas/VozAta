@@ -34,7 +34,7 @@ docs/roadmap/               this roadmap
 engine/
   pyproject.toml
   .env.example
-  src/meeting_minutes/
+  src/vozata/
     __main__.py             CLI: record | minutes | recover | reindex | serve
     config.py               Settings (only module reading env vars)
     domain.py               dataclasses / enums (no I/O)
@@ -60,10 +60,10 @@ engine/
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
-  MeetingMinutes.sln
-  src/MeetingMinutes.Client/        IEngineClient, DTOs, WebSocket event stream
-  src/MeetingMinutes.Desktop/       Avalonia app (Views, ViewModels, Services, Resources/Strings*.resx)
-  tests/MeetingMinutes.Desktop.Tests/
+  VozAta.sln
+  src/VozAta.Client/        IEngineClient, DTOs, WebSocket event stream
+  src/VozAta.Desktop/       Avalonia app (Views, ViewModels, Services, Resources/Strings*.resx)
+  tests/VozAta.Desktop.Tests/
 ```
 
 ## 3. SOLID mapping

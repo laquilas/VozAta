@@ -23,10 +23,10 @@ Nothing.
 | `engine/CLAUDE.md` | copy of "engine/CLAUDE.md" from `standards.md` |
 | `ui/CLAUDE.md` | copy of "ui/CLAUDE.md" from `standards.md` |
 | `.gitignore` | add `.env`, `recordings/`, `.coverage`, `htmlcov/`, `ui/**/bin/`, `ui/**/obj/`, `*.user`, `.ruff_cache/` (keep the existing `!__legacy__/` exception) |
-| `engine/pyproject.toml` | project `meeting-minutes`, `requires-python >= 3.13`, src layout, deps below, ruff + pytest + coverage config |
+| `engine/pyproject.toml` | project `vozata`, `requires-python >= 3.13`, src layout, deps below, ruff + pytest + coverage config |
 | `engine/.env.example` | keys owned by phases 01–05 (architecture §9), each with a one-line comment |
-| `engine/src/meeting_minutes/__init__.py` | `__version__ = "0.1.0"` |
-| `engine/src/meeting_minutes/__main__.py` | prints the version (replaced in phase 05) |
+| `engine/src/vozata/__init__.py` | `__version__ = "0.1.0"` |
+| `engine/src/vozata/__main__.py` | prints the version (replaced in phase 05) |
 | `engine/tests/test_smoke.py` | imports the package, checks `__version__` |
 | `.github/workflows/ci.yml` | `engine` job on `windows-latest`: setup Python 3.13, `pip install -e "engine[dev]"`, ruff check, ruff format --check, pytest |
 
@@ -55,7 +55,7 @@ Dependencies:
 - [ ] Three `CLAUDE.md` files exist and match `standards.md`.
 - [ ] `pip install -e "engine[dev]"` succeeds in `.venv`.
 - [ ] `pytest`, `ruff check`, `ruff format --check` pass from `engine/`.
-- [ ] `python -m meeting_minutes` prints the version.
+- [ ] `python -m vozata` prints the version.
 - [ ] Repository initialized as approved by the user; `__legacy__/` is tracked, `.env` and
       `recordings/` are ignored (`git check-ignore` confirms).
 - [ ] CI workflow green (if a remote was created).
@@ -78,13 +78,13 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 - **Branch:** `feature/00-foundation`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:00
-- **Next step:** rename the package `meeting_minutes` → `vozata` (and UI `MeetingMinutes.*` → `VozAta.*`) across all roadmap docs and `CLAUDE.md`, in one docs commit.
+- **Updated:** 2026-10-15 22:10
+- **Next step:** copy `__legacy__/` from the prototype workspace and extend `.gitignore` (step 2 of the plan).
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section
-- [ ] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md)
+- [x] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md)
 - [ ] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries
 - [ ] Create `.venv` junction to the existing prototype venv (local only, not committed)
 - [ ] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
@@ -96,6 +96,6 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 ### Decisions and notes
 
 - **Git bootstrap skipped**: the repository already exists with a public remote `laquilas/VozAta` on `main`; the phase uses the normal feature-branch flow.
-- **Package name `vozata`** (user decision): product and repo are VozAta and `meeting-minutes` is generic. UI projects become `VozAta.*`.
+- **Package name `vozata`** (user decision): product and repo are VozAta and `meeting-minutes` is generic. Docs renamed `meeting_minutes`/`meeting-minutes` → `vozata` and `MeetingMinutes` → `VozAta`. UI projects become `VozAta.*`.
 - **`.venv`** (user decision): the repo lives in OneDrive and had no venv. `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive) (Python 3.13.12 with faster-whisper 1.2.1, ctranslate2, cuBLAS/cuDNN 9, PyAudioWPatch, soxr, numpy 2) so OneDrive does not sync 2.3 GB. Recreate with `New-Item -ItemType Junction -Path .venv -Target <venv>` on a fresh clone.
 - **`__legacy__/`** (user decision): copied from `<prototype-workspace>/__legacy__` (4 files, no recordings, no secrets) and tracked in the public repo.

@@ -45,7 +45,7 @@ row tagged **06** in the API contract.
       start, 404 codes, settings masking, health with fake LLM availability.
 - [ ] WebSocket test: connect → initial `status`; fake session events arrive in order with the
       envelope; disconnect does not break publishing.
-- [ ] Manual: `python -m meeting_minutes serve`, then start/stop via `curl` and watch events with a
+- [ ] Manual: `python -m vozata serve`, then start/stop via `curl` and watch events with a
       WebSocket client (e.g. `python -m websockets ws://127.0.0.1:8765/ws`).
 - [ ] Coverage ≥ 80 %.
 
