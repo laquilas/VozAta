@@ -12,6 +12,7 @@ from vozata.api.deps import container
 from vozata.api.errors import error_body
 from vozata.api.schemas import SettingSchema, SettingsUpdate, SettingsUpdated, SettingsView
 from vozata.config import ConfigError
+from vozata.settings_file import SettingsWriteError
 from vozata.settings_view import settings_schema, settings_values
 
 router = APIRouter(tags=["settings"])
@@ -39,6 +40,9 @@ def put_settings(
         body = error_body("invalid_setting", error.render(c.localizer))
         body["error"]["key"] = error.key
         return JSONResponse(body, status_code=422)
+    except SettingsWriteError as error:
+        message = c.localizer.t("errors.api.settings_write_failed", reason=error)
+        return JSONResponse(error_body("settings_write_failed", message), status_code=503)
     return SettingsUpdated(
         values=settings_values(c.settings_file.current), restart_required=restart
     )

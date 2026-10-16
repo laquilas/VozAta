@@ -127,3 +127,46 @@ def test_process_environment_values_keep_winning(tmp_path: Path) -> None:
 
     assert file.current.chunk_seconds == 3.0  # documented: the process environment overrides .env
     assert "CHUNK_SECONDS=8\n" in (tmp_path / ".env").read_text(encoding="utf-8")
+
+
+def test_a_briefly_locked_env_file_is_retried(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata import settings_file as module
+
+    real_set_key = module.set_key
+    failures = [PermissionError("locked by OneDrive"), PermissionError("still locked")]
+
+    def flaky(*args: object, **kwargs: object) -> object:
+        if failures:
+            raise failures.pop(0)
+        return real_set_key(*args, **kwargs)
+
+    monkeypatch.setattr(module, "set_key", flaky)
+    monkeypatch.setattr(module, "WRITE_RETRY_SECONDS", 0)
+    file = settings_file(tmp_path)
+
+    file.update({"CHUNK_SECONDS": 8})
+
+    assert file.current.chunk_seconds == 8.0
+    assert "CHUNK_SECONDS=8\n" in (tmp_path / ".env").read_text(encoding="utf-8")
+
+
+def test_a_file_that_stays_locked_reports_a_write_error_and_keeps_the_current_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata import settings_file as module
+
+    def locked(*args: object, **kwargs: object) -> object:
+        raise PermissionError("locked by OneDrive")
+
+    monkeypatch.setattr(module, "set_key", locked)
+    monkeypatch.setattr(module, "WRITE_RETRY_SECONDS", 0)
+    file = settings_file(tmp_path)
+    before = file.current
+
+    with pytest.raises(module.SettingsWriteError) as caught:
+        file.update({"CHUNK_SECONDS": 8})
+
+    assert "locked by OneDrive" in str(caught.value)
+    assert file.current is before

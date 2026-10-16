@@ -46,3 +46,20 @@ def test_a_malformed_body_is_rejected(api: Api) -> None:
 
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "invalid_request"
+
+
+def test_a_settings_file_that_cannot_be_written_is_a_503(api: Api, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from vozata import settings_file as module
+
+    def locked(*args: object, **kwargs: object) -> object:
+        raise PermissionError("locked by OneDrive")
+
+    monkeypatch.setattr(module, "set_key", locked)
+    monkeypatch.setattr(module, "WRITE_RETRY_SECONDS", 0)
+
+    response = api.client.put("/settings", json={"values": {"CHUNK_SECONDS": 8}})
+
+    assert response.status_code == 503
+    error = response.json()["error"]
+    assert error["code"] == "settings_write_failed"
+    assert "locked by OneDrive" in error["message"]

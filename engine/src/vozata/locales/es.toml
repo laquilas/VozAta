@@ -20,6 +20,7 @@ minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la graba
 model_failed = "No se pudo cargar el modelo de voz ({reason}). La grabación continúa: el audio se guarda, pero no se transcribe."
 
 [errors.api]
+settings_write_failed = "No se pudo guardar el archivo de configuración ({reason}). Cierra los programas que puedan estar usándolo, como una herramienta de sincronización, e inténtalo de nuevo."
 minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 empty_transcript = "La sesión \"{id}\" no tiene transcripción, así que no hay nada que resumir."
 not_found = "Este endpoint no existe."

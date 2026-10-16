@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -15,6 +16,12 @@ from vozata.settings_view import SECRET_MASK
 
 FIELD_BY_KEY = {field.key: field for field in FIELDS}
 SECRET_KEYS = frozenset(field.key for field in FIELDS if field.secret)
+WRITE_ATTEMPTS = 5
+WRITE_RETRY_SECONDS = 0.2  # sync tools such as OneDrive briefly lock a file they are uploading
+
+
+class SettingsWriteError(OSError):
+    """`.env` could not be written (still locked after retrying); `str()` holds the reason."""
 
 
 class SettingsFile:
@@ -40,7 +47,8 @@ class SettingsFile:
     def update(self, values: Mapping[str, object]) -> list[str]:
         """Apply `values` (JSON values; `None` clears a key); returns the keys needing a restart.
 
-        Raises `ConfigError` (unknown key or invalid value) without changing anything.
+        Raises `ConfigError` (unknown key or invalid value) without changing anything, and
+        `SettingsWriteError` when `.env` stays locked (keys written before it may be saved).
         """
         with self._lock:
             requested: dict[str, str] = {}
@@ -76,7 +84,19 @@ class SettingsFile:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.touch()
         for key, text in changes.items():
-            set_key(self._path, key, text, quote_mode="never")
+            self._set(key, text)
+
+    def _set(self, key: str, text: str) -> None:
+        attempt = 1
+        while True:
+            try:
+                set_key(self._path, key, text, quote_mode="never")
+                return
+            except PermissionError as error:
+                if attempt >= WRITE_ATTEMPTS:
+                    raise SettingsWriteError(str(error)) from error
+                attempt += 1
+                time.sleep(WRITE_RETRY_SECONDS)
 
 
 def _text(value: object) -> str:
