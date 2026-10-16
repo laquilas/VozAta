@@ -67,9 +67,9 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 ## Progress
 
 - **Branch:** `feature/02-audio`
-- **Status:** in progress
-- **Updated:** 2026-10-15 23:04
-- **Next step:** implement `audio/capture.py` (`WasapiSource`: callback timestamps blocks, consumer thread downmixes and resamples with `soxr.ResampleStream`, overflow count); unit-test block handling with a fake clock; write `engine/scripts/smoke_capture.py` and run it for 10 s.
+- **Status:** blocked
+- **Updated:** 2026-10-15 23:12
+- **Next step:** BLOCKED on the machine's audio stack: after a reboot (or an admin restart of the Audiosrv and AudioEndpointBuilder services), run from engine/: `../.venv/Scripts/python -u scripts/smoke_capture.py --seconds 10 --tone`. Check both WAVs have equal duration and non-silent RMS, record the output in the PR, then tick the smoke criterion and close the phase.
 
 ### Steps
 
@@ -78,7 +78,7 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - [x] `audio/wav_writer.py` (`AlignedWavWriter`): gap fill, pause, padding — `69a0f8c`
 - [x] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause — `cce70a1`
 - [x] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config — `604e113`
-- [x] `audio/devices.py` (testable with a fake PyAudio)
+- [x] `audio/devices.py` (testable with a fake PyAudio) — `3a98cdd`
 - [ ] `audio/capture.py` (`WasapiSource`) + `engine/scripts/smoke_capture.py`; run the smoke check
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
@@ -90,3 +90,5 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - `tests/` and `tests/audio/` are packages (`__init__.py`) so test modules in subfolders get unique names.
 - Device discovery lists **WASAPI** devices; `default_input()` uses WASAPI's default capture device (the system default is MME). On the reference machine: WASAPI mic id 9, default loopback id 10.
 - Device names from PortAudio can contain mis-decoded characters (seen: `Intel�`); phase 08 (device UI) should handle display names.
+- **Smoke check blocked (2026-10-15 23:06–23:12)**: opening the microphone (Intel Smart Sound array mic) hung in `pa.open` on WASAPI and MME, and `ffmpeg` DirectShow could not record from it either. At 23:09 Windows logged `AppHangXProcB1` (`svchost.exe_Audiosrv` waiting on `audiodg.exe`) and killed Windows Audio, which auto-restarted at 23:10. After that, `PyAudio()` initialization itself hangs, so audio needs a reboot. Before the stack wedged, the loopback (id 10) opened in 1.7 s and streamed. It is unclear whether the first WASAPI mic open triggered the driver hang or met an already-wedged driver.
+- **Robustness (for phase 05)**: a device open can hang indefinitely in the driver. `RecordingSession` must start sources with a timeout (e.g. open on a worker thread and fail the session with a localized error), never block forever.
