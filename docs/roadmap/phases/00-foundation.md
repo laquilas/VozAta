@@ -73,3 +73,29 @@ Any engine logic (phase 01+), the UI solution (phase 07).
 
 > Execute phase 00 of the roadmap: read `docs/roadmap/README.md` and
 > `docs/roadmap/phases/00-foundation.md` and follow them. Ask me before initializing git.
+
+## Progress
+
+- **Branch:** `feature/00-foundation`
+- **Status:** in progress
+- **Updated:** 2026-10-15 22:00
+- **Next step:** rename the package `meeting_minutes` → `vozata` (and UI `MeetingMinutes.*` → `VozAta.*`) across all roadmap docs and `CLAUDE.md`, in one docs commit.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section
+- [ ] Rename package to `vozata` across docs (architecture, standards, api-contract, phases, CLAUDE.md)
+- [ ] Copy `__legacy__/` prototypes and add the `!__legacy__/` gitignore exception; add the remaining ignore entries
+- [ ] Create `.venv` junction to the existing prototype venv (local only, not committed)
+- [ ] Write `engine/CLAUDE.md` and `ui/CLAUDE.md` from `standards.md`; drop the bootstrap note from root `CLAUDE.md`
+- [ ] TDD: `engine/tests/test_smoke.py`, then `pyproject.toml`, `__init__.py`, `__main__.py`
+- [ ] `engine/.env.example` with phase 01–05 keys
+- [ ] `.github/workflows/ci.yml` and green CI
+- [ ] Update architecture §1 environment facts; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- **Git bootstrap skipped**: the repository already exists with a public remote `laquilas/VozAta` on `main`; the phase uses the normal feature-branch flow.
+- **Package name `vozata`** (user decision): product and repo are VozAta and `meeting-minutes` is generic. UI projects become `VozAta.*`.
+- **`.venv`** (user decision): the repo lives in OneDrive and had no venv. `.venv` is a directory junction to `<local-venv>` (a virtualenv outside OneDrive) (Python 3.13.12 with faster-whisper 1.2.1, ctranslate2, cuBLAS/cuDNN 9, PyAudioWPatch, soxr, numpy 2) so OneDrive does not sync 2.3 GB. Recreate with `New-Item -ItemType Junction -Path .venv -Target <venv>` on a fresh clone.
+- **`__legacy__/`** (user decision): copied from `<prototype-workspace>/__legacy__` (4 files, no recordings, no secrets) and tracked in the public repo.

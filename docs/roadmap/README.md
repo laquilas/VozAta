@@ -43,7 +43,7 @@ context**. Read only what the phase asks for.
 
 | # | Phase | Depends on | Status |
 |---|-------|------------|--------|
-| 00 | [Foundation](phases/00-foundation.md) | — | todo |
+| 00 | [Foundation](phases/00-foundation.md) | — | in progress |
 | 01 | [Engine core](phases/01-engine-core.md) | 00 | todo |
 | 02 | [Audio capture and files](phases/02-audio.md) | 01 | todo |
 | 03 | [Transcription](phases/03-transcription.md) | 01 | todo |
