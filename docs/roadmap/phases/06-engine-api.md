@@ -40,14 +40,14 @@ row tagged **06** in the API contract.
 
 ## Acceptance criteria
 
-- [ ] Every 06 row of the contract implemented; OpenAPI at `/docs` matches the contract shapes.
-- [ ] `TestClient` tests: start/pause/resume/stop lifecycle with fake session, 409 on second
+- [x] Every 06 row of the contract implemented; OpenAPI at `/docs` matches the contract shapes.
+- [x] `TestClient` tests: start/pause/resume/stop lifecycle with fake session, 409 on second
       start, 404 codes, settings masking, health with fake LLM availability.
-- [ ] WebSocket test: connect → initial `status`; fake session events arrive in order with the
+- [x] WebSocket test: connect → initial `status`; fake session events arrive in order with the
       envelope; disconnect does not break publishing.
-- [ ] Manual: `python -m vozata serve`, then start/stop via `curl` and watch events with a
+- [x] Manual: `python -m vozata serve`, then start/stop via `curl` and watch events with a
       WebSocket client (e.g. `python -m websockets ws://127.0.0.1:8765/ws`).
-- [ ] Coverage ≥ 80 %.
+- [x] Coverage ≥ 80 %.
 
 ## Tests
 
@@ -66,9 +66,9 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 ## Progress
 
 - **Branch:** `feature/06-engine-api`
-- **Status:** in progress
-- **Updated:** 2026-10-16 09:11
-- **Next step:** manual check: from engine/ run `../.venv/Scripts/python -m vozata serve`; `curl` /health, /devices, /settings, POST /sessions, pause/resume, stop; watch events with `python -m websockets ws://127.0.0.1:8765/ws`; record the results here.
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 09:15
+- **Next step:** open the PR (put the manual results below in its description) and merge.
 
 ### Steps
 
@@ -79,9 +79,9 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 - [x] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
       `settings` (GET) + tests — `134f808`
 - [x] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests — `134f808`
-- [x] `serve` command (uvicorn; refuses `0.0.0.0`) + tests
-- [ ] Manual: `python -m vozata serve`, start/stop with `curl`, events with a WebSocket client
-- [ ] Verify; tick acceptance criteria; set phase `done`
+- [x] `serve` command (uvicorn; refuses `0.0.0.0`) + tests — `21472c4`
+- [x] Manual: `python -m vozata serve`, start/stop with `curl`, events with a WebSocket client
+- [x] Verify; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
 
@@ -113,3 +113,17 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 - `GET /devices` uses `audio/catalog.py` (`WasapiCatalog`): every listing runs on its own
   short-lived `PortAudioThread`, never on the recording session's.
 - `serve` refuses `0.0.0.0`, `::`, `[::]` and an empty host (the API has no authentication).
+- **Manual check (2026-10-16)**: a script ran the real `python -m vozata serve`, called every
+  endpoint with httpx (the same requests `curl` sends) and listened on `/ws` with the
+  `websockets` client while a ~60 s Portuguese meeting played (TTS) and the USB mic recorded:
+  - `/health` 200 (RTX 3050 6 GB, `large-v3`, Ollama `qwen2.5:7b` reachable); `/devices` listed
+    both mics and both loopbacks with defaults; `/settings` 24 keys + schema.
+  - `POST /sessions` 201 → second start 409 `session_already_active` (localized) → pause 200 →
+    resume 200 → stop 202 `finalizing`; then `done` with mic/system/mixed WAVs, transcript (21
+    segments with labels `Me`/`Others`) and minutes (`has_minutes: true`, `GET .../minutes` 200);
+    unknown session 404 in the error envelope.
+  - WebSocket: first message `{"status": "idle"}`, then status `recording → paused → recording →
+    finalizing → done` (with the 1 s heartbeat), 21 `segment`, ~6 `level`/s per channel, one
+    `minutes_ready`.
+  - Found and fixed: finished sessions reported `ended_at - started_at` (finalization included)
+    as `duration_seconds`; `session.json` now stores the recorded length.
