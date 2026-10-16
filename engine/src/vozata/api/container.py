@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from vozata.api.session_manager import SessionManager
@@ -12,7 +12,7 @@ from vozata.api.ws import EventBroadcaster
 from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
-from vozata.ports import Localizer
+from vozata.ports import DocumentExporter, Localizer
 from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
 
@@ -41,3 +41,4 @@ class ApiContainer:
     llm_reachable: Callable[[], bool]
     regenerate_minutes: Callable[[str], None]  # runs in the background, then `minutes_ready`
     release_models: Callable[[], None] = lambda: None  # at shutdown (kept Whisper, phase 26)
+    exporters: Mapping[str, DocumentExporter] = field(default_factory=dict)  # by format (11)

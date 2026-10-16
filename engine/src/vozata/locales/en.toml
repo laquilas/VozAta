@@ -20,6 +20,7 @@ minutes_failed = "The minutes could not be generated ({reason}). The recording a
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
 
 [errors.api]
+unsupported_format = "Unsupported export format \"{format}\". Use one of: {allowed}."
 settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
@@ -95,3 +96,14 @@ system = "loopback device id (default: the default output's loopback)"
 list_devices = "list the audio devices and exit"
 minutes = "generate the minutes of a recorded session again"
 session_dir = "session folder, e.g. recordings/20261015_202358"
+
+[export]
+title = "Meeting of {date}"
+duration = "Duration: {value}"
+language = "Language: {value}"
+minutes = "Minutes"
+transcript = "Transcript"
+no_minutes = "No minutes were generated for this session."
+column_time = "Time"
+column_speaker = "Speaker"
+column_text = "Text"

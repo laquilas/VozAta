@@ -126,3 +126,17 @@ internal sealed class FakeShell : IShellService
 
     public void Open(string path) => Opened.Add(path);
 }
+
+/// <summary>Records saves; answers with <see cref="Path"/> (null = the user cancelled).</summary>
+internal sealed class FakeFileSaver : IFileSaver
+{
+    public string? Path { get; set; } = @"C:\Users\me\Documents\minutes.pdf";
+
+    public List<(string Name, string TypeName, string Extension, byte[] Content)> Saves { get; } = [];
+
+    public Task<string?> SaveAsync(string suggestedName, string typeName, string extension, byte[] content)
+    {
+        Saves.Add((suggestedName, typeName, extension, content));
+        return Task.FromResult(Path);
+    }
+}

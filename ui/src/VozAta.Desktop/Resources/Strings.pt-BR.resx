@@ -438,6 +438,48 @@
   <data name="SettingHelp_API_PORT" xml:space="preserve">
     <value>Porta do motor local. O aplicativo precisa usar a mesma porta.</value>
   </data>
+  <data name="ExportMarkdown" xml:space="preserve">
+    <value>Exportar Markdown</value>
+  </data>
+  <data name="ExportWord" xml:space="preserve">
+    <value>Exportar Word</value>
+  </data>
+  <data name="ExportPdf" xml:space="preserve">
+    <value>Exportar PDF</value>
+  </data>
+  <data name="ExportSaved" xml:space="preserve">
+    <value>Salvo em {0}</value>
+  </data>
+  <data name="FileTypeMarkdown" xml:space="preserve">
+    <value>Markdown</value>
+  </data>
+  <data name="FileTypeWord" xml:space="preserve">
+    <value>Documento do Word</value>
+  </data>
+  <data name="FileTypePdf" xml:space="preserve">
+    <value>Documento PDF</value>
+  </data>
+  <data name="Pause" xml:space="preserve">
+    <value>Pausar</value>
+  </data>
+  <data name="Resume" xml:space="preserve">
+    <value>Retomar</value>
+  </data>
+  <data name="TrayShow" xml:space="preserve">
+    <value>Mostrar o VozAta</value>
+  </data>
+  <data name="TrayQuit" xml:space="preserve">
+    <value>Sair</value>
+  </data>
+  <data name="TrayToolTip" xml:space="preserve">
+    <value>VozAta — {0}</value>
+  </data>
+  <data name="MinimizeToTray" xml:space="preserve">
+    <value>Minimizar para a bandeja do sistema</value>
+  </data>
+  <data name="DesktopPreferences" xml:space="preserve">
+    <value>Aplicativo</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Fechar</value>
   </data>

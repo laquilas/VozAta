@@ -17,11 +17,13 @@ dependencies = [
     "httpx",
     "fastapi",
     "uvicorn[standard]",
+    "python-docx",
+    "fpdf2",
 ]
 
 [project.optional-dependencies]
 cuda = ["nvidia-cublas-cu12", "nvidia-cudnn-cu12>=9,<10"]
-dev = ["pytest", "pytest-cov", "ruff"]
+dev = ["pytest", "pytest-cov", "ruff", "pypdf"]
 
 [tool.setuptools.dynamic]
 version = { attr = "vozata.__version__" }
@@ -30,7 +32,7 @@ version = { attr = "vozata.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-vozata = ["locales/*.toml"]
+vozata = ["locales/*.toml", "export/fonts/*"]
 
 [tool.ruff]
 line-length = 100

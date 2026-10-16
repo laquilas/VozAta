@@ -20,6 +20,7 @@ minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a tr
 model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."
 
 [errors.api]
+unsupported_format = "Formato de exportação não suportado: \"{format}\". Use um destes: {allowed}."
 settings_write_failed = "Não foi possível salvar o arquivo de configurações ({reason}). Feche programas que possam estar usando-o, como uma ferramenta de sincronização, e tente novamente."
 minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
 empty_transcript = "A sessão \"{id}\" não tem transcrição, então não há o que resumir."
@@ -95,3 +96,14 @@ system = "id do dispositivo de loopback (padrão: o loopback da saída padrão)"
 list_devices = "lista os dispositivos de áudio e sai"
 minutes = "gera novamente a ata de uma sessão gravada"
 session_dir = "pasta da sessão, por exemplo recordings/20261015_202358"
+
+[export]
+title = "Reunião de {date}"
+duration = "Duração: {value}"
+language = "Idioma: {value}"
+minutes = "Ata"
+transcript = "Transcrição"
+no_minutes = "Nenhuma ata foi gerada para esta sessão."
+column_time = "Hora"
+column_speaker = "Falante"
+column_text = "Texto"

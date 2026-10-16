@@ -42,7 +42,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IUiPreferences preferences,
         IClock clock,
         IUiTimer timer,
-        IShellService shell)
+        IShellService shell,
+        IFileSaver saver)
     {
         _client = client;
         _events = events;
@@ -53,9 +54,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _preferences = preferences;
         _timer = timer;
         Devices = new DevicesViewModel(client, preferences);
-        History = new HistoryViewModel(client, shell, localization);
+        History = new HistoryViewModel(client, shell, localization, saver);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);
+        Tray = new TrayViewModel(this, localization, preferences);
         Settings.Saved += OnSettingsSaved;
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
@@ -121,8 +123,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public int HandledEvents { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsRecording))]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand), nameof(StopCommand))]
+    [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsRecording), nameof(IsPaused), nameof(IsActivelyRecording), nameof(PauseResumeText))]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand), nameof(StopCommand), nameof(PauseResumeCommand))]
     public partial RecordingState State { get; private set; } = RecordingState.Idle;
 
     [ObservableProperty]
@@ -148,6 +150,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool IsRecording => State is RecordingState.Recording or RecordingState.Paused;
 
+    /// <summary>Paused: amber indicator, frozen timer, audio not transcribed.</summary>
+    public bool IsPaused => State == RecordingState.Paused;
+
+    /// <summary>Recording and not paused: red indicator.</summary>
+    public bool IsActivelyRecording => State == RecordingState.Recording;
+
+    public string PauseResumeText => _localization[IsPaused ? "Resume" : "Pause"];
+
     public string StatusText => _localization[$"State{State}"];
 
     public string EngineText => EngineStatus switch
@@ -162,6 +172,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public HealthViewModel Health { get; }
 
     public SettingsViewModel Settings { get; }
+
+    /// <summary>The system-tray menu (built into a tray icon by the composition root).</summary>
+    public TrayViewModel Tray { get; }
 
     /// <summary>The last save of the interface language (tests await it).</summary>
     public Task LanguageSave { get; private set; } = Task.CompletedTask;
@@ -252,6 +265,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool CanStart() => State == RecordingState.Idle && EngineStatus == EngineStatus.Connected;
 
     private bool CanStop() => IsRecording;
+
+    /// <summary>Pause while recording, resume while paused (the window button and the tray).</summary>
+    [RelayCommand(CanExecute = nameof(CanStop))]
+    private async Task PauseResumeAsync()
+    {
+        var resume = IsPaused;
+        try
+        {
+            if (resume)
+            {
+                await _client.ResumeSessionAsync(_stop.Token);
+            }
+            else
+            {
+                await _client.PauseSessionAsync(_stop.Token);
+            }
+
+            SetState(resume ? RecordingState.Recording : RecordingState.Paused);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            Notify(ErrorText(error));
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task StartAsync()
@@ -447,7 +484,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void OnStatus(StatusEvent status)
     {
-        if (status.DurationSeconds is { } seconds)
+        // The engine clock keeps running while paused (WAVs record silence); the display freezes
+        // and continues from the engine clock on resume, matching the transcript timestamps.
+        if (status.DurationSeconds is { } seconds && !(IsPaused && status.Status == "paused"))
         {
             Elapsed = TranscriptLine.FormatTime(seconds);
         }
@@ -549,6 +588,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         MicMeter.Label = _micLabel ?? _localization["SpeakerMic"];
         SystemMeter.Label = _systemLabel ?? _localization["SpeakerSystem"];
         OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(PauseResumeText));
         OnPropertyChanged(nameof(EngineText));
         Health.RefreshTexts();
     }

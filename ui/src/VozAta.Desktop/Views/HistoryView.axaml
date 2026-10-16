@@ -93,7 +93,15 @@
                           Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlaySystem]}" />
                   <Button Margin="0,0,8,4" Command="{Binding OpenFolderCommand}"
                           Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}" />
+                  <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="md"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportMarkdown]}" />
+                  <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="docx"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportWord]}" />
+                  <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="pdf"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportPdf]}" />
                 </WrapPanel>
+                <TextBlock Text="{Binding Message}" Foreground="#2E7D32" TextWrapping="Wrap"
+                           IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Regenerating]}"
                            FontStyle="Italic" Foreground="#E65100" IsVisible="{Binding IsBusy}" />
                 <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Loading]}"

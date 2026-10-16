@@ -31,6 +31,9 @@ public interface IEngineClient
 
     Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /sessions/{id}/export?format=</c>: <c>md</c>, <c>docx</c> or <c>pdf</c>.</summary>
+    Task<ExportedFile> ExportSessionAsync(string id, string format, CancellationToken cancellationToken = default);
+
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
     /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
@@ -101,6 +104,16 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);
+
+    public async Task<ExportedFile> ExportSessionAsync(
+        string id, string format, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Get, $"sessions/{Escape(id)}/export?format={Uri.EscapeDataString(format)}", null, cancellationToken);
+        var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var name = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+        return new ExportedFile(string.IsNullOrEmpty(name) ? $"{id}-minutes.{format}" : name, content);
+    }
 
     public Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>

@@ -16,8 +16,17 @@ public sealed partial class SessionDetailViewModel(
     IEngineClient client,
     IShellService shell,
     ILocalizationService localization,
+    IFileSaver saver,
     SessionSummary summary) : ObservableObject
 {
+    /// <summary>Export formats and the file-type name shown in the save dialog.</summary>
+    private static readonly Dictionary<string, string> ExportTypes = new()
+    {
+        ["md"] = "FileTypeMarkdown",
+        ["docx"] = "FileTypeWord",
+        ["pdf"] = "FileTypePdf",
+    };
+
     private IReadOnlyList<string> _files = [];
 
     public string Id => summary.Id;
@@ -43,6 +52,14 @@ public sealed partial class SessionDetailViewModel(
 
     [ObservableProperty]
     public partial string? Error { get; private set; }
+
+    /// <summary>Feedback such as "Saved to …".</summary>
+    [ObservableProperty]
+    public partial string? Message { get; private set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
+    public partial bool IsExporting { get; private set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenFolderCommand), nameof(OpenAudioCommand))]
@@ -127,6 +144,33 @@ public sealed partial class SessionDetailViewModel(
         {
             IsBusy = false;
             Error = ErrorText(error);
+        }
+    }
+
+    private bool CanExport(string? format) => !IsExporting && !IsLive && format is not null && ExportTypes.ContainsKey(format);
+
+    /// <summary>Download the session as <c>md</c>, <c>docx</c> or <c>pdf</c> and ask where to save it.</summary>
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private async Task ExportAsync(string? format)
+    {
+        Error = Message = null;
+        IsExporting = true;
+        try
+        {
+            var file = await client.ExportSessionAsync(Id, format!);
+            var path = await saver.SaveAsync(file.FileName, localization[ExportTypes[format!]], format!, file.Content);
+            if (path is not null)
+            {
+                Message = localization.Format("ExportSaved", path);
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException or IOException or UnauthorizedAccessException)
+        {
+            Error = error is EngineUnavailableException ? localization["EngineUnavailable"] : error.Message;
+        }
+        finally
+        {
+            IsExporting = false;
         }
     }
 

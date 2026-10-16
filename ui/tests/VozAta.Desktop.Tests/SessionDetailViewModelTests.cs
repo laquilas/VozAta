@@ -13,6 +13,7 @@ public sealed class SessionDetailViewModelTests
     private readonly FakeEngineClient _client = new();
     private readonly FakeShell _shell = new();
     private readonly LocalizationService _localization = new();
+    private readonly FakeFileSaver _saver = new();
 
     public SessionDetailViewModelTests()
     {
@@ -31,7 +32,7 @@ public sealed class SessionDetailViewModelTests
     private static SessionDetail Detail(IReadOnlyList<string> files) =>
         new(Id, "done", null, null, 75, "pt", true, files, Folder);
 
-    private SessionDetailViewModel Create(string status = "done") => new(_client, _shell, _localization, Summary(status));
+    private SessionDetailViewModel Create(string status = "done") => new(_client, _shell, _localization, _saver, Summary(status));
 
     [Fact]
     public async Task Loading_fills_the_transcript_and_the_minutes()
@@ -172,5 +173,57 @@ public sealed class SessionDetailViewModelTests
 
         Assert.Equal(Summary().StartedAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture), detail.Title);
         Assert.Equal(Id, detail.Id);
+    }
+
+    [Theory]
+    [InlineData("md", "Markdown")]
+    [InlineData("docx", "Word document")]
+    [InlineData("pdf", "PDF document")]
+    public async Task Export_downloads_the_format_and_saves_where_the_user_chooses(string format, string typeName)
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+
+        await detail.ExportCommand.ExecuteAsync(format);
+
+        Assert.Equal((Id, format), _client.Exports.Single());
+        var (name, type, extension, content) = _saver.Saves.Single();
+        Assert.Equal(($"{Id}-minutes.{format}", typeName, format), (name, type, extension));
+        Assert.Equal([1, 2, 3], content);
+        Assert.Equal(@"Saved to C:\Users\me\Documents\minutes.pdf", detail.Message);
+        Assert.False(detail.IsExporting);
+    }
+
+    [Fact]
+    public async Task A_cancelled_save_says_nothing()
+    {
+        _saver.Path = null;
+        var detail = Create();
+
+        await detail.ExportCommand.ExecuteAsync("pdf");
+
+        Assert.Null(detail.Message);
+        Assert.Null(detail.Error);
+    }
+
+    [Fact]
+    public async Task Export_errors_are_shown()
+    {
+        _client.ExportError = FakeEngineClient.ApiError("session_not_found", "Session was not found.");
+        var detail = Create();
+
+        await detail.ExportCommand.ExecuteAsync("docx");
+
+        Assert.Equal("Session was not found.", detail.Error);
+        Assert.Empty(_saver.Saves);
+    }
+
+    [Fact]
+    public void Live_sessions_and_unknown_formats_cannot_be_exported()
+    {
+        Assert.False(Create(status: "recording").ExportCommand.CanExecute("pdf"));
+        Assert.False(Create().ExportCommand.CanExecute("odt"));
+        Assert.False(Create().ExportCommand.CanExecute(null));
+        Assert.True(Create().ExportCommand.CanExecute("md"));
     }
 }

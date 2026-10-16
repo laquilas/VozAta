@@ -14,7 +14,8 @@ public sealed record UiPreferencesData(
     DeviceChoice? Mic = null,
     DeviceChoice? Loopback = null,
     double? WindowWidth = null,
-    double? WindowHeight = null);
+    double? WindowHeight = null,
+    bool MinimizeToTray = false);
 
 public interface IUiPreferences
 {

@@ -25,6 +25,9 @@ from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
 from vozata.domain import AudioChunk, Channel, ChunkMode, ConversationLanguage, MixMode
+from vozata.export.docx import DocxExporter
+from vozata.export.markdown import MarkdownExporter
+from vozata.export.pdf import PdfExporter
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
@@ -32,6 +35,7 @@ from vozata.minutes.generator import MinutesGenerator
 from vozata.ports import (
     AudioMixer,
     Chunker,
+    DocumentExporter,
     LanguageModel,
     Localizer,
     SessionObserver,
@@ -73,6 +77,11 @@ CHUNKERS: dict[ChunkMode, Callable[[Settings, Channel, Callable[[AudioChunk], No
     ChunkMode.FIXED: lambda settings, channel, on_chunk: FixedWindowChunker(
         channel, settings.chunk_seconds, settings.sample_rate, on_chunk
     ),
+}
+EXPORTERS: dict[str, Callable[[], DocumentExporter]] = {
+    "md": MarkdownExporter,
+    "docx": DocxExporter,
+    "pdf": PdfExporter,
 }
 MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
@@ -235,4 +244,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         llm_reachable=llm_reachable,
         regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
         release_models=shared.release if shared is not None else lambda: None,
+        exporters={name: build() for name, build in EXPORTERS.items()},
     )
