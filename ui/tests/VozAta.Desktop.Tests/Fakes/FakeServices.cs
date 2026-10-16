@@ -40,6 +40,16 @@ internal sealed class FakeEngineProcess : IEngineProcess
         Task.FromResult(Result);
 
     public void StopIfStarted() => Stops++;
+
+    public EngineRestartResult RestartResult { get; set; } = EngineRestartResult.Restarted;
+
+    public int Restarts { get; private set; }
+
+    public Task<EngineRestartResult> RestartAsync(CancellationToken cancellationToken = default)
+    {
+        Restarts++;
+        return Task.FromResult(RestartResult);
+    }
 }
 
 internal sealed class FakeDialogs : IDialogService

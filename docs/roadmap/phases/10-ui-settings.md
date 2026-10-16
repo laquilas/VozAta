@@ -60,8 +60,8 @@ Vocabulary editor (19), template selection (20).
 
 - **Branch:** `feature/10-ui-settings`
 - **Status:** in progress
-- **Updated:** 2026-10-16 17:30
-- **Next step:** UI client: `UpdateSettingsAsync` (`PUT /settings`, `SettingsUpdateResult`, `EngineApiException.Key`), `SettingSchema.Group/Applies`, `IEngineProcess.RestartAsync`; tests in `EngineClientTests.cs` / `EngineProcessTests.cs`
+- **Updated:** 2026-10-16 17:50
+- **Next step:** `ViewModels/HealthViewModel.cs` (GPU / STT / LLM texts, `CheckAgainCommand`, errors) with `HealthViewModelTests.cs`; `MainViewModel` status-bar texts delegate to it
 
 ### Steps
 
@@ -69,8 +69,8 @@ Vocabulary editor (19), template selection (20).
 - [x] Schema: `group` and `applies` per key — `06fe8ca`
 - [x] Engine: `SettingsFile` (validate, persist with `set_key`, secrets mask, restart keys) +
       `PUT /settings` (422 `invalid_setting` with `key`); sessions / minutes / LLM check read the
-      current settings — this commit
-- [ ] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync`
+      current settings — `ba6ed5e`
+- [x] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync` — this commit
 - [ ] `HealthViewModel` (status bar + settings page, "Check again")
 - [ ] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt)
 - [ ] Localized label and help for every key (en / pt-BR / es)

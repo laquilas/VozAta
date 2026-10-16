@@ -32,15 +32,22 @@ public interface IEngineClient
     Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default);
 
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
+    Task<SettingsUpdateResult> UpdateSettingsAsync(
+        IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default);
 }
 
 /// <summary>The engine answered with the error envelope; <see cref="Exception.Message"/> is localized.</summary>
-public sealed class EngineApiException(HttpStatusCode status, string code, string message)
+public sealed class EngineApiException(HttpStatusCode status, string code, string message, string? key = null)
     : Exception(message)
 {
     public HttpStatusCode Status { get; } = status;
 
     public string Code { get; } = code;
+
+    /// <summary>The rejected setting for <c>invalid_setting</c>.</summary>
+    public string? Key { get; } = key;
 }
 
 /// <summary>The engine could not be reached (not running, starting, or crashed).</summary>
@@ -95,6 +102,10 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);
 
+    public Task<SettingsUpdateResult> UpdateSettingsAsync(
+        IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>
+        SendAsync<SettingsUpdateResult>(HttpMethod.Put, "settings", new { values }, cancellationToken);
+
     private async Task<T> SendAsync<T>(
         HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
@@ -142,7 +153,7 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
             var envelope = JsonSerializer.Deserialize<ErrorEnvelope>(text, EngineJson.Options);
             if (envelope?.Error is { } error)
             {
-                return new EngineApiException(response.StatusCode, error.Code, error.Message);
+                return new EngineApiException(response.StatusCode, error.Code, error.Message, error.Key);
             }
         }
         catch (JsonException)
@@ -158,5 +169,5 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     private sealed record ErrorEnvelope(ErrorBody? Error);
 
-    private sealed record ErrorBody(string Code, string Message);
+    private sealed record ErrorBody(string Code, string Message, string? Key);
 }

@@ -124,7 +124,35 @@ internal sealed class FakeEngineClient : IEngineClient
         Calls.Add("settings");
         var values = SettingValues.ToDictionary(
             pair => pair.Key, pair => JsonSerializer.SerializeToElement(pair.Value));
-        return Task.FromResult(new EngineSettings(values, []));
+        return Task.FromResult(new EngineSettings(values, Schema));
+    }
+
+    public List<IReadOnlyDictionary<string, object?>> Updates { get; } = [];
+
+    public List<SettingSchema> Schema { get; } = [];
+
+    /// <summary>Keys the next update reports as needing a restart.</summary>
+    public List<string> RestartKeys { get; } = [];
+
+    public Exception? UpdateError { get; set; }
+
+    public Task<SettingsUpdateResult> UpdateSettingsAsync(
+        IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("update-settings");
+        Updates.Add(values);
+        if (UpdateError is not null)
+        {
+            return Task.FromException<SettingsUpdateResult>(UpdateError);
+        }
+
+        foreach (var (key, value) in values)
+        {
+            SettingValues[key] = value;
+        }
+
+        var saved = SettingValues.ToDictionary(pair => pair.Key, pair => JsonSerializer.SerializeToElement(pair.Value));
+        return Task.FromResult(new SettingsUpdateResult(saved, [.. RestartKeys.Where(values.ContainsKey)]));
     }
 
     public static EngineApiException ApiError(string code, string message) =>

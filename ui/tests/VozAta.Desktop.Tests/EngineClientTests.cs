@@ -183,4 +183,48 @@ public sealed class EngineClientTests
         {
             Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
         };
+
+    [Fact]
+    public async Task Settings_updates_are_put_and_report_restart_keys()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"values": {"CHUNK_SECONDS": 8.0, "WHISPER_MODEL": "medium"}, "restart_required": ["WHISPER_MODEL"]}
+            """);
+
+        var result = await new EngineClient(handler.Client())
+            .UpdateSettingsAsync(new Dictionary<string, object?> { ["CHUNK_SECONDS"] = 8, ["MIC_LABEL"] = null });
+
+        var (method, path, body) = handler.Requests.Single();
+        Assert.Equal((HttpMethod.Put, "/settings"), (method, path));
+        Assert.Equal("""{"values":{"CHUNK_SECONDS":8,"MIC_LABEL":null}}""", body);
+        Assert.Equal(["WHISPER_MODEL"], result.RestartRequired);
+        Assert.Equal(8.0, result.Values["CHUNK_SECONDS"].GetDouble());
+    }
+
+    [Fact]
+    public async Task An_invalid_setting_error_names_the_key()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"error": {"code": "invalid_setting", "message": "Invalid value", "key": "CHUNK_SECONDS"}}
+            """, (HttpStatusCode)422);
+
+        var error = await Assert.ThrowsAsync<EngineApiException>(() => new EngineClient(handler.Client())
+            .UpdateSettingsAsync(new Dictionary<string, object?> { ["CHUNK_SECONDS"] = 500 }));
+
+        Assert.Equal(("invalid_setting", "CHUNK_SECONDS"), (error.Code, error.Key));
+    }
+
+    [Fact]
+    public void Schema_entries_know_when_they_apply()
+    {
+        var schema = System.Text.Json.JsonSerializer.Deserialize<SettingSchema>(
+            """{"key": "WHISPER_MODEL", "type": "string", "default": "large-v3-turbo", "choices": null, "secret": false, "group": "transcription", "applies": "restart"}""",
+            EngineJson.Options)!;
+        var old = System.Text.Json.JsonSerializer.Deserialize<SettingSchema>(
+            """{"key": "MIX_MODE", "type": "choice", "default": "mono", "choices": ["mono"], "secret": false}""",
+            EngineJson.Options)!;
+
+        Assert.Equal(("transcription", true), (schema.Group, schema.NeedsRestart));
+        Assert.Equal(("general", false), (old.Group, old.NeedsRestart));
+    }
 }
