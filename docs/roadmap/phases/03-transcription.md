@@ -69,14 +69,14 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:14
-- **Next step:** TDD `transcription/language_lock.py`: `tests/transcription/test_language_lock.py` (fixed passthrough, auto returns None until ≥ 3 s of speech, majority lock, single callback, unsupported languages ignored), see it fail, then implement.
+- **Updated:** 2026-10-15 23:15
+- **Next step:** TDD `transcription/stitcher.py`: write `tests/transcription/contract.py` and `test_stitcher.py` (every case in the acceptance criteria), see them fail, then implement `CarryOverStitcher` exactly as architecture §7 and `SegmentIds`.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `ff41b35`
-- [x] Config keys owned by 03 (`config.py`; `.env.example` already lists them)
-- [ ] `transcription/language_lock.py` (`LanguageLock`)
+- [x] Config keys owned by 03 (`config.py`; `.env.example` already lists them) — `3cf51fa`
+- [x] `transcription/language_lock.py` (`LanguageLock`)
 - [ ] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite
 - [ ] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`)
 - [ ] `transcription/worker.py` (`TranscriptionWorker`)
