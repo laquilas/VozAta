@@ -36,11 +36,11 @@ and silence never reaches the GPU. Origin: [optimizations.md](../optimizations.m
 
 ## Acceptance criteria
 
-- [ ] Tests with a fake detector: cut after the pause, forced cut at the maximum, leading silence
+- [x] Tests with a fake detector: cut after the pause, forced cut at the maximum, leading silence
       dropped with the correct `start`, blip merging, pause/resume flush, `flush()` at stop.
-- [ ] Manual (phase 05 TTS meeting + live speech): compare `fixed` vs `vad` — speech-end-to-line
+- [x] Manual (phase 05 TTS meeting + live speech): compare `fixed` vs `vad` — speech-end-to-line
       latency and WER on the TTS script; record both in the PR. `vad` must not be worse on WER.
-- [ ] Coverage ≥ 80 %.
+- [x] Coverage ≥ 80 %.
 
 ## Tests
 
@@ -58,9 +58,9 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
 ## Progress
 
 - **Branch:** `feature/27-vad-segmentation`
-- **Status:** in progress
-- **Updated:** 2026-10-16 18:40
-- **Next step:** manual comparison: play the phase 05 TTS meeting on the speakers and record it once with `CHUNK_MODE=fixed` and once with `CHUNK_MODE=vad` (env overrides from memory); compare WER against the script and speech-end-to-line latency; record both in Progress and the PR
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 19:00
+- **Next step:** open the PR (combined draft in `__pr__/feature-27-vad-segmentation/`)
 
 ### Steps
 
@@ -69,8 +69,8 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
       `VAD_MIN_CHUNK_SECONDS`, `VAD_MAX_CHUNK_SECONDS`, `VAD_SPEECH_PAD_MS` — `21963c2`
 - [x] Ports `Chunker` and `SpeechDetector`; `VadChunker` (fake-detector tests) — `8fa408e`
 - [x] `AudioChunk.complete`; the stitcher commits every word of a complete chunk — `59ea83e`
-- [x] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory — this commit
-- [ ] Manual: TTS meeting `fixed` vs `vad` (latency, WER); acceptance criteria
+- [x] `SileroSpeechDetector`, `CHUNKERS` registry, `CapturePipeline` builds chunkers through a factory — `9cee222`
+- [x] Manual: TTS meeting `fixed` vs `vad` (latency, WER); acceptance criteria — this commit
 
 ### Decisions and notes
 
@@ -88,3 +88,22 @@ Per-channel thresholds (only if the manual check shows loopback music being trea
   utterance, or leaves at the forced cut (`VAD_MAX_CHUNK_SECONDS`) / `flush()` if nobody speaks.
 - Silero (faster-whisper 1.2.1 `get_speech_timestamps`) is stateless per call and runs on CPU with
   one ONNX thread, so one shared model serves both channels.
+- **Manual comparison (2026-10-16, RTX 6 GB, `large-v3`, `int8_float16`, language `pt`).** The
+  phase 05 script (9 sentences, Windows TTS voice Maria) was rebuilt as a 68.8 s meeting with
+  0.65–1.5 s pauses between sentences and a −60 dBFS noise floor, then fed in 0.1 s blocks through
+  the real chunker + Silero + stitcher + Whisper, one simulated worker (latency = commit time −
+  end of the segment's last word):
+
+  | Mode | WER | Chunks | Audio sent to Whisper | Latency median / max |
+  |------|-----|--------|-----------------------|----------------------|
+  | `fixed` (5 s) | 6.4 % | 14 | 126.0 s | 6.14 s / 8.55 s |
+  | `vad` | **0.0 %** | 10 | **51.1 s** | **2.63 s / 2.90 s** |
+
+  `fixed` produced a stray "O" fragment and a duplicated "Até a próxima!" at the final flush;
+  `vad` produced one line per sentence. Live check: `python -m vozata record --language pt` with
+  `CHUNK_MODE=vad` while the same meeting played on the speakers (WASAPI loopback + USB mic): all
+  9 sentences appeared during playback, word-for-word; the silent mic produced no Whisper calls.
+  `CHUNK_MODE=vad` stays the default.
+- Seen during the checks, not changed here: the fixed-window flush can duplicate the last words
+  (voiced-tail cut at the end of the audio); the CLI's stop message mentions minutes even with
+  `GENERATE_MINUTES=false`.
