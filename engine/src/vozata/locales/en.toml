@@ -17,6 +17,8 @@ mix_failed = "mixed.wav could not be created ({reason}). The microphone and syst
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
 
 [errors.api]
+minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
+empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
 not_found = "This endpoint does not exist."
 method_not_allowed = "This method is not allowed on this endpoint."
 http_error = "The request failed with HTTP status {status}."
@@ -55,6 +57,8 @@ action_items = "Action items"
 open_issues = "Open issues"
 
 [cli]
+serving = "Engine API listening on {url} (Ctrl+C to stop)."
+serve_public_host = "Refusing to listen on {host}: the engine API has no authentication. Use 127.0.0.1 or localhost in API_HOST."
 loading_model = "Loading the speech recognition model..."
 recording = "Recording to {folder}"
 controls = "Press p + Enter to pause or resume, Ctrl+C to stop."
@@ -77,6 +81,7 @@ loopbacks = "System audio (loopback):"
 default = "default"
 
 [cli.help]
+serve = "run the local HTTP + WebSocket API used by the desktop app"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"

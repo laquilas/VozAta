@@ -5,9 +5,16 @@ New providers are added to a registry here; orchestrators never change.
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable, Mapping
 
+from vozata.api.container import ApiContainer
+from vozata.api.minutes_job import MinutesJob
+from vozata.api.session_manager import SessionManager, StartOptions
+from vozata.api.system_info import query_gpu
+from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
+from vozata.audio.catalog import WasapiCatalog
 from vozata.audio.clock import SessionClock
 from vozata.audio.devices import DeviceInfo, default_input, default_loopback, find_device
 from vozata.audio.mixer import MonoMixer, StereoMixer
@@ -125,3 +132,40 @@ def _devices(
         lambda: default_loopback(pa) if system_device is None else find_device(system_device, pa)
     )
     return {Channel.MIC: mic, Channel.SYSTEM: system}
+
+
+def build_api_container(settings: Settings) -> ApiContainer:
+    """Everything `api.app.create_app` needs, wired with the real providers."""
+    localizer = build_localizer(settings)
+    labeler = build_labeler(settings, localizer)
+    store = build_store(settings)
+    broadcaster = EventBroadcaster()
+
+    def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
+        return build_session(
+            settings,
+            observer,
+            language=options.language,
+            mic_device=options.mic_device,
+            system_device=options.system_device,
+        )
+
+    language_model = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
+    return ApiContainer(
+        settings=settings,
+        localizer=localizer,
+        labeler=labeler,
+        store=store,
+        broadcaster=broadcaster,
+        manager=SessionManager(session_factory, store, broadcaster, labeler),
+        devices=WasapiCatalog(),
+        gpu_info=functools.cache(query_gpu),  # the GPU does not change while running
+        llm_reachable=language_model.is_available,
+        regenerate_minutes=MinutesJob(
+            store,
+            lambda: build_minutes_generator(settings, localizer),
+            labeler,
+            broadcaster,
+            localizer,
+        ),
+    )

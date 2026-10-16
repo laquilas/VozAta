@@ -67,8 +67,8 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 
 - **Branch:** `feature/06-engine-api`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:08
-- **Next step:** add `bootstrap.build_api_container(settings)` (real devices on a PortAudio thread, GPU via nvidia-smi, Ollama reachability, background minutes regeneration publishing `minutes_ready`/`error`) and the `serve` command in `__main__.py` (uvicorn on API_HOST:API_PORT, refuse 0.0.0.0) with tests.
+- **Updated:** 2026-10-16 09:11
+- **Next step:** manual check: from engine/ run `../.venv/Scripts/python -m vozata serve`; `curl` /health, /devices, /settings, POST /sessions, pause/resume, stop; watch events with `python -m websockets ws://127.0.0.1:8765/ws`; record the results here.
 
 ### Steps
 
@@ -77,9 +77,9 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 - [x] `api/ws.py` (`EventBroadcaster`) + tests — `82005b0`
 - [x] `api/session_manager.py` (`SessionManager`) + tests — `69b6ff5`
 - [x] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
-      `settings` (GET) + tests
-- [x] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests
-- [ ] `serve` command (uvicorn; refuses `0.0.0.0`) + tests
+      `settings` (GET) + tests — `134f808`
+- [x] Routes `sessions` (start, pause, resume, stop, list, detail, transcript, minutes) + tests — `134f808`
+- [x] `serve` command (uvicorn; refuses `0.0.0.0`) + tests
 - [ ] Manual: `python -m vozata serve`, start/stop with `curl`, events with a WebSocket client
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
@@ -107,3 +107,9 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
   (code from `SessionStartError`), 500 `invalid_configuration`.
 - `SessionStore.load_transcript_with_source` gives the transcript endpoint its `source`.
 - `OllamaLanguageModel.is_available` now uses a 3 s timeout (it backs `GET /health`).
+- `minutes/session_minutes.py` (`write_session_minutes`) is shared by the CLI `minutes` command and
+  `POST /sessions/{id}/minutes` (`api/minutes_job.py`, background thread, `minutes_ready` or a
+  localized `error` event with code `minutes_failed` / `empty_transcript`).
+- `GET /devices` uses `audio/catalog.py` (`WasapiCatalog`): every listing runs on its own
+  short-lived `PortAudioThread`, never on the recording session's.
+- `serve` refuses `0.0.0.0`, `::`, `[::]` and an empty host (the API has no authentication).

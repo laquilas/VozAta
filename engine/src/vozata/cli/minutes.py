@@ -7,9 +7,9 @@ from pathlib import Path
 
 from vozata.cli.console import ConsoleObserver
 from vozata.config import Settings
-from vozata.domain import ConversationLanguage
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.session_minutes import EmptyTranscriptError, write_session_minutes
 from vozata.ports import LanguageModelError, Localizer
 from vozata.storage.session_store import SessionNotFoundError, SessionStore
 
@@ -26,23 +26,17 @@ def run_minutes(
     t = localizer.t
     folder = session_dir.resolve()
     store = SessionStore(folder.parent)
+    generator = build_generator(settings, localizer)
     try:
-        meta = store.read_meta(folder.name)
+        path = write_session_minutes(store, folder.name, generator, labeler)
     except SessionNotFoundError:
         console.say(t("cli.session_not_found", folder=folder))
         return 1
-    segments = store.load_transcript(folder.name)
-    if not segments:
+    except EmptyTranscriptError:
         console.say(t("cli.empty_transcript", folder=folder))
         return 1
-    language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
-    generator = build_generator(settings, localizer)
-    try:
-        minutes = generator.generate(segments, labeler, language)
     except LanguageModelError as error:
         console.say(t("cli.minutes_failed", reason=error))
         return 1
-    path = store.paths(folder.name).minutes_md
-    path.write_text(minutes + "\n", encoding="utf-8", newline="\n")
     console.say(t("cli.minutes_written", path=path))
     return 0

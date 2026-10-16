@@ -17,6 +17,8 @@ mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas d
 minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
 
 [errors.api]
+minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
+empty_transcript = "La sesión \"{id}\" no tiene transcripción, así que no hay nada que resumir."
 not_found = "Este endpoint no existe."
 method_not_allowed = "Este método no está permitido en este endpoint."
 http_error = "La solicitud falló con el estado HTTP {status}."
@@ -55,6 +57,8 @@ action_items = "Elementos de acción"
 open_issues = "Asuntos pendientes"
 
 [cli]
+serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
+serve_public_host = "No se escuchará en {host}: la API del motor no tiene autenticación. Usa 127.0.0.1 o localhost en API_HOST."
 loading_model = "Cargando el modelo de reconocimiento de voz..."
 recording = "Grabando en {folder}"
 controls = "Pulsa p + Intro para pausar o reanudar, Ctrl+C para detener."
@@ -77,6 +81,7 @@ loopbacks = "Audio del sistema (loopback):"
 default = "predeterminado"
 
 [cli.help]
+serve = "ejecuta la API HTTP + WebSocket local que usa la aplicación de escritorio"
 description = "Transcripción de reuniones casi en tiempo real y generación de actas."
 record = "graba el micrófono y el audio del sistema con transcripción en vivo"
 language = "idioma hablado en la reunión (predeterminado: TRANSCRIPTION_LANGUAGE)"
