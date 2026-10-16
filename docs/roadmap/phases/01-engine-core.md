@@ -66,13 +66,13 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 - **Branch:** `feature/01-engine-core`
 - **Status:** in progress
-- **Updated:** 2026-10-16 00:30
-- **Next step:** TDD `domain.py`: write `tests/test_domain.py` (enum values, `TranscriptSegment` jsonl round trip), see it fail, then implement the domain types from architecture §4.
+- **Updated:** 2026-10-15 22:50
+- **Next step:** TDD `ports.py`: write `tests/fakes.py` and `tests/test_ports.py` (each fake satisfies its `@runtime_checkable` port), see it fail, then add the seven ports and exclude `...` lines from coverage.
 
 ### Steps
 
-- [x] Start phase: status `in progress`, Progress section
-- [ ] `domain.py` + `tests/test_domain.py` (jsonl round trip)
+- [x] Start phase: status `in progress`, Progress section — `7e96b07`
+- [x] `domain.py` + `tests/test_domain.py` (jsonl round trip)
 - [ ] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies
 - [ ] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests
 - [ ] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
