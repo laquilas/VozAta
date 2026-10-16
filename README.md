@@ -24,11 +24,15 @@ local LLM.
 
 ## Architecture
 
-```
-┌────────────────────────┐   HTTP + WebSocket   ┌──────────────────────────────────────┐
-│ Desktop UI (Avalonia,  │ ───────────────────▶ │ Engine (Python)                      │
-│ C# / .NET)             │ ◀─────────────────── │ capture → STT → transcript → minutes │
-└────────────────────────┘    live events       └──────────────────────────────────────┘
+```mermaid
+flowchart LR
+  UI["Desktop UI<br/>(Avalonia, C# / .NET)"]
+  subgraph Engine["Engine (Python)"]
+    direction LR
+    CAP[Audio capture<br/>mic + system] --> STT[Speech-to-text] --> TR[Transcript] --> MIN[Minutes<br/>local LLM]
+  end
+  UI -- "HTTP commands" --> Engine
+  Engine -- "WebSocket live events" --> UI
 ```
 
 - **`engine/`**: a Python engine that does the audio capture, speech-to-text, minutes generation,
