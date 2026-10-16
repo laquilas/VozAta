@@ -60,14 +60,13 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 
 - **Branch:** `feature/26-capture-first`
 - **Status:** in progress
-- **Updated:** 2026-10-16 19:30
-- **Next step:** add `WHISPER_KEEP_LOADED` (`false`) to `config.py`, `settings_fields.py`,
-  `.env.example` with tests
+- **Updated:** 2026-10-16 19:40
+- **Next step:** capture first: `SessionObserver.on_model_loading` (ports, fakes, console, API observer stub), `TranscriptionWorker` loads stitchers on its thread, `CapturePipeline` takes the transcriber factory, `RecordingSession.start` reports `recording` before the load; tests in `tests/test_session.py`, `tests/transcription/test_worker.py`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] Config: `WHISPER_KEEP_LOADED`
+- [x] Config: `WHISPER_KEEP_LOADED` — this commit
 - [ ] Capture first: sources open and `recording` is reported before the transcriber loads; the
       worker loads it on its thread (`SessionObserver.on_model_loading`), queued chunks are
       transcribed afterwards; a failed load reports `model_failed` and keeps recording WAVs; CLI

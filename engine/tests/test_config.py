@@ -401,3 +401,11 @@ def test_invalid_segmentation_values_raise(key: str, value: str) -> None:
         load_settings(env={key: value})
 
     assert caught.value.key == key
+
+
+def test_whisper_keep_loaded_defaults_to_false_and_accepts_booleans() -> None:
+    assert load_settings(env={}).whisper_keep_loaded is False
+    assert load_settings(env={"WHISPER_KEEP_LOADED": "true"}).whisper_keep_loaded is True
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"WHISPER_KEEP_LOADED": "sometimes"})
+    assert caught.value.key == "WHISPER_KEEP_LOADED"
