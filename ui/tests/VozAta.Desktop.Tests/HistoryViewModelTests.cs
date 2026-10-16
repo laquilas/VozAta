@@ -14,7 +14,7 @@ public sealed class HistoryViewModelTests
     private static SessionSummary Session(int day, string status = "done", bool minutes = true, string? language = "pt") =>
         new($"session_{day:000}", status, new DateTimeOffset(2026, 9, 30, 9, 0, 0, TimeSpan.Zero).AddDays(day), null, 3725.6, language, minutes);
 
-    private HistoryViewModel Create() => new(_client, _shell, _localization);
+    private HistoryViewModel Create() => new(_client, _shell, _localization, new FakeFileSaver());
 
     private void AddSessions(int count)
     {

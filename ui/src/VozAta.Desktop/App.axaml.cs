@@ -68,6 +68,7 @@ public partial class App : Application
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IUiTimer, AvaloniaUiTimer>();
         services.AddSingleton<IShellService, ShellService>();
+        services.AddSingleton<IFileSaver>(_ => new AvaloniaFileSaver(desktop));
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

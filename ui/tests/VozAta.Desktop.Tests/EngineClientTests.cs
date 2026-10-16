@@ -227,4 +227,34 @@ public sealed class EngineClientTests
         Assert.Equal(("transcription", true), (schema.Group, schema.NeedsRestart));
         Assert.Equal(("general", false), (old.Group, old.NeedsRestart));
     }
+
+    [Fact]
+    public async Task Exports_download_bytes_with_the_engine_file_name()
+    {
+        var handler = new FakeHttpHandler(_ =>
+        {
+            var content = new ByteArrayContent([0x25, 0x50, 0x44, 0x46]);
+            content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "\"20261015_202358-minutes.pdf\"",
+            };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+        });
+
+        var file = await new EngineClient(handler.Client()).ExportSessionAsync("20261015_202358", "pdf");
+
+        Assert.Equal("/sessions/20261015_202358/export?format=pdf", handler.Requests.Single().Path);
+        Assert.Equal("20261015_202358-minutes.pdf", file.FileName);
+        Assert.Equal([0x25, 0x50, 0x44, 0x46], file.Content);
+    }
+
+    [Fact]
+    public async Task An_export_without_a_file_name_gets_a_default_one()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1]) });
+
+        var file = await new EngineClient(handler.Client()).ExportSessionAsync("s1", "md");
+
+        Assert.Equal("s1-minutes.md", file.FileName);
+    }
 }

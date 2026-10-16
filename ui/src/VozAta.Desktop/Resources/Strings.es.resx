@@ -438,6 +438,27 @@
   <data name="SettingHelp_API_PORT" xml:space="preserve">
     <value>Puerto del motor local. La aplicación debe usar el mismo puerto.</value>
   </data>
+  <data name="ExportMarkdown" xml:space="preserve">
+    <value>Exportar Markdown</value>
+  </data>
+  <data name="ExportWord" xml:space="preserve">
+    <value>Exportar Word</value>
+  </data>
+  <data name="ExportPdf" xml:space="preserve">
+    <value>Exportar PDF</value>
+  </data>
+  <data name="ExportSaved" xml:space="preserve">
+    <value>Guardado en {0}</value>
+  </data>
+  <data name="FileTypeMarkdown" xml:space="preserve">
+    <value>Markdown</value>
+  </data>
+  <data name="FileTypeWord" xml:space="preserve">
+    <value>Documento de Word</value>
+  </data>
+  <data name="FileTypePdf" xml:space="preserve">
+    <value>Documento PDF</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Cerrar</value>
   </data>

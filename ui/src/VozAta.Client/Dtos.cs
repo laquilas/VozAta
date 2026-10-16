@@ -79,6 +79,9 @@ public sealed record Transcript(string Source, IReadOnlyList<Segment> Segments);
 
 public sealed record Minutes(string Markdown);
 
+/// <summary>A downloaded export: the engine's file name and the bytes.</summary>
+public sealed record ExportedFile(string FileName, byte[] Content);
+
 public sealed record SettingSchema(
     string Key,
     string Type,

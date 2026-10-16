@@ -438,6 +438,27 @@
   <data name="SettingHelp_API_PORT" xml:space="preserve">
     <value>Port of the local engine. The desktop app must use the same port.</value>
   </data>
+  <data name="ExportMarkdown" xml:space="preserve">
+    <value>Export Markdown</value>
+  </data>
+  <data name="ExportWord" xml:space="preserve">
+    <value>Export Word</value>
+  </data>
+  <data name="ExportPdf" xml:space="preserve">
+    <value>Export PDF</value>
+  </data>
+  <data name="ExportSaved" xml:space="preserve">
+    <value>Saved to {0}</value>
+  </data>
+  <data name="FileTypeMarkdown" xml:space="preserve">
+    <value>Markdown</value>
+  </data>
+  <data name="FileTypeWord" xml:space="preserve">
+    <value>Word document</value>
+  </data>
+  <data name="FileTypePdf" xml:space="preserve">
+    <value>PDF document</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>

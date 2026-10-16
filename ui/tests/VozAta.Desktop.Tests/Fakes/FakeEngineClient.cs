@@ -113,6 +113,18 @@ internal sealed class FakeEngineClient : IEngineClient
             ? Task.FromResult(new Minutes(markdown))
             : Task.FromException<Minutes>(new EngineApiException(HttpStatusCode.NotFound, "minutes_not_found", "No minutes yet."));
 
+    public List<(string Id, string Format)> Exports { get; } = [];
+
+    public Exception? ExportError { get; set; }
+
+    public Task<ExportedFile> ExportSessionAsync(string id, string format, CancellationToken cancellationToken = default)
+    {
+        Exports.Add((id, format));
+        return ExportError is null
+            ? Task.FromResult(new ExportedFile($"{id}-minutes.{format}", [1, 2, 3]))
+            : Task.FromException<ExportedFile>(ExportError);
+    }
+
     public Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default)
     {
         Regenerated.Add(id);

@@ -64,8 +64,8 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 
 - **Branch:** `feature/11-export-tray-pause`
 - **Status:** in progress
-- **Updated:** 2026-10-16 21:15
-- **Next step:** UI export: `IEngineClient.ExportSessionAsync(id, format)` (bytes + file name), `IFileSaver` (Avalonia `StorageProvider` save dialog) and export commands for md / docx / pdf in `SessionDetailViewModel` with tests
+- **Updated:** 2026-10-16 21:40
+- **Next step:** UI pause / resume: `MainViewModel` Pause / Resume commands (`POST /sessions/current/pause|resume`), amber Paused indicator, elapsed time frozen while paused; one toggle button next to Stop; tests in `PauseResumeTests.cs`
 
 ### Steps
 
@@ -73,8 +73,8 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 - [x] `DocumentExporter` port + Markdown exporter — `6a627f2`
 - [x] DOCX exporter (`python-docx`) — `40f139a`
 - [x] PDF exporter (`fpdf2`, bundled DejaVu Sans + license) — `4615620`
-- [x] `EXPORTERS` registry + `GET /sessions/{id}/export?format=` — this commit
-- [ ] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail
+- [x] `EXPORTERS` registry + `GET /sessions/{id}/export?format=` — `c2a8675`
+- [x] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail — this commit
 - [ ] UI pause / resume: button next to Stop, amber paused state, frozen timer
 - [ ] UI tray: `TrayViewModel` (Start, Pause–Resume, Stop, Show, Quit, state icon), minimize to tray
 - [ ] Manual: export md / docx / pdf of a pt-BR session; pause 30 s; criteria

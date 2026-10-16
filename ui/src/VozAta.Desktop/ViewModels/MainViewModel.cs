@@ -42,7 +42,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IUiPreferences preferences,
         IClock clock,
         IUiTimer timer,
-        IShellService shell)
+        IShellService shell,
+        IFileSaver saver)
     {
         _client = client;
         _events = events;
@@ -53,7 +54,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _preferences = preferences;
         _timer = timer;
         Devices = new DevicesViewModel(client, preferences);
-        History = new HistoryViewModel(client, shell, localization);
+        History = new HistoryViewModel(client, shell, localization, saver);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);
         Settings.Saved += OnSettingsSaved;
