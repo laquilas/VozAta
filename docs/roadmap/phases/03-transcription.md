@@ -69,8 +69,8 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
-- **Updated:** 2026-10-15 23:18
-- **Next step:** TDD `transcription/cuda.py` (idempotent DLL registration, tested with a temp site-packages) and `transcription/faster_whisper.py` with an injected model factory (auto: CUDA + warm-up, CPU fallback; cuda/cpu explicit; transcribe parameters and mapping; close), see them fail, then implement.
+- **Updated:** 2026-10-15 23:20
+- **Next step:** generate `engine/tests/data/speech_en.wav` with Windows TTS (SAPI to file, 16 kHz mono), add `tests/transcription/test_faster_whisper_gpu.py` (marker `gpu`, skipped by default: contract suite + expected words), register the marker, run `pytest -m gpu`, then the CPU fallback with `WHISPER_DEVICE=cpu`.
 
 ### Steps
 
@@ -79,8 +79,8 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - [x] `transcription/language_lock.py` (`LanguageLock`) — `675f5b2`
 - [x] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite — `e0cdaa3`
 - [x] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`) — `798366e`
-- [x] `transcription/worker.py` (`TranscriptionWorker`)
-- [ ] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests)
+- [x] `transcription/worker.py` (`TranscriptionWorker`) — `0d23bb9`
+- [x] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests)
 - [ ] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
