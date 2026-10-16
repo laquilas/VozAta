@@ -55,7 +55,7 @@ class TomlLocalizer:
             {} if self.language is AppLanguage.EN else load_catalog(AppLanguage.EN, locales_dir)
         )
 
-    def t(self, key: str, **params: object) -> str:
+    def t(self, key: str, /, **params: object) -> str:
         return self._message(key).format_map(params)
 
     def _message(self, key: str) -> str:

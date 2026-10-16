@@ -66,7 +66,7 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 - **Branch:** `feature/01-engine-core`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:52
+- **Updated:** 2026-10-15 22:54
 - **Next step:** TDD `config.py`: write `tests/test_config.py` (defaults, each invalid value, env-file loading and env override, empty `TRANSCRIPTION_LANGUAGE` derivation, empty label overrides, localized `ConfigError`), see it fail, then implement `Settings`, `load_settings` and `ConfigError`.
 
 ### Steps
@@ -74,7 +74,7 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - [x] Start phase: status `in progress`, Progress section — `7e96b07`
 - [x] `domain.py` + `tests/test_domain.py` (jsonl round trip) — `33818b1`
 - [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies — `30131cf`
-- [x] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests
+- [x] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests — `3273324`
 - [ ] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
 - [ ] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
 - [ ] `formatting.py` + `tests/test_formatting.py`
@@ -87,3 +87,4 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - **`AudioChunk`** is `frozen=True, eq=False`: dataclass equality on `np.ndarray` fields is ambiguous.
 - **Ports** are `@runtime_checkable` Protocols; `tests/fakes.py` provides fakes, and structural `isinstance` tests check them. Coverage excludes `...`-only lines (Protocol bodies).
 - `pyproject.toml` sets pytest `pythonpath = ["."]` so tests import shared fakes as `tests.fakes`.
+- **`Localizer.t(key, /, **params)`**: `key` is positional-only so a placeholder may itself be called `key` (config errors use `{key}`); architecture §5 updated.

@@ -101,7 +101,7 @@ class FakeLanguageModel:
 class FakeLocalizer:
     """Echoes the key with its params, e.g. `labels.user(n=2)`."""
 
-    def t(self, key: str, **params: object) -> str:
+    def t(self, key: str, /, **params: object) -> str:
         if not params:
             return key
         args = ",".join(f"{name}={value}" for name, value in sorted(params.items()))

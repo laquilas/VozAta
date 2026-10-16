@@ -130,7 +130,7 @@ class DocumentExporter(Protocol):
 class TaskExporter(Protocol):
     def export(self, items: Sequence[ActionItem], session_title: str) -> list[str]: ...  # created URLs
 class Localizer(Protocol):
-    def t(self, key: str, **params: object) -> str: ...
+    def t(self, key: str, /, **params: object) -> str: ...  # key is positional-only
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
