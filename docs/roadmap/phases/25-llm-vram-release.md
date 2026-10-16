@@ -57,18 +57,17 @@ Keeping Whisper warm between sessions (phase 26).
 
 - **Branch:** `feature/25-llm-vram-release`
 - **Status:** in progress
-- **Updated:** 2026-10-16 15:40
-- **Next step:** `MinutesGenerator.generate` calls `self._llm.release()` in a `finally` (log and
-  swallow a release `LanguageModelError` so it never masks the minutes or the original error);
-  tests in `tests/minutes/test_generator.py`; note the release in architecture §6 stop order
+- **Updated:** 2026-10-16 16:00
+- **Next step:** manual check — with Ollama running, `python -m vozata minutes <session dir>`, then
+  `ollama ps` must list no model; tick the acceptance criteria and set the phase to `done`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds) — `dedb429`
 - [x] `LanguageModel.release()` port method; Ollama sends `keep_alive` with every chat request and
-      `release()` unloads with the configured value; wired in `bootstrap.py` — this commit
-- [ ] `MinutesGenerator` calls `release()` once after every job (success or failure)
+      `release()` unloads with the configured value; wired in `bootstrap.py` — `668501e`
+- [x] `MinutesGenerator` calls `release()` once after every job (success or failure) — this commit
 - [ ] Manual check: `ollama ps` empty after `python -m vozata minutes <dir>`; acceptance criteria
 
 ### Decisions and notes
