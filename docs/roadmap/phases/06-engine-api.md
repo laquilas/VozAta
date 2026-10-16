@@ -67,14 +67,14 @@ Settings writes (10), export (11), recovery (17), every row tagged with another 
 
 - **Branch:** `feature/06-engine-api`
 - **Status:** in progress
-- **Updated:** 2026-10-16 08:59
-- **Next step:** write `tests/api/test_ws.py`, then `api/ws.py` (`EventBroadcaster`: thread-safe `publish(type, session_id, data)` via `loop.call_soon_threadsafe`, per-client bounded asyncio queues, drop the oldest `level` events for slow clients, initial `status` on connect).
+- **Updated:** 2026-10-16 09:00
+- **Next step:** write `tests/api/test_session_manager.py`, then `api/session_manager.py` (`SessionManager`: one active session -> `SessionConflictError`; observer adapter publishing contract events; `level` throttled to ~10 Hz per channel; `stop()` finalizes on a background thread and returns at once; `summary()` / `status_message()`).
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `fd671b5`
-- [x] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py`
-- [ ] `api/ws.py` (`EventBroadcaster`) + tests
+- [x] Dependencies; `API_HOST` / `API_PORT`; settings schema metadata in `config.py` — `02a9678`
+- [x] `api/ws.py` (`EventBroadcaster`) + tests
 - [ ] `api/session_manager.py` (`SessionManager`) + tests
 - [ ] `api/app.py`, `api/schemas.py`, error handler, `system_info.py`, routes `health`, `devices`,
       `settings` (GET) + tests
