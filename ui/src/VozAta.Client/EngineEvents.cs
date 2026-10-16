@@ -23,6 +23,9 @@ public sealed record MinutesReadyEvent(string? SessionId) : EngineEvent(SessionI
 
 public sealed record ErrorEvent(string? SessionId, string Code, string Message) : EngineEvent(SessionId);
 
+/// <summary>The speech model started (true) or finished (false) loading while the session already records.</summary>
+public sealed record ModelLoadingEvent(string? SessionId, bool Loading) : EngineEvent(SessionId);
+
 /// <summary>An event type this client does not know yet (added by a later phase).</summary>
 public sealed record UnknownEvent(string? SessionId, string Type) : EngineEvent(SessionId);
 
@@ -54,6 +57,7 @@ public static class EngineEventParser
                 "language_detected" => new LanguageDetectedEvent(
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
+                "model_loading" => new ModelLoadingEvent(sessionId, data.GetProperty("loading").GetBoolean()),
                 "error" => new ErrorEvent(
                     sessionId, data.GetProperty("code").GetString() ?? "", data.GetProperty("message").GetString() ?? ""),
                 _ => new UnknownEvent(sessionId, type),

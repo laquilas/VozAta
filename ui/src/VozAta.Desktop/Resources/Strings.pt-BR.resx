@@ -102,6 +102,9 @@
   <data name="MinutesReady" xml:space="preserve">
     <value>A ata está pronta.</value>
   </data>
+  <data name="ModelLoading" xml:space="preserve">
+    <value>Carregando o modelo de fala — já gravando</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Fechar</value>
   </data>

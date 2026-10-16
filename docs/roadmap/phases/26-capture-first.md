@@ -60,8 +60,8 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
 
 - **Branch:** `feature/26-capture-first`
 - **Status:** in progress
-- **Updated:** 2026-10-16 20:50
-- **Next step:** UI: `ModelLoadingEvent` in `EngineEvents.cs` (parser + test), `MainViewModel.ModelLoadingText` shown next to the elapsed time in `MainWindow.axaml`, cleared on idle; `ModelLoading` string in the three `.resx`; tests in `MainViewModelTests.cs` / `EngineEventsTests.cs`
+- **Updated:** 2026-10-16 21:10
+- **Next step:** manual check: `python -m vozata record` with the TTS meeting played right after Start (env overrides from memory) → the first sentence is transcribed; time from Start to `recording`; then `serve` + WebSocket shows `model_loading` true/false; tick acceptance criteria
 
 ### Steps
 
@@ -73,8 +73,8 @@ Transcribing a session whose model never loaded (backlog: "transcribe later" fro
       messages — `a5eefc8`
 - [x] API: `model_loading` `{loading}` event — same commit (the observer method is one change)
 - [x] `WHISPER_KEEP_LOADED` in `serve`: shared transcriber, released before minutes (session and
-      `POST /sessions/{id}/minutes`) — this commit
-- [ ] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings
+      `POST /sessions/{id}/minutes`) — `0ca4226`
+- [x] UI: `ModelLoadingEvent`, loading indicator next to the elapsed time; en / pt-BR / es strings — this commit
 - [ ] Manual: speak right after Start → first words in the transcript; acceptance criteria
 
 ### Decisions and notes

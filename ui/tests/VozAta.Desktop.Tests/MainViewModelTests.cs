@@ -202,6 +202,35 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Recording_starts_at_once_and_shows_the_model_loading_indicator()
+    {
+        var viewModel = await ReadyAsync();
+
+        await viewModel.StartCommand.ExecuteAsync(null);
+        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.False(viewModel.IsModelLoading);
+        await SendAsync(viewModel, new ModelLoadingEvent("s", true));
+
+        Assert.True(viewModel.IsModelLoading);
+        Assert.True(viewModel.StopCommand.CanExecute(null));
+        await SendAsync(viewModel, new ModelLoadingEvent("s", false));
+        Assert.False(viewModel.IsModelLoading);
+    }
+
+    [Fact]
+    public async Task The_model_loading_indicator_is_cleared_when_the_session_ends()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.StartCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new ModelLoadingEvent("s", true));
+
+        await SendAsync(viewModel, new StatusEvent("s", "done", 5));
+
+        Assert.False(viewModel.IsModelLoading);
+        Assert.Equal(RecordingState.Idle, viewModel.State);
+    }
+
+    [Fact]
     public async Task Errors_and_minutes_ready_become_dismissable_notifications()
     {
         var viewModel = await ReadyAsync();
