@@ -67,7 +67,7 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - **Branch:** `feature/01-engine-core`
 - **Status:** in progress
 - **Updated:** 2026-10-15 22:54
-- **Next step:** TDD `config.py`: write `tests/test_config.py` (defaults, each invalid value, env-file loading and env override, empty `TRANSCRIPTION_LANGUAGE` derivation, empty label overrides, localized `ConfigError`), see it fail, then implement `Settings`, `load_settings` and `ConfigError`.
+- **Next step:** TDD `labels.py`: write `tests/test_labels.py` (`Me`/`Eu`/`Yo`, `User 2`/`Usuário 2`/`Usuario 2`, overrides and names win, unknown ids), see it fail, then implement `SpeakerLabeler`.
 
 ### Steps
 
@@ -75,7 +75,7 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - [x] `domain.py` + `tests/test_domain.py` (jsonl round trip) — `33818b1`
 - [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies — `30131cf`
 - [x] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests — `3273324`
-- [ ] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
+- [x] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
 - [ ] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
 - [ ] `formatting.py` + `tests/test_formatting.py`
 - [ ] `language.py` + `tests/test_language.py`
@@ -88,3 +88,4 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 - **Ports** are `@runtime_checkable` Protocols; `tests/fakes.py` provides fakes, and structural `isinstance` tests check them. Coverage excludes `...`-only lines (Protocol bodies).
 - `pyproject.toml` sets pytest `pythonpath = ["."]` so tests import shared fakes as `tests.fakes`.
 - **`Localizer.t(key, /, **params)`**: `key` is positional-only so a placeholder may itself be called `key` (config errors use `{key}`); architecture §5 updated.
+- `load_settings()` without arguments reads `.env` in the working directory, then the process environment on top; with an `env` mapping, only `env_file` (if given) sits underneath it. Empty values mean "not set".

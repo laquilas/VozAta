@@ -114,3 +114,8 @@ class TranscriptSegment:
             text=str(data["text"]),
             words=tuple(Word.from_dict(word) for word in data.get("words", ())),
         )
+
+
+def default_conversation_language(app_language: AppLanguage) -> ConversationLanguage:
+    """The spoken language assumed when none is configured (`pt-BR` -> `pt`)."""
+    return ConversationLanguage(app_language.value.split("-")[0])
