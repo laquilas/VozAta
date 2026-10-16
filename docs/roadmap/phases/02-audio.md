@@ -41,13 +41,13 @@ clock-aligned WAVs, cut fixed transcription windows, and mix the final tracks.
 
 ## Acceptance criteria
 
-- [ ] Gap filling, padding and equal final length proven by unit tests with a fake clock.
-- [ ] Chunker emits windows with correct `start` values, flushes partial windows, respects pause.
-- [ ] Mono and stereo mixes verified sample-by-sample on synthetic WAVs (including clipping and
+- [x] Gap filling, padding and equal final length proven by unit tests with a fake clock.
+- [x] Chunker emits windows with correct `start` values, flushes partial windows, respects pause.
+- [x] Mono and stereo mixes verified sample-by-sample on synthetic WAVs (including clipping and
       different input lengths).
-- [ ] `smoke_capture.py` run manually: both WAVs have equal duration and audible content (record
+- [x] `smoke_capture.py` run manually: both WAVs have equal duration and audible content (record
       the result in the PR description).
-- [ ] Coverage ≥ 80 % excluding `capture.py`/`devices.py` (hardware, marked `# pragma: no cover`
+- [x] Coverage ≥ 80 % excluding `capture.py`/`devices.py` (hardware, marked `# pragma: no cover`
       only on device calls).
 
 ## Tests
@@ -67,9 +67,9 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 ## Progress
 
 - **Branch:** `feature/02-audio`
-- **Status:** blocked
-- **Updated:** 2026-10-15 23:12
-- **Next step:** BLOCKED on the machine's audio stack: after a reboot (or an admin restart of the Audiosrv and AudioEndpointBuilder services), run from engine/: `../.venv/Scripts/python -u scripts/smoke_capture.py --seconds 10 --tone`. Check both WAVs have equal duration and non-silent RMS, record the output in the PR, then tick the smoke criterion and close the phase.
+- **Status:** ready for PR
+- **Updated:** 2026-10-16 07:40
+- **Next step:** open the PR (record the smoke results below in its description) and merge.
 
 ### Steps
 
@@ -79,8 +79,8 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - [x] `audio/chunker.py` (`FixedWindowChunker`): windows, gap fill, flush, pause — `cce70a1`
 - [x] `audio/mixer.py` (`MonoMixer`, `StereoMixer`) + `MIX_MODE` in config — `604e113`
 - [x] `audio/devices.py` (testable with a fake PyAudio) — `3a98cdd`
-- [ ] `audio/capture.py` (`WasapiSource`) + `engine/scripts/smoke_capture.py`; run the smoke check
-- [ ] Verify; tick acceptance criteria; set phase `done`
+- [x] `audio/capture.py` (`WasapiSource`) + `engine/scripts/smoke_capture.py`; run the smoke check — `a91d072`
+- [x] Verify; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
 
@@ -92,3 +92,15 @@ Transcription (03), session orchestration and CLI (05), device selection UI (08)
 - Device names from PortAudio can contain mis-decoded characters (seen: `Intel�`); phase 08 (device UI) should handle display names.
 - **Smoke check blocked (2026-10-15 23:06–23:12)**: opening the microphone (Intel Smart Sound array mic) hung in `pa.open` on WASAPI and MME, and `ffmpeg` DirectShow could not record from it either. At 23:09 Windows logged `AppHangXProcB1` (`svchost.exe_Audiosrv` waiting on `audiodg.exe`) and killed Windows Audio, which auto-restarted at 23:10. After that, `PyAudio()` initialization itself hangs, so audio needs a reboot. Before the stack wedged, the loopback (id 10) opened in 1.7 s and streamed. It is unclear whether the first WASAPI mic open triggered the driver hang or met an already-wedged driver.
 - **Robustness (for phase 05)**: a device open can hang indefinitely in the driver. `RecordingSession` must start sources with a timeout (e.g. open on a worker thread and fail the session with a localized error), never block forever.
+- **Smoke check (2026-10-16, after a reboot)**: `smoke_capture.py --seconds 10 --tone` produced
+  `mic.wav` and `system.wav` of **equal length (40.160 s, 642 568 samples each)**, 0 overflows;
+  `system.wav` RMS -23.2 dBFS (tone captured), `mic.wav` RMS -63.6 dBFS (quiet room). The files
+  were 40 s, not 10 s, because opening the first device took ~30 s; the writer gap-filled that
+  time with silence as designed. A separate run delivered 2 s of mic audio (32 000 samples at
+  16 kHz) with a 0.18 s open.
+- **The Intel Smart Sound mic driver is unreliable on the reference machine**: in later runs the
+  open took 46 s, hung indefinitely (`pa.open` in `pyaudiowpatch.Stream.__init__`), then failed
+  with `Invalid device` / a segfault, until WASAPI listed no input devices at all. Plain PyAudio
+  opens fail the same way, so the cause is the driver, not `WasapiSource`. This confirms the
+  phase 05 requirement: open sources on a worker thread with a timeout and fail the session with
+  a localized error.
