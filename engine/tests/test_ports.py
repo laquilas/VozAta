@@ -104,6 +104,9 @@ def test_fake_language_model_replies_streams_and_reports_availability() -> None:
     assert list(model.stream("sys", "again")) == ["a", "b"]
     assert model.generate("sys", "empty") == ""
     assert not model.is_available()
+    assert model.releases == 0
+    model.release()
+    assert model.releases == 1
 
 
 def test_fake_localizer_echoes_key_and_params() -> None:

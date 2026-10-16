@@ -204,6 +204,7 @@ def test_minutes_defaults() -> None:
     assert settings.ollama_url == "http://localhost:11434"
     assert settings.ollama_model == "qwen2.5:7b"
     assert settings.llm_max_chars == 12000
+    assert settings.ollama_keep_alive == "0"
 
 
 def test_minutes_values_are_parsed() -> None:
@@ -213,6 +214,7 @@ def test_minutes_values_are_parsed() -> None:
             "OLLAMA_URL": "https://ollama.lan:8443/",
             "OLLAMA_MODEL": "qwen2.5:3b",
             "LLM_MAX_CHARS": "20000",
+            "OLLAMA_KEEP_ALIVE": "5m",
         }
     )
 
@@ -220,6 +222,12 @@ def test_minutes_values_are_parsed() -> None:
     assert settings.ollama_url == "https://ollama.lan:8443"  # trailing slash dropped
     assert settings.ollama_model == "qwen2.5:3b"
     assert settings.llm_max_chars == 20000
+    assert settings.ollama_keep_alive == "5m"
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "300", "5m", "1h30m", "1.5h", "250ms", "-1m"])
+def test_ollama_keep_alive_accepts_seconds_and_durations(value: str) -> None:
+    assert load_settings(env={"OLLAMA_KEEP_ALIVE": value}).ollama_keep_alive == value
 
 
 @pytest.mark.parametrize(
@@ -229,6 +237,10 @@ def test_minutes_values_are_parsed() -> None:
         ("OLLAMA_URL", "ftp://host", "invalid_url"),
         ("LLM_MAX_CHARS", "999", "out_of_range"),
         ("LLM_MAX_CHARS", "many", "not_a_number"),
+        ("OLLAMA_KEEP_ALIVE", "forever", "invalid_duration"),
+        ("OLLAMA_KEEP_ALIVE", "5 m", "invalid_duration"),
+        ("OLLAMA_KEEP_ALIVE", "m", "invalid_duration"),
+        ("OLLAMA_KEEP_ALIVE", "5d", "invalid_duration"),
     ],
 )
 def test_invalid_minutes_values_raise(key: str, value: str, message_key: str) -> None:

@@ -8,6 +8,7 @@ invalid_choice = "Valor inválido \"{value}\" para {key}. Valores permitidos: {a
 not_a_number = "Valor inválido \"{value}\" para {key}: era esperado um número."
 out_of_range = "Valor inválido \"{value}\" para {key}: deve estar entre {min} e {max}."
 invalid_url = "Valor inválido \"{value}\" para {key}: era esperada uma URL http:// ou https://."
+invalid_duration = "Valor inválido \"{value}\" para {key}: eram esperados segundos (0, -1, 300) ou uma duração como 5m ou 1h30m."
 
 [errors.session]
 audio_unavailable = "O áudio do Windows não respondeu. Reinicie o serviço Áudio do Windows ou o PC e tente novamente."

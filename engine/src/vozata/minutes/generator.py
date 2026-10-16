@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
 from vozata.domain import ConversationLanguage, TranscriptSegment
 from vozata.formatting import render_line
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.prompts import map_prompt, minutes_prompt, reduce_prompt
-from vozata.ports import LanguageModel, Localizer
+from vozata.ports import LanguageModel, LanguageModelError, Localizer
+
+_log = logging.getLogger(__name__)
 
 
 class MinutesGenerator:
@@ -16,6 +19,8 @@ class MinutesGenerator:
 
     A transcript longer than `max_chars` is split at segment boundaries; each part is summarized
     into notes (map) and the notes become the minutes (reduce). `LanguageModelError` propagates.
+    The model is released after every job, even a failed one, so it never holds the GPU while
+    Whisper loads for the next recording (architecture §6, VRAM rule).
     """
 
     def __init__(self, llm: LanguageModel, localizer: Localizer, max_chars: int) -> None:
@@ -35,6 +40,12 @@ class MinutesGenerator:
             render_line(segment, labeler.label(segment.speaker_id))
             for segment in sorted(segments, key=lambda segment: segment.start)
         ]
+        try:
+            return self._summarize(lines, conversation_language)
+        finally:
+            self._release()
+
+    def _summarize(self, lines: list[str], conversation_language: ConversationLanguage) -> str:
         transcript = "\n".join(lines)
         if len(transcript) <= self._max_chars:
             return self._ask(minutes_prompt(self._localizer, transcript, conversation_language))
@@ -44,6 +55,12 @@ class MinutesGenerator:
             for i, part in enumerate(parts, start=1)
         ]
         return self._ask(reduce_prompt(self._localizer, notes, conversation_language))
+
+    def _release(self) -> None:
+        try:
+            self._llm.release()
+        except LanguageModelError as error:
+            _log.warning("Could not release the language model: %s", error)
 
     def _ask(self, prompt: tuple[str, str]) -> str:
         system, user = prompt

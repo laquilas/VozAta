@@ -93,3 +93,85 @@ def test_headings_follow_the_app_language() -> None:
     )
 
     assert "## Itens de ação" in llm.prompts[0][1]
+
+
+class _Recording(FakeLanguageModel):
+    """Logs generate/release calls in order; can fail either."""
+
+    def __init__(
+        self,
+        replies: list[str] | None = None,
+        generate_error: Exception | None = None,
+        release_error: Exception | None = None,
+    ) -> None:
+        super().__init__(replies)
+        self.calls: list[str] = []
+        self._generate_error = generate_error
+        self._release_error = release_error
+
+    def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+        self.calls.append("generate")
+        if self._generate_error is not None:
+            raise self._generate_error
+        return super().generate(system, prompt, json_schema)
+
+    def release(self) -> None:
+        self.calls.append("release")
+        super().release()
+        if self._release_error is not None:
+            raise self._release_error
+
+
+def test_single_pass_releases_the_model_after_the_only_call() -> None:
+    llm = _Recording(["minutes"])
+
+    generator(llm).generate([seg(0, "hi")], LABELER, ConversationLanguage.EN)
+
+    assert llm.calls == ["generate", "release"]
+
+
+def test_map_reduce_releases_the_model_only_after_the_reduce_call() -> None:
+    llm = _Recording(["n1", "n2", "minutes"])
+
+    generator(llm, max_chars=20).generate(
+        [seg(0, "x" * 50), seg(1, "short")], LABELER, ConversationLanguage.EN
+    )
+
+    assert llm.calls == ["generate", "generate", "generate", "release"]
+
+
+def test_the_model_is_released_when_a_call_fails() -> None:
+    llm = _Recording(generate_error=LanguageModelError("timeout"))
+
+    with pytest.raises(LanguageModelError, match="timeout"):
+        generator(llm).generate([seg(0, "hi")], LABELER, ConversationLanguage.EN)
+
+    assert llm.calls == ["generate", "release"]
+
+
+def test_a_failed_release_does_not_lose_the_minutes(caplog: pytest.LogCaptureFixture) -> None:
+    llm = _Recording(["minutes"], release_error=LanguageModelError("server gone"))
+
+    minutes = generator(llm).generate([seg(0, "hi")], LABELER, ConversationLanguage.EN)
+
+    assert minutes == "minutes"
+    assert "server gone" in caplog.text
+
+
+def test_a_failed_release_does_not_hide_the_original_error() -> None:
+    llm = _Recording(
+        generate_error=LanguageModelError("timeout"),
+        release_error=LanguageModelError("server gone"),
+    )
+
+    with pytest.raises(LanguageModelError, match="timeout"):
+        generator(llm).generate([seg(0, "hi")], LABELER, ConversationLanguage.EN)
+
+
+def test_empty_transcript_does_not_touch_the_model() -> None:
+    llm = _Recording()
+
+    with pytest.raises(ValueError):
+        generator(llm).generate([], LABELER, ConversationLanguage.EN)
+
+    assert llm.calls == []

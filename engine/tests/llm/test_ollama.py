@@ -12,8 +12,11 @@ from vozata.ports import LanguageModel, LanguageModelError
 URL = "http://ollama.test:11434"
 
 
-def model_with(handler: Callable[[httpx.Request], httpx.Response]) -> OllamaLanguageModel:
-    return OllamaLanguageModel(URL, "qwen2.5:7b", transport=httpx.MockTransport(handler))
+def model_with(
+    handler: Callable[[httpx.Request], httpx.Response], keep_alive: str = "0"
+) -> OllamaLanguageModel:
+    transport = httpx.MockTransport(handler)
+    return OllamaLanguageModel(URL, "qwen2.5:7b", keep_alive=keep_alive, transport=transport)
 
 
 def chat_reply(content: str) -> httpx.Response:
@@ -46,6 +49,7 @@ def test_generate_posts_a_non_streaming_chat_request() -> None:
         ],
         "stream": False,
         "options": {"num_ctx": 8192},
+        "keep_alive": "5m",
     }
 
 
@@ -79,6 +83,44 @@ def test_stream_yields_text_from_ndjson_lines_until_done() -> None:
 
     assert list(model_with(handler).stream("s", "p")) == ["Hel", "lo"]
     assert bodies[0]["stream"] is True
+    assert bodies[0]["keep_alive"] == "5m"  # stays loaded between the calls of one job
+
+
+@pytest.mark.parametrize(
+    ("configured", "sent"),
+    [("0", 0), ("-1", -1), ("300", 300), ("5m", "5m"), ("1h30m", "1h30m")],
+)
+def test_release_sends_an_empty_chat_with_the_configured_keep_alive(
+    configured: str, sent: int | str
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"message": {"content": ""}, "done": True})
+
+    model_with(handler, keep_alive=configured).release()
+
+    assert (requests[0].method, requests[0].url.path) == ("POST", "/api/chat")
+    assert json.loads(requests[0].content) == {
+        "model": "qwen2.5:7b",
+        "messages": [],
+        "keep_alive": sent,
+    }
+
+
+@pytest.mark.parametrize(
+    "handler",
+    [
+        lambda request: httpx.Response(500, json={"error": "boom"}),
+        lambda request: (_ for _ in ()).throw(httpx.ConnectError("refused", request=request)),
+    ],
+)
+def test_release_failures_raise_language_model_error(
+    handler: Callable[[httpx.Request], httpx.Response],
+) -> None:
+    with pytest.raises(LanguageModelError):
+        model_with(handler).release()
 
 
 @pytest.mark.parametrize(

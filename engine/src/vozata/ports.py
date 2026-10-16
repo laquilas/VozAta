@@ -74,6 +74,10 @@ class LanguageModel(Protocol):
 
     def is_available(self) -> bool: ...
 
+    def release(self) -> None:
+        """Free the model's memory (VRAM) after a job; raises `LanguageModelError` on failure."""
+        ...
+
 
 @runtime_checkable
 class Localizer(Protocol):

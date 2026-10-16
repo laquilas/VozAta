@@ -46,6 +46,8 @@ FIELDS: tuple[Field, ...] = (
     Field("OLLAMA_URL", "ollama_url", "url"),
     Field("OLLAMA_MODEL", "ollama_model", "string"),
     Field("LLM_MAX_CHARS", "llm_max_chars", "integer"),
+    # LLM VRAM release (phase 25)
+    Field("OLLAMA_KEEP_ALIVE", "ollama_keep_alive", "string"),
     # Session (phase 05)
     Field("GENERATE_MINUTES", "generate_minutes", "bool"),
     # API (phase 06)

@@ -122,6 +122,7 @@ class LanguageModel(Protocol):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str: ...
     def stream(self, system: str, prompt: str) -> Iterator[str]: ...
     def is_available(self) -> bool: ...
+    def release(self) -> None: ...   # after a job: unload per OLLAMA_KEEP_ALIVE (25)
 class Diarizer(Protocol):
     def diarize(self, wav: Path, min_speakers: int | None, max_speakers: int | None) -> list[SpeakerTurn]: ...
     def close(self) -> None: ...
@@ -180,7 +181,8 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 3. Finalize WAVs to the same length (max written samples); run `AudioMixer` → `mixed.wav`.
 4. `transcriber.close()` (free VRAM).
 5. If enabled: diarize `system.wav` → relabel → `diarizer.close()`.
-6. If enabled: `MinutesGenerator` → `minutes.md`; index the session for search.
+6. If enabled: `MinutesGenerator` → `minutes.md`, then `llm.release()` (Ollama unloads per
+   `OLLAMA_KEEP_ALIVE`, also after a failed job); index the session for search.
 7. `status = done`, `ended_at` set in `session.json`.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same

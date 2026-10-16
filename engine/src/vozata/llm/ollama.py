@@ -12,6 +12,7 @@ from vozata.ports import LanguageModelError
 
 NUM_CTX = 8192
 AVAILABILITY_TIMEOUT = 3.0  # health checks must answer quickly
+JOB_KEEP_ALIVE = "5m"  # keeps the model loaded between the calls of one job (map-reduce)
 
 
 class OllamaLanguageModel:
@@ -19,16 +20,21 @@ class OllamaLanguageModel:
 
     Every failure (unreachable server, HTTP error, timeout, malformed reply) raises
     `LanguageModelError`; callers decide whether the session continues.
+
+    Chat requests keep the model loaded for `JOB_KEEP_ALIVE`; `release()` then applies
+    `keep_alive` (`OLLAMA_KEEP_ALIVE`, default `0`: unload at once) so the GPU is free for Whisper.
     """
 
     def __init__(
         self,
         url: str,
         model: str,
+        keep_alive: str = "0",
         timeout: float = 300.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._model = model
+        self.keep_alive = keep_alive
         self._client = httpx.Client(base_url=url, timeout=timeout, transport=transport)
 
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
@@ -74,6 +80,14 @@ class OllamaLanguageModel:
             return False
         return self._model in names or f"{self._model}:latest" in names
 
+    def release(self) -> None:
+        """Apply `keep_alive` now: an empty chat is Ollama's way to unload (or re-time) a model."""
+        body = {"model": self._model, "messages": [], "keep_alive": _keep_alive(self.keep_alive)}
+        try:
+            self._client.post("/api/chat", json=body).raise_for_status()
+        except (httpx.HTTPError, RuntimeError) as error:
+            raise LanguageModelError(f"Ollama release failed: {error}") from error
+
     def close(self) -> None:
         self._client.close()
 
@@ -86,4 +100,13 @@ class OllamaLanguageModel:
             ],
             "stream": stream,
             "options": {"num_ctx": NUM_CTX},
+            "keep_alive": JOB_KEEP_ALIVE,
         }
+
+
+def _keep_alive(value: str) -> int | str:
+    """Whole seconds go as a JSON number: Ollama parses a string as a Go duration (units needed)."""
+    try:
+        return int(value)
+    except ValueError:
+        return value
