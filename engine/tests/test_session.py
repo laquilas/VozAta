@@ -41,7 +41,9 @@ RATE = 16000
 BRT = timezone(timedelta(hours=-3))
 STARTED = datetime(2026, 10, 15, 20, 23, 58, tzinfo=BRT)
 ENDED = datetime(2026, 10, 15, 20, 30, 0, tzinfo=BRT)
-SETTINGS = Settings(chunk_seconds=1.0, whisper_model="tiny", llm_max_chars=12000)
+SETTINGS = Settings(
+    chunk_seconds=1.0, whisper_model="tiny", llm_max_chars=12000, live_partials=False
+)
 
 
 def _voice(seconds: float, level: float = 0.1) -> np.ndarray:
@@ -112,6 +114,7 @@ class _Rig:
         chunker_factory: ChunkerFactory | None = None,
         load_gate: threading.Event | None = None,
         load_error: Exception | None = None,
+        settings: Settings = SETTINGS,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -129,7 +132,7 @@ class _Rig:
         localizer = FakeLocalizer()
         self.observer = FakeSessionObserver()
         self.session = RecordingSession(
-            SETTINGS,
+            settings,
             self.store,
             SessionComponents(
                 sources={Channel.MIC: self.mic, Channel.SYSTEM: self.system},
@@ -156,6 +159,12 @@ class _Rig:
             raise self._load_error
         return self.transcriber
 
+    def paths_text(self) -> str:
+        paths = self.session.paths
+        return paths.transcript_jsonl.read_text(encoding="utf-8") + paths.transcript_md.read_text(
+            encoding="utf-8"
+        )
+
     def wav(self, channel: Channel) -> np.ndarray:
         with wave.open(str(self.session.paths.wav(channel)), "rb") as wav:
             return np.frombuffer(wav.readframes(wav.getnframes()), dtype=np.int16)
@@ -176,6 +185,49 @@ def test_segments_reach_the_observer_and_the_transcript_files(tmp_path: Path) ->
     assert (
         paths.transcript_md.read_text(encoding="utf-8") == "[00:00:00] labels.mic: Hello world.\n"
     )
+
+
+def _vad_factory(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> VadChunker:
+    detector = FakeSpeechDetector(RATE)
+    return VadChunker(
+        channel, RATE, on_chunk, detector,
+        min_silence=0.6, min_chunk=0.5, max_chunk=15, speech_pad=0.2,
+    )  # fmt: skip
+
+
+def _wait_for(condition: Callable[[], bool]) -> None:
+    for _ in range(400):
+        if condition():
+            return
+        threading.Event().wait(0.005)
+    raise AssertionError("condition not met")
+
+
+def test_interim_text_previews_the_phrase_in_progress_then_the_segment_replaces_it(
+    tmp_path: Path,
+) -> None:
+    settings = dataclasses.replace(SETTINGS, live_partials=True, partial_interval_seconds=10)
+    rig = _Rig(
+        tmp_path,
+        results=[_words("Hel"), _words("Hello", " there.")],
+        chunker_factory=_vad_factory,
+        settings=settings,
+    )
+    rig.session.start()
+
+    rig.mic.push(_voice(2.0), 0.0)  # still speaking: nothing cut yet
+    _wait_for(lambda: bool(rig.observer.of("partial")))
+    rig.mic.push(_voice(1.0, 0.0), 2.0)  # the pause ends the phrase
+    rig.clock.time = 3.0
+    rig.session.stop()
+
+    assert rig.observer.of("partial") == [(Channel.MIC, "mic", 0.0, "Hel")]
+    [(segment,)] = rig.observer.of("segment")
+    assert segment.text == "Hello there."
+    audio = [len(samples) / RATE for samples, _, _ in rig.transcriber.calls]
+    assert audio[0] == 2.0  # the uncut phrase
+    assert len(audio) == 2  # the committed audio was never previewed again
+    assert "partial" not in rig.paths_text()
 
 
 def test_a_chunker_from_the_components_cuts_at_pauses(tmp_path: Path) -> None:

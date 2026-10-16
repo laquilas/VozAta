@@ -39,6 +39,28 @@ def test_session_events_arrive_in_order_with_the_envelope(api: Api) -> None:
     assert messages[2]["data"] == {"channel": "mic", "rms_db": -12.5}
 
 
+def test_partial_envelope_reaches_the_websocket(api: Api) -> None:
+    with api.client.websocket_connect("/ws") as ws:
+        ws.receive_json()  # idle
+        api.client.post("/sessions", json={})
+        ws.receive_json()  # recording
+        api.factory.sessions[0].observer.on_partial(Channel.MIC, "mic", 3.5, "Bom d")
+
+        message = ws.receive_json()
+
+    assert message == {
+        "type": "partial",
+        "session_id": SESSION,
+        "data": {
+            "channel": "mic",
+            "speaker_id": "mic",
+            "label": "labels.mic",
+            "start": 3.5,
+            "text": "Bom d",
+        },
+    }
+
+
 def test_connect_during_a_session_describes_it(api: Api) -> None:
     api.client.post("/sessions", json={})
     api.factory.sessions[0].duration_seconds = 3.0

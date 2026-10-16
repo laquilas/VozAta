@@ -124,6 +124,7 @@ class Chunker(Protocol):             # FixedWindowChunker (01), VadChunker (27)
     paused: bool
     def feed(self, samples: np.ndarray, at: float) -> None: ...
     def flush(self) -> None: ...
+    def buffered(self) -> AudioChunk | None: ...  # copy of the audio not emitted yet (28)
 class SpeechDetector(Protocol):      # SileroSpeechDetector (27); unpadded spans in seconds
     def speech_spans(self, samples: np.ndarray) -> list[tuple[float, float]]: ...
 class LanguageModel(Protocol):
@@ -150,6 +151,7 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
     def on_minutes_ready(self, session_id: str) -> None: ...
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
+    def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
 ```
 
@@ -173,6 +175,13 @@ WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
 `SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
 (`SileroSpeechDetector`, CPU) every 0.25 s and cuts in the middle of pauses ≥ `VAD_MIN_SILENCE_MS`,
 marking those chunks `complete`; `FixedWindowChunker` cuts every `CHUNK_SECONDS`.
+
+**Interim text** (phase 28, `LIVE_PARTIALS`): when the chunk queue is empty, the worker previews
+each channel's uncommitted audio (stitcher carry + `Chunker.buffered()`, copied under the track
+lock) at most once per `PARTIAL_INTERVAL_SECONDS`, only with ≥ 1 s of voiced audio, and sends
+changed text through `on_partial` (API `partial`), never to the transcript files. A segment
+replaces it; an empty `partial` clears it when the channel's next chunk commits nothing, and at
+stop.
 
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
@@ -239,6 +248,9 @@ on_chunk(chunk):
     return [segment(committed, offset=audio_start)]
 
 flush(): transcribe pending (if any) and commit every word.
+
+partial(tail):  # interim text (28): pending + chunker.buffered(), ≥ 1 s voiced; commits nothing,
+                # does not feed the language lock
 ```
 
 Committed audio is dropped, so no text is duplicated.

@@ -49,6 +49,9 @@ FIELDS: tuple[Field, ...] = (
     Field("VAD_MIN_CHUNK_SECONDS", "vad_min_chunk_seconds", "number"),
     Field("VAD_MAX_CHUNK_SECONDS", "vad_max_chunk_seconds", "number"),
     Field("VAD_SPEECH_PAD_MS", "vad_speech_pad_ms", "integer"),
+    # Live interim text (phase 28)
+    Field("LIVE_PARTIALS", "live_partials", "bool"),
+    Field("PARTIAL_INTERVAL_SECONDS", "partial_interval_seconds", "number"),
     # Minutes (phase 04)
     Field("LLM_PROVIDER", "llm_provider", "string"),
     Field("OLLAMA_URL", "ollama_url", "url"),

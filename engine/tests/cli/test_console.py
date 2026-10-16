@@ -154,6 +154,14 @@ def test_events_from_many_threads_never_interleave_within_a_line() -> None:
     assert set(lines) == {"[00:01:05] labels.mic: " + "x" * 50}
 
 
+def test_interim_text_is_not_printed() -> None:
+    stream = io.StringIO()
+
+    _console(stream).on_partial(Channel.MIC, "mic", 1.0, "Hel")
+
+    assert stream.getvalue() == ""
+
+
 def test_model_loading_is_announced_while_recording() -> None:
     stream = io.StringIO()
     console = _console(stream)

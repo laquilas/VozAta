@@ -13,6 +13,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from vozata.domain import (
+    AudioChunk,
     Channel,
     ConversationLanguage,
     SessionStatus,
@@ -67,6 +68,10 @@ class Chunker(Protocol):
 
     def flush(self) -> None: ...
 
+    def buffered(self) -> AudioChunk | None:
+        """A copy of the audio not emitted yet (interim text, phase 28)."""
+        ...
+
 
 @runtime_checkable
 class SpeechDetector(Protocol):
@@ -119,6 +124,10 @@ class SessionObserver(Protocol):
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
 
     def on_minutes_ready(self, session_id: str) -> None: ...
+
+    def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
+        """Interim text of a channel (phase 28); empty `text` clears it. Never written to files."""
+        ...
 
     def on_model_loading(self, loading: bool) -> None:
         """The speech model started (True) or finished (False) loading; capture already runs."""

@@ -113,16 +113,27 @@
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
       <Panel>
         <TextBlock Text="{Binding L[TranscriptEmpty]}" Opacity="0.6" Margin="16"
-                   TextWrapping="Wrap" IsVisible="{Binding !Segments.Count}" />
+                   TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
         <ScrollViewer views:AutoScroll.IsEnabled="True">
-          <ItemsControl ItemsSource="{Binding Segments}" Margin="12">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:TranscriptLine">
-                <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
-                                     TextWrapping="Wrap" Margin="0,3" FontSize="15" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+          <StackPanel Margin="12">
+            <ItemsControl ItemsSource="{Binding Segments}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TranscriptLine">
+                  <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
+                                       TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- Interim text (phase 28): grey italic, replaced in place, removed by the segment -->
+            <ItemsControl ItemsSource="{Binding Partials}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TranscriptLine">
+                  <TextBlock Text="{Binding Display}" Foreground="Gray" FontStyle="Italic"
+                             TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
         </ScrollViewer>
       </Panel>
     </Border>

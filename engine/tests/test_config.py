@@ -409,3 +409,26 @@ def test_whisper_keep_loaded_defaults_to_false_and_accepts_booleans() -> None:
     with pytest.raises(ConfigError) as caught:
         load_settings(env={"WHISPER_KEEP_LOADED": "sometimes"})
     assert caught.value.key == "WHISPER_KEEP_LOADED"
+
+
+def test_live_partials_defaults_and_values() -> None:
+    settings = load_settings(env={})
+    assert (settings.live_partials, settings.partial_interval_seconds) == (True, 1.5)
+
+    settings = load_settings(env={"LIVE_PARTIALS": "false", "PARTIAL_INTERVAL_SECONDS": "3"})
+    assert (settings.live_partials, settings.partial_interval_seconds) == (False, 3.0)
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("LIVE_PARTIALS", "maybe"),
+        ("PARTIAL_INTERVAL_SECONDS", "0.4"),
+        ("PARTIAL_INTERVAL_SECONDS", "11"),
+    ],
+)
+def test_invalid_live_partial_values_raise(key: str, value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert caught.value.key == key

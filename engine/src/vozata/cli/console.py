@@ -90,6 +90,9 @@ class ConsoleObserver:
         with self._lock:
             self._print(self._t("cli.minutes_ready"))
 
+    def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
+        pass  # interim text is a desktop feature (phase 28 scope)
+
     def on_model_loading(self, loading: bool) -> None:
         with self._lock:
             self._print(self._t("cli.loading_model" if loading else "cli.model_ready"))

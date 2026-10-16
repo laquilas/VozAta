@@ -44,6 +44,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SelectedLanguage = ConversationLanguages[0];
         SelectedAppLanguage = AppLanguages[0];
         localization.PropertyChanged += OnLanguageChanged;
+        Segments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsTranscriptEmpty));
+        Partials.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsTranscriptEmpty));
         RefreshTexts();
     }
 
@@ -59,6 +61,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public IReadOnlyList<ChoiceOption> AppLanguages { get; }
 
     public ObservableCollection<TranscriptLine> Segments { get; } = [];
+
+    /// <summary>Interim text, at most one line per channel, shown under the transcript.</summary>
+    public ObservableCollection<TranscriptLine> Partials { get; } = [];
+
+    public bool IsTranscriptEmpty => Segments.Count == 0 && Partials.Count == 0;
 
     public ObservableCollection<string> Notifications { get; } = [];
 
@@ -184,6 +191,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task StartAsync()
     {
         Segments.Clear();
+        Partials.Clear();
         DetectedLanguage = _detectedLanguage = null;
         Elapsed = TranscriptLine.FormatTime(0);
         SetState(RecordingState.Starting);
@@ -250,8 +258,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 OnStatus(status);
                 break;
             case SegmentEvent { Segment: var segment }:
+                RemovePartial(segment.Channel);
                 Segments.Add(new TranscriptLine(
                     TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel));
+                break;
+            case PartialEvent partial:
+                OnPartial(partial);
                 break;
             case LanguageDetectedEvent detected:
                 _detectedLanguage = detected.Language;
@@ -269,6 +281,48 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         HandledEvents++;
+    }
+
+    private void OnPartial(PartialEvent partial)
+    {
+        if (partial.Text.Length == 0)
+        {
+            RemovePartial(partial.Channel);
+            return;
+        }
+
+        var line = new TranscriptLine(TranscriptLine.FormatTime(partial.Start), partial.Label, partial.Text, partial.Channel);
+        var index = PartialIndex(partial.Channel);
+        if (index < 0)
+        {
+            Partials.Add(line);
+        }
+        else
+        {
+            Partials[index] = line;
+        }
+    }
+
+    private void RemovePartial(string channel)
+    {
+        var index = PartialIndex(channel);
+        if (index >= 0)
+        {
+            Partials.RemoveAt(index);
+        }
+    }
+
+    private int PartialIndex(string channel)
+    {
+        for (var i = 0; i < Partials.Count; i++)
+        {
+            if (Partials[i].Channel == channel)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private void OnStatus(StatusEvent status)
@@ -298,6 +352,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (state == RecordingState.Idle)
         {
             IsModelLoading = false;
+            Partials.Clear();
             _idle.TrySetResult();
         }
     }

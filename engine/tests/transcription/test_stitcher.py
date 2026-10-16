@@ -279,3 +279,48 @@ def test_a_complete_chunk_also_commits_audio_carried_from_a_forced_cut() -> None
     assert [s.text for s in segments] == ["carried rest."]
     assert audio_seconds(fake, 1) == pytest.approx(6.0)
     assert stitcher.flush() == []
+
+
+def test_partial_previews_carry_plus_tail_without_committing_or_observing() -> None:
+    fake = FakeTranscriber(
+        [result(w(" carried", 0.5, 4.8)), result(w(" carried", 0.5, 4.8), w(" and more", 5.0, 6.0))]
+    )
+    language = FakeLanguage()
+    stitcher = make(fake, language=language)
+    assert stitcher.on_chunk(chunk(start=10.0)) == []  # 5 s carried
+    observed = list(language.observed)
+
+    preview = stitcher.partial(chunk(start=15.0, seconds=1.5))
+
+    assert preview == (10.0, "carried and more")
+    assert audio_seconds(fake, 1) == pytest.approx(6.5)
+    assert language.observed == observed  # interim text never locks the language
+    stitcher.on_chunk(chunk(start=15.0))
+    assert audio_seconds(fake, 2) == pytest.approx(10.0)  # the carry was kept
+
+
+def test_partial_of_the_tail_alone_starts_at_the_tail() -> None:
+    fake = FakeTranscriber([result(w(" hello", 0.1, 0.6))])
+
+    assert make(fake).partial(chunk(start=42.0, seconds=1.2)) == (42.0, "hello")
+
+
+@pytest.mark.parametrize(
+    "tail",
+    [
+        None,
+        chunk(start=0.0, seconds=0.9),  # less than 1 s of speech
+        chunk(start=0.0, seconds=3.0, level=0.001),  # silence
+    ],
+)
+def test_partial_needs_a_second_of_speech(tail: AudioChunk | None) -> None:
+    fake = FakeTranscriber([result(w(" x", 0.1, 0.4))])
+
+    assert make(fake).partial(tail) is None
+    assert fake.calls == []
+
+
+def test_partial_without_words_is_none() -> None:
+    fake = FakeTranscriber([result()])
+
+    assert make(fake).partial(chunk(start=0.0, seconds=2.0)) is None
