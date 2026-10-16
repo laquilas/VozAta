@@ -232,6 +232,69 @@ public sealed class MainViewModelTests
         Assert.Equal("Portugués", viewModel.History.Rows[0].Language);
     }
 
+    private void AddSchema(string key, string type, string group, params string[] choices) =>
+        _client.Schema.Add(new SettingSchema(
+            key, type, System.Text.Json.JsonSerializer.SerializeToElement((object?)null), choices.Length > 0 ? choices : null, false, group));
+
+    [Fact]
+    public async Task The_settings_page_loads_at_start_up()
+    {
+        AddSchema("CHUNK_SECONDS", "number", "segmentation");
+        _client.SettingValues["CHUNK_SECONDS"] = 5.0;
+
+        var viewModel = await ReadyAsync();
+
+        Assert.Equal(5.0m, viewModel.Settings.Groups.Single().Editors.Single().NumberValue);
+    }
+
+    [Fact]
+    public async Task Saved_settings_apply_languages_and_labels_to_the_window()
+    {
+        AddSchema("APP_LANGUAGE", "choice", "general", "en", "pt-BR", "es");
+        AddSchema("TRANSCRIPTION_LANGUAGE", "choice", "general", "en", "pt", "es", "auto");
+        AddSchema("MIC_LABEL", "string", "general");
+        _client.SettingValues["MIC_LABEL"] = null;
+        var viewModel = await ReadyAsync();
+        var editors = viewModel.Settings.Groups.Single().Editors;
+        editors[0].SelectedChoice = editors[0].Choices.Single(choice => choice.Value == "es");
+        editors[1].SelectedChoice = editors[1].Choices.Single(choice => choice.Value == "auto");
+        editors[2].TextValue = "Host";
+
+        await viewModel.Settings.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("es", _localization.Language);
+        Assert.Equal("es", viewModel.SelectedAppLanguage!.Value);
+        Assert.Equal("auto", viewModel.SelectedLanguage.Value);
+        Assert.Equal("Host", viewModel.MicMeter.Label);
+        Assert.Single(_client.Updates);  // the language switch did not save again
+    }
+
+    [Fact]
+    public async Task The_interface_language_selector_saves_the_choice_after_start_up()
+    {
+        _client.SettingValues["APP_LANGUAGE"] = "pt-BR";
+        var viewModel = await ReadyAsync();
+        Assert.Empty(_client.Updates);  // restoring the saved language is not a change
+
+        viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "es");
+        await viewModel.LanguageSave;
+
+        Assert.Equal("es", (string)_client.Updates.Single()["APP_LANGUAGE"]!);
+    }
+
+    [Fact]
+    public async Task A_failed_language_save_is_shown_but_the_language_still_switches()
+    {
+        var viewModel = await ReadyAsync();
+        _client.UpdateError = new EngineUnavailableException("refused", new HttpRequestException());
+
+        viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
+        await viewModel.LanguageSave;
+
+        Assert.Equal("pt-BR", _localization.Language);
+        Assert.Contains(_localization["EngineUnavailable"], viewModel.Notifications);
+    }
+
     [Fact]
     public async Task Health_without_gpu_and_unreachable_llm()
     {

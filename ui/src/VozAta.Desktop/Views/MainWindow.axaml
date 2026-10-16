@@ -186,6 +186,9 @@
       <TabItem Header="{Binding L[TabHistory]}">
         <views:HistoryView DataContext="{Binding History}" />
       </TabItem>
+      <TabItem Header="{Binding L[TabSettings]}">
+        <views:SettingsView DataContext="{Binding Settings}" />
+      </TabItem>
     </TabControl>
   </DockPanel>
 </Window>
