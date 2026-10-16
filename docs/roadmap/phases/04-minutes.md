@@ -63,9 +63,9 @@ Templates (20), action-item extraction (23), Q&A (24), triggering at session end
 ## Progress
 
 - **Branch:** `feature/04-minutes`
-- **Status:** in progress
+- **Status:** blocked
 - **Updated:** 2026-10-15 23:32
-- **Next step:** write `engine/scripts/smoke_minutes.py` (synthetic sample transcript → minutes in en / pt-BR / es through `OllamaLanguageModel`); run it once Ollama is installed and `qwen2.5:7b` pulled (waiting for the user's approval).
+- **Next step:** BLOCKED on Ollama: with the user's approval, install Ollama for Windows and run `ollama pull qwen2.5:7b`; then from engine/ run `../.venv/Scripts/python scripts/smoke_minutes.py` (and once with `--max-chars 200` to exercise map-reduce), record the minutes per language in the PR, tick the manual criterion and close the phase.
 
 ### Steps
 
@@ -73,7 +73,7 @@ Templates (20), action-item extraction (23), Q&A (24), triggering at session end
 - [x] Config keys owned by 04 + `.env.example` note on a smaller model — `e7d1bea`
 - [x] `LanguageModelError` + `llm/ollama.py` (`OllamaLanguageModel`, tested with `httpx.MockTransport`) — `6eed588`
 - [x] Locale keys + `minutes/prompts.py` — `a4aaf3e`
-- [x] `minutes/generator.py` (`MinutesGenerator`, map-reduce)
+- [x] `minutes/generator.py` (`MinutesGenerator`, map-reduce) — `c7eadab`
 - [ ] Manual run against a local Ollama in en / pt-BR / es
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
