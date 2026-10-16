@@ -40,6 +40,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "-m 'not gpu'"
+markers = ["gpu: needs an NVIDIA GPU and downloaded Whisper models (run with -m gpu)"]
 
 [tool.coverage.run]
 source = ["vozata"]

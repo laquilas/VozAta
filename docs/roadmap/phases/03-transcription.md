@@ -70,7 +70,7 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - **Branch:** `feature/03-transcription`
 - **Status:** in progress
 - **Updated:** 2026-10-15 23:25
-- **Next step:** generate `engine/tests/data/speech_en.wav` with Windows TTS (SAPI to file, 16 kHz mono), add `tests/transcription/test_faster_whisper_gpu.py` (marker `gpu`, skipped by default: contract suite + expected words), register the marker, run `pytest -m gpu`, then the CPU fallback with `WHISPER_DEVICE=cpu`.
+- **Next step:** verify (pytest with coverage, ruff), tick the acceptance criteria, set phase 03 to `done` and Progress to `ready for PR`.
 
 ### Steps
 
@@ -80,8 +80,8 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - [x] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite — `e0cdaa3`
 - [x] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`) — `798366e`
 - [x] `transcription/worker.py` (`TranscriptionWorker`) — `0d23bb9`
-- [x] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests)
-- [ ] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check
+- [x] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests) — `86d59f4`
+- [x] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check
 - [ ] Verify; tick acceptance criteria; set phase `done`
 
 ### Decisions and notes
@@ -92,3 +92,5 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 - Ranges: `TAIL_MARGIN_SECONDS` [0, 5], `PAUSE_GAP_SECONDS` [0.05, 5], `MAX_CARRY_SECONDS` [1, 120], `SILENCE_RMS_THRESHOLD` [0, 1]; `STT_PROVIDER` is validated against the registry in `bootstrap.py` (05), not here.
 - `FakeTranscriber` returns an empty result for all-zero audio without consuming a scripted result, as the transcriber contract requires.
 - **Stitcher fix (architecture §7 updated)**: the GPU smoke run showed Whisper's last-word end timestamp running early, so the carried tail began with the end of that word and `flush()` emitted a fragment ("meeting." then "eating."). The cut after a window's last word now extends through still-voiced 10 ms frames, capped at 0.3 s.
+- **GPU smoke result (2026-10-15, RTX 3050 6 GB)**: `WHISPER_MODEL=large-v3 WHISPER_CPU_MODEL=large-v3 HF_HUB_OFFLINE=1 pytest -m gpu`: 3 passed in 41.6 s (CUDA contract, CPU contract via `WHISPER_DEVICE=cpu`, stitched 2 s windows reproduce the sentence exactly).
+- **Model download**: this connection reached about 186 KB/s from Hugging Face, so `large-v3-turbo` (1.6 GB, the default) and `small` were not downloaded; the smoke run used the fully cached `large-v3`. Either let turbo download once (`HF_HUB_DISABLE_XET=1`) or set `WHISPER_MODEL=large-v3` in `.env`.
