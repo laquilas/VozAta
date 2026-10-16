@@ -10,6 +10,7 @@ out_of_range = "Invalid value \"{value}\" for {key}: must be between {min} and {
 invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https:// URL."
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
 unknown_key = "Unknown setting {key}."
+no_word_timestamps = "The speech API at {host} returned no word timestamps for model \"{value}\". Choose a model that supports timestamp_granularities=word."
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
@@ -66,6 +67,7 @@ serving = "Engine API listening on {url} (Ctrl+C to stop)."
 serve_public_host = "Refusing to listen on {host}: the engine API has no authentication. Use 127.0.0.1 or localhost in API_HOST."
 loading_model = "Loading the speech recognition model — already recording..."
 model_ready = "Speech recognition model ready."
+remote_stt = "Speech recognition runs on {host}: the audio is sent there."
 recording = "Recording to {folder}"
 controls = "Press p + Enter to pause or resume, Ctrl+C to stop."
 paused = "Paused: the audio is replaced by silence and not transcribed. Press p + Enter to resume."

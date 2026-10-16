@@ -73,6 +73,10 @@ FIELDS: tuple[Field, ...] = (
         group="transcription",
         applies="restart",
     ),  # phase 26
+    # External STT API (phase 12)
+    Field("OPENAI_STT_URL", "openai_stt_url", "url", group="transcription"),
+    Field("OPENAI_STT_KEY", "openai_stt_key", "string", secret=True, group="transcription"),
+    Field("OPENAI_STT_MODEL", "openai_stt_model", "string", group="transcription"),
     # Pause-based segmentation (phase 27)
     Field("CHUNK_MODE", "chunk_mode", "choice", ChunkMode, group="segmentation"),
     Field("VAD_THRESHOLD", "vad_threshold", "number", group="segmentation"),

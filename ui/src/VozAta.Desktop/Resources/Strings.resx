@@ -480,6 +480,24 @@
   <data name="DesktopPreferences" xml:space="preserve">
     <value>Desktop app</value>
   </data>
+  <data name="Setting_OPENAI_STT_URL" xml:space="preserve">
+    <value>External speech API address</value>
+  </data>
+  <data name="SettingHelp_OPENAI_STT_URL" xml:space="preserve">
+    <value>Base URL of an OpenAI-style speech API used when the recognition engine is openai_compatible, e.g. https://api.openai.com/v1 or https://api.groq.com/openai/v1. Audio is sent there.</value>
+  </data>
+  <data name="Setting_OPENAI_STT_KEY" xml:space="preserve">
+    <value>External speech API key</value>
+  </data>
+  <data name="SettingHelp_OPENAI_STT_KEY" xml:space="preserve">
+    <value>Key of the external speech API. It is stored in the engine's .env file and never shown again.</value>
+  </data>
+  <data name="Setting_OPENAI_STT_MODEL" xml:space="preserve">
+    <value>External speech model</value>
+  </data>
+  <data name="SettingHelp_OPENAI_STT_MODEL" xml:space="preserve">
+    <value>Model of the external speech API, e.g. whisper-1 (OpenAI) or whisper-large-v3 (Groq). Check the provider's price per minute.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>

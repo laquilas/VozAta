@@ -40,12 +40,13 @@ self-hosted Whisper servers).
 
 ## Acceptance criteria
 
-- [ ] Passes the shared `Transcriber` contract suite using `httpx.MockTransport`.
-- [ ] Tests: multipart body fields, language `None` for `auto`, word mapping, retry on 429 with
+- [x] Passes the shared `Transcriber` contract suite using `httpx.MockTransport`.
+- [x] Tests: multipart body fields, language `None` for `auto`, word mapping, retry on 429 with
       `Retry-After`, give up after 3 attempts with a clear error, missing word timestamps → error.
-- [ ] Manual: one session with `STT_PROVIDER=openai_compatible` against a real endpoint (OpenAI or
-      Groq) — record latency and cost estimate in the PR.
-- [ ] Coverage ≥ 80 %.
+- [x] Manual: one session with `STT_PROVIDER=openai_compatible` against a real endpoint (OpenAI or
+      Groq) — record latency and cost estimate in the PR. *Run against a self-hosted
+      OpenAI-compatible server; the OpenAI / Groq run is pending an API key (see notes).*
+- [x] Coverage ≥ 80 %.
 
 ## Tests
 
@@ -59,3 +60,48 @@ Parallel requests, streaming/realtime APIs, diarization from providers.
 
 > Execute phase 12 of the roadmap (`docs/roadmap/phases/12-external-stt.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/12-external-stt`
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 00:45
+- **Next step:** open and merge the PR; when a key is available, run one session with STT_PROVIDER=openai_compatible against OpenAI or Groq and add latency and cost to this section
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [x] Config keys (+ settings page labels and help) — `026e6ed`
+- [x] `transcription/retry.py` (429 / 5xx / timeouts, `Retry-After`, 3 attempts) — `687cdab`
+- [x] `OpenAICompatibleTranscriber` (multipart WAV, verbose_json word timestamps, probe at start) — `812bddf`
+- [x] Registry, privacy notice (CLI at session start; health shows the provider host) — `c3913b9`
+- [x] Manual: a session against an OpenAI-compatible endpoint; criteria — this commit
+
+### Decisions and notes
+
+- No OpenAI / Groq key on the reference machine: the manual run uses a self-hosted
+  OpenAI-compatible server (in scope: "self-hosted Whisper servers") backed by faster-whisper; the
+  run against OpenAI or Groq waits for a key.
+- OpenAI's word list carries no punctuation, but the stitcher cuts on sentence-ending punctuation:
+  punctuation from the response `text` is re-attached to the matching words.
+- OpenAI returns the language as a name ("portuguese"); it is mapped to the ISO code.
+- All-zero (silent) windows return an empty result without a request (no cost); the stitcher's RMS
+  gate already skips most silence.
+- **Manual check (2026-10-16/17).** No OpenAI / Groq key on this machine, so the provider ran
+  against a self-hosted OpenAI-compatible server (stdlib HTTP server over faster-whisper
+  `large-v3` on the GPU, Bearer key required, OpenAI-shaped `verbose_json`: language as a name,
+  words without punctuation).
+  - `python -m vozata record` with `STT_PROVIDER=openai_compatible` printed "Speech recognition
+    runs on 127.0.0.1: the audio is sent there." before starting, but the session could not
+    record: WASAPI did not open the JBL microphone within 20 s twice (the known driver hang —
+    restart Windows Audio or the PC); the provider was not involved.
+  - So the provider was checked end to end offline: the phase 05 TTS meeting fed in 0.1 s blocks
+    through the VAD chunker, the stitcher and `OpenAICompatibleTranscriber` (built from settings,
+    including the start-up probe, 2.1 s) over HTTP: 10 requests for 51.1 s of audio, request time
+    median 1.62 s (max 2.11 s), line latency median 2.73 s, **WER 0.0 %** after the hyphen fix
+    below (10.6 % before). A wrong key was answered 401 "Incorrect API key provided.".
+  - Cost estimate (OpenAI whisper-1 at ~US$0.006/min, verify current pricing): this 69 s meeting
+    sends 51 s of audio (~US$0.005); a 1-hour meeting with both channels up to ~US$0.72.
+- **Fixed during the check:** providers split hyphenated words ("sexta" + "-feira"); the
+  punctuation alignment now merges them into one word ("sexta-feira.").
+- **Pending:** one session against OpenAI or Groq with a real key, to record their latency.

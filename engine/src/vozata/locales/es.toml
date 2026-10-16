@@ -10,6 +10,7 @@ out_of_range = "Valor no válido \"{value}\" para {key}: debe estar entre {min} 
 invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http:// o https://."
 invalid_duration = "Valor no válido \"{value}\" para {key}: se esperaban segundos (0, -1, 300) o una duración como 5m o 1h30m."
 unknown_key = "Configuración desconocida: {key}."
+no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por palabra para el modelo \"{value}\". Elige un modelo que admita timestamp_granularities=word."
 
 [errors.session]
 audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."
@@ -66,6 +67,7 @@ serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
 serve_public_host = "No se escuchará en {host}: la API del motor no tiene autenticación. Usa 127.0.0.1 o localhost en API_HOST."
 loading_model = "Cargando el modelo de reconocimiento de voz — ya grabando..."
 model_ready = "Modelo de reconocimiento de voz listo."
+remote_stt = "El reconocimiento de voz se hace en {host}: el audio se envía allí."
 recording = "Grabando en {folder}"
 controls = "Pulsa p + Intro para pausar o reanudar, Ctrl+C para detener."
 paused = "En pausa: el audio se sustituye por silencio y no se transcribe. Pulsa p + Intro para reanudar."
