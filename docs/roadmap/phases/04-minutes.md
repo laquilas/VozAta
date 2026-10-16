@@ -59,3 +59,27 @@ Templates (20), action-item extraction (23), Q&A (24), triggering at session end
 
 > Execute phase 04 of the roadmap (`docs/roadmap/phases/04-minutes.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/04-minutes`
+- **Status:** in progress
+- **Updated:** 2026-10-16 02:00
+- **Next step:** add `LLM_PROVIDER`, `OLLAMA_URL`, `OLLAMA_MODEL`, `LLM_MAX_CHARS` to `config.py` test-first (URL must be http(s); `errors.config.invalid_url` in the three locales).
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section
+- [ ] Config keys owned by 04 + `.env.example` note on a smaller model
+- [ ] `LanguageModelError` + `llm/ollama.py` (`OllamaLanguageModel`, tested with `httpx.MockTransport`)
+- [ ] Locale keys + `minutes/prompts.py`
+- [ ] `minutes/generator.py` (`MinutesGenerator`, map-reduce)
+- [ ] Manual run against a local Ollama in en / pt-BR / es
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- `is_available()` is already part of the `LanguageModel` port (added in phase 01).
+- `LanguageModelError` lives in `ports.py` next to the port: callers catch it by port, not by provider.
+- Prompts name languages through locale keys (`languages.*`, `minutes.output_language`), so each locale names them in its own language.
+- **Ollama is not installed** on the reference machine; the manual run waits for the user's approval to install it and pull `qwen2.5:7b` (~4.7 GB).
