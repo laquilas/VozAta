@@ -296,6 +296,64 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Pause_and_resume_toggle_through_the_engine()
+    {
+        var viewModel = await ReadyAsync();
+        Assert.False(viewModel.PauseResumeCommand.CanExecute(null));
+        await viewModel.StartCommand.ExecuteAsync(null);
+        Assert.Equal("Pause", viewModel.PauseResumeText);
+
+        await viewModel.PauseResumeCommand.ExecuteAsync(null);
+        Assert.Equal(RecordingState.Paused, viewModel.State);
+        Assert.True(viewModel.IsPaused && viewModel.IsRecording && !viewModel.IsActivelyRecording);
+        Assert.Equal("Resume", viewModel.PauseResumeText);
+        Assert.True(viewModel.StopCommand.CanExecute(null));
+
+        await viewModel.PauseResumeCommand.ExecuteAsync(null);
+
+        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Equal(["pause", "resume"], _client.Calls.Where(call => call is "pause" or "resume"));
+    }
+
+    [Fact]
+    public async Task The_timer_freezes_while_paused_and_follows_the_engine_after_resume()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.StartCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new StatusEvent("s", "recording", 10));
+
+        await SendAsync(viewModel, new StatusEvent("s", "paused", 12));
+        await SendAsync(viewModel, new StatusEvent("s", "paused", 40));  // heartbeat while paused
+        Assert.Equal("00:00:12", viewModel.Elapsed);
+        await SendAsync(viewModel, new StatusEvent("s", "recording", 41));
+
+        Assert.Equal("00:00:41", viewModel.Elapsed);
+    }
+
+    [Fact]
+    public async Task A_rejected_pause_is_shown_and_keeps_recording()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.StartCommand.ExecuteAsync(null);
+        _client.PauseError = FakeEngineClient.ApiError("no_active_session", "Nothing is recording.");
+
+        await viewModel.PauseResumeCommand.ExecuteAsync(null);
+
+        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Contains("Nothing is recording.", viewModel.Notifications);
+    }
+
+    [Fact]
+    public async Task The_pause_button_text_follows_the_ui_language()
+    {
+        var viewModel = await ReadyAsync();
+
+        viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
+
+        Assert.Equal("Pausar", viewModel.PauseResumeText);
+    }
+
+    [Fact]
     public async Task Health_without_gpu_and_unreachable_llm()
     {
         _client.Health = _client.Health with

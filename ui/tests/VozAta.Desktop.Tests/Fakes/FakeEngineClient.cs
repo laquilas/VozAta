@@ -61,11 +61,19 @@ internal sealed class FakeEngineClient : IEngineClient
         return StartError is null ? Task.FromResult(Summary("recording")) : Task.FromException<SessionSummary>(StartError);
     }
 
-    public Task<SessionSummary> PauseSessionAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(Summary("paused"));
+    public Exception? PauseError { get; set; }
 
-    public Task<SessionSummary> ResumeSessionAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(Summary("recording"));
+    public Task<SessionSummary> PauseSessionAsync(CancellationToken cancellationToken = default)
+    {
+        Calls.Add("pause");
+        return PauseError is null ? Task.FromResult(Summary("paused")) : Task.FromException<SessionSummary>(PauseError);
+    }
+
+    public Task<SessionSummary> ResumeSessionAsync(CancellationToken cancellationToken = default)
+    {
+        Calls.Add("resume");
+        return Task.FromResult(Summary("recording"));
+    }
 
     public Task<SessionSummary> StopSessionAsync(CancellationToken cancellationToken = default)
     {

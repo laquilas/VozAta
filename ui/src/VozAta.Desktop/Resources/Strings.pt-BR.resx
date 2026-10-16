@@ -459,6 +459,12 @@
   <data name="FileTypePdf" xml:space="preserve">
     <value>Documento PDF</value>
   </data>
+  <data name="Pause" xml:space="preserve">
+    <value>Pausar</value>
+  </data>
+  <data name="Resume" xml:space="preserve">
+    <value>Retomar</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Fechar</value>
   </data>

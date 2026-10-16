@@ -74,10 +74,14 @@
                   <TextBlock Text="{Binding L[Stop]}" />
                 </StackPanel>
               </Button>
+              <Button FontSize="18" Padding="22,14" Command="{Binding PauseResumeCommand}"
+                      IsVisible="{Binding IsRecording}" Content="{Binding PauseResumeText}" />
               <StackPanel VerticalAlignment="Center" Spacing="2">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Ellipse Width="14" Height="14" Fill="#E53935" VerticalAlignment="Center"
-                           IsVisible="{Binding IsRecording}" />
+                           IsVisible="{Binding IsActivelyRecording}" />
+                  <Ellipse Width="14" Height="14" Fill="#FFB300" VerticalAlignment="Center"
+                           IsVisible="{Binding IsPaused}" />
                   <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
                 </StackPanel>
                 <TextBlock Text="{Binding Elapsed}" FontSize="22" FontFamily="Consolas, monospace" />

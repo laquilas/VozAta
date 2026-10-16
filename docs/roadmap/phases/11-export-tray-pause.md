@@ -64,8 +64,8 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 
 - **Branch:** `feature/11-export-tray-pause`
 - **Status:** in progress
-- **Updated:** 2026-10-16 21:40
-- **Next step:** UI pause / resume: `MainViewModel` Pause / Resume commands (`POST /sessions/current/pause|resume`), amber Paused indicator, elapsed time frozen while paused; one toggle button next to Stop; tests in `PauseResumeTests.cs`
+- **Updated:** 2026-10-16 22:00
+- **Next step:** UI tray: `TrayViewModel` (Start / Pause–Resume / Stop / Show / Quit commands routed to `MainViewModel`, state for the icon, localized menu texts), `MinimizeToTray` in `UiPreferencesData` + Settings checkbox, Avalonia `TrayIcon` wired in `App.axaml.cs` with three generated state icons; tests in `TrayViewModelTests.cs`
 
 ### Steps
 
@@ -74,8 +74,8 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 - [x] DOCX exporter (`python-docx`) — `40f139a`
 - [x] PDF exporter (`fpdf2`, bundled DejaVu Sans + license) — `4615620`
 - [x] `EXPORTERS` registry + `GET /sessions/{id}/export?format=` — `c2a8675`
-- [x] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail — this commit
-- [ ] UI pause / resume: button next to Stop, amber paused state, frozen timer
+- [x] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail — `79f2a25`
+- [x] UI pause / resume: button next to Stop, amber paused state, frozen timer — this commit
 - [ ] UI tray: `TrayViewModel` (Start, Pause–Resume, Stop, Show, Quit, state icon), minimize to tray
 - [ ] Manual: export md / docx / pdf of a pt-BR session; pause 30 s; criteria
 
