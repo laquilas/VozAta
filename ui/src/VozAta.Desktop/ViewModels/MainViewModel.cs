@@ -29,7 +29,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private string? _micLabel;
     private string? _systemLabel;
     private TaskCompletionSource _idle = NewIdleSignal(completed: true);
-    private EngineHealth? _health;
     private string? _detectedLanguage;
 
     public MainViewModel(
@@ -54,6 +53,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _timer = timer;
         Devices = new DevicesViewModel(client, preferences);
         History = new HistoryViewModel(client, shell, localization);
+        Health = new HealthViewModel(client, localization);
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
         var saved = preferences.Load();
@@ -155,14 +155,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ => _localization["EngineStarting"],
     };
 
-    public string GpuText => _health is null ? "" : _health.Gpu.Available
-        ? _localization.Format("GpuName", _health.Gpu.Name, _health.Gpu.VramTotalMb)
-        : _localization["GpuNone"];
-
-    public string SpeechText => _health is null ? "" : _localization.Format("SpeechModel", _health.Stt.Model, _health.Stt.Device);
-
-    public string MinutesText => _health is null ? "" : _localization.Format(
-        _health.Llm.Reachable ? "MinutesReachable" : "MinutesUnreachable", _health.Llm.Model);
+    /// <summary>GPU, speech and minutes status (status bar and settings page).</summary>
+    public HealthViewModel Health { get; }
 
     /// <summary>Connect to (or start) the engine, load its settings, then follow its events.</summary>
     public async Task InitializeAsync()
@@ -175,9 +169,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        await Health.LoadAsync(_stop.Token);
+        if (Health.Error is { } healthError)
+        {
+            Notify(healthError);
+        }
+
         try
         {
-            _health = await _client.GetHealthAsync(_stop.Token);
             var settings = await _client.GetSettingsAsync(_stop.Token);
             SelectedAppLanguage = AppLanguages.FirstOrDefault(
                 option => option.Value == settings.GetString("APP_LANGUAGE")) ?? AppLanguages[0];
@@ -495,9 +494,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SystemMeter.Label = _systemLabel ?? _localization["SpeakerSystem"];
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(EngineText));
-        OnPropertyChanged(nameof(GpuText));
-        OnPropertyChanged(nameof(SpeechText));
-        OnPropertyChanged(nameof(MinutesText));
+        Health.RefreshTexts();
     }
 
     private void RefreshDetectedLanguage()

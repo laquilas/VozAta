@@ -31,9 +31,9 @@
             Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
       <WrapPanel>
         <TextBlock Text="{Binding EngineText}" Margin="0,0,24,0" />
-        <TextBlock Text="{Binding GpuText}" Margin="0,0,24,0" />
-        <TextBlock Text="{Binding SpeechText}" Margin="0,0,24,0" />
-        <TextBlock Text="{Binding MinutesText}" />
+        <TextBlock Text="{Binding Health.GpuText}" Margin="0,0,24,0" />
+        <TextBlock Text="{Binding Health.SpeechText}" Margin="0,0,24,0" />
+        <TextBlock Text="{Binding Health.MinutesText}" />
       </WrapPanel>
     </Border>
 

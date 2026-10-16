@@ -60,8 +60,8 @@ Vocabulary editor (19), template selection (20).
 
 - **Branch:** `feature/10-ui-settings`
 - **Status:** in progress
-- **Updated:** 2026-10-16 17:50
-- **Next step:** `ViewModels/HealthViewModel.cs` (GPU / STT / LLM texts, `CheckAgainCommand`, errors) with `HealthViewModelTests.cs`; `MainViewModel` status-bar texts delegate to it
+- **Updated:** 2026-10-16 18:10
+- **Next step:** `ViewModels/SettingsViewModel.cs` + `SettingEditorViewModel` (editor kind from schema type, text / number / bool / choice / secret values, dirty tracking, Save sends only changed keys, Discard, per-key error from `invalid_setting`, restart prompt via `IEngineProcess.RestartAsync`, saved values reported to the main window) with `SettingsViewModelTests.cs`
 
 ### Steps
 
@@ -70,8 +70,8 @@ Vocabulary editor (19), template selection (20).
 - [x] Engine: `SettingsFile` (validate, persist with `set_key`, secrets mask, restart keys) +
       `PUT /settings` (422 `invalid_setting` with `key`); sessions / minutes / LLM check read the
       current settings — `ba6ed5e`
-- [x] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync` — this commit
-- [ ] `HealthViewModel` (status bar + settings page, "Check again")
+- [x] UI client: `UpdateSettingsAsync`, schema fields, `IEngineProcess.RestartAsync` — `53e1470`
+- [x] `HealthViewModel` (status bar + settings page, "Check again") — this commit
 - [ ] `SettingsViewModel` + typed editors (dirty tracking, save / discard, restart prompt)
 - [ ] Localized label and help for every key (en / pt-BR / es)
 - [ ] Settings tab in the main window; app language saved; default conversation language applied

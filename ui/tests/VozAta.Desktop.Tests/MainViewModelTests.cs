@@ -64,9 +64,9 @@ public sealed class MainViewModelTests
         Assert.Equal("pt-BR", _localization.Language);
         Assert.Equal("pt-BR", viewModel.SelectedAppLanguage!.Value);
         Assert.Equal("es", viewModel.SelectedLanguage.Value);
-        Assert.Equal("GPU: RTX 3050 (6144 MB)", viewModel.GpuText);
-        Assert.Equal("Fala: large-v3 em auto", viewModel.SpeechText);
-        Assert.Equal("Ata: qwen2.5:7b pronto", viewModel.MinutesText);
+        Assert.Equal("GPU: RTX 3050 (6144 MB)", viewModel.Health.GpuText);
+        Assert.Equal("Fala: large-v3 em auto", viewModel.Health.SpeechText);
+        Assert.Equal("Ata: qwen2.5:7b pronto", viewModel.Health.MinutesText);
         Assert.Equal("Motor conectado", viewModel.EngineText);
         Assert.True(viewModel.StartCommand.CanExecute(null));
         Assert.Equal(RecordingState.Idle, viewModel.State);
@@ -243,8 +243,8 @@ public sealed class MainViewModelTests
 
         var viewModel = await ReadyAsync();
 
-        Assert.Equal("No GPU (CPU only)", viewModel.GpuText);
-        Assert.Equal("Minutes: qwen2.5:7b not reachable (start Ollama)", viewModel.MinutesText);
+        Assert.Equal("No GPU (CPU only)", viewModel.Health.GpuText);
+        Assert.Equal("Minutes: qwen2.5:7b not reachable (start Ollama)", viewModel.Health.MinutesText);
     }
 
     [Fact]
