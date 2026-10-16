@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>VozAta</value>
+  </data>
+  <data name="Start" xml:space="preserve">
+    <value>Iniciar gravação</value>
+  </data>
+  <data name="Stop" xml:space="preserve">
+    <value>Parar</value>
+  </data>
+  <data name="StateIdle" xml:space="preserve">
+    <value>Pronto</value>
+  </data>
+  <data name="StateStarting" xml:space="preserve">
+    <value>Iniciando…</value>
+  </data>
+  <data name="StateRecording" xml:space="preserve">
+    <value>Gravando</value>
+  </data>
+  <data name="StatePaused" xml:space="preserve">
+    <value>Pausado</value>
+  </data>
+  <data name="StateFinalizing" xml:space="preserve">
+    <value>Finalizando: transcrição, áudio e ata…</value>
+  </data>
+  <data name="ConversationLanguage" xml:space="preserve">
+    <value>Idioma da reunião</value>
+  </data>
+  <data name="LanguageEn" xml:space="preserve">
+    <value>Inglês</value>
+  </data>
+  <data name="LanguagePt" xml:space="preserve">
+    <value>Português</value>
+  </data>
+  <data name="LanguageEs" xml:space="preserve">
+    <value>Espanhol</value>
+  </data>
+  <data name="LanguageAuto" xml:space="preserve">
+    <value>Detectar automaticamente</value>
+  </data>
+  <data name="DetectedLanguage" xml:space="preserve">
+    <value>Detectado: {0}</value>
+  </data>
+  <data name="InterfaceLanguage" xml:space="preserve">
+    <value>Idioma da interface</value>
+  </data>
+  <data name="AppLanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="AppLanguagePtBr" xml:space="preserve">
+    <value>Português (Brasil)</value>
+  </data>
+  <data name="AppLanguageEs" xml:space="preserve">
+    <value>Español</value>
+  </data>
+  <data name="TranscriptEmpty" xml:space="preserve">
+    <value>Pressione Iniciar: a transcrição aparece aqui enquanto as pessoas falam.</value>
+  </data>
+  <data name="EngineStarting" xml:space="preserve">
+    <value>Iniciando o motor (a primeira vez carrega os modelos)…</value>
+  </data>
+  <data name="EngineConnected" xml:space="preserve">
+    <value>Motor conectado</value>
+  </data>
+  <data name="EngineDisconnected" xml:space="preserve">
+    <value>Motor desconectado, reconectando…</value>
+  </data>
+  <data name="EngineStartFailed" xml:space="preserve">
+    <value>Não foi possível iniciar o motor. Verifique Engine:PythonPath e Engine:WorkingDirectory no appsettings.json.</value>
+  </data>
+  <data name="EngineUnavailable" xml:space="preserve">
+    <value>O motor não está respondendo.</value>
+  </data>
+  <data name="GpuName" xml:space="preserve">
+    <value>GPU: {0} ({1} MB)</value>
+  </data>
+  <data name="GpuNone" xml:space="preserve">
+    <value>Sem GPU (somente CPU)</value>
+  </data>
+  <data name="SpeechModel" xml:space="preserve">
+    <value>Fala: {0} em {1}</value>
+  </data>
+  <data name="MinutesReachable" xml:space="preserve">
+    <value>Ata: {0} pronto</value>
+  </data>
+  <data name="MinutesUnreachable" xml:space="preserve">
+    <value>Ata: {0} indisponível (inicie o Ollama)</value>
+  </data>
+  <data name="MinutesReady" xml:space="preserve">
+    <value>A ata está pronta.</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>Fechar</value>
+  </data>
+  <data name="ConfirmCloseTitle" xml:space="preserve">
+    <value>Gravação em andamento</value>
+  </data>
+  <data name="ConfirmCloseMessage" xml:space="preserve">
+    <value>Há uma gravação em andamento. Parar e fechar o VozAta? O áudio e a transcrição gravados até agora são mantidos.</value>
+  </data>
+  <data name="ConfirmCloseYes" xml:space="preserve">
+    <value>Parar e fechar</value>
+  </data>
+  <data name="ConfirmCloseNo" xml:space="preserve">
+    <value>Continuar gravando</value>
+  </data>
+</root>

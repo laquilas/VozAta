@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>VozAta</value>
+  </data>
+  <data name="Start" xml:space="preserve">
+    <value>Start recording</value>
+  </data>
+  <data name="Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="StateIdle" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="StateStarting" xml:space="preserve">
+    <value>Starting…</value>
+  </data>
+  <data name="StateRecording" xml:space="preserve">
+    <value>Recording</value>
+  </data>
+  <data name="StatePaused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="StateFinalizing" xml:space="preserve">
+    <value>Finishing: transcript, audio and minutes…</value>
+  </data>
+  <data name="ConversationLanguage" xml:space="preserve">
+    <value>Meeting language</value>
+  </data>
+  <data name="LanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="LanguagePt" xml:space="preserve">
+    <value>Portuguese</value>
+  </data>
+  <data name="LanguageEs" xml:space="preserve">
+    <value>Spanish</value>
+  </data>
+  <data name="LanguageAuto" xml:space="preserve">
+    <value>Detect automatically</value>
+  </data>
+  <data name="DetectedLanguage" xml:space="preserve">
+    <value>Detected: {0}</value>
+  </data>
+  <data name="InterfaceLanguage" xml:space="preserve">
+    <value>Interface language</value>
+  </data>
+  <data name="AppLanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="AppLanguagePtBr" xml:space="preserve">
+    <value>Português (Brasil)</value>
+  </data>
+  <data name="AppLanguageEs" xml:space="preserve">
+    <value>Español</value>
+  </data>
+  <data name="TranscriptEmpty" xml:space="preserve">
+    <value>Press Start: the transcript appears here as people speak.</value>
+  </data>
+  <data name="EngineStarting" xml:space="preserve">
+    <value>Starting the engine (the first start loads the models)…</value>
+  </data>
+  <data name="EngineConnected" xml:space="preserve">
+    <value>Engine connected</value>
+  </data>
+  <data name="EngineDisconnected" xml:space="preserve">
+    <value>Engine disconnected, reconnecting…</value>
+  </data>
+  <data name="EngineStartFailed" xml:space="preserve">
+    <value>The engine could not be started. Check Engine:PythonPath and Engine:WorkingDirectory in appsettings.json.</value>
+  </data>
+  <data name="EngineUnavailable" xml:space="preserve">
+    <value>The engine is not responding.</value>
+  </data>
+  <data name="GpuName" xml:space="preserve">
+    <value>GPU: {0} ({1} MB)</value>
+  </data>
+  <data name="GpuNone" xml:space="preserve">
+    <value>No GPU (CPU only)</value>
+  </data>
+  <data name="SpeechModel" xml:space="preserve">
+    <value>Speech: {0} on {1}</value>
+  </data>
+  <data name="MinutesReachable" xml:space="preserve">
+    <value>Minutes: {0} ready</value>
+  </data>
+  <data name="MinutesUnreachable" xml:space="preserve">
+    <value>Minutes: {0} not reachable (start Ollama)</value>
+  </data>
+  <data name="MinutesReady" xml:space="preserve">
+    <value>Minutes are ready.</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="ConfirmCloseTitle" xml:space="preserve">
+    <value>Recording in progress</value>
+  </data>
+  <data name="ConfirmCloseMessage" xml:space="preserve">
+    <value>A recording is in progress. Stop it and close VozAta? The audio and transcript recorded so far are kept.</value>
+  </data>
+  <data name="ConfirmCloseYes" xml:space="preserve">
+    <value>Stop and close</value>
+  </data>
+  <data name="ConfirmCloseNo" xml:space="preserve">
+    <value>Keep recording</value>
+  </data>
+</root>

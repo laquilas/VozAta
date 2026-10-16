@@ -64,16 +64,16 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 
 - **Branch:** `feature/07-ui-skeleton`
 - **Status:** in progress
-- **Updated:** 2026-10-16 09:37
-- **Next step:** in `VozAta.Desktop/Services`: `IUiDispatcher` (+ Avalonia impl), `IEngineProcess` / `EngineProcess` with an `IProcessRunner` (health check, start `python -m vozata serve`, wait up to 60 s, stop only if started), `ILocalizationService` over `Resources/Strings*.resx` (en, pt-BR, es; runtime switch) + `EngineProcessTests.cs`, `LocalizationResourcesTests.cs`.
+- **Updated:** 2026-10-16 09:39
+- **Next step:** write `MainViewModelTests.cs`, then `ViewModels/MainViewModel.cs` (CommunityToolkit.Mvvm): `InitializeAsync` (ensure engine, health bar, settings defaults, UI language, event loop), state machine Idle → Starting → Recording/Paused → Finalizing → Idle from status events, `StartCommand` with the selected language, `StopCommand`, segments, detected-language badge, notifications for errors, `ConfirmCloseAsync` guard.
 
 ### Steps
 
 - [x] Start phase: status in progress, Progress section — `6ae4ec1`
 - [x] Solution scaffold, `Directory.Build.props`, CI `ui` job — `2b1ddf3`
 - [x] `VozAta.Client`: DTOs, `IEngineClient` / `EngineClient`, error envelope + tests — `56bb664`
-- [x] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests
-- [ ] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
+- [x] `IEngineEvents` (WebSocket, auto-reconnect with backoff) + tests — `8a3c247`
+- [x] Desktop services: `EngineProcess`, `ILocalizationService` + `.resx` (en, pt-BR, es) +
       parity test, `IUiDispatcher`
 - [ ] `MainViewModel` (state machine, commands, segments, language badge, errors, close guard)
       + tests
@@ -87,3 +87,10 @@ Device pickers and meters (08), history (09), settings screen (10), tray/pause/e
 - .NET SDK 10.0.402 and Avalonia templates were installed with the user's approval
   (2026-10-16); the templates use Avalonia 12.1.4.
 
+- `.resx` files are generated from one table (all three languages side by side) by a script kept
+  out of the repo; the parity test guards against drift. `LocalizationService` raises
+  `PropertyChanged("Item[]")` so `{Binding L[Key]}` bindings refresh on a language switch.
+- `PathResolver` resolves `Engine:PythonPath` / `Engine:WorkingDirectory` against the current
+  directory, then every folder above the app, so the defaults (`../.venv/...`, `../engine`) work
+  from `ui/` and from `bin/Debug/net10.0/`. The engine is stopped on exit with
+  `Kill(entireProcessTree)` only if the UI started it.
