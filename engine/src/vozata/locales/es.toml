@@ -1,0 +1,9 @@
+[labels]
+mic = "Yo"
+system = "Otros"
+user = "Usuario {n}"
+
+[errors.config]
+invalid_choice = "Valor no válido \"{value}\" para {key}. Valores permitidos: {allowed}."
+not_a_number = "Valor no válido \"{value}\" para {key}: se esperaba un número."
+out_of_range = "Valor no válido \"{value}\" para {key}: debe estar entre {min} y {max}."

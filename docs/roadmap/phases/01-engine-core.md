@@ -66,15 +66,15 @@ Audio, transcription, LLM, providers registries (phase 05 `bootstrap.py`).
 
 - **Branch:** `feature/01-engine-core`
 - **Status:** in progress
-- **Updated:** 2026-10-15 22:51
-- **Next step:** TDD `i18n.py`: write `tests/test_i18n.py` (key parity across the three locales, placeholders, `en` fallback, strict mode), see it fail, then add `TomlLocalizer`, the locale files and `package-data` in `pyproject.toml`.
+- **Updated:** 2026-10-15 22:52
+- **Next step:** TDD `config.py`: write `tests/test_config.py` (defaults, each invalid value, env-file loading and env override, empty `TRANSCRIPTION_LANGUAGE` derivation, empty label overrides, localized `ConfigError`), see it fail, then implement `Settings`, `load_settings` and `ConfigError`.
 
 ### Steps
 
 - [x] Start phase: status `in progress`, Progress section — `7e96b07`
 - [x] `domain.py` + `tests/test_domain.py` (jsonl round trip) — `33818b1`
-- [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies
-- [ ] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests
+- [x] `ports.py` + `tests/fakes.py` + structural port tests; coverage ignores `...` bodies — `30131cf`
+- [x] `i18n.py` + `locales/{en,pt-BR,es}.toml` + package data; parity and placeholder tests
 - [ ] `config.py` (`Settings`, `load_settings`, `ConfigError`) + `tests/test_config.py`
 - [ ] `labels.py` (`SpeakerLabeler`) + `tests/test_labels.py`
 - [ ] `formatting.py` + `tests/test_formatting.py`
