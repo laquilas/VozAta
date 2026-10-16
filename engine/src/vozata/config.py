@@ -16,6 +16,7 @@ from dotenv import dotenv_values
 from vozata.domain import (
     AppLanguage,
     ConversationLanguage,
+    MixMode,
     WhisperDevice,
     default_conversation_language,
 )
@@ -30,6 +31,7 @@ KEYS = (
     "MIC_LABEL",
     "SYSTEM_LABEL",
     "OUTPUT_DIR",
+    "MIX_MODE",
     # Transcription (phase 03)
     "TAIL_MARGIN_SECONDS",
     "PAUSE_GAP_SECONDS",
@@ -77,6 +79,7 @@ class Settings:
     mic_label: str | None = None
     system_label: str | None = None
     output_dir: Path = Path("recordings")
+    mix_mode: MixMode = MixMode.MONO
     # Transcription (phase 03)
     tail_margin_seconds: float = 0.6
     pause_gap_seconds: float = 0.5
@@ -114,6 +117,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         mic_label=raw.get("MIC_LABEL"),
         system_label=raw.get("SYSTEM_LABEL"),
         output_dir=Path(raw.get("OUTPUT_DIR", "recordings")),
+        mix_mode=_choice(raw, "MIX_MODE", MixMode, MixMode.MONO),
         tail_margin_seconds=_number(raw, "TAIL_MARGIN_SECONDS", 0.6, minimum=0, maximum=5),
         pause_gap_seconds=_number(raw, "PAUSE_GAP_SECONDS", 0.5, minimum=0.05, maximum=5),
         max_carry_seconds=_number(raw, "MAX_CARRY_SECONDS", 15.0, minimum=1, maximum=120),

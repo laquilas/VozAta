@@ -6,7 +6,7 @@ import pytest
 
 from tests.fakes import FakeLocalizer
 from vozata.config import ConfigError, Settings, load_settings
-from vozata.domain import AppLanguage, ConversationLanguage, WhisperDevice
+from vozata.domain import AppLanguage, ConversationLanguage, MixMode, WhisperDevice
 
 
 def test_defaults_when_nothing_is_set() -> None:
@@ -129,6 +129,16 @@ def test_process_environment_is_used_when_no_mapping_is_given(
 
 def test_explicit_supported_sample_rate_is_accepted() -> None:
     assert load_settings(env={"SAMPLE_RATE": "16000"}).sample_rate == 16000
+
+
+def test_mix_mode_defaults_to_mono_and_accepts_stereo() -> None:
+    assert load_settings(env={}).mix_mode is MixMode.MONO
+    assert load_settings(env={"MIX_MODE": "stereo"}).mix_mode is MixMode.STEREO
+
+
+def test_invalid_mix_mode_names_the_allowed_values() -> None:
+    with pytest.raises(ConfigError, match="Allowed values: mono, stereo"):
+        load_settings(env={"MIX_MODE": "surround"})
 
 
 def test_transcription_defaults() -> None:
