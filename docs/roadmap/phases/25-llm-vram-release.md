@@ -52,3 +52,28 @@ Keeping Whisper warm between sessions (phase 26).
 
 > Execute phase 25 of the roadmap (`docs/roadmap/phases/25-llm-vram-release.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/25-llm-vram-release`
+- **Status:** in progress
+- **Updated:** 2026-10-16 15:00
+- **Next step:** add `OLLAMA_KEEP_ALIVE` to `config.py`, `settings_fields.py`, `.env.example` with
+  tests in `tests/test_config.py`
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] `OLLAMA_KEEP_ALIVE` config key (default `0`, Ollama duration or seconds)
+- [ ] `LanguageModel.release()` port method; Ollama sends `keep_alive` with every chat request and
+      `release()` unloads with the configured value; wired in `bootstrap.py`
+- [ ] `MinutesGenerator` calls `release()` once after every job (success or failure)
+- [ ] Manual check: `ollama ps` empty after `python -m vozata minutes <dir>`; acceptance criteria
+
+### Decisions and notes
+
+- Port change: `LanguageModel.release()` (one new method) instead of `generate(..., last=True)`.
+  Chat requests send `keep_alive: "5m"` so map-reduce does not reload the model between parts;
+  `release()` posts an empty chat (`messages: []`) with `keep_alive = OLLAMA_KEEP_ALIVE`, which is
+  Ollama's documented way to unload. Calling it from a `finally` frees the GPU even when a map
+  step fails, which `last=True` would not.
