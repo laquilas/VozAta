@@ -59,3 +59,32 @@ Speaker names in exports (16 extends the labeler), action items in exports (23).
 
 > Execute phase 11 of the roadmap (`docs/roadmap/phases/11-export-tray-pause.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/11-export-tray-pause`
+- **Status:** in progress
+- **Updated:** 2026-10-16 20:10
+- **Next step:** `DocumentExporter` port, `export/document.py` (minutes Markdown → blocks, shared by
+  the exporters) and `export/markdown.py` with tests
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] `DocumentExporter` port + Markdown exporter
+- [ ] DOCX exporter (`python-docx`)
+- [ ] PDF exporter (`fpdf2`, bundled DejaVu Sans + license)
+- [ ] `EXPORTERS` registry + `GET /sessions/{id}/export?format=`
+- [ ] UI export: client download, `IFileSaver` (StorageProvider), format picker in session detail
+- [ ] UI pause / resume: button next to Stop, amber paused state, frozen timer
+- [ ] UI tray: `TrayViewModel` (Start, Pause–Resume, Stop, Show, Quit, state icon), minimize to tray
+- [ ] Manual: export md / docx / pdf of a pt-BR session; pause 30 s; criteria
+
+### Decisions and notes
+
+- New engine dependencies: `python-docx`, `fpdf2`; `pypdf` (dev) extracts PDF text in tests,
+  because fpdf2 stores glyph ids, not readable text. DejaVu Sans regular + bold (2.37) and its
+  license are bundled in `export/fonts/` for Unicode PDF text.
+- The minutes Markdown is parsed once into blocks (headings, items, paragraphs) shared by the DOCX
+  and PDF exporters; the Markdown exporter keeps the minutes text as written.
+- Transcript source: the raw transcript for now (edited / diarized variants come with 14 and 21).
