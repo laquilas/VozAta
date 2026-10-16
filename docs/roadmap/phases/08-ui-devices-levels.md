@@ -49,3 +49,30 @@ Mic test without a session, engine-side device changes during recording.
 
 > Execute phase 08 of the roadmap (`docs/roadmap/phases/08-ui-devices-levels.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/08-ui-devices-levels`
+- **Status:** in progress
+- **Updated:** 2026-10-17 09:00
+- **Next step:** `Services/UiPreferences.cs` (`IUiPreferences`, JSON file in `%APPDATA%/VozAta/ui.json`)
+  with `UiPreferencesTests.cs`
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] `IUiPreferences` + JSON file store
+- [ ] `IClock` / `IUiTimer` + `LevelMeterViewModel` (dB mapping, decay, peak-hold, no-signal)
+- [ ] `DevicesViewModel` (load, defaults, restore by name, fallback, refresh, persist)
+- [ ] `MainViewModel` + `MainWindow`: device pickers, meters, ids on start, window size; resources
+- [ ] Manual: meters move with speech and media; changing devices records from them; criteria
+
+### Decisions and notes
+
+- WASAPI device ids are PortAudio indices that change when devices are plugged in or out, so the
+  preferences keep the device **name and id**: the selection is restored by name first, then by id,
+  else the engine's default.
+- Meters rise instantly to a new reading and fall at a fixed rate on timer ticks; the peak marker
+  holds for 1 s, then falls. The engine floors silence at −90 dBFS; the meter clamps −60…0 dB.
+- The UI has no clock/timer abstraction yet: `IClock` (time now) and `IUiTimer` (periodic tick on
+  the UI thread, Avalonia `DispatcherTimer`) are added so tests drive the meters by hand.
