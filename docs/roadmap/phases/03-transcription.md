@@ -64,3 +64,28 @@ Session wiring and CLI (05), echo dedupe (18), live speaker tags (15), vocabular
 
 > Execute phase 03 of the roadmap (`docs/roadmap/phases/03-transcription.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/03-transcription`
+- **Status:** in progress
+- **Updated:** 2026-10-16 01:30
+- **Next step:** add the phase 03 config keys (`TAIL_MARGIN_SECONDS`, `PAUSE_GAP_SECONDS`, `MAX_CARRY_SECONDS`, `SILENCE_RMS_THRESHOLD`, `STT_PROVIDER`, `WHISPER_*`) to `config.py` test-first.
+
+### Steps
+
+- [x] Start phase: status `in progress`, Progress section
+- [ ] Config keys owned by 03 (`config.py`; `.env.example` already lists them)
+- [ ] `transcription/language_lock.py` (`LanguageLock`)
+- [ ] `transcription/stitcher.py` (`CarryOverStitcher`, segment ids) + transcriber contract suite
+- [ ] `output/sinks.py` (`ConsoleSink`, `JsonlSink`, `MarkdownSink`, `CompositeSink`)
+- [ ] `transcription/worker.py` (`TranscriptionWorker`)
+- [ ] `transcription/cuda.py` + `transcription/faster_whisper.py` (fake model factory in unit tests)
+- [ ] GPU smoke (`pytest -m gpu`) on a synthetic speech WAV; CPU fallback check
+- [ ] Verify; tick acceptance criteria; set phase `done`
+
+### Decisions and notes
+
+- **No sample recording** exists in `__legacy__/gravacoes/`; the GPU smoke test uses `engine/tests/data/speech_en.wav`, synthetic speech generated with Windows TTS (SAPI writes directly to a file, no audio device).
+- **Language provider**: the stitcher depends on a small protocol (`current() -> str | None`, `observe(language, speech_seconds)`); `LanguageLock` implements it. Detected languages outside en/pt/es do not count toward the lock.
+- **Model cache**: the `large-v3-turbo` cache (344 MB) looks incomplete and `small` is not cached; first runs download them with `HF_HUB_DISABLE_XET=1` (the xet protocol hung on this machine before).
