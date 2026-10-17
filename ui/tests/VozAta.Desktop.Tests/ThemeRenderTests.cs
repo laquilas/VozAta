@@ -59,6 +59,33 @@ public sealed class ThemeRenderTests
         Assert.Equal(5, rendered);
     }
 
+#if DEBUG
+    [Fact]
+    public async Task The_theme_gallery_shows_both_themes()
+    {
+        var rendered = await Session.Value.Dispatch<bool>(
+            () =>
+            {
+                var window = new Diagnostics.ThemeGalleryWindow { Width = 1500, Height = 1450 };
+                window.Show();
+                try
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    var frame = window.CaptureRenderedFrame();
+                    Save(frame!, "theme-gallery.png");
+                    return Task.FromResult(frame is not null);
+                }
+                finally
+                {
+                    window.Close();
+                }
+            },
+            CancellationToken.None);
+
+        Assert.True(rendered);
+    }
+#endif
+
     private static void Render(MainViewModel viewModel, int tab, string name)
     {
         var window = new MainWindow { DataContext = viewModel, Width = 1280, Height = 860 };

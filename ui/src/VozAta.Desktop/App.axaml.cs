@@ -30,6 +30,16 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+#if DEBUG
+            if (desktop.Args?.Contains("--theme-gallery") == true)
+            {
+                // Design review (phase 34): every token and style in both themes, no engine.
+                desktop.MainWindow = new Diagnostics.ThemeGalleryWindow();
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+#endif
+
             var services = ConfigureServices(desktop);
             var viewModel = services.GetRequiredService<MainViewModel>();
             var window = new MainWindow { DataContext = viewModel };

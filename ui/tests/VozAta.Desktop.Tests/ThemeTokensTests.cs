@@ -101,6 +101,7 @@ public sealed partial class ThemeTokensTests
             .OfType<string>()
             .ToHashSet();
         var used = Directory.GetFiles(Path.Combine(DesktopFolder(), "Views"), "*.axaml")
+            .Concat(Directory.GetFiles(Path.Combine(DesktopFolder(), "Diagnostics"), "*.axaml"))
             .Append(Path.Combine(themes, "Controls.axaml"))
             .SelectMany(file => ResourceReference().Matches(File.ReadAllText(file)).Select(match => match.Groups[1].Value))
             .Where(key => key.Contains('.'))

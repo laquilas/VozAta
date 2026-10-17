@@ -66,7 +66,8 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Branch:** `feature/34-ui-design-system`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** `ThemeGalleryWindow` (debug builds only) showing every token, icon and style.
+- **Next step:** docs (architecture: `ui.json` `theme`, design system), tick acceptance criteria, full UI
+  suite, open the PR.
 
 ### Steps
 
@@ -74,7 +75,7 @@ Layout changes (35–38), custom fonts beyond Inter.
 - [x] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app — this commit
 - [x] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests` — this commit
 - [x] Contrast test for the token pairs (≥ 4.5:1 in light and dark) — this commit
-- [ ] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots
+- [x] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots — this commit
 - [ ] Docs (architecture), acceptance criteria, full UI suite, PR
 
 ### Decisions and notes
@@ -98,3 +99,6 @@ Layout changes (35–38), custom fonts beyond Inter.
 - `ThemeRenderTests` (new test dependency `Avalonia.Headless`, CPU Skia rendering, no window on screen)
   renders every page in light and dark with fake engine data; with `VOZATA_SCREENSHOTS=<folder>` it saves
   the PNGs used in the PR. Start goes to the fake engine only (no audio).
+- `ThemeGalleryWindow` lives in `Diagnostics/` (excluded from non-Debug builds in the csproj) and opens with
+  `dotnet run --project src/VozAta.Desktop -- --theme-gallery`: light and dark side by side through
+  `ThemeVariantScope`, no engine started. `ThemeRenderTests` renders it too (Debug only).

@@ -1,0 +1,349 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VozAta.Desktop.Diagnostics.ThemeGalleryPanel">
+  <!-- Every token, icon and shared style of the design system (phase 34), for review without the engine.
+       Debug builds only; the labels are token names, not user-facing text. -->
+  <StackPanel Spacing="{StaticResource Space.4}" Margin="{StaticResource Inset.Page}">
+    <TextBlock Classes="title" Text="Brushes" />
+    <WrapPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Surface}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Surface" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.SurfaceAlt}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.SurfaceAlt" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Border}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Border" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.TextPrimary}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.TextPrimary" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.TextSecondary}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.TextSecondary" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Sidebar}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Sidebar" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.SidebarText}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.SidebarText" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Accent}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Accent" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.AccentHover}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.AccentHover" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.AccentPressed}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.AccentPressed" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.OnAccent}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.OnAccent" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.AccentText}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.AccentText" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.AccentSubtle}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.AccentSubtle" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Danger}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Danger" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.DangerHover}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.DangerHover" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.DangerPressed}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.DangerPressed" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.OnDanger}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.OnDanger" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.DangerText}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.DangerText" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.DangerSurface}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.DangerSurface" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Warning}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Warning" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.WarningText}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.WarningText" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.WarningSurface}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.WarningSurface" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Success}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Success" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.SuccessText}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.SuccessText" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Info}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Info" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.InfoSurface}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.InfoSurface" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.ChannelMic}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.ChannelMic" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.ChannelSystem}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.ChannelSystem" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.ChannelOther}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.ChannelOther" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.MeterMic}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.MeterMic" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.MeterMicPeak}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.MeterMicPeak" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.MeterSystem}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.MeterSystem" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.MeterSystemPeak}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.MeterSystemPeak" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space.2}" Width="200" Margin="0,0,0,4">
+          <Border Width="28" Height="20" CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                  BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Highlight}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="Brush.Highlight" />
+        </StackPanel>
+    </WrapPanel>
+
+    <TextBlock Classes="title" Text="Type scale" />
+    <StackPanel Spacing="{StaticResource Space.1}">
+      <TextBlock Classes="timer" Text="01:23:45 timer (tnum)" />
+      <TextBlock Classes="h1" Text="Heading 1 (minutes)" />
+      <TextBlock Classes="title" Text="Title" />
+      <TextBlock Classes="subtitle" Text="Subtitle" />
+      <TextBlock Classes="reading" Text="Reading text: transcript lines and answers" />
+      <TextBlock Text="Body text (default)" />
+      <TextBlock Classes="secondary" Text="Secondary text" />
+      <TextBlock Classes="hint" Text="Hint: busy or empty state" />
+      <TextBlock Classes="caption" Text="Caption: help under a field" />
+      <TextBlock Classes="error" Text="Error text" />
+      <TextBlock Classes="warning" Text="Warning text" />
+      <TextBlock Classes="success" Text="Success text" />
+      <TextBlock Classes="channel mic reading" Text="[00:00:05] Me: microphone line" />
+      <TextBlock Classes="channel system reading" Text="[00:00:10] Others: system audio line" />
+      <TextBlock Classes="channel reading" Text="[00:00:15] Speaker 3: other speaker" />
+      <TextBlock Classes="translation" Text="Translation under a line" />
+      <TextBlock Classes="partial" Text="[00:00:20] Me: interim text…" />
+      <TextBlock Classes="reading focused" Text="Line opened by a search result" />
+    </StackPanel>
+
+    <TextBlock Classes="title" Text="Buttons" />
+    <WrapPanel>
+      <Button Classes="primary large" Margin="0,0,8,8" Content="primary large" />
+      <Button Classes="danger large" Margin="0,0,8,8">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <PathIcon Classes="inline" Data="{StaticResource Icon.Stop}" />
+          <TextBlock Text="danger large" />
+        </StackPanel>
+      </Button>
+      <Button Classes="primary" Margin="0,0,8,8" Content="primary" />
+      <Button Margin="0,0,8,8" Content="default" />
+      <Button Classes="ghost" Margin="0,0,8,8" Content="ghost" />
+      <Button Classes="link" Margin="0,0,8,8" Content="link" />
+      <Button Classes="round-start" Margin="0,0,8,8">
+        <PathIcon Data="{StaticResource Icon.Play}" />
+      </Button>
+      <Button Classes="round-stop" Margin="0,0,8,8">
+        <PathIcon Data="{StaticResource Icon.Stop}" />
+      </Button>
+      <Button Classes="icon" Margin="0,0,8,8">
+        <PathIcon Data="{StaticResource Icon.Refresh}" />
+      </Button>
+      <Button Classes="icon small" Margin="0,0,8,8">
+        <PathIcon Data="{StaticResource Icon.Dismiss}" />
+      </Button>
+    </WrapPanel>
+
+    <TextBlock Classes="title" Text="Tags, state and meters" />
+    <WrapPanel>
+      <Border Classes="tag" Margin="0,0,8,8"><TextBlock Text="Minutes" /></Border>
+      <Border Classes="tag live" Margin="0,0,8,8"><TextBlock Text="Live" /></Border>
+      <Border Classes="tag term" Margin="0,0,8,8"><TextBlock Text="Glossary term" /></Border>
+      <Ellipse Classes="state-dot recording" Margin="0,0,8,8" />
+      <Ellipse Classes="state-dot paused" Margin="0,0,8,8" />
+    </WrapPanel>
+    <Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto" Width="320" HorizontalAlignment="Left">
+      <Panel Height="12" Margin="0,0,0,6">
+        <ProgressBar Minimum="0" Maximum="1" Value="0.8" Classes="meter-mic-peak" />
+        <ProgressBar Minimum="0" Maximum="1" Value="0.5" Classes="meter-mic" />
+      </Panel>
+      <Panel Grid.Row="1" Height="12">
+        <ProgressBar Minimum="0" Maximum="1" Value="0.6" Classes="meter-system-peak" />
+        <ProgressBar Minimum="0" Maximum="1" Value="0.3" Classes="meter-system" />
+      </Panel>
+    </Grid>
+
+    <TextBlock Classes="title" Text="Banners and cards" />
+    <Border Classes="banner info"><TextBlock Text="Info banner: interrupted sessions can be recovered." /></Border>
+    <Border Classes="banner warning"><TextBlock Text="Warning banner: restart the engine to apply." /></Border>
+    <Border Classes="banner error"><TextBlock Text="Error banner: the engine is not responding." /></Border>
+    <Border Classes="card">
+      <StackPanel Spacing="{StaticResource Space.1}">
+        <TextBlock Classes="subtitle" Text="Card title" />
+        <TextBlock Classes="caption" Text="A card groups related settings." />
+      </StackPanel>
+    </Border>
+    <Border Classes="statusbar"><TextBlock Text="Status bar" /></Border>
+    <Border Background="{DynamicResource Brush.Sidebar}" Padding="{StaticResource Inset.Card}"
+            CornerRadius="{StaticResource Radius.Medium}">
+      <TextBlock Foreground="{DynamicResource Brush.SidebarText}" Text="Sidebar text on the sidebar" />
+    </Border>
+
+    <TextBlock Classes="title" Text="Icons" />
+    <WrapPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Play}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Play" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Pause}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Pause" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Stop}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Stop" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Record}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Record" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.History}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="History" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Search}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Search" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Settings}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Settings" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Chat}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Chat" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Speaker}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Speaker" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Export}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Export" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Delete}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Delete" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Folder}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Folder" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Refresh}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Refresh" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Dismiss}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Dismiss" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.ChevronDown}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="ChevronDown" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.ChevronUp}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="ChevronUp" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.ChevronLeft}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="ChevronLeft" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.ChevronRight}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="ChevronRight" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Sun}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Sun" />
+        </StackPanel>
+        <StackPanel Width="84" Margin="0,0,0,8" Spacing="{StaticResource Space.1}">
+          <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Moon}" />
+          <TextBlock Classes="caption" HorizontalAlignment="Center" Text="Moon" />
+        </StackPanel>
+    </WrapPanel>
+  </StackPanel>
+</UserControl>
