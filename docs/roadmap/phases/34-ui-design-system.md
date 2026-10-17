@@ -66,8 +66,7 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Branch:** `feature/34-ui-design-system`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** headless render test (`Avalonia.Headless` in the test project) that loads every view in
-  light and dark and can save screenshots.
+- **Next step:** `ThemeGalleryWindow` (debug builds only) showing every token, icon and style.
 
 ### Steps
 
@@ -96,3 +95,6 @@ Layout changes (35–38), custom fonts beyond Inter.
   `hint` / `caption` classes) so its contrast is measurable. Small item margins stay numeric; page,
   card and banner insets use `Inset.*` tokens (layout unchanged).- `ThemeContrastTests` reads `Tokens.axaml` and checks 26 text/background pairs per theme; it caught
   `OnAccent` on the light `AccentPressed` (4.2:1), so the pressed accent is now lighter (`#EE9BE3`).
+- `ThemeRenderTests` (new test dependency `Avalonia.Headless`, CPU Skia rendering, no window on screen)
+  renders every page in light and dark with fake engine data; with `VOZATA_SCREENSHOTS=<folder>` it saves
+  the PNGs used in the PR. Start goes to the fake engine only (no audio).
