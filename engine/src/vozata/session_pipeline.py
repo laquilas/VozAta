@@ -62,11 +62,15 @@ class _DeferredTranscriber:
         return True
 
     def transcribe(
-        self, samples: np.ndarray, language: str | None, hints: str | None = None
+        self,
+        samples: np.ndarray,
+        language: str | None,
+        hints: str | None = None,
+        prompt: str | None = None,
     ) -> TranscriptionResult:
         if self.loaded is None:
             raise RuntimeError("The speech model is not loaded")
-        return self.loaded.transcribe(samples, language, hints)
+        return self.loaded.transcribe(samples, language, hints, prompt)
 
     def close(self) -> None:  # the session releases `loaded` itself
         pass

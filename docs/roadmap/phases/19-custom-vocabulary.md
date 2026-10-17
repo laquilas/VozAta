@@ -64,8 +64,8 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 13:54
-- **Next step:** add the `prompt` argument and `TranscriptionResult.avg_logprob` to the transcriber port (faster-whisper `initial_prompt` + `hallucination_silence_threshold`, OpenAI-compatible `prompt`), then wire `RollingContext` into `CarryOverStitcher`.
+- **Updated:** 2026-10-17 13:55
+- **Next step:** wire `RollingContext` into `CarryOverStitcher` (per channel, `CONTEXT_PROMPT_CHARS`) with tests in `tests/transcription/test_stitcher.py`.
 
 ### Steps
 
@@ -84,3 +84,4 @@ Automatic term extraction from previous meetings.
 ### Decisions and notes
 - `VOCABULARY_FILE` is a `path` setting; empty (`None`) resolves in `bootstrap.py` to `vocabulary.txt` next to the `.env` file the engine reads.
 - `RollingContext` (transcription/context.py) is done; a long silence is 30 s and a very low `avg_logprob` is < -1.0 (constants in the module).
+- Port: `Transcriber.transcribe(samples, language, hints=None, prompt=None)`; `prompt` is the rolling context only. faster-whisper sends the vocabulary as `hotwords` and the context as `initial_prompt` (both land in the same decoder prompt), OpenAI-compatible joins them into one `prompt` field. `TranscriptionResult.avg_logprob` (mean of segments, None when unknown).

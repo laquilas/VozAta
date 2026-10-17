@@ -49,9 +49,13 @@ class _Lease:
         self._keep = keep
 
     def transcribe(
-        self, samples: np.ndarray, language: str | None, hints: str | None = None
+        self,
+        samples: np.ndarray,
+        language: str | None,
+        hints: str | None = None,
+        prompt: str | None = None,
     ) -> TranscriptionResult:
-        return self._model.transcribe(samples, language, hints)
+        return self._model.transcribe(samples, language, hints, prompt)
 
     def close(self) -> None:
         if not self._keep:

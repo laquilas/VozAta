@@ -44,9 +44,17 @@ class AudioSink(Protocol):
 @runtime_checkable
 class Transcriber(Protocol):
     def transcribe(
-        self, samples: np.ndarray, language: str | None, hints: str | None = None
+        self,
+        samples: np.ndarray,
+        language: str | None,
+        hints: str | None = None,
+        prompt: str | None = None,
     ) -> TranscriptionResult:
-        """Return chunk-relative words; an empty result on silence (never raise for silence)."""
+        """Return chunk-relative words; an empty result on silence (never raise for silence).
+
+        `hints` are vocabulary terms (phase 19); `prompt` is the channel's recent text, the
+        rolling context of the chunk (O4). Both may be ignored by a provider.
+        """
         ...
 
     def close(self) -> None:
