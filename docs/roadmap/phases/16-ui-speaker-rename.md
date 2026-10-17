@@ -55,12 +55,13 @@ Remembering names across sessions.
 - **Branch:** `feature/16-ui-speaker-rename`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** engine — `SessionStore.update_speaker_names` + `GET`/`PUT /sessions/{id}/speakers`
-  with tests in `engine/tests/api/test_speakers.py`.
+- **Next step:** UI client — `GetSpeakersAsync` / `UpdateSpeakersAsync` in `IEngineClient`,
+  `EngineClient`, `FakeEngineClient`, DTOs `SpeakerInfo` / `SessionSpeakers`, tests in
+  `EngineClientTests.cs`.
 
 ### Steps
 
-- [ ] Engine: merge names into `speakers.json`, `GET`/`PUT /sessions/{id}/speakers`
+- [x] Engine: merge names into `speakers.json`, `GET`/`PUT /sessions/{id}/speakers`
       (422 `unknown_speaker`), names in search hits; contract docs
 - [ ] UI client: `GetSpeakersAsync` / `UpdateSpeakersAsync` + DTOs
 - [ ] UI: `SpeakersViewModel` (rows, save, regenerate prompt) + "Speakers" tab in session detail
@@ -68,4 +69,9 @@ Remembering names across sessions.
 
 ### Decisions and notes
 
-- (none yet)
+- Added `GET /sessions/{id}/speakers` (not in the original contract): the UI needs each
+  speaker's current name and default label to build the rename rows. Routes live in their own
+  module `api/routes/speakers.py` to stay out of `sessions.py` (phases 21 / 24).
+- `PUT` merges: ids left out keep their names. Accepted ids are those of the best transcript,
+  including `mic` and an undiarized `system`.
+- Search hits (22) now also use the session's names.

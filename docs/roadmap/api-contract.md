@@ -34,7 +34,8 @@ own rows. Changing a row requires updating both sides.
 | GET | `/settings` | 06 | — | `{values: {KEY: value}, schema: [{key, type, default, choices?, secret, group, applies}]}` (secrets masked; `group` = settings page section, `applies` = `next_session` \| `restart`, phase 10) |
 | PUT | `/settings` | 10 | `{values: {KEY: value}}` (`null` clears a key; the secret mask `********` means unchanged) | `{values, restart_required: [KEY]}` — validated by `config.py`, persisted to `.env` key by key (comments kept); `422 invalid_setting` with `error.key` |
 | POST | `/sessions/{id}/recover` | 17 | — | `202`; finalizes an `interrupted` session |
-| PUT | `/sessions/{id}/speakers` | 16 | `{speakers: {"system:1": {"name": "Alice"}}}` | `{speakers}` |
+| GET | `/sessions/{id}/speakers` | 16 | — | `{speakers: {"<speaker_id>": {name, default_label}}}` — every speaker of the transcript (`mic`, `system`, `system:<n>`) in order of first appearance; `name` is `null` when unset, `default_label` is the label without the name |
+| PUT | `/sessions/{id}/speakers` | 16 | `{speakers: {"system:1": {"name": "Alice"}}}` (name trimmed, max 200 chars; empty or `null` = back to the default label; ids left out are unchanged) | `{speakers}` as in `GET`; writes only `speakers.json`; `422 unknown_speaker` when an id is not in the transcript (nothing saved) |
 | PUT | `/sessions/{id}/transcript` | 21 | `{segments: [Segment]}` | `{source: "edited"}` writes `transcript.edited.jsonl` |
 | DELETE | `/sessions/{id}/transcript/edits` | 21 | — | `204` reverts to the previous source |
 | GET | `/templates` | 20 | — | `[{id, name}]` in display order, `name` in `APP_LANGUAGE` (ids: `general`, `daily`, `one_on_one`, `client`, `retrospective`) |
