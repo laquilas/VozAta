@@ -61,12 +61,12 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - **Branch:** `feature/29-live-translation`
 - **Status:** in progress
 - **Updated:** 2026-10-17 14:30
-- **Next step:** add the `Translator` port and `translation/worker.py` (queue, same-language skip,
-  failure handling, `transcript.translated.jsonl`) with tests in `tests/translation/`.
+- **Next step:** add `translation/opus_mt.py` (CTranslate2 Opus-MT, lazy imports), the
+  `TRANSLATORS` registry in `bootstrap.py` and the config keys, with tests on fakes.
 
 ### Steps
 
-- [ ] `Translator` port + `TranslationWorker` (own thread, queue, skip, error once) + translations file
+- [x] `Translator` port + `TranslationWorker` (own thread, queue, skip, error once) + translations file
 - [ ] Opus-MT (CTranslate2) provider, `TRANSLATORS` registry, `TRANSLATE_TO` / `TRANSLATION_PROVIDER`
       / `TRANSLATION_MODEL_DIR`, optional extra `translation`
 - [ ] Session wiring: extra sink in `session_pipeline.py`, `on_translation` observer, `translation`

@@ -162,6 +162,23 @@ class SpeakerTurn:
         return max(0.0, min(self.end, end) - max(self.start, start))
 
 
+@dataclass(frozen=True)
+class Translation:
+    """A committed segment translated into `language` (phase 29)."""
+
+    segment_id: str
+    language: str
+    text: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """One `transcript.translated.jsonl` line (architecture §8)."""
+        return {"segment_id": self.segment_id, "language": self.language, "text": self.text}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Translation:
+        return cls(str(data["segment_id"]), str(data["language"]), str(data["text"]))
+
+
 def default_conversation_language(app_language: AppLanguage) -> ConversationLanguage:
     """The spoken language assumed when none is configured (`pt-BR` -> `pt`)."""
     return ConversationLanguage(app_language.value.split("-")[0])

@@ -146,6 +146,25 @@ class FakeDiarizer:
         self.closed = True
 
 
+class FakeTranslator:
+    """Translates to `"[target] text"`; raises `error` (from call `fail_at` on); records calls."""
+
+    def __init__(self, error: Exception | None = None, fail_at: int = 0) -> None:
+        self.error = error
+        self.fail_at = fail_at
+        self.calls: list[tuple[str, str, str]] = []
+        self.closed = False
+
+    def translate(self, text: str, source: str, target: str) -> str:
+        self.calls.append((text, source, target))
+        if self.error is not None and len(self.calls) > self.fail_at:
+            raise self.error
+        return f"[{target}] {text}"
+
+    def close(self) -> None:
+        self.closed = True
+
+
 class FakeSpeechDetector:
     """Every non-zero sample is speech; spans are runs of them, in seconds. Counts calls."""
 

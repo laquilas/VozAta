@@ -178,6 +178,23 @@ class SessionObserver(Protocol):
         ...
 
 
+class TranslationError(RuntimeError):
+    """A translator could not translate (missing extra or model, unsupported pair, model error)."""
+
+
+@runtime_checkable
+class Translator(Protocol):
+    """Translates committed transcript text (phase 29); runs on CPU during recording."""
+
+    def translate(self, text: str, source: str, target: str) -> str:
+        """`text` from `source` into `target` (`en`, `pt`, `es`); raises `TranslationError`."""
+        ...
+
+    def close(self) -> None:
+        """Release the model memory."""
+        ...
+
+
 @runtime_checkable
 class TranscriptSearch(Protocol):
     """Full-text search over every session's transcript (phase 22; reused by 21 and 24)."""
