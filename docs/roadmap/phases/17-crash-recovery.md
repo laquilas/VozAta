@@ -65,15 +65,16 @@ Recovering audio still in memory buffers at crash time.
 - **Branch:** `feature/17-crash-recovery`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** refactor `RecordingSession.stop()` so steps 3 (mix) to 7 are one `_finish()`
-  sequence, then add `RecordingSession.recover()` that runs it on an existing folder.
+- **Next step:** `storage/wav_repair.py` (`repair_wav`, `pad_wav`) and `storage/recovery.py`
+  (`find_interrupted`, transcript repair, `SessionRecovery.recover`) with
+  `tests/storage/test_recovery.py`.
 
 ### Steps
 
 - [x] `AUTOSAVE_SECONDS` key + heartbeat (`last_heartbeat_at`, `duration_seconds`) every
       `AUTOSAVE_SECONDS` while the session is active
 - [x] `JsonlSink` flushes + `os.fsync` per segment
-- [ ] Refactor `stop()`: steps 3 (mix) to 7 become one `_finish()` sequence shared with
+- [x] Refactor `stop()`: steps 3 (mix) to 7 become one `_finish()` sequence shared with
       `RecordingSession.recover()`
 - [ ] `storage/recovery.py`: `find_interrupted`, `repair_wav`, `pad_wav`, transcript repair,
       `SessionRecovery.recover` (idempotent, error kept in `session.json`)

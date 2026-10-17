@@ -91,6 +91,7 @@ class RecordingSession:
         self._paths: SessionPaths | None = None
         self._captured: float | None = None  # recorded length, fixed once capture stops
         self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
+        self._pipeline: CapturePipeline | None = None  # None until `start()`, and on `recover()`
 
     @property
     def paths(self) -> SessionPaths:
@@ -163,7 +164,31 @@ class RecordingSession:
             self._meta.pause_ended(self._c.clock.now())
         self._stop_capture()  # 1
         self._drain()  # 2
-        self._finalize_audio()  # 3
+        self._pipeline.finalize_wavs()  # 3
+        self._finish()
+
+    def recover(self, session_id: str, duration_seconds: float) -> None:
+        """Finish an interrupted session whose WAVs and transcript were repaired (phase 17).
+
+        Runs the same `_finish()` sequence as `stop()` (mix onwards), so every stop step also
+        runs on recovery. `duration_seconds` is the recorded length found in the repaired WAVs.
+        """
+        if self._paths is not None:
+            raise RuntimeError("A session can only be started or recovered once")
+        meta = self._store.read_meta(session_id)
+        self._paths = self._store.paths(session_id)
+        self._meta = SessionMeta.restore(self._store, session_id, meta)
+        language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
+        self._lock = LanguageLock(language, self._on_language_detected)
+        self._captured = duration_seconds
+        self._meta.captured(duration_seconds)
+        self._set_status(SessionStatus.FINALIZING)
+        self._start_heartbeat()
+        self._finish()
+
+    def _finish(self) -> None:
+        """Stop steps 3 (mix) to 7, shared by `stop()` and `recover()` (phase 17)."""
+        self._mix()  # 3
         self._release_transcriber()  # 4
         self._identify_speakers()  # 5
         self._write_minutes()  # 6
@@ -234,8 +259,7 @@ class RecordingSession:
         except Exception:
             _log.exception("Releasing the audio backend failed")
 
-    def _finalize_audio(self) -> None:
-        self._pipeline.finalize_wavs()
+    def _mix(self) -> None:
         paths = self.paths
         try:
             self._c.mixer.mix(paths.wav(Channel.MIC), paths.wav(Channel.SYSTEM), paths.mixed_wav)
@@ -244,7 +268,7 @@ class RecordingSession:
             self._error("mix_failed", reason=str(error))
 
     def _release_transcriber(self) -> None:
-        transcriber = self._pipeline.transcriber
+        transcriber = self._pipeline.transcriber if self._pipeline is not None else None
         if transcriber is None:
             return
         try:
