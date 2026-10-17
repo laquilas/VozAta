@@ -29,6 +29,7 @@ settings_write_failed = "The settings file could not be saved ({reason}). Close 
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
 unknown_template = "Unknown minutes template \"{id}\". Use one of: {allowed}."
+unknown_speaker = "Unknown speaker \"{id}\" for this session. Use one of: {allowed}."
 not_found = "This endpoint does not exist."
 method_not_allowed = "This method is not allowed on this endpoint."
 http_error = "The request failed with HTTP status {status}."

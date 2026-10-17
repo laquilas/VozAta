@@ -19,6 +19,7 @@ from vozata.api.routes import (
     search,
     sessions,
     settings,
+    speakers,
     templates,
 )
 from vozata.api.schemas import ErrorResponse
@@ -39,7 +40,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     )
     app.state.container = container
     install_error_handlers(app, container.localizer)
-    for module in (health, devices, sessions, export, settings, search, templates):
+    for module in (health, devices, sessions, speakers, export, settings, search, templates):
         app.include_router(module.router, responses=ERROR_RESPONSES)
     app.include_router(branding.router)
 

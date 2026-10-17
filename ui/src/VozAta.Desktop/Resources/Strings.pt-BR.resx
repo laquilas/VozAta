@@ -603,4 +603,31 @@
   <data name="ConfirmCloseNo" xml:space="preserve">
     <value>Continuar gravando</value>
   </data>
+  <data name="TabSpeakers" xml:space="preserve">
+    <value>Participantes</value>
+  </data>
+  <data name="SpeakersIntro" xml:space="preserve">
+    <value>Dê os nomes reais às pessoas desta gravação. Deixe um nome vazio para manter o rótulo padrão.</value>
+  </data>
+  <data name="SpeakersName" xml:space="preserve">
+    <value>Nome</value>
+  </data>
+  <data name="SpeakersSave" xml:space="preserve">
+    <value>Salvar nomes</value>
+  </data>
+  <data name="SpeakersSaving" xml:space="preserve">
+    <value>Salvando…</value>
+  </data>
+  <data name="SpeakersSaved" xml:space="preserve">
+    <value>Nomes salvos.</value>
+  </data>
+  <data name="SpeakersRegeneratePrompt" xml:space="preserve">
+    <value>Nomes salvos. A ata ainda usa os nomes antigos.</value>
+  </data>
+  <data name="SpeakersRegenerate" xml:space="preserve">
+    <value>Regerar a ata com os novos nomes</value>
+  </data>
+  <data name="SpeakersEmpty" xml:space="preserve">
+    <value>Nenhum participante ainda: esta sessão não tem transcrição.</value>
+  </data>
 </root>

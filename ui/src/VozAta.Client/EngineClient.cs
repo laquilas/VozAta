@@ -35,6 +35,13 @@ public interface IEngineClient
     /// <summary><c>GET /templates</c>: the minutes templates in display order (phase 20).</summary>
     Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /sessions/{id}/speakers</c> (phase 16): names and default labels.</summary>
+    Task<SessionSpeakers> GetSpeakersAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary><c>PUT /sessions/{id}/speakers</c> (phase 16): a null or empty name restores the default label.</summary>
+    Task<SessionSpeakers> UpdateSpeakersAsync(
+        string id, IReadOnlyDictionary<string, string?> names, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /sessions/{id}/export?format=</c>: <c>md</c>, <c>docx</c> or <c>pdf</c>.</summary>
     Task<ExportedFile> ExportSessionAsync(string id, string format, CancellationToken cancellationToken = default);
 
@@ -111,6 +118,17 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyList<MinutesTemplate>>(HttpMethod.Get, "templates", null, cancellationToken);
+
+    public Task<SessionSpeakers> GetSpeakersAsync(string id, CancellationToken cancellationToken = default) =>
+        SendAsync<SessionSpeakers>(HttpMethod.Get, $"sessions/{Escape(id)}/speakers", null, cancellationToken);
+
+    public Task<SessionSpeakers> UpdateSpeakersAsync(
+        string id, IReadOnlyDictionary<string, string?> names, CancellationToken cancellationToken = default) =>
+        SendAsync<SessionSpeakers>(
+            HttpMethod.Put,
+            $"sessions/{Escape(id)}/speakers",
+            new { speakers = names.ToDictionary(pair => pair.Key, pair => new { name = pair.Value }) },
+            cancellationToken);
 
     public Task<SearchResults> SearchAsync(
         string query, int limit = 50, CancellationToken cancellationToken = default) =>
