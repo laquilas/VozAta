@@ -49,3 +49,23 @@ Remembering names across sessions.
 
 > Execute phase 16 of the roadmap (`docs/roadmap/phases/16-ui-speaker-rename.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/16-ui-speaker-rename`
+- **Status:** in progress
+- **Updated:** 2026-10-17 12:00
+- **Next step:** engine — `SessionStore.update_speaker_names` + `GET`/`PUT /sessions/{id}/speakers`
+  with tests in `engine/tests/api/test_speakers.py`.
+
+### Steps
+
+- [ ] Engine: merge names into `speakers.json`, `GET`/`PUT /sessions/{id}/speakers`
+      (422 `unknown_speaker`), names in search hits; contract docs
+- [ ] UI client: `GetSpeakersAsync` / `UpdateSpeakersAsync` + DTOs
+- [ ] UI: `SpeakersViewModel` (rows, save, regenerate prompt) + "Speakers" tab in session detail
+- [ ] Acceptance criteria, README status, PR
+
+### Decisions and notes
+
+- (none yet)
