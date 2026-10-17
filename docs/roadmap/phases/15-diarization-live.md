@@ -64,8 +64,8 @@ Cross-session speaker recognition (remembering voices between meetings).
 
 - **Branch:** `feature/15-diarization-live`
 - **Status:** ready for PR
-- **Updated:** 2026-10-17 14:46
-- **Next step:** merge `origin/main`, run the full engine and UI suites, open the PR and watch its checks; then run the manual check recipe below on the reference machine.
+- **Updated:** 2026-10-17 14:47
+- **Next step:** open the PR and watch its checks (full suites pass locally); then run the manual check recipe below on the reference machine.
 
 ### Steps
 
@@ -85,6 +85,7 @@ Cross-session speaker recognition (remembering voices between meetings).
   architecture §6), so the transcription thread only enqueues; `worker.py` stays unchanged.
 - The live worker sits between the echo filter and the sinks (`LiveSpeakerSink`), so `transcript.jsonl` stores the live `system:<n>`; the post-session pass stays authoritative in `transcript.diarized.jsonl`. Its clip comes from `AudioHistory` (system chunks kept 60 s + `MAX_CARRY_SECONDS`), so neither `worker.py` nor the stitcher changed. The embedder loads on its own thread; lines before it is ready keep `system`. A failed load reports `error` `live_diarization_failed`.
 - The live embedder (`pyannote/wespeaker-voxceleb-resnet34-LM`, `EMBEDDERS[DIARIZATION_PROVIDER]`) lives in one child process per session (`python -m vozata.diarization.embed_child`, line protocol with an `@vozata ` reply prefix); it loads and warms up once, each clip is one round trip (30 s timeout), and stdin EOF at stop ends it. Tests run a stand-in child script (`tests/diarization/fake_embed_child.py`), never torch.
+- The acceptance test named `tests/transcription/test_worker.py` lives in `tests/diarization/test_live_sink.py` and `tests/test_session_live_speakers.py`: tagging is a sink stage, so `worker.py` and the stitcher did not change (smaller overlap with phase 29). Live and post-session speaker numbers are independent.
 
 ### Manual check recipe (pending manual (credentials))
 
@@ -111,4 +112,3 @@ Run on the reference machine, one phase at a time (shared audio hardware):
    off (…HF_TOKEN…)", recording and transcription go on with "Others".
 7. If one voice splits into several users, lower `SPEAKER_SIMILARITY_THRESHOLD` (e.g. 0.6); if
    voices merge, raise it (e.g. 0.8). Record the value used and the accuracy in the PR.
-- The acceptance test named `tests/transcription/test_worker.py` lives in `tests/diarization/test_live_sink.py` and `tests/test_session_live_speakers.py`: tagging is a sink stage, so `worker.py` and the stitcher did not change (smaller overlap with phase 29). Live and post-session speaker numbers are independent.
