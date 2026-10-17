@@ -64,13 +64,13 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:00
-- **Next step:** write `tests/test_vocabulary.py` and implement `vocabulary.py`
-  (`VocabularyStore`, `merge_terms`, `build_hints`).
+- **Updated:** 2026-10-17 10:30
+- **Next step:** add `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` to `config.py`,
+  `settings_fields.py` and `engine/.env.example` (tests in `tests/test_config.py`).
 
 ### Steps
 
-- [ ] `vocabulary.py`: store (comments, blanks, case-insensitive dedupe), merge, `build_hints`
+- [x] `vocabulary.py`: store (comments, blanks, case-insensitive dedupe), merge, `build_hints`
 - [ ] `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` in `config.py`, `settings_fields.py`, `.env.example`
 - [ ] Rolling context prompt (`transcription/context.py`) wired into the stitcher; `prompt` and
       `avg_logprob` on the transcriber port; faster-whisper `initial_prompt` +
