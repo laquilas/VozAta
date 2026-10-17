@@ -64,14 +64,14 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 13:55
-- **Next step:** wire `RollingContext` into `CarryOverStitcher` (per channel, `CONTEXT_PROMPT_CHARS`) with tests in `tests/transcription/test_stitcher.py`.
+- **Updated:** 2026-10-17 13:56
+- **Next step:** session wiring: `SessionComponents.vocabulary`, `session.json.vocabulary`, hints + one `RollingContext` per channel in `CapturePipeline`, bootstrap merges the glossary file with the session terms.
 
 ### Steps
 
 - [x] `vocabulary.py`: store (comments, blanks, case-insensitive dedupe), merge, `build_hints`
 - [x] `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` in `config.py`, `settings_fields.py`, `.env.example`
-- [ ] Rolling context prompt (`transcription/context.py`) wired into the stitcher; `prompt` and
+- [x] Rolling context prompt (`transcription/context.py`) wired into the stitcher; `prompt` and
       `avg_logprob` on the transcriber port; faster-whisper `initial_prompt` +
       `hallucination_silence_threshold`; OpenAI-compatible `prompt`
 - [ ] Session: merge global + session terms → `session.json.vocabulary`, hints to every
