@@ -5,7 +5,7 @@ using VozAta.Client;
 namespace VozAta.Desktop.Tests.Fakes;
 
 /// <summary>Scriptable engine: canned answers, recorded calls, optional failures.</summary>
-internal sealed class FakeEngineClient : IEngineClient
+internal sealed partial class FakeEngineClient : IEngineClient
 {
     public List<string> Calls { get; } = [];
 

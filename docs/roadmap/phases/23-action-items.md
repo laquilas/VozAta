@@ -62,8 +62,8 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** UI: `ActionItem`/export DTOs + `IEngineClient` methods (`EngineClient`,
-  `FakeEngineClient`), `action_items_ready` event, then `ActionItemsViewModel` + tab
+- **Next step:** UI `ActionItemsViewModel` + "Action items" tab (`ActionItemsPanel`), resources
+  in en / pt-BR / es, settings group `tasks`
 
 ### Steps
 
