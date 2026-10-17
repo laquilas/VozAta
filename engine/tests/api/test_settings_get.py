@@ -29,6 +29,14 @@ def test_settings_returns_every_key_with_its_schema(api: Api) -> None:
     }
 
 
+def test_settings_expose_the_low_confidence_threshold(api: Api) -> None:
+    body = api.client.get("/settings").json()
+
+    assert body["values"]["LOW_CONFIDENCE_THRESHOLD"] == 0.5
+    field = next(item for item in body["schema"] if item["key"] == "LOW_CONFIDENCE_THRESHOLD")
+    assert (field["type"], field["group"], field["default"]) == ("number", "transcription", 0.5)
+
+
 def test_secret_settings_are_masked(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     fields = list(settings_view.FIELDS)
     index = next(i for i, field in enumerate(fields) if field.key == "OLLAMA_MODEL")

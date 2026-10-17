@@ -603,6 +603,63 @@
   <data name="ConfirmCloseNo" xml:space="preserve">
     <value>Continuar gravando</value>
   </data>
+  <data name="Setting_LOW_CONFIDENCE_THRESHOLD" xml:space="preserve">
+    <value>Limite de baixa confiança</value>
+  </data>
+  <data name="SettingHelp_LOW_CONFIDENCE_THRESHOLD" xml:space="preserve">
+    <value>Palavras reconhecidas com probabilidade abaixo deste valor (0 a 1) são destacadas na transcrição da sessão.</value>
+  </data>
+  <data name="TranscriptEdit" xml:space="preserve">
+    <value>Editar transcrição</value>
+  </data>
+  <data name="TranscriptSave" xml:space="preserve">
+    <value>Salvar correções</value>
+  </data>
+  <data name="TranscriptCancelEdit" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="TranscriptRevert" xml:space="preserve">
+    <value>Voltar ao original</value>
+  </data>
+  <data name="TranscriptSaving" xml:space="preserve">
+    <value>Salvando…</value>
+  </data>
+  <data name="TranscriptSaved" xml:space="preserve">
+    <value>Transcrição atualizada. Gere a ata de novo para que ela a use.</value>
+  </data>
+  <data name="TranscriptHasEdits" xml:space="preserve">
+    <value>Esta transcrição inclui suas correções.</value>
+  </data>
+  <data name="TranscriptLowConfidenceHint" xml:space="preserve">
+    <value>As palavras destacadas foram reconhecidas com baixa confiança.</value>
+  </data>
+  <data name="TranscriptEmptySegment" xml:space="preserve">
+    <value>Uma fala não pode ficar vazia. Digite o texto ou cancele a alteração.</value>
+  </data>
+  <data name="ConfirmDiscardEditsTitle" xml:space="preserve">
+    <value>Correções não salvas</value>
+  </data>
+  <data name="ConfirmDiscardEditsMessage" xml:space="preserve">
+    <value>Suas correções na transcrição não foram salvas. Descartá-las?</value>
+  </data>
+  <data name="ConfirmDiscardEditsYes" xml:space="preserve">
+    <value>Descartar</value>
+  </data>
+  <data name="ConfirmDiscardEditsNo" xml:space="preserve">
+    <value>Continuar editando</value>
+  </data>
+  <data name="ConfirmRevertTitle" xml:space="preserve">
+    <value>Voltar ao original</value>
+  </data>
+  <data name="ConfirmRevertMessage" xml:space="preserve">
+    <value>Remover todas as suas correções e mostrar de novo a transcrição original? A ata só muda quando for gerada de novo.</value>
+  </data>
+  <data name="ConfirmRevertYes" xml:space="preserve">
+    <value>Reverter</value>
+  </data>
+  <data name="ConfirmRevertNo" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
   <data name="TabSpeakers" xml:space="preserve">
     <value>Participantes</value>
   </data>

@@ -603,6 +603,63 @@
   <data name="ConfirmCloseNo" xml:space="preserve">
     <value>Keep recording</value>
   </data>
+  <data name="Setting_LOW_CONFIDENCE_THRESHOLD" xml:space="preserve">
+    <value>Low-confidence threshold</value>
+  </data>
+  <data name="SettingHelp_LOW_CONFIDENCE_THRESHOLD" xml:space="preserve">
+    <value>Words recognized with a probability below this (0 to 1) are highlighted in the session transcript.</value>
+  </data>
+  <data name="TranscriptEdit" xml:space="preserve">
+    <value>Edit transcript</value>
+  </data>
+  <data name="TranscriptSave" xml:space="preserve">
+    <value>Save corrections</value>
+  </data>
+  <data name="TranscriptCancelEdit" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="TranscriptRevert" xml:space="preserve">
+    <value>Revert to original</value>
+  </data>
+  <data name="TranscriptSaving" xml:space="preserve">
+    <value>Saving…</value>
+  </data>
+  <data name="TranscriptSaved" xml:space="preserve">
+    <value>Transcript updated. Regenerate the minutes so they use it.</value>
+  </data>
+  <data name="TranscriptHasEdits" xml:space="preserve">
+    <value>This transcript includes your corrections.</value>
+  </data>
+  <data name="TranscriptLowConfidenceHint" xml:space="preserve">
+    <value>Highlighted words were recognized with low confidence.</value>
+  </data>
+  <data name="TranscriptEmptySegment" xml:space="preserve">
+    <value>A line cannot be empty. Type its text, or cancel the change.</value>
+  </data>
+  <data name="ConfirmDiscardEditsTitle" xml:space="preserve">
+    <value>Unsaved corrections</value>
+  </data>
+  <data name="ConfirmDiscardEditsMessage" xml:space="preserve">
+    <value>Your transcript corrections are not saved. Discard them?</value>
+  </data>
+  <data name="ConfirmDiscardEditsYes" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="ConfirmDiscardEditsNo" xml:space="preserve">
+    <value>Keep editing</value>
+  </data>
+  <data name="ConfirmRevertTitle" xml:space="preserve">
+    <value>Revert to original</value>
+  </data>
+  <data name="ConfirmRevertMessage" xml:space="preserve">
+    <value>Remove all your corrections and show the original transcript again? The minutes change only when you regenerate them.</value>
+  </data>
+  <data name="ConfirmRevertYes" xml:space="preserve">
+    <value>Revert</value>
+  </data>
+  <data name="ConfirmRevertNo" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
   <data name="TabSpeakers" xml:space="preserve">
     <value>Speakers</value>
   </data>

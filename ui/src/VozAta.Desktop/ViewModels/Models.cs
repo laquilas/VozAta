@@ -32,7 +32,16 @@ public sealed record TranscriptLine(string Timestamp, string Label, string Text,
     /// <summary>The line a search result opened (highlighted and scrolled into view).</summary>
     public bool IsFocused { get; init; }
 
-    public string Color => Channel switch
+    /// <summary>The text split around low-confidence words (phase 21); null when none is highlighted.</summary>
+    public IReadOnlyList<TextPart>? LowConfidenceParts { get; init; }
+
+    /// <summary><see cref="Display"/> in parts, for the highlighted history transcript.</summary>
+    public IReadOnlyList<TextPart> DisplayParts =>
+        [new TextPart($"[{Timestamp}] {Label}: "), .. LowConfidenceParts ?? [new TextPart(Text)]];
+
+    public string Color => ColorOf(Channel);
+
+    public static string ColorOf(string channel) => channel switch
     {
         "mic" => "#2E7D32",
         "system" => "#1565C0",

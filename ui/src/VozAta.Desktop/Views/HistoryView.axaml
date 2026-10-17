@@ -186,22 +186,71 @@
                   </Panel>
                 </TabItem>
                 <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabTranscript]}">
-                  <Panel>
-                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoTranscript]}"
-                               Opacity="0.6" Margin="8" IsVisible="{Binding !Lines.Count}" />
-                    <ScrollViewer>
-                      <ItemsControl ItemsSource="{Binding Lines}" Margin="8"
-                                    views:ScrollToItem.Item="{Binding FocusedLine}">
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:TranscriptLine">
-                            <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
-                                                 TextWrapping="Wrap" Margin="0,3" FontSize="15"
-                                                 Classes.focused="{Binding IsFocused}" />
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </ScrollViewer>
-                  </Panel>
+                  <DockPanel>
+                    <!-- Edit mode toolbar (phase 21) -->
+                    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="8,8,8,0" IsVisible="{Binding !IsLive}">
+                      <WrapPanel>
+                        <Button Margin="0,0,8,4" Command="{Binding Editor.EditCommand}"
+                                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptEdit]}"
+                                IsVisible="{Binding !Editor.IsEditing}" />
+                        <Button Margin="0,0,8,4" Classes="accent" Command="{Binding Editor.SaveCommand}"
+                                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSave]}"
+                                IsVisible="{Binding Editor.IsEditing}" />
+                        <Button Margin="0,0,8,4" Command="{Binding Editor.CancelEditCommand}"
+                                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptCancelEdit]}"
+                                IsVisible="{Binding Editor.IsEditing}" />
+                        <Button Margin="0,0,8,4" Command="{Binding Editor.RevertCommand}"
+                                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptRevert]}"
+                                IsVisible="{Binding Editor.HasEdits}" />
+                      </WrapPanel>
+                      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSaving]}"
+                                 FontStyle="Italic" Opacity="0.7" IsVisible="{Binding Editor.IsSaving}" />
+                      <TextBlock Text="{Binding Editor.Error}" Foreground="#C62828" TextWrapping="Wrap"
+                                 IsVisible="{Binding Editor.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Editor.SuggestRegenerate}">
+                        <TextBlock VerticalAlignment="Center" Foreground="#2E7D32" TextWrapping="Wrap"
+                                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSaved]}" />
+                        <Button Command="{Binding RegenerateMinutesCommand}"
+                                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}" />
+                      </StackPanel>
+                      <TextBlock Opacity="0.6" FontStyle="Italic" TextWrapping="Wrap"
+                                 Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptHasEdits]}"
+                                 IsVisible="{Binding Editor.HasEdits}" />
+                      <TextBlock Opacity="0.6" FontStyle="Italic" TextWrapping="Wrap"
+                                 Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptLowConfidenceHint]}"
+                                 IsVisible="{Binding HasLowConfidence}" />
+                    </StackPanel>
+                    <Panel>
+                      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoTranscript]}"
+                                 Opacity="0.6" Margin="8" IsVisible="{Binding !Lines.Count}" />
+                      <ScrollViewer IsVisible="{Binding !Editor.IsEditing}">
+                        <ItemsControl ItemsSource="{Binding Lines}" Margin="8"
+                                      views:ScrollToItem.Item="{Binding FocusedLine}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TranscriptLine">
+                              <SelectableTextBlock views:ConfidenceText.Parts="{Binding DisplayParts}" Foreground="{Binding Color}"
+                                                   TextWrapping="Wrap" Margin="0,3" FontSize="15"
+                                                   Classes.focused="{Binding IsFocused}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                      <!-- Edit mode: one text box per segment -->
+                      <ScrollViewer IsVisible="{Binding Editor.IsEditing}">
+                        <ItemsControl ItemsSource="{Binding Editor.Segments}" Margin="8">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:EditableSegment">
+                              <StackPanel Margin="0,3" Spacing="2">
+                                <TextBlock Text="{Binding Header}" Foreground="{Binding Color}" FontSize="13" />
+                                <TextBox Text="{Binding Text}" TextWrapping="Wrap" FontSize="15"
+                                         AutomationProperties.Name="{Binding Header}" />
+                              </StackPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                    </Panel>
+                  </DockPanel>
                 </TabItem>
                 <!-- Speaker rename (phase 16) -->
                 <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabSpeakers]}"

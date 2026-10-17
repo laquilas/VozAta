@@ -14,7 +14,7 @@ def segment_payload(segment: TranscriptSegment, labeler: SpeakerLabeler) -> dict
     """`Segment`: the raw segment plus its display label (raw files never store labels)."""
     payload = segment.to_dict()
     payload["label"] = labeler.label(segment.speaker_id)
-    payload["edited"] = False  # phase 21
+    payload["edited"] = segment.edited  # phase 21
     return payload
 
 
