@@ -83,7 +83,7 @@ minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama es
 session_not_found = "No se encontró ninguna sesión en {folder}."
 empty_transcript = "La sesión en {folder} no tiene transcripción, así que no hay nada que resumir."
 device_not_found = "No se encontró el dispositivo de audio: {reason}. Ejecuta \"python -m vozata record --list-devices\" para ver los ids."
-reindexed = "Índice de búsqueda reconstruido: {count} sesiones."
+reindexed = "Índice de búsqueda reconstruido. Sesiones indexadas: {count}."
 reindex_failed = "No se pudo reconstruir el índice de búsqueda ({reason})."
 
 [cli.devices]

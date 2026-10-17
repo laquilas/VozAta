@@ -83,7 +83,7 @@ minutes_failed = "The minutes could not be generated ({reason}). Check that Olla
 session_not_found = "No session found in {folder}."
 empty_transcript = "The session in {folder} has no transcript, so there is nothing to summarize."
 device_not_found = "Audio device not found: {reason}. Run \"python -m vozata record --list-devices\" to see the ids."
-reindexed = "Search index rebuilt: {count} sessions."
+reindexed = "Search index rebuilt. Sessions indexed: {count}."
 reindex_failed = "The search index could not be rebuilt ({reason})."
 
 [cli.devices]
