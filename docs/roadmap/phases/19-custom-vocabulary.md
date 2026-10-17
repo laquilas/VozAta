@@ -59,3 +59,29 @@ Automatic term extraction from previous meetings.
 
 > Execute phase 19 of the roadmap (`docs/roadmap/phases/19-custom-vocabulary.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/19-custom-vocabulary`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** write `tests/test_vocabulary.py` and implement `vocabulary.py`
+  (`VocabularyStore`, `merge_terms`, `build_hints`).
+
+### Steps
+
+- [ ] `vocabulary.py`: store (comments, blanks, case-insensitive dedupe), merge, `build_hints`
+- [ ] `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` in `config.py`, `settings_fields.py`, `.env.example`
+- [ ] Rolling context prompt (`transcription/context.py`) wired into the stitcher; `prompt` and
+      `avg_logprob` on the transcriber port; faster-whisper `initial_prompt` +
+      `hallucination_silence_threshold`; OpenAI-compatible `prompt`
+- [ ] Session: merge global + session terms → `session.json.vocabulary`, hints to every
+      `transcribe` call
+- [ ] Minutes prompt glossary (live stop and regeneration)
+- [ ] API: `GET|PUT /vocabulary`, `vocabulary` in `POST /sessions`
+- [ ] UI: client + DTOs, settings tab "Vocabulary", Start screen "Terms for this meeting"
+- [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
+
+### Decisions and notes
+
+- (none yet)
