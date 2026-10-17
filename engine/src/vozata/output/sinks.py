@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -33,19 +34,25 @@ class ConsoleSink:
 
 
 class _AppendFile:
+    sync = False  # also `os.fsync` each line: it survives a machine crash, not only the process
+
     def __init__(self, path: Path) -> None:
         self._file = path.open("a", encoding="utf-8", newline="\n")
 
     def _write_line(self, line: str) -> None:
         self._file.write(line + "\n")
         self._file.flush()  # every segment is on disk before the next one (crash safety)
+        if self.sync:
+            os.fsync(self._file.fileno())
 
     def close(self) -> None:
         self._file.close()
 
 
 class JsonlSink(_AppendFile):
-    """Raw, append-only `transcript.jsonl` (architecture §8)."""
+    """Raw, append-only `transcript.jsonl` (architecture §8); fsynced per segment (phase 17)."""
+
+    sync = True
 
     def emit(self, segment: TranscriptSegment) -> None:
         self._write_line(json.dumps(segment.to_dict(), ensure_ascii=False))
