@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 
@@ -148,7 +148,9 @@ class CapturePipeline:
     are used. `hints` (the session vocabulary, phase 19) go with every transcription, and each
     channel gets its own rolling context prompt of `CONTEXT_PROMPT_CHARS`. With a
     `speaker_embedder` (`LIVE_DIARIZATION_ENABLED`), system segments get live `system:<n>`
-    speakers from a `LiveSpeakerSink` between the echo filter and the sinks.
+    speakers from a `LiveSpeakerSink` between the echo filter and the sinks. `extra_sinks` get
+    every committed segment after echo dedupe (and live speakers), next to the transcript files
+    (e.g. the translation worker, phase 29); they must return quickly and are closed by `drain()`.
     """
 
     def __init__(
@@ -164,6 +166,7 @@ class CapturePipeline:
         on_load_failed: Callable[[Exception], None] = lambda error: None,
         hints: str | None = None,
         speaker_embedder: Callable[[], SpeakerEmbedder] | None = None,
+        extra_sinks: Sequence[TranscriptSink] = (),
     ) -> None:
         self._rate = settings.sample_rate
         new_chunker = chunker_factory or _fixed_windows(settings)
@@ -184,6 +187,7 @@ class CapturePipeline:
                 JsonlSink(paths.transcript_jsonl),
                 MarkdownSink(paths.transcript_md, labeler),
                 _ObserverSink(observer),
+                *extra_sinks,
             ]
         )
         if speaker_embedder is not None and Channel.SYSTEM in self._tracks:

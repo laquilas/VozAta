@@ -23,6 +23,7 @@ mix_failed = "mixed.wav could not be created ({reason}). The microphone and syst
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
 index_failed = "The session could not be added to the search index ({reason}). Rebuild the index with: python -m vozata reindex"
+translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
 unsupported_format = "Unsupported export format \"{format}\". Use one of: {allowed}."

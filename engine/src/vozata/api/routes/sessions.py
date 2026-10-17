@@ -21,7 +21,8 @@ from vozata.api.schemas import (
     Transcript,
 )
 from vozata.api.session_manager import StartOptions
-from vozata.domain import ConversationLanguage
+from vozata.domain import ConversationLanguage, TranslationTarget
+from vozata.translation.translations_file import read_translations
 
 router = APIRouter(tags=["sessions"])
 Container = Annotated[ApiContainer, Depends(container)]
@@ -36,6 +37,7 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
         system_device=body.system_device_id,
         template=body.template,
         vocabulary=tuple(body.vocabulary or ()),
+        translate_to=TranslationTarget(body.translate_to) if body.translate_to else None,
     )
     try:
         return c.manager.start(options)
@@ -86,7 +88,14 @@ def transcript(session_id: str, c: Container) -> dict[str, Any]:
     source, segments = c.store.load_transcript_with_source(session_id)
     ordered = sorted(segments, key=lambda segment: segment.start)
     labeler = c.labeler.with_names(c.store.speaker_names(session_id))
-    return {"source": source, "segments": [segment_payload(s, labeler) for s in ordered]}
+    translations = read_translations(c.store.paths(session_id).translated_jsonl)
+    payloads = []
+    for segment in ordered:
+        payload = segment_payload(segment, labeler)
+        if (translation := translations.get(segment.segment_id)) is not None:
+            payload["translation"] = {"language": translation.language, "text": translation.text}
+        payloads.append(payload)
+    return {"source": source, "segments": payloads}
 
 
 @router.get("/sessions/{session_id}/minutes", response_model=Minutes)

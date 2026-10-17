@@ -39,6 +39,15 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class TranslationTarget(StrEnum):
+    """`TRANSLATE_TO`: the live translation language (phase 29); `off` disables it."""
+
+    OFF = "off"
+    EN = "en"
+    PT = "pt"
+    ES = "es"
+
+
 class ChunkMode(StrEnum):
     VAD = "vad"  # cut at pauses (phase 27)
     FIXED = "fixed"  # CHUNK_SECONDS windows
@@ -160,6 +169,23 @@ class SpeakerTurn:
     def overlap(self, start: float, end: float) -> float:
         """Seconds this turn shares with the span `start`-`end` (0 when they do not meet)."""
         return max(0.0, min(self.end, end) - max(self.start, start))
+
+
+@dataclass(frozen=True)
+class Translation:
+    """A committed segment translated into `language` (phase 29)."""
+
+    segment_id: str
+    language: str
+    text: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """One `transcript.translated.jsonl` line (architecture §8)."""
+        return {"segment_id": self.segment_id, "language": self.language, "text": self.text}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Translation:
+        return cls(str(data["segment_id"]), str(data["language"]), str(data["text"]))
 
 
 def default_conversation_language(app_language: AppLanguage) -> ConversationLanguage:

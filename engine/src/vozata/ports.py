@@ -190,8 +190,29 @@ class SessionObserver(Protocol):
         """The speech model started (True) or finished (False) loading; capture already runs."""
         ...
 
+    def on_translation(self, segment_id: str, language: str, text: str) -> None:
+        """A committed segment translated into `language` (phase 29)."""
+        ...
+
     def on_error(self, code: str, message: str) -> None:
         """A non-fatal error; `message` is localized."""
+        ...
+
+
+class TranslationError(RuntimeError):
+    """A translator could not translate (missing extra or model, unsupported pair, model error)."""
+
+
+@runtime_checkable
+class Translator(Protocol):
+    """Translates committed transcript text (phase 29); runs on CPU during recording."""
+
+    def translate(self, text: str, source: str, target: str) -> str:
+        """`text` from `source` into `target` (`en`, `pt`, `es`); raises `TranslationError`."""
+        ...
+
+    def close(self) -> None:
+        """Release the model memory."""
         ...
 
 

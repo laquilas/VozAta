@@ -501,6 +501,30 @@
   <data name="SessionTermsHint" xml:space="preserve">
     <value>Nomes e termos, separados por vírgulas ou quebras de linha</value>
   </data>
+  <data name="TranslateTo" xml:space="preserve">
+    <value>Traduzir para</value>
+  </data>
+  <data name="TranslateOff" xml:space="preserve">
+    <value>Desligado</value>
+  </data>
+  <data name="Setting_TRANSLATE_TO" xml:space="preserve">
+    <value>Tradução ao vivo</value>
+  </data>
+  <data name="SettingHelp_TRANSLATE_TO" xml:space="preserve">
+    <value>Traduz cada linha da transcrição para este idioma durante a gravação (mostrada abaixo da linha e salva em transcript.translated.jsonl). A tela Iniciar pode escolher outro idioma por reunião. Roda na CPU.</value>
+  </data>
+  <data name="Setting_TRANSLATION_PROVIDER" xml:space="preserve">
+    <value>Provedor de tradução</value>
+  </data>
+  <data name="SettingHelp_TRANSLATION_PROVIDER" xml:space="preserve">
+    <value>opus_mt: modelos Opus-MT no CTranslate2. Requer o extra opcional "translation" do motor.</value>
+  </data>
+  <data name="Setting_TRANSLATION_MODEL_DIR" xml:space="preserve">
+    <value>Pasta dos modelos de tradução</value>
+  </data>
+  <data name="SettingHelp_TRANSLATION_MODEL_DIR" xml:space="preserve">
+    <value>Pasta com opus-mt-ROMANCE-en e opus-mt-en-ROMANCE. Vazio: baixados uma vez (cerca de 155 MB cada) para o cache do Hugging Face.</value>
+  </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Provedor do modelo da ata</value>
   </data>

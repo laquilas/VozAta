@@ -8,7 +8,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from vozata.domain import AppLanguage, ChunkMode, ConversationLanguage, MixMode, WhisperDevice
+from vozata.domain import (
+    AppLanguage,
+    ChunkMode,
+    ConversationLanguage,
+    MixMode,
+    TranslationTarget,
+    WhisperDevice,
+)
 from vozata.minutes.template_repository import bundled_templates
 
 # The bundled minutes template ids as choices, so the settings page offers a list (phase 20).
@@ -112,6 +119,10 @@ FIELDS: tuple[Field, ...] = (
     Field("CONTEXT_PROMPT_CHARS", "context_prompt_chars", "integer", group="transcription"),
     # Editable transcript (phase 21)
     Field("LOW_CONFIDENCE_THRESHOLD", "low_confidence_threshold", "number", group="transcription"),
+    # Live translation (phase 29)
+    Field("TRANSLATE_TO", "translate_to", "choice", TranslationTarget, group="transcription"),
+    Field("TRANSLATION_PROVIDER", "translation_provider", "string", group="transcription"),
+    Field("TRANSLATION_MODEL_DIR", "translation_model_dir", "path", group="transcription"),
     # Minutes (phase 04)
     Field("LLM_PROVIDER", "llm_provider", "string", group="minutes"),
     Field("OLLAMA_URL", "ollama_url", "url", group="minutes"),

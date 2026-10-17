@@ -64,6 +64,10 @@ class SessionPaths:
         return self.root / "transcript.edited.jsonl"
 
     @property
+    def translated_jsonl(self) -> Path:
+        return self.root / "transcript.translated.jsonl"
+
+    @property
     def speakers_json(self) -> Path:
         return self.root / "speakers.json"
 

@@ -666,3 +666,29 @@ def test_invalid_autosave_seconds_raise(value: str) -> None:
         load_settings(env={"AUTOSAVE_SECONDS": value})
 
     assert caught.value.key == "AUTOSAVE_SECONDS"
+
+
+def test_live_translation_defaults_and_values(tmp_path: Path) -> None:
+    from vozata.domain import TranslationTarget
+
+    defaults = load_settings(env={})
+    assert (
+        defaults.translate_to,
+        defaults.translation_provider,
+        defaults.translation_model_dir,
+    ) == (TranslationTarget.OFF, "opus_mt", None)
+    chosen = load_settings(
+        env={
+            "TRANSLATE_TO": "pt",
+            "TRANSLATION_PROVIDER": "other",
+            "TRANSLATION_MODEL_DIR": str(tmp_path),
+        }
+    )
+    assert (chosen.translate_to, chosen.translation_provider, chosen.translation_model_dir) == (
+        TranslationTarget.PT,
+        "other",
+        tmp_path,
+    )
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"TRANSLATE_TO": "auto"})
+    assert caught.value.key == "TRANSLATE_TO"
