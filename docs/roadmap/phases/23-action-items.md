@@ -62,11 +62,11 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add `ActionItem` to `domain.py` and `action_items.json` read/write in `storage/`
+- **Next step:** write `minutes/action_items.py` (`ActionItemExtractor`) with its tests
 
 ### Steps
 
-- [ ] Domain `ActionItem` + `storage/action_items.py` (`action_items.json`)
+- [x] Domain `ActionItem` + `storage/action_items.py` (`action_items.json`)
 - [ ] `minutes/action_items.py`: `ActionItemExtractor` (localized prompt, JSON schema, one retry)
 - [ ] Config keys `EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*` (secrets masked) + `.env.example`
 - [ ] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry

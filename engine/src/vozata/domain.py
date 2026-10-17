@@ -239,3 +239,46 @@ class Citation:
 
     def to_dict(self) -> dict[str, Any]:
         return {"session_id": self.session_id, "segment_id": self.segment_id, "start": self.start}
+
+
+# Action items (phase 23).
+
+
+@dataclass(frozen=True)
+class ActionItem:
+    """A task agreed in a meeting; `exported_url` is set once it was exported (no duplicates)."""
+
+    id: str
+    description: str
+    owner: str | None = None
+    due: str | None = None  # ISO date (YYYY-MM-DD) when known, else as said in the meeting
+    source_segment_ids: tuple[str, ...] = ()
+    exported_url: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "description": self.description,
+            "owner": self.owner,
+            "due": self.due,
+            "source_segment_ids": list(self.source_segment_ids),
+            "exported_url": self.exported_url,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> ActionItem:
+        return cls(
+            id=str(data["id"]),
+            description=str(data["description"]),
+            owner=optional_text(data.get("owner")),
+            due=optional_text(data.get("due")),
+            source_segment_ids=tuple(str(item) for item in data.get("source_segment_ids", ())),
+            exported_url=optional_text(data.get("exported_url")),
+        )
+
+
+def optional_text(value: object) -> str | None:
+    """A stripped string, or None for a missing, blank or non-string value."""
+    if not isinstance(value, str):
+        return None
+    return value.strip() or None

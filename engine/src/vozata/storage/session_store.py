@@ -67,6 +67,10 @@ class SessionPaths:
     def speakers_json(self) -> Path:
         return self.root / "speakers.json"
 
+    @property
+    def action_items_json(self) -> Path:
+        return self.root / "action_items.json"
+
 
 def _local_now() -> datetime:
     return datetime.now().astimezone()
