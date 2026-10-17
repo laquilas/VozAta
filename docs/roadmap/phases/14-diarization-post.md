@@ -68,7 +68,7 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - **Branch:** `feature/14-diarization-post`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add the CLI command `diarize <session_dir> [--minutes]` in `__main__.py` + `cli/diarize.py`.
+- **Next step:** update architecture.md and api-contract.md, tick the acceptance criteria, set README status `done`, open the PR.
 
 ### Steps
 
@@ -78,7 +78,7 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - [x] `speakers.json` in the store, labels from speaker names, `diarize_session`
 - [x] Session stop step 5 + `DIARIZERS` registry
 - [x] pyannote adapter (subprocess) + optional extra `diarization`
-- [ ] CLI `diarize <session_dir>`
+- [x] CLI `diarize <session_dir>`
 - [ ] Docs, acceptance criteria, PR
 
 ### Decisions and notes

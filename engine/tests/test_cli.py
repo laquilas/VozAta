@@ -191,3 +191,24 @@ def test_build_app_wraps_the_real_container(monkeypatch: pytest.MonkeyPatch, tmp
     app = cli._build_app(container.settings)
 
     assert app.state.container is container
+
+
+@pytest.mark.parametrize(("argv", "then_minutes"), [([], False), (["--minutes"], True)])
+def test_diarize_command_runs_on_the_folder_and_can_chain_the_minutes(
+    monkeypatch: pytest.MonkeyPatch, argv: list[str], then_minutes: bool
+) -> None:
+    received: list[tuple[Path, bool]] = []
+    minutes: list[Path] = []
+
+    def diarize(folder, settings, console, localizer, build, then):  # type: ignore[no-untyped-def]
+        received.append((folder, then is not None))
+        return then() if then is not None else 0
+
+    monkeypatch.setattr(cli, "run_diarize", diarize)
+    monkeypatch.setattr(cli, "run_minutes", lambda folder, *args: minutes.append(folder) or 5)
+
+    code, _ = _main(["diarize", "recordings/20261015_202358", *argv])
+
+    folder = Path("recordings/20261015_202358")
+    assert received == [(folder, then_minutes)]
+    assert (code, minutes) == ((5, [folder]) if then_minutes else (0, []))

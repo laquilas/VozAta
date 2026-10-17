@@ -127,8 +127,13 @@ def build_diarizer_factory(settings: Settings) -> Callable[[], Diarizer] | None:
     """The configured diarizer, built only when a session needs it; None when disabled."""
     if not settings.diarization_enabled:
         return None
-    factory = _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)
-    return functools.partial(factory, settings)
+    _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)  # fail fast
+    return functools.partial(build_diarizer, settings)
+
+
+def build_diarizer(settings: Settings) -> Diarizer:
+    """The `DIARIZATION_PROVIDER` diarizer, whether or not `DIARIZATION_ENABLED` is set."""
+    return _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)(settings)
 
 
 def build_session(

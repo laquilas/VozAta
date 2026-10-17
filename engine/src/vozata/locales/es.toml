@@ -84,6 +84,9 @@ minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama es
 session_not_found = "No se encontró ninguna sesión en {folder}."
 empty_transcript = "La sesión en {folder} no tiene transcripción, así que no hay nada que resumir."
 device_not_found = "No se encontró el dispositivo de audio: {reason}. Ejecuta \"python -m vozata record --list-devices\" para ver los ids."
+diarized = "Se encontraron {count} participante(s) remoto(s); transcripción con participantes guardada en {path}"
+diarize_failed = "No se pudo identificar a los participantes remotos ({reason})."
+no_system_speech = "La sesión en {folder} no tiene voz en el audio del sistema, así que no hay nadie a quien identificar."
 
 [cli.devices]
 microphones = "Micrófonos:"
@@ -100,6 +103,8 @@ system = "id del dispositivo de loopback (predeterminado: el loopback de la sali
 list_devices = "muestra los dispositivos de audio y sale"
 minutes = "vuelve a generar el acta de una sesión grabada"
 session_dir = "carpeta de la sesión, por ejemplo recordings/20261015_202358"
+diarize = "identifica a los participantes remotos de una sesión grabada (Usuario 1, Usuario 2, ...)"
+diarize_minutes = "vuelve a generar el acta después"
 
 [export]
 title = "Reunión del {date}"

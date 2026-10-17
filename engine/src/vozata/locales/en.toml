@@ -84,6 +84,9 @@ minutes_failed = "The minutes could not be generated ({reason}). Check that Olla
 session_not_found = "No session found in {folder}."
 empty_transcript = "The session in {folder} has no transcript, so there is nothing to summarize."
 device_not_found = "Audio device not found: {reason}. Run \"python -m vozata record --list-devices\" to see the ids."
+diarized = "Found {count} remote speaker(s); speaker-labelled transcript written to {path}"
+diarize_failed = "The remote speakers could not be identified ({reason})."
+no_system_speech = "The session in {folder} has no system-audio speech, so there is nobody to identify."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -100,6 +103,8 @@ system = "loopback device id (default: the default output's loopback)"
 list_devices = "list the audio devices and exit"
 minutes = "generate the minutes of a recorded session again"
 session_dir = "session folder, e.g. recordings/20261015_202358"
+diarize = "identify the remote speakers of a recorded session (User 1, User 2, ...)"
+diarize_minutes = "generate the minutes again afterwards"
 
 [export]
 title = "Meeting of {date}"

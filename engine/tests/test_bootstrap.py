@@ -425,3 +425,12 @@ def test_a_shared_transcriber_is_not_kept_when_speakers_are_identified(
     assert session._c.diarizer_factory is not None
     assert shared.loaded is False  # VRAM rule: Whisper never stays next to the diarizer
     assert fake.closed
+
+
+def test_build_diarizer_ignores_the_enabled_flag_for_explicit_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeDiarizer()
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda settings: fake)
+
+    assert bootstrap.build_diarizer(Settings(diarization_provider="fake")) is fake
