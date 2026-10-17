@@ -209,10 +209,11 @@ public sealed class EngineClientTests
         await client.ResumeSessionAsync();
         await client.StopSessionAsync();
         await client.RegenerateMinutesAsync("20261015_202358");
+        await client.RecoverSessionAsync("20261014_090000");
 
         Assert.Equal(
             ["/sessions/current/pause", "/sessions/current/resume", "/sessions/current/stop",
-             "/sessions/20261015_202358/minutes"],
+             "/sessions/20261015_202358/minutes", "/sessions/20261014_090000/recover"],
             handler.Requests.Select(request => request.Path));
         Assert.All(handler.Requests, request => Assert.Equal(HttpMethod.Post, request.Method));
     }

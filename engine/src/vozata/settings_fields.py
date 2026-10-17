@@ -134,6 +134,8 @@ FIELDS: tuple[Field, ...] = (
     Field("OLLAMA_KEEP_ALIVE", "ollama_keep_alive", "string", group="minutes"),
     # Session (phase 05)
     Field("GENERATE_MINUTES", "generate_minutes", "bool", group="general"),
+    # Crash recovery (phase 17)
+    Field("AUTOSAVE_SECONDS", "autosave_seconds", "number", group="general"),
     # API (phase 06)
     Field("API_HOST", "api_host", "string", group="api", applies="restart"),
     Field("API_PORT", "api_port", "integer", group="api", applies="restart"),

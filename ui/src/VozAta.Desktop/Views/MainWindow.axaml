@@ -58,6 +58,31 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
+    <!-- Crash recovery dialog (phase 17): interrupted sessions with Recover / Later -->
+    <Border DockPanel.Dock="Top" Margin="16,4" Padding="16,12" CornerRadius="4" BorderThickness="1"
+            BorderBrush="#1E88E5" Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+            IsVisible="{Binding Recovery.IsOpen}">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding L[RecoveryTitle]}" FontWeight="SemiBold" FontSize="16" />
+        <TextBlock Text="{Binding L[RecoveryMessage]}" TextWrapping="Wrap" />
+        <ItemsControl ItemsSource="{Binding Recovery.Sessions}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RecoverySession">
+              <Grid ColumnDefinitions="Auto,Auto" Margin="0,2">
+                <TextBlock Text="{Binding Started}" FontWeight="SemiBold" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="1" Text="{Binding Duration}" Foreground="Gray" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+          <Button Content="{Binding L[RecoveryLater]}" Command="{Binding Recovery.LaterCommand}" />
+          <Button Classes="accent" Content="{Binding L[RecoveryRecover]}"
+                  Command="{Binding Recovery.RecoverCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <TabControl Margin="0,4,0,0">
       <TabItem Header="{Binding L[TabRecording]}">
         <DockPanel>

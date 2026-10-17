@@ -11,6 +11,7 @@ from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
 from vozata.config import ConfigError, Settings
 from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
+from vozata.heartbeat import Heartbeat
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import DEFAULT_TEMPLATE
@@ -96,6 +97,8 @@ class RecordingSession:
         self.status: SessionStatus | None = None
         self._paths: SessionPaths | None = None
         self._captured: float | None = None  # recorded length, fixed once capture stops
+        self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
+        self._pipeline: CapturePipeline | None = None  # None until `start()`, and on `recover()`
 
     @property
     def paths(self) -> SessionPaths:
@@ -147,6 +150,7 @@ class RecordingSession:
         self._pipeline.accept()
         self._open_sources()
         self._set_status(SessionStatus.RECORDING)
+        self._start_heartbeat()
         self._pipeline.start_transcription()
         if translation:
             translation.start()
@@ -172,13 +176,51 @@ class RecordingSession:
             self._meta.pause_ended(self._c.clock.now())
         self._stop_capture()  # 1
         self._drain()  # 2
-        self._finalize_audio()  # 3
+        self._pipeline.finalize_wavs()  # 3
+        self._finish()
+
+    def recover(self, session_id: str, duration_seconds: float) -> None:
+        """Finish an interrupted session whose WAVs and transcript were repaired (phase 17).
+
+        Runs the same `_finish()` sequence as `stop()` (mix onwards), so every stop step also
+        runs on recovery. `duration_seconds` is the recorded length found in the repaired WAVs.
+        """
+        if self._paths is not None:
+            raise RuntimeError("A session can only be started or recovered once")
+        meta = self._store.read_meta(session_id)
+        self._paths = self._store.paths(session_id)
+        self._meta = SessionMeta.restore(self._store, session_id, meta)
+        language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
+        self._lock = LanguageLock(language, self._on_language_detected)
+        self._captured = duration_seconds
+        self._meta.captured(duration_seconds)
+        self._set_status(SessionStatus.FINALIZING)
+        self._start_heartbeat()
+        self._finish()
+
+    def _finish(self) -> None:
+        """Stop steps 3 (mix) to 7, shared by `stop()` and `recover()` (phase 17)."""
+        self._mix()  # 3
         self._release_transcriber()  # 4
         self._identify_speakers()  # 5
         self._write_minutes()  # 6
         self._index_transcript()  # 6: search (phase 22)
         self._meta.ended(self._store.now())  # 7
         self._set_status(SessionStatus.DONE)
+        self._stop_heartbeat()
+
+    def _start_heartbeat(self) -> None:
+        """Save `last_heartbeat_at` and the length so far every `AUTOSAVE_SECONDS` until done, so
+        a crash leaves a recent `session.json` (phase 17)."""
+        self._heartbeat = Heartbeat(self._settings.autosave_seconds, self._autosave, "autosave")
+        self._heartbeat.start()
+
+    def _stop_heartbeat(self) -> None:
+        if self._heartbeat is not None:
+            self._heartbeat.stop()
+
+    def _autosave(self) -> None:
+        self._meta.heartbeat(self._store.now(), self.duration_seconds)
 
     def _live_translation(self) -> TranslationWorker | None:
         """The translation worker (phase 29), closed with the transcript files at step 2."""
@@ -242,8 +284,7 @@ class RecordingSession:
         except Exception:
             _log.exception("Releasing the audio backend failed")
 
-    def _finalize_audio(self) -> None:
-        self._pipeline.finalize_wavs()
+    def _mix(self) -> None:
         paths = self.paths
         try:
             self._c.mixer.mix(paths.wav(Channel.MIC), paths.wav(Channel.SYSTEM), paths.mixed_wav)
@@ -252,7 +293,7 @@ class RecordingSession:
             self._error("mix_failed", reason=str(error))
 
     def _release_transcriber(self) -> None:
-        transcriber = self._pipeline.transcriber
+        transcriber = self._pipeline.transcriber if self._pipeline is not None else None
         if transcriber is None:
             return
         try:

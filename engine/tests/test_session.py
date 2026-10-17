@@ -722,3 +722,17 @@ def test_the_minutes_at_stop_get_the_session_vocabulary_as_a_glossary(tmp_path: 
     rig.session.stop()
 
     assert "minutes.glossary(terms=Jéssica)" in rig.llm.prompts[0][1]
+
+
+def test_session_json_gets_a_heartbeat_with_the_length_so_far(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, settings=dataclasses.replace(SETTINGS, autosave_seconds=0.01))
+    rig.session.start()
+    rig.clock.time = 2.5
+
+    _wait_for(lambda: rig.store.read_meta(rig.session.id).get("duration_seconds") == 2.5)
+    meta = rig.store.read_meta(rig.session.id)
+    assert meta["status"] == "recording"
+    assert meta["last_heartbeat_at"] == "2026-10-15T20:30:00-03:00"
+
+    rig.session.stop()
+    assert rig.store.read_meta(rig.session.id)["status"] == "done"

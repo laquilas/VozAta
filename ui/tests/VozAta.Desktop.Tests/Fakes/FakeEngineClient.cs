@@ -195,6 +195,17 @@ internal sealed class FakeEngineClient : IEngineClient
         return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
     }
 
+    /// <summary>Every <c>POST /sessions/{id}/recover</c>, in order (phase 17).</summary>
+    public List<string> Recovered { get; } = [];
+
+    public Exception? RecoverError { get; set; }
+
+    public Task RecoverSessionAsync(string id, CancellationToken cancellationToken = default)
+    {
+        Recovered.Add(id);
+        return RecoverError is null ? Task.CompletedTask : Task.FromException(RecoverError);
+    }
+
     /// <summary>Speakers of each session (phase 16); <see cref="UpdateSpeakersAsync"/> applies names to them.</summary>
     public Dictionary<string, Dictionary<string, SpeakerInfo>> Speakers { get; } = [];
 

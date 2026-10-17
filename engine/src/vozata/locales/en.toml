@@ -50,6 +50,8 @@ internal_error = "Unexpected engine error. Check the engine log for details."
 answer_failed = "The question could not be answered ({reason}). Check that Ollama is running and the model is pulled."
 answer_in_progress = "Another question is still being answered. Wait until it finishes, then ask again."
 ask_unavailable = "Asking questions about meetings is not available in this engine."
+session_not_interrupted = "Session \"{id}\" was not interrupted, so there is nothing to recover."
+recovery_failed = "Session \"{id}\" could not be recovered ({reason}). Its files were kept; the reason is saved in session.json."
 
 [languages]
 en = "English"
@@ -111,6 +113,11 @@ diarize_failed = "The remote speakers could not be identified ({reason})."
 no_system_speech = "The session in {folder} has no system-audio speech, so there is nobody to identify."
 reindexed = "Search index rebuilt. Sessions indexed: {count}."
 reindex_failed = "The search index could not be rebuilt ({reason})."
+recovering = "Recovering the interrupted session {id}..."
+recovered = "Recovered: {folder}"
+recover_failed = "The session {id} could not be recovered ({reason}). Its files were kept."
+recover_none = "No interrupted sessions found."
+recover_not_interrupted = "The session in {folder} was not interrupted, so there is nothing to recover."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -130,6 +137,8 @@ session_dir = "session folder, e.g. recordings/20261015_202358"
 diarize = "identify the remote speakers of a recorded session (User 1, User 2, ...)"
 diarize_minutes = "generate the minutes again afterwards"
 reindex = "rebuild the search index from every recorded session"
+recover = "repair and finish a session interrupted by a crash (audio, speakers, minutes)"
+recover_all = "recover every interrupted session in OUTPUT_DIR"
 
 [export]
 title = "Meeting of {date}"

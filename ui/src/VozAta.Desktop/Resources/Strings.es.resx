@@ -306,6 +306,12 @@
   <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
     <value>Genera el acta con el modelo de lenguaje local después de cada grabación.</value>
   </data>
+  <data name="Setting_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Intervalo de guardado automático (segundos)</value>
+  </data>
+  <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Cada cuánto se guarda el archivo de la sesión durante la grabación (1 a 300 s). Tras un fallo, la sesión interrumpida se detecta y puede recuperarse en el siguiente inicio.</value>
+  </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Frecuencia de muestreo (Hz)</value>
   </data>
@@ -788,5 +794,20 @@
   </data>
   <data name="SpeakersEmpty" xml:space="preserve">
     <value>Todavía no hay participantes: esta sesión no tiene transcripción.</value>
+  </data>
+  <data name="RecoveryTitle" xml:space="preserve">
+    <value>Recuperar grabaciones interrumpidas</value>
+  </data>
+  <data name="RecoveryMessage" xml:space="preserve">
+    <value>VozAta se cerró mientras estas sesiones grababan. Recupéralas para reparar el audio y completar la transcripción, los hablantes y el acta con lo que se guardó. Pueden faltar los últimos segundos antes del fallo.</value>
+  </data>
+  <data name="RecoveryRecover" xml:space="preserve">
+    <value>Recuperar</value>
+  </data>
+  <data name="RecoveryLater" xml:space="preserve">
+    <value>Más tarde</value>
+  </data>
+  <data name="SessionRecovered" xml:space="preserve">
+    <value>La sesión de {0} se recuperó.</value>
   </data>
 </root>

@@ -171,7 +171,7 @@ class FakeDevices:
 class Api:
     """The real app over fakes, plus handles on the fakes for assertions."""
 
-    def __init__(self, tmp_path: Path, settings: Any = None) -> None:
+    def __init__(self, tmp_path: Path, settings: Any = None, recovery: Any = None) -> None:
         from fastapi.testclient import TestClient
 
         from vozata.api.app import create_app
@@ -184,8 +184,16 @@ class Api:
         self.factory = SessionFactory(self.store)
         self.broadcaster = RecordingBroadcaster()
         self.labeler = SpeakerLabeler(FakeLocalizer())
+        from vozata.i18n import TomlLocalizer as _Localizer
+
         self.manager = SessionManager(
-            self.factory, self.store, self.broadcaster, self.labeler, status_interval=60
+            self.factory,
+            self.store,
+            self.broadcaster,
+            self.labeler,
+            status_interval=60,
+            recovery=recovery(self.store) if recovery is not None else None,  # phase 17
+            localizer=_Localizer(self.settings.app_language),
         )
         self.devices = FakeDevices()
         self.gpu = GpuInfo(True, "RTX 3050", 6144)

@@ -65,6 +65,16 @@ class SessionMeta:
             },
         }
 
+    @classmethod
+    def restore(cls, store: MetaStore, session_id: str, meta: dict[str, Any]) -> SessionMeta:
+        """Continue an existing `session.json` (crash recovery, phase 17)."""
+        restored = cls.__new__(cls)
+        restored._store = store
+        restored._id = session_id
+        restored._lock = threading.Lock()
+        restored._meta = dict(meta)
+        return restored
+
     def set_language(self, language: ConversationLanguage, source: str) -> None:
         if language is ConversationLanguage.AUTO:
             return
@@ -91,6 +101,13 @@ class SessionMeta:
     def echo_dropped(self, count: int) -> None:
         """Mic segments the echo filter dropped (phase 18), written once the transcript is final."""
         self._update(echo_dropped=count)
+
+    def heartbeat(self, at: datetime, duration_seconds: float) -> None:
+        """Autosave every `AUTOSAVE_SECONDS` (phase 17): proof of life and the length so far."""
+        self._update(
+            last_heartbeat_at=at.isoformat(timespec="seconds"),
+            duration_seconds=round(duration_seconds, 3),
+        )
 
     def ended(self, at: datetime) -> None:
         self._update(ended_at=at.isoformat(timespec="seconds"))

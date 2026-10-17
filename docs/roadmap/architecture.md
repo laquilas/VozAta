@@ -54,7 +54,7 @@ engine/
     llm/                    ollama.py
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py
-    storage/                session_store.py, recovery.py, search_index.py
+    storage/                session_store.py, recovery.py, wav_repair.py, search_index.py
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github}.py
     qa/                     retriever.py, citations.py, answerer.py
     translation/            worker.py, opus_mt.py, translations_file.py, live.py (29)
@@ -273,6 +273,35 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    `OLLAMA_KEEP_ALIVE`, also after a failed job); index the session for search.
 7. `status = done`, `ended_at` set in `session.json`.
 
+Steps 3 (mix) to 7 are one sequence, `RecordingSession._finish()`, which crash recovery reuses
+(below): a new stop step goes there, so recovered sessions get it too.
+
+**Crash recovery** (phase 17): while a session is active (from `recording` until `done`) a
+heartbeat rewrites `session.json` every `AUTOSAVE_SECONDS` with `last_heartbeat_at` and
+`duration_seconds`, and `JsonlSink` fsyncs every segment. On the next start, a session still
+`recording` / `paused` / `finalizing` that is not live is marked `interrupted`
+(`storage/recovery.find_interrupted`; `serve`: not live in this process, sent to each WebSocket
+client as `recovery_available`; CLI: also no heartbeat for `2 * AUTOSAVE_SECONDS + 5` s, so a
+session another process records is left alone). Recovering (`POST /sessions/{id}/recover`,
+`python -m vozata recover [<dir> | --all]`):
+
+```mermaid
+graph LR
+  I[interrupted] --> R[repair_wav both tracks: RIFF/data sizes from the file size]
+  R --> P[pad_wav to the longest track]
+  P --> T[unreadable transcript.jsonl lines moved to transcript.jsonl.damaged]
+  T --> F["RecordingSession.recover(): status finalizing, then _finish() = stop steps 3-7"]
+  F --> D[done]
+  R -- header unreadable --> E[stays interrupted + recovery_error]
+```
+
+The recovered session uses the template, glossary and `MIX_MODE` stored in its `session.json`
+and the current settings for the rest (diarization, minutes on/off). Nothing is deleted: a
+missing or empty WAV becomes a valid empty one; the transcript lines already flushed are kept and
+only the last unfinished window (≤ `CHUNK_SECONDS` + carry) is lost. In `serve` a recovery
+holds the single-session slot (VRAM rule): `POST /sessions` meanwhile answers
+`409 session_already_active`. Recovering is idempotent: a `done` session is never touched again.
+
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
 time; steps 4 → 5 → 6 enforce that. The live speaker embedder (15, ~30 MB model plus the
 child's CUDA context) is the one exception next to Whisper while recording; it ends at step 2. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
@@ -329,10 +358,11 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 
 | File | Written by | Notes |
 |------|-----------|-------|
-| `session.json` | 05 | metadata, updated on every status change |
+| `session.json` | 05 / 17 | metadata, updated on every status change and every `AUTOSAVE_SECONDS` while active (17) |
 | `mic.wav`, `system.wav` | 02 / 05 | mono 16-bit, `SAMPLE_RATE`, equal length |
 | `mixed.wav` | 02 / 05 | `MIX_MODE=mono` (sum with headroom, clipped) or `stereo` (L = mic, R = system) |
-| `transcript.jsonl` | 03 / 05 | raw, append-only, one segment per line |
+| `transcript.jsonl` | 03 / 05 | raw, append-only, one segment per line, fsynced per segment (17) |
+| `transcript.jsonl.damaged` | 17 | lines of `transcript.jsonl` a crash left unreadable (e.g. half-written), moved here by recovery |
 | `transcript.md` | 03 / 05 | human-readable, `[hh:mm:ss] Label: text` |
 | `minutes.md` | 04 / 05 | generated minutes |
 | `transcript.diarized.jsonl` | 14 | full transcript; system segments tagged `system:<n>`, a segment split at a speaker change becomes `<id>-1`, `<id>-2`, … |
@@ -359,6 +389,7 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "started_at": "2026-10-15T20:23:58-03:00",
   "ended_at": "2026-10-15T21:10:02-03:00",
   "duration_seconds": 2764.2,
+  "last_heartbeat_at": "2026-10-15T21:10:02-03:00",
   "language": "pt", "language_source": "selected",
   "app_language": "en",
   "template": "general",
@@ -391,8 +422,14 @@ transcript through `SessionStore.load_transcript(session_id)`, which returns the
 of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jsonl`. Raw capture data
 (`transcript.jsonl`, WAVs) is never rewritten after the session ends.
 
+`status` is `recording`, `paused`, `finalizing`, `done`, or `interrupted` (17: a crash cut the
+session short; recovery takes it to `finalizing` and `done`, or leaves it `interrupted` with
+`recovery_error`, the reason its files could not be repaired, removed by the next successful
+recovery). `last_heartbeat_at` (17) is the last autosave, every `AUTOSAVE_SECONDS` while the session
+is active; with it, `duration_seconds` is the length so far.
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
-written at stop; `ended_at` is later, after finalization. `language` / `language_source` are written only when known: at start for a fixed language
+written at stop (after a crash: the length of the repaired WAVs); `ended_at` is later, after
+finalization. `language` / `language_source` are written only when known: at start for a fixed language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
 has neither key. `template` (20) is the minutes template id, written at start (even with
 `GENERATE_MINUTES=false`) and replaced by the template of the last regeneration; sessions recorded
@@ -457,7 +494,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
 | `LIVE_DIARIZATION_ENABLED` | `false` | 15 | live `User N` labels while recording (needs the `diarization` extra and `HF_TOKEN`; uses `DIARIZATION_PROVIDER` / `DIARIZATION_DEVICE`) |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
-| `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat |
+| `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat interval while a session is active (1–300 s) |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
 | `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
 | `ECHO_HOLD_SECONDS` | *(empty)* = `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment (1–60 s); mic lines are delayed by it |
