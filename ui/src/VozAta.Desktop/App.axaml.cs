@@ -81,7 +81,7 @@ public partial class App : Application
     {
         var icons = Enum.GetValues<TrayState>().ToDictionary(
             state => state,
-            state => new WindowIcon(AssetLoader.Open(new Uri($"avares://VozAta.Desktop/Assets/tray-{state.ToString().ToLowerInvariant()}.png"))));
+            state => new WindowIcon(AssetLoader.Open(AppIcons.ForTray(state))));
         var start = new NativeMenuItem { Command = tray.StartCommand };
         var pauseResume = new NativeMenuItem { Command = tray.PauseResumeCommand };
         var stop = new NativeMenuItem { Command = tray.StopCommand };

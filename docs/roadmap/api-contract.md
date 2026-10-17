@@ -13,13 +13,15 @@ own rows. Changing a row requires updating both sides.
 - Errors: HTTP status + `{"error": {"code": "session_not_found", "message": "<localized>"}}`.
   Codes are stable English identifiers; `message` is localized with `APP_LANGUAGE`.
 - Only one recording session can be active at a time (`409 session_already_active`).
-- OpenAPI is served at `/docs` (FastAPI default) and must match this document.
+- OpenAPI is served at `/docs` (Swagger UI) and `/redoc`, both showing the VozAta favicon, and must
+  match this document.
 
 ## HTTP endpoints
 
 | Method | Path | Phase | Request | Response |
 |--------|------|-------|---------|----------|
 | GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}}` |
+| GET | `/favicon.ico` | — | — | the VozAta logo (`image/x-icon`, package data copied from `assets/web/favicon.ico`); not in the OpenAPI schema |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
 | POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str]}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template` |
 | POST | `/sessions/current/pause` | 06 | — | `SessionSummary` |
