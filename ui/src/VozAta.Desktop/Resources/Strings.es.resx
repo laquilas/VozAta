@@ -648,4 +648,31 @@
   <data name="ConfirmCloseNo" xml:space="preserve">
     <value>Seguir grabando</value>
   </data>
+  <data name="TabSpeakers" xml:space="preserve">
+    <value>Participantes</value>
+  </data>
+  <data name="SpeakersIntro" xml:space="preserve">
+    <value>Pon los nombres reales de las personas de esta grabación. Deja un nombre vacío para mantener la etiqueta predeterminada.</value>
+  </data>
+  <data name="SpeakersName" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="SpeakersSave" xml:space="preserve">
+    <value>Guardar nombres</value>
+  </data>
+  <data name="SpeakersSaving" xml:space="preserve">
+    <value>Guardando…</value>
+  </data>
+  <data name="SpeakersSaved" xml:space="preserve">
+    <value>Nombres guardados.</value>
+  </data>
+  <data name="SpeakersRegeneratePrompt" xml:space="preserve">
+    <value>Nombres guardados. El acta todavía usa los nombres anteriores.</value>
+  </data>
+  <data name="SpeakersRegenerate" xml:space="preserve">
+    <value>Regenerar el acta con los nuevos nombres</value>
+  </data>
+  <data name="SpeakersEmpty" xml:space="preserve">
+    <value>Todavía no hay participantes: esta sesión no tiene transcripción.</value>
+  </data>
 </root>

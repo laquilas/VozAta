@@ -143,6 +143,40 @@ internal sealed class FakeEngineClient : IEngineClient
         return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
     }
 
+    /// <summary>Speakers of each session (phase 16); <see cref="UpdateSpeakersAsync"/> applies names to them.</summary>
+    public Dictionary<string, Dictionary<string, SpeakerInfo>> Speakers { get; } = [];
+
+    /// <summary>Every <c>PUT /sessions/{id}/speakers</c> payload, in order.</summary>
+    public List<(string Id, IReadOnlyDictionary<string, string?> Names)> SpeakerUpdates { get; } = [];
+
+    public Exception? SpeakersError { get; set; }
+
+    public Exception? UpdateSpeakersError { get; set; }
+
+    public Task<SessionSpeakers> GetSpeakersAsync(string id, CancellationToken cancellationToken = default) =>
+        SpeakersError is null
+            ? Task.FromResult(new SessionSpeakers(new Dictionary<string, SpeakerInfo>(Speakers.GetValueOrDefault(id) ?? [])))
+            : Task.FromException<SessionSpeakers>(SpeakersError);
+
+    public Task<SessionSpeakers> UpdateSpeakersAsync(
+        string id, IReadOnlyDictionary<string, string?> names, CancellationToken cancellationToken = default)
+    {
+        SpeakerUpdates.Add((id, names));
+        if (UpdateSpeakersError is not null)
+        {
+            return Task.FromException<SessionSpeakers>(UpdateSpeakersError);
+        }
+
+        var speakers = Speakers.TryGetValue(id, out var known) ? known : Speakers[id] = [];
+        foreach (var (speakerId, name) in names)
+        {
+            var label = speakers.TryGetValue(speakerId, out var info) ? info.DefaultLabel : speakerId;
+            speakers[speakerId] = new SpeakerInfo(string.IsNullOrWhiteSpace(name) ? null : name.Trim(), label);
+        }
+
+        return GetSpeakersAsync(id, cancellationToken);
+    }
+
     public List<MinutesTemplate> Templates { get; } =
     [
         new("general", "General meeting"),

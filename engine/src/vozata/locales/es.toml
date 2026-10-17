@@ -30,6 +30,7 @@ minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama es
 empty_transcript = "La sesión \"{id}\" no tiene transcripción, así que no hay nada que resumir."
 vocabulary_failed = "No se pudo leer ni guardar el archivo de vocabulario ({reason})."
 unknown_template = "Plantilla de acta desconocida \"{id}\". Usa una de estas: {allowed}."
+unknown_speaker = "Participante desconocido \"{id}\" en esta sesión. Usa uno de estos: {allowed}."
 not_found = "Este endpoint no existe."
 method_not_allowed = "Este método no está permitido en este endpoint."
 http_error = "La solicitud falló con el estado HTTP {status}."

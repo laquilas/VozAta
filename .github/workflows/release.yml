@@ -2,13 +2,11 @@ name: Release
 
 # Builds the Windows installer. A pushed tag v* attaches it to that tag's GitHub release
 # (tags follow the release policy: major mandatory, minor optional, patch never).
-# Pull requests that touch packaging/ and manual runs build an installer artifact without a release.
+# Manual runs build an installer artifact without a release.
 
 on:
   push:
     tags: ["v*"]
-  pull_request:  # catch packaging breakage before merge (artifact only, no release)
-    paths: ["packaging/**", ".github/workflows/release.yml"]
   workflow_dispatch:
     inputs:
       version:

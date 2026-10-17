@@ -12,12 +12,14 @@ from vozata import __version__
 from vozata.api.container import ApiContainer
 from vozata.api.errors import install_error_handlers
 from vozata.api.routes import (
+    branding,
     devices,
     export,
     health,
     search,
     sessions,
     settings,
+    speakers,
     templates,
     vocabulary,
 )
@@ -33,11 +35,25 @@ def create_app(container: ApiContainer) -> FastAPI:
         yield
         container.release_models()
 
-    app = FastAPI(title="VozAta engine", version=__version__, lifespan=lifespan)
+    # /docs and /redoc come from the branding router so they show the VozAta favicon
+    app = FastAPI(
+        title="VozAta engine", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None
+    )
     app.state.container = container
     install_error_handlers(app, container.localizer)
-    for module in (health, devices, sessions, export, settings, search, templates, vocabulary):
+    for module in (
+        health,
+        devices,
+        sessions,
+        speakers,
+        export,
+        settings,
+        search,
+        templates,
+        vocabulary,
+    ):
         app.include_router(module.router, responses=ERROR_RESPONSES)
+    app.include_router(branding.router)
 
     @app.websocket("/ws")
     async def events(websocket: WebSocket) -> None:

@@ -13,7 +13,7 @@ in the same branch.
 | GPU | NVIDIA RTX 3050 Laptop, **6 GB VRAM** |
 | Tools | ffmpeg, git, gh, docker |
 | Missing | **.NET SDK** (install .NET 10 LTS in phase 07), Ollama CLI not on PATH (install + `ollama pull` in phase 04) |
-| Repo | GitHub `laquilas/VozAta` (public), default branch `main`; CI on pull requests into and pushes to `main` |
+| Repo | GitHub `laquilas/VozAta` (public), default branch `main`; CI: quick checks (lint, format, compile) on pull requests into `main`; full test suites and the installer on `v*` tags and manual runs |
 
 ### Legacy code (`__legacy__/`, read-only reference)
 
@@ -299,7 +299,7 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 | `transcript.md` | 03 / 05 | human-readable, `[hh:mm:ss] Label: text` |
 | `minutes.md` | 04 / 05 | generated minutes |
 | `transcript.diarized.jsonl` | 14 | full transcript; system segments tagged `system:<n>`, a segment split at a speaker change becomes `<id>-1`, `<id>-2`, … |
-| `speakers.json` | 14 / 16 | `{"system:1": {"name": null}}` (display label comes from the localizer unless `name` is set) |
+| `speakers.json` | 14 / 16 | `{"system:1": {"name": null}, "mic": {"name": "Ana"}}` (display label comes from the localizer unless `name` is set; 16 may add `mic` / `system`) |
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
 | `action_items.json` | 23 | extracted items + export results |
 
@@ -473,13 +473,16 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
   the engine works without the extra. The installer (13) does not bundle it.
 - `python -m vozata diarize <session_dir> [--minutes]` diarizes a stored session (ignores
   `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
-- Readers (minutes, export, `GET /sessions/{id}/transcript`) label speakers with
+- Readers (minutes, export, `GET /sessions/{id}/transcript`, search hits) label speakers with
   `SpeakerLabeler.with_names(store.speaker_names(id))`: a name in `speakers.json` wins over
   `User {n}`.
 - Live (15): speaker embedding per committed system segment, cosine similarity against running
   centroids; above `SPEAKER_SIMILARITY_THRESHOLD` → existing speaker, else new one. The
   post-session pass is authoritative and emits `speakers_relabeled`.
-- Renaming (16): `speakers.json` maps ids to names; raw data untouched.
+- Renaming (16): `PUT /sessions/{id}/speakers` merges names into `speakers.json`
+  (`SessionStore.rename_speakers`; an empty name stores `null`, so the default label returns);
+  only ids present in the transcript are accepted, `mic` and an undiarized `system` included.
+  Raw data is untouched. Re-running diarization rewrites `speakers.json` without names.
 - Limits: overlapping speech and several people sharing one room microphone reduce accuracy;
   pyannote models require a Hugging Face token and accepting the model terms.
 

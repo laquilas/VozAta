@@ -30,6 +30,7 @@ minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Olla
 empty_transcript = "A sessão \"{id}\" não tem transcrição, então não há o que resumir."
 vocabulary_failed = "Não foi possível ler ou salvar o arquivo de vocabulário ({reason})."
 unknown_template = "Modelo de ata desconhecido \"{id}\". Use um destes: {allowed}."
+unknown_speaker = "Participante desconhecido \"{id}\" nesta sessão. Use um destes: {allowed}."
 not_found = "Este endpoint não existe."
 method_not_allowed = "Este método não é permitido neste endpoint."
 http_error = "A requisição falhou com o status HTTP {status}."

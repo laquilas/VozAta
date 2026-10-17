@@ -2,6 +2,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The .exe, taskbar and shortcut icon; single source in the repo's assets/ folder -->
+    <ApplicationIcon>..\..\..\assets\desktop\windows\vozata.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
@@ -34,5 +36,8 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <!-- The VozAta logo, linked from the repo's assets/ folder (no copies to keep in sync) -->
+    <AvaloniaResource Include="..\..\..\assets\desktop\windows\vozata.ico" Link="Assets\vozata.ico" />
+    <AvaloniaResource Include="..\..\..\assets\desktop\windows\vozata-64.png" Link="Assets\vozata-64.png" />
   </ItemGroup>
 </Project>
