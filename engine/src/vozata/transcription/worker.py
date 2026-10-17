@@ -48,6 +48,9 @@ class TranscriptionWorker:
     With `partials`, an idle worker (empty queue) previews each channel's uncommitted audio at
     most once per `interval` and sends the text when it changed. A shown partial is cleared when
     its channel's next chunk commits nothing, and at stop; a committed segment replaces it.
+
+    `tick` (optional) runs on this thread after every chunk and every idle wait (~50 ms), e.g. to
+    release mic segments the echo filter held (phase 18).
     """
 
     def __init__(
@@ -58,8 +61,10 @@ class TranscriptionWorker:
         backlog_per_channel: int = 3,
         load: Callable[[], bool] | None = None,
         partials: PartialOptions | None = None,
+        tick: Callable[[], None] = lambda: None,
     ) -> None:
         self._chunks = chunks
+        self._tick = tick
         self._load = load
         self._usable = True
         self._stitchers = stitchers
@@ -94,6 +99,7 @@ class TranscriptionWorker:
                 self._process(self._chunks.get(timeout=0.05))
             except queue.Empty:
                 self._preview()
+            self._tick()
         self._finish()
 
     def _finish(self) -> None:

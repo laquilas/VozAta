@@ -98,6 +98,10 @@ FIELDS: tuple[Field, ...] = (
     # Live interim text (phase 28)
     Field("LIVE_PARTIALS", "live_partials", "bool", group="transcription"),
     Field("PARTIAL_INTERVAL_SECONDS", "partial_interval_seconds", "number", group="transcription"),
+    # Echo dedupe (phase 18)
+    Field("ECHO_DEDUPE_ENABLED", "echo_dedupe_enabled", "bool", group="transcription"),
+    Field("ECHO_SIMILARITY", "echo_similarity", "number", group="transcription"),
+    Field("ECHO_HOLD_SECONDS", "echo_hold_seconds", "number", group="transcription"),
     # Minutes (phase 04)
     Field("LLM_PROVIDER", "llm_provider", "string", group="minutes"),
     Field("OLLAMA_URL", "ollama_url", "url", group="minutes"),

@@ -16,8 +16,9 @@ from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel, TranscriptionResult, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
-from vozata.ports import Chunker, SessionObserver, Transcriber
+from vozata.ports import Chunker, SessionObserver, Transcriber, TranscriptSink
 from vozata.storage.session_store import SessionPaths
+from vozata.transcription.echo import EchoFilter
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 from vozata.transcription.worker import PartialOptions, TranscriptionWorker
@@ -69,6 +70,24 @@ class _DeferredTranscriber:
 
     def close(self) -> None:  # the session releases `loaded` itself
         pass
+
+
+def _echo_filter(
+    settings: Settings, sinks: TranscriptSink, observer: SessionObserver
+) -> EchoFilter:
+    """Echo dedupe in front of the sinks (phase 18); a dropped mic segment also clears the mic
+    interim text it had replaced, since no segment will replace it."""
+
+    def clear_partial(segment: TranscriptSegment) -> None:
+        if settings.live_partials:
+            observer.on_partial(segment.channel, segment.channel.value, segment.start, "")
+
+    return EchoFilter(
+        sinks,
+        settings.echo_similarity,
+        settings.effective_echo_hold_seconds,
+        on_dropped=clear_partial,
+    )
 
 
 class _ObserverSink:
@@ -126,13 +145,17 @@ class CapturePipeline:
             )
             for channel in channels
         }
-        self._sink = CompositeSink(
+        sinks = CompositeSink(
             [
                 JsonlSink(paths.transcript_jsonl),
                 MarkdownSink(paths.transcript_md, labeler),
                 _ObserverSink(observer),
             ]
         )
+        self._echo = (
+            _echo_filter(settings, sinks, observer) if settings.echo_dedupe_enabled else None
+        )
+        self._sink: TranscriptSink = self._echo or sinks
         self._transcriber = _DeferredTranscriber(transcriber_factory, observer, on_load_failed)
         transcriber = self._transcriber
         ids = SegmentIds()
@@ -150,12 +173,22 @@ class CapturePipeline:
                 ),
             )
         self._worker = TranscriptionWorker(
-            chunks, stitchers, self._sink, load=transcriber.load, partials=partials
+            chunks,
+            stitchers,
+            self._sink,
+            load=transcriber.load,
+            partials=partials,
+            tick=self._echo.tick if self._echo else lambda: None,
         )
 
     @property
     def accepting(self) -> bool:
         return self._accepting
+
+    @property
+    def echo_dropped(self) -> int | None:
+        """Mic segments dropped as echo so far; None when `ECHO_DEDUPE_ENABLED` is off."""
+        return self._echo.dropped if self._echo else None
 
     @property
     def transcriber(self) -> Transcriber | None:
@@ -204,7 +237,10 @@ class CapturePipeline:
                 track.chunker.flush()
 
     def drain(self) -> None:
-        """Transcribe everything queued, flush the stitchers and close the transcript files."""
+        """Transcribe everything queued, flush the stitchers and close the transcript files.
+
+        Closing releases the mic segments the echo filter still holds (`EchoFilter.flush()`).
+        """
         self._worker.stop()
         self._sink.close()
 

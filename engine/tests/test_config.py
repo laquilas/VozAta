@@ -491,6 +491,47 @@ def test_an_invalid_external_stt_url_is_rejected() -> None:
     assert (caught.value.key, caught.value.message_key) == ("OPENAI_STT_URL", "invalid_url")
 
 
+def test_echo_dedupe_defaults_and_values() -> None:
+    settings = load_settings(env={})
+    assert (
+        settings.echo_dedupe_enabled,
+        settings.echo_similarity,
+        settings.echo_hold_seconds,
+    ) == (True, 0.85, None)
+
+    settings = load_settings(
+        env={"ECHO_DEDUPE_ENABLED": "false", "ECHO_SIMILARITY": "0.7", "ECHO_HOLD_SECONDS": "12"}
+    )
+    assert (
+        settings.echo_dedupe_enabled,
+        settings.echo_similarity,
+        settings.echo_hold_seconds,
+    ) == (False, 0.7, 12.0)
+
+
+def test_echo_hold_defaults_to_chunk_seconds_plus_three() -> None:
+    assert load_settings(env={}).effective_echo_hold_seconds == 8.0
+    assert load_settings(env={"CHUNK_SECONDS": "10"}).effective_echo_hold_seconds == 13.0
+    assert load_settings(env={"ECHO_HOLD_SECONDS": "4"}).effective_echo_hold_seconds == 4.0
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("ECHO_DEDUPE_ENABLED", "maybe"),
+        ("ECHO_SIMILARITY", "0.4"),
+        ("ECHO_SIMILARITY", "1.1"),
+        ("ECHO_HOLD_SECONDS", "0.5"),
+        ("ECHO_HOLD_SECONDS", "61"),
+    ],
+)
+def test_invalid_echo_dedupe_values_raise(key: str, value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert caught.value.key == key
+
+
 def test_diarization_defaults_values_and_secret_mask() -> None:
     from vozata.settings_view import settings_values
 

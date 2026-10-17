@@ -368,3 +368,38 @@ def test_no_partials_after_a_failed_load(chunks: queue.Queue[AudioChunk]) -> Non
     worker.stop()
 
     assert partials.snapshots == []
+
+
+def test_tick_runs_on_the_worker_thread_while_idle_and_after_each_chunk(
+    chunks: queue.Queue[AudioChunk],
+) -> None:
+    ticks: list[str] = []
+    sink = FakeTranscriptSink()
+
+    def tick() -> None:
+        ticks.append(threading.current_thread().name)
+
+    worker = TranscriptionWorker(chunks, {Channel.MIC: FakeStitcher(Channel.MIC)}, sink, tick=tick)
+    worker.start()
+    wait_for(lambda: len(ticks) >= 2)  # idle: no chunk waiting
+    chunks.put(chunk(Channel.MIC, 0))
+    wait_for(lambda: len(sink.segments) == 1)
+    seen = len(ticks)
+    wait_for(lambda: len(ticks) > seen)
+    worker.stop()
+
+    assert set(ticks) == {"transcription"}
+
+
+def test_tick_is_not_called_by_a_worker_that_never_started(
+    chunks: queue.Queue[AudioChunk],
+) -> None:
+    ticks: list[int] = []
+    worker = TranscriptionWorker(
+        chunks, {Channel.MIC: FakeStitcher(Channel.MIC)}, FakeTranscriptSink(),
+        tick=lambda: ticks.append(1),
+    )  # fmt: skip
+
+    worker.stop()
+
+    assert ticks == []

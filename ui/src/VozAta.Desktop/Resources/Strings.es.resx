@@ -411,6 +411,24 @@
   <data name="SettingHelp_PARTIAL_INTERVAL_SECONDS" xml:space="preserve">
     <value>Tiempo mínimo entre dos actualizaciones del texto provisional de un canal.</value>
   </data>
+  <data name="Setting_ECHO_DEDUPE_ENABLED" xml:space="preserve">
+    <value>Quitar el eco de los altavoces</value>
+  </data>
+  <data name="SettingHelp_ECHO_DEDUPE_ENABLED" xml:space="preserve">
+    <value>Descarta las líneas del micrófono que repiten lo que sonó en los altavoces, para reuniones sin auriculares.</value>
+  </data>
+  <data name="Setting_ECHO_SIMILARITY" xml:space="preserve">
+    <value>Similitud del eco</value>
+  </data>
+  <data name="SettingHelp_ECHO_SIMILARITY" xml:space="preserve">
+    <value>Fracción de las palabras de una línea del micrófono (0,5 a 1) oídas al mismo tiempo en el audio del sistema para que la línea cuente como eco.</value>
+  </data>
+  <data name="Setting_ECHO_HOLD_SECONDS" xml:space="preserve">
+    <value>Espera del eco (s)</value>
+  </data>
+  <data name="SettingHelp_ECHO_HOLD_SECONDS" xml:space="preserve">
+    <value>Cuánto esperan las líneas del micrófono a la línea correspondiente del sistema; aparecen ese tiempo después. Vacío: duración del fragmento + 3 s.</value>
+  </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Proveedor del modelo del acta</value>
   </data>

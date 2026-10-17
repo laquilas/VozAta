@@ -156,7 +156,7 @@ class RecordingSession:
         if self.status is SessionStatus.PAUSED:
             self._meta.pause_ended(self._c.clock.now())
         self._stop_capture()  # 1
-        self._pipeline.drain()  # 2
+        self._drain()  # 2
         self._finalize_audio()  # 3
         self._release_transcriber()  # 4
         self._identify_speakers()  # 5
@@ -201,6 +201,12 @@ class RecordingSession:
         self._meta.captured(self._captured)
         self._release_audio()
         self._set_status(SessionStatus.FINALIZING)
+
+    def _drain(self) -> None:
+        self._pipeline.drain()
+        dropped = self._pipeline.echo_dropped
+        if dropped is not None:
+            self._meta.echo_dropped(dropped)
 
     def _release_audio(self) -> None:
         try:
