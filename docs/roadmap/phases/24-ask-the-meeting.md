@@ -39,13 +39,13 @@ citations rendered as links that open the session at that time.
 
 ## Acceptance criteria
 
-- [ ] Tests: retriever budget and neighbour expansion (temp index), citation parsing (valid,
+- [x] Tests: retriever budget and neighbour expansion (temp index), citation parsing (valid,
       malformed, unknown session ignored), streaming order with `FakeLanguageModel`, empty-context
       answer, API events.
-- [ ] UI tests: streamed text accumulation, citation navigation, concurrent questions blocked.
+- [x] UI tests: streamed text accumulation, citation navigation, concurrent questions blocked.
 - [ ] Manual: three questions in pt-BR about a recorded meeting return correct answers with working
-      citations.
-- [ ] Resource parity test passes.
+      citations. — **pending manual** (recipe in Progress; Ollama not run in the parallel session)
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -63,9 +63,9 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 ## Progress
 
 - **Branch:** `feature/24-ask-the-meeting`
-- **Status:** in progress
-- **Updated:** 2026-10-17 12:00
-- **Next step:** tick the acceptance criteria, write the manual check recipe, set README `done`, open the PR
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 15:00
+- **Next step:** run the manual check recipe below (Ollama `qwen2.5:7b`, recorded pt-BR sessions) before merging
 
 ### Steps
 
@@ -74,9 +74,10 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - [x] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context) — `19a4faa`
 - [x] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py` — `be4a3d2`
 - [x] Docs: api-contract and architecture — `95e75a7`
-- [x] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent` (`VozAta.Client/Ask.cs`)
-- [ ] UI: `AskViewModel` + panel (History, scoped to the selected session or all sessions)
-- [ ] Acceptance criteria, manual check recipe, PR
+- [x] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent` (`VozAta.Client/Ask.cs`) — `9f66898`
+- [x] UI: `AskViewModel` + panel (History, scoped to the selected session or all sessions) — `e3e5a30`
+- [x] Acceptance criteria, manual check recipe, PR
+- [ ] Manual check (pending manual)
 
 ### Decisions and notes
 
@@ -97,3 +98,35 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
   `hh:mm:ss · date` links (the text shows `[hh:mm:ss]`) and open the session at the segment via
   `HistoryViewModel.OpenSegmentAsync` (shared with search hits). Events that arrive before
   `POST /ask` returns the `answer_id` are buffered and replayed.
+
+### Manual check recipe (pending manual — not run in the parallel session)
+
+No microphone, speaker or GPU capture is needed: it runs over sessions already recorded on the
+reference machine. Ollama uses the GPU, so run it while no other phase holds the GPU.
+
+1. `git checkout feature/24-ask-the-meeting`; `ollama list` shows `qwen2.5:7b` (else
+   `ollama pull qwen2.5:7b`) and `ollama serve` is running.
+2. In `engine/.env`: `APP_LANGUAGE=pt-BR`, `LLM_PROVIDER=ollama`, `OLLAMA_MODEL=qwen2.5:7b`,
+   `OUTPUT_DIR` = the folder with the recorded pt-BR meetings (default `recordings`).
+3. From `engine/`: `../.venv/Scripts/python -m vozata reindex` (prints the sessions indexed), then
+   `../.venv/Scripts/python -m vozata serve`.
+4. In a second terminal, listen to the events:
+   `../.venv/Scripts/python -m websockets ws://127.0.0.1:8765/ws` (the `websockets` CLI client).
+5. Pick a session id (`curl http://127.0.0.1:8765/sessions`) and ask three pt-BR questions about
+   it, one at a time (each waits for `answer_done`), e.g.:
+   `curl -X POST http://127.0.0.1:8765/ask -H "Content-Type: application/json" -d "{\"question\": \"O que foi decidido sobre <tema>?\", \"session_id\": \"<id>\"}"`
+   - "O que foi decidido sobre <tema da reunião>?"
+   - "Quem ficou responsável por <tarefa>?"
+   - "Qual é o prazo combinado para <entrega>?"
+   Then one without `session_id` (all meetings) and one about something never discussed.
+6. Expect: `202 {"answer_id"}`; `answer_chunk` events streaming Portuguese text; `answer_done`
+   with `citations` (`session_id`, `segment_id`, `start`) and `"error": null`. Open
+   `GET /sessions/<id>/transcript` and check that each cited `segment_id` says what the answer
+   claims. The never-discussed question answers "Não encontrei isso nas reuniões." (or the model
+   says it was not found) with no invented facts. A second `POST /ask` while one streams → `409
+   answer_in_progress`; with Ollama stopped → `answer_done.error` "Não foi possível responder…".
+7. UI: `dotnet run --project src/VozAta.Desktop` (from `ui/`), History → expand "Pergunte às
+   reuniões", select the session, tick "Somente a reunião selecionada", ask the same three
+   questions: the text streams, the Ask button stays disabled until the answer ends, and each
+   source link (`hh:mm:ss · data`) opens that session on the Transcript tab with the cited line
+   highlighted. Untick it to ask across all meetings.

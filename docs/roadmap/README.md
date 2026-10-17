@@ -73,7 +73,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 21 | [Editable transcript](phases/21-editable-transcript.md) | 09 | todo |
 | 22 | [Cross-session search](phases/22-search.md) | 09 | done |
 | 23 | [Action items export](phases/23-action-items.md) | 04, 09 | todo |
-| 24 | [Ask the meeting](phases/24-ask-the-meeting.md) | 09, 22 | in progress (`feature/24-ask-the-meeting`) |
+| 24 | [Ask the meeting](phases/24-ask-the-meeting.md) | 09, 22 | done |
 | 25 | [LLM VRAM release](phases/25-llm-vram-release.md) | 04 | done |
 | 26 | [Capture first, load later](phases/26-capture-first.md) | 06, 07 | done |
 | 27 | [Pause-based segmentation (VAD)](phases/27-vad-segmentation.md) | 05 | done |
