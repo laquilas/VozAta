@@ -52,3 +52,25 @@ Acoustic echo cancellation on the audio signal (backlog).
 
 > Execute phase 18 of the roadmap (`docs/roadmap/phases/18-echo-dedupe.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/18-echo-dedupe`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** write `tests/transcription/test_echo.py` and make it pass with
+  `transcription/echo.py` (`EchoFilter`).
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] `EchoFilter` in `transcription/echo.py` with fake-clock tests
+- [ ] Config keys `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` (config, fields,
+      `.env.example`, UI labels, architecture §9)
+- [ ] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
+      `session.json.echo_dropped` (architecture §6 / §8)
+- [ ] Acceptance criteria, README `done`, PR
+
+### Decisions and notes
+
+- (none yet)
