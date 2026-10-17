@@ -18,6 +18,7 @@ from vozata.domain import (
     ConversationLanguage,
     ExportDocument,
     SessionStatus,
+    SpeakerTurn,
     TranscriptionResult,
     TranscriptSegment,
 )
@@ -100,6 +101,25 @@ class LanguageModel(Protocol):
 
     def release(self) -> None:
         """Free the model's memory (VRAM) after a job; raises `LanguageModelError` on failure."""
+        ...
+
+
+class DiarizationError(RuntimeError):
+    """Speaker identification failed (missing extra or token, model error, bad output)."""
+
+
+@runtime_checkable
+class Diarizer(Protocol):
+    """Finds who speaks when in a recording (phase 14); only `system.wav` is diarized."""
+
+    def diarize(
+        self, wav: Path, min_speakers: int | None, max_speakers: int | None
+    ) -> list[SpeakerTurn]:
+        """Speaker turns in time order; raises `DiarizationError` on failure."""
+        ...
+
+    def close(self) -> None:
+        """Release model memory (GPU)."""
         ...
 
 

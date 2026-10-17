@@ -68,11 +68,11 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - **Branch:** `feature/14-diarization-post`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add `SpeakerTurn`, the `Diarizer` port and `FakeDiarizer` (tests first).
+- **Next step:** write `tests/diarization/test_assign.py` and `diarization/assign.py`.
 
 ### Steps
 
-- [ ] `SpeakerTurn`, `Diarizer` port, `FakeDiarizer`
+- [x] `SpeakerTurn`, `Diarizer` port, `FakeDiarizer`
 - [ ] `assign_speakers` (pure) with tests
 - [ ] Config keys (`DIARIZATION_*`, `HF_TOKEN`, `MIN_SPEAKERS`, `MAX_SPEAKERS`), `.env.example`, UI settings strings
 - [ ] `speakers.json` in the store, labels from speaker names, `diarize_session`
