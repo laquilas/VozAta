@@ -40,6 +40,17 @@ public sealed partial class SessionDetailViewModel(
 
     public ObservableCollection<TranscriptLine> Lines { get; } = [];
 
+    private SpeakersViewModel? _speakers;
+
+    /// <summary>The "Speakers" tab (phase 16): saving names reloads this detail.</summary>
+    public SpeakersViewModel Speakers => _speakers ??= new SpeakersViewModel(
+        client,
+        localization,
+        summary.Id,
+        LoadAsync,
+        () => HasMinutes,
+        () => RegenerateMinutesCommand.CanExecute(null) ? RegenerateMinutesCommand.ExecuteAsync(null) : Task.CompletedTask);
+
     public ObservableCollection<MarkdownBlock> Blocks { get; } = [];
 
     [ObservableProperty]
@@ -113,6 +124,10 @@ public sealed partial class SessionDetailViewModel(
             }
 
             ApplyFocus();
+            if (!IsLive)
+            {
+                await Speakers.LoadAsync(transcript.Segments, cancellationToken);
+            }
 
             RegenerateMinutesCommand.NotifyCanExecuteChanged();
             await LoadMinutesAsync(cancellationToken);

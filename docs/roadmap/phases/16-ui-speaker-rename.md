@@ -55,15 +55,15 @@ Remembering names across sessions.
 - **Branch:** `feature/16-ui-speaker-rename`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** UI — `SpeakersViewModel` (+ `SpeakersViewModelTests.cs`), wire it into
-  `SessionDetailViewModel.Speakers`, `Views/SpeakersPanel.axaml` as a "Speakers" tab, resx keys.
+- **Next step:** tick the acceptance criteria, write the manual check recipe, set the README
+  status to `done`, open the PR.
 
 ### Steps
 
 - [x] Engine: merge names into `speakers.json`, `GET`/`PUT /sessions/{id}/speakers`
       (422 `unknown_speaker`), names in search hits; contract docs
 - [x] UI client: `GetSpeakersAsync` / `UpdateSpeakersAsync` + DTOs
-- [ ] UI: `SpeakersViewModel` (rows, save, regenerate prompt) + "Speakers" tab in session detail
+- [x] UI: `SpeakersViewModel` (rows, save, regenerate prompt) + "Speakers" tab in session detail
 - [ ] Acceptance criteria, README status, PR
 
 ### Decisions and notes
