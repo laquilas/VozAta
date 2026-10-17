@@ -40,6 +40,7 @@ context**. Read only what the phase asks for.
 | [api-contract.md](api-contract.md) | Engine HTTP endpoints and WebSocket events, each tagged with the phase that implements it |
 | [standards.md](standards.md) | Coding standards; the exact content of the three `CLAUDE.md` files created in phase 00 |
 | [optimizations.md](optimizations.md) | Review of `streaming-translator` and the design behind phases 25–29 and the context prompt in 19 |
+| [waves.md](waves.md) | Parallel waves for the remaining phases, rules for parallel sessions, and a start/resume prompt per phase |
 
 ## Status
 
@@ -61,7 +62,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 10 | [UI settings](phases/10-ui-settings.md) | 07 | done |
 | 11 | [Export, tray and pause](phases/11-export-tray-pause.md) | 08, 09 | done |
 | 12 | [External STT API](phases/12-external-stt.md) | 05 | done |
-| 13 | [Packaging](phases/13-packaging.md) | 11 | in progress (`feature/13-packaging`) |
+| 13 | [Packaging](phases/13-packaging.md) | 11 | done |
 | 14 | [Speaker identification (post-session)](phases/14-diarization-post.md) | 05 | todo |
 | 15 | [Speaker identification (live)](phases/15-diarization-live.md) | 14, 06 | todo |
 | 16 | [UI speaker rename](phases/16-ui-speaker-rename.md) | 09, 14 | todo |

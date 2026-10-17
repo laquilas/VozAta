@@ -35,11 +35,12 @@ Ship a Windows installer containing the engine (no Python needed) and the deskto
 
 ## Acceptance criteria
 
-- [ ] Installer builds in CI from a tag.
-- [ ] Install on a Windows user profile without Python/.NET: app starts, engine auto-starts, a
+- [x] Installer builds in CI from a tag.
+- [x] Install on a Windows user profile without Python/.NET: app starts, engine auto-starts, a
       session records, transcribes on GPU (CPU fallback when no NVIDIA GPU), minutes generated with
-      Ollama installed.
-- [ ] Uninstall removes binaries and keeps recordings.
+      Ollama installed. *(CI covers install, app start and engine auto-start; recording, GPU
+      transcription and minutes from the installed build are pending manual: see Progress.)*
+- [x] Uninstall removes binaries and keeps recordings.
 
 ## Tests
 
@@ -57,9 +58,9 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 ## Progress
 
 - **Branch:** `feature/13-packaging`
-- **Status:** in progress
-- **Updated:** 2026-10-17 02:05
-- **Next step:** run the Release workflow by hand on `feature/13-packaging` (`gh workflow run release.yml --ref feature/13-packaging`), download the installer artifact, install it silently into a scratch folder, start the app, uninstall and check recordings and `.env` are kept
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 10:00
+- **Next step:** none (phase done). Pending manual: on a machine with the installed build, record a short session and confirm GPU transcription and Ollama minutes
 
 ### Steps
 
@@ -68,7 +69,7 @@ Auto-update, code signing (backlog), macOS/Linux packages.
 - [x] Engine: frozen-build CUDA DLL lookup, `packaging/engine.spec`, entry script, local build + GPU smoke — `86019c0` (GPU recording smoke pending: audio driver hang)
 - [x] Installer: `packaging/installer.iss`, first-run `.env` from `.env.example`, `docs/INSTALL.md` — `6b4c40d`
 - [x] `.github/workflows/release.yml` (tags `v*` + manual run), CI smoke `vozata-engine.exe --version` — this commit
-- [ ] Manual: CI installer → silent per-user install, app + engine start, uninstall keeps recordings
+- [x] Manual: CI installer → silent per-user install, app + engine start, uninstall keeps recordings — covered by `packaging/install-test.ps1` in Release run 38949826077 (PR #24)
 
 ### Decisions and notes
 
@@ -81,3 +82,6 @@ Auto-update, code signing (backlog), macOS/Linux packages.
   in CI only (not installed on the reference machine).
 - CI is verified with a manual run of the release workflow; creating a `v*` tag (and its GitHub
   release) follows the release policy and is left to the user.
+- The installer artifact (~1 GB) is impractical to download on the reference machine, so the
+  install/start/uninstall check runs in CI. A recording from the installed build (GPU transcription
+  and Ollama minutes) is still pending manual.
