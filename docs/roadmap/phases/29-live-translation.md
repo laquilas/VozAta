@@ -55,3 +55,27 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 
 > Execute phase 29 of the roadmap (`docs/roadmap/phases/29-live-translation.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/29-live-translation`
+- **Status:** in progress
+- **Updated:** 2026-10-17 14:30
+- **Next step:** add the `Translator` port and `translation/worker.py` (queue, same-language skip,
+  failure handling, `transcript.translated.jsonl`) with tests in `tests/translation/`.
+
+### Steps
+
+- [ ] `Translator` port + `TranslationWorker` (own thread, queue, skip, error once) + translations file
+- [ ] Opus-MT (CTranslate2) provider, `TRANSLATORS` registry, `TRANSLATE_TO` / `TRANSLATION_PROVIDER`
+      / `TRANSLATION_MODEL_DIR`, optional extra `translation`
+- [ ] Session wiring: extra sink in `session_pipeline.py`, `on_translation` observer, `translation`
+      event, `translation_failed` error
+- [ ] API: `translate_to` in `POST /sessions`, `translation` per segment in `GET .../transcript`
+- [ ] UI client: `TranslationEvent`, `Segment.Translation`, `StartSessionRequest.TranslateTo`
+- [ ] UI: translated text under each live line, "Translate to" picker, strings en/pt-BR/es
+- [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
+
+### Decisions and notes
+
+- Provider: MarianMT / Opus-MT models converted to CTranslate2 (see architecture §14).
