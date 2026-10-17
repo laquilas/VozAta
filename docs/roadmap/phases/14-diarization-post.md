@@ -40,14 +40,15 @@ segments `User 1`, `User 2`, … (localized) in the transcript, minutes and ever
 
 ## Acceptance criteria
 
-- [ ] `assign_speakers` tests: full overlap, partial overlap, split on change, unassigned gaps keep
+- [x] `assign_speakers` tests: full overlap, partial overlap, split on change, unassigned gaps keep
       `system`, numbering by first appearance, mic untouched.
-- [ ] Session test with `FakeDiarizer`: order Whisper close → diarize → diarizer close → minutes;
+- [x] Session test with `FakeDiarizer`: order Whisper close → diarize → diarizer close → minutes;
       failure path continues.
-- [ ] `load_transcript` returns the diarized file; labels show `User N` per app language.
+- [x] `load_transcript` returns the diarized file; labels show `User N` per app language.
 - [ ] Manual: a recorded call with 2–3 remote people → distinct `User N` labels; GPU memory
-      released between steps (check `nvidia-smi`).
-- [ ] Coverage ≥ 80 % (pyannote adapter excluded as hardware).
+      released between steps (check `nvidia-smi`). **Pending manual (credentials)**: no
+      `HF_TOKEN` in the parallel session; recipe in Progress.
+- [x] Coverage ≥ 80 % (pyannote adapter excluded as hardware).
 
 ## Tests
 
@@ -66,9 +67,9 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 ## Progress
 
 - **Branch:** `feature/14-diarization-post`
-- **Status:** in progress
-- **Updated:** 2026-10-17 10:00
-- **Next step:** update architecture.md and api-contract.md, tick the acceptance criteria, set README status `done`, open the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 12:00
+- **Next step:** run the manual check below (needs `HF_TOKEN`), then merge the PR.
 
 ### Steps
 
@@ -79,7 +80,7 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - [x] Session stop step 5 + `DIARIZERS` registry
 - [x] pyannote adapter (subprocess) + optional extra `diarization`
 - [x] CLI `diarize <session_dir>`
-- [ ] Docs, acceptance criteria, PR
+- [x] Docs, acceptance criteria, PR
 
 ### Decisions and notes
 
@@ -96,3 +97,28 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - Missing `HF_TOKEN` with diarization enabled → localized `errors.config.missing_hf_token` inside the
   `diarization_failed` error; the session continues to minutes.
 - The PyInstaller installer (phase 13) does not bundle the extra; diarization needs a source install.
+
+### Manual check recipe (pending manual: credentials + GPU)
+
+Run it alone (audio hardware and GPU are shared with the other phases). From the repo root:
+
+1. Token: create a read token at <https://huggingface.co/settings/tokens> and accept the terms on
+   <https://huggingface.co/pyannote/speaker-diarization-community-1>.
+2. Extra (in `.venv`, or a copy of it if you want to keep the shared one untouched):
+   `.venv/Scripts/python -m pip install torch --index-url https://download.pytorch.org/whl/cu128`
+   then `.venv/Scripts/python -m pip install -e "engine[diarization]"`. Check that Whisper still runs
+   on the GPU afterwards: `cd engine; ../.venv/Scripts/python -m pytest -m gpu`.
+3. `engine/.env`: `DIARIZATION_ENABLED=true`, `HF_TOKEN=hf_...`, optionally `MIN_SPEAKERS=2`,
+   `MAX_SPEAKERS=3`.
+4. In a second terminal: `nvidia-smi --query-gpu=memory.used --format=csv -l 1`.
+5. `cd engine; ../.venv/Scripts/python -m vozata record`, play a call / video with 2–3 different
+   remote voices for ~2 minutes (say a few words into the mic too), then Ctrl+C.
+6. Expect in the session folder: `transcript.diarized.jsonl` with `system:1`…`system:N`,
+   `speakers.json` with those ids, `minutes.md` / `transcript` readers showing `User 1`, `User 2`…
+   (`Usuário N` with `APP_LANGUAGE=pt-BR`), `mic` lines unchanged, `transcript.jsonl` untouched.
+   In `nvidia-smi`: memory drops after Whisper closes, rises while the
+   `python -m vozata.diarization.child` process runs, drops to the baseline when it exits, then
+   rises again for Ollama.
+7. Existing session: `../.venv/Scripts/python -m vozata diarize recordings/<id> --minutes`.
+8. Failure path: blank `HF_TOKEN`, record again → the console shows the localized
+   `diarization_failed` message with the retry command, labels stay `Others`, minutes are written.
