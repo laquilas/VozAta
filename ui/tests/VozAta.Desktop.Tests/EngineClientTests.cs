@@ -67,6 +67,32 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Speakers_are_read_and_names_are_sent_per_id()
+    {
+        const string Speakers = """
+            {"speakers": {"mic": {"name": null, "default_label": "Me"},
+                          "system:1": {"name": "Alice", "default_label": "User 1"}}}
+            """;
+        var handler = FakeHttpHandler.Json(Speakers);
+        var client = new EngineClient(handler.Client());
+
+        var read = await client.GetSpeakersAsync("20261015_202358");
+        var saved = await client.UpdateSpeakersAsync(
+            "20261015_202358", new Dictionary<string, string?> { ["system:1"] = "Alice", ["mic"] = null });
+
+        Assert.Equal(["mic", "system:1"], read.Speakers.Keys);
+        Assert.Equal(new SpeakerInfo(null, "Me"), read.Speakers["mic"]);
+        Assert.Equal(new SpeakerInfo("Alice", "User 1"), saved.Speakers["system:1"]);
+        Assert.Equal(
+            [
+                (HttpMethod.Get, "/sessions/20261015_202358/speakers", (string?)null),
+                (HttpMethod.Put, "/sessions/20261015_202358/speakers",
+                 """{"speakers":{"system:1":{"name":"Alice"},"mic":{"name":null}}}"""),
+            ],
+            handler.Requests);
+    }
+
+    [Fact]
     public async Task Templates_are_read_in_order()
     {
         var handler = FakeHttpHandler.Json("""

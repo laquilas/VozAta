@@ -130,6 +130,31 @@ class RegenerateMinutes(BaseModel):
     template: str | None = None  # phase 20
 
 
+class SpeakerNameUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, max_length=200)  # empty or null: the default label
+
+
+class SpeakersUpdate(BaseModel):
+    """`PUT /sessions/{id}/speakers` (phase 16)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    speakers: dict[str, SpeakerNameUpdate]
+
+
+class SpeakerInfo(BaseModel):
+    name: str | None
+    default_label: str
+
+
+class Speakers(BaseModel):
+    """Every speaker of the transcript, in order of first appearance (phase 16)."""
+
+    speakers: dict[str, SpeakerInfo]
+
+
 class TemplateInfo(BaseModel):
     id: str
     name: str

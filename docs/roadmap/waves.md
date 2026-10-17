@@ -46,7 +46,8 @@ graph LR
    marked `pending manual (credentials)` in Progress. The phase is still finished on fakes.
 7. When done:
    - Tick the acceptance criteria and set the README status to `done`.
-   - Open the PR and wait for CI. Fix failures from the logs, at most 5 cycles.
+   - Run the full engine and UI test suites locally (PR CI only lints and compiles), then open
+     the PR and wait for the checks. Fix failures from the logs, at most 5 cycles.
    - Report the PR number and the manual check recipe.
 
 ## Prompts

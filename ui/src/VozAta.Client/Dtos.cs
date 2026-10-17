@@ -87,6 +87,12 @@ public sealed record Transcript(string Source, IReadOnlyList<Segment> Segments);
 
 public sealed record Minutes(string Markdown);
 
+/// <summary>A speaker of one session (phase 16): the given name (null = unset) and the label without it.</summary>
+public sealed record SpeakerInfo(string? Name, string DefaultLabel);
+
+/// <summary><c>GET</c>/<c>PUT /sessions/{id}/speakers</c>: every transcript speaker by id.</summary>
+public sealed record SessionSpeakers(IReadOnlyDictionary<string, SpeakerInfo> Speakers);
+
 /// <summary>A downloaded export: the engine's file name and the bytes.</summary>
 public sealed record ExportedFile(string FileName, byte[] Content);
 
