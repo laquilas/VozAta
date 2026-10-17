@@ -215,3 +215,18 @@ class SearchHit:
             "speaker_id": self.speaker_id,
             "snippet": self.snippet,
         }
+
+
+# Ask the meeting (phase 24).
+
+
+@dataclass(frozen=True)
+class Citation:
+    """A transcript segment an answer cites, as `[session_id@hh:mm:ss]` in the answer text."""
+
+    session_id: str
+    segment_id: str
+    start: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"session_id": self.session_id, "segment_id": self.segment_id, "start": self.start}

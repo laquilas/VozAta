@@ -40,6 +40,9 @@ session_still_recording = "La sesión \"{id}\" sigue grabando; el acta se genera
 device_not_found = "No se encontró el dispositivo de audio: {reason}"
 invalid_request = "Solicitud no válida: {details}"
 internal_error = "Error inesperado del motor. Consulta el registro del motor para más detalles."
+answer_failed = "No se pudo responder a la pregunta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
+answer_in_progress = "Todavía se está respondiendo otra pregunta. Espera a que termine y vuelve a preguntar."
+ask_unavailable = "Hacer preguntas sobre las reuniones no está disponible en este motor."
 
 [languages]
 en = "inglés"
@@ -63,6 +66,17 @@ Usa solo hechos de esta parte."""
 reduce_instructions = "Estas son notas de partes consecutivas de una misma reunión realizada en {conversation_language}. Combínalas en el acta de la reunión."
 transcript_label = "Transcripción:"
 notes_label = "Notas:"
+
+[qa]
+system = "Respondes preguntas sobre reuniones grabadas usando solo los fragmentos de reunión que se te dan. Nunca inventes nombres, fechas, números ni decisiones. Si los fragmentos no contienen la respuesta, di que no se encontró en las reuniones."
+instructions = """Responde a la pregunta en {output_language}, de forma concisa, usando solo los fragmentos de abajo.
+Después de cada afirmación, cita la línea del fragmento de donde viene como [session_id@hh:mm:ss], copiando el id de la sesión y la hora exactamente como aparecen, por ejemplo [{example}].
+Si los fragmentos no responden a la pregunta, responde solo: {not_found}"""
+context_label = "Fragmentos de las reuniones:"
+session_header = "Sesión {id} ({date}):"
+question_label = "Pregunta:"
+not_found = "No encontré esto en las reuniones."
+stopwords = "a al algo algunos ante antes como con contra cual cuales cuando de del desde dijo dime donde dos e el ella ellas ellos en entre era es esa ese eso esta está este esto estos fue fueron ha han hay hicimos la las le les lo los más me mi mis mucho muy nada ni no nos nosotros o os otra otro para pero poco por porque qué que quien quién se ser si sí sin sobre son su sus también te tiene tienen todo tu tus un una unas uno unos usted ustedes y ya yo"
 
 [cli]
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
