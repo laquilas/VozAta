@@ -59,3 +59,33 @@ Recovering audio still in memory buffers at crash time.
 
 > Execute phase 17 of the roadmap (`docs/roadmap/phases/17-crash-recovery.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/17-crash-recovery`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** add `AUTOSAVE_SECONDS` (config, settings fields, `.env.example`, UI labels) and
+  the `session.json` heartbeat in `session.py`.
+
+### Steps
+
+- [ ] `AUTOSAVE_SECONDS` key + heartbeat (`last_heartbeat_at`, `duration_seconds`) every
+      `AUTOSAVE_SECONDS` while the session is active
+- [ ] `JsonlSink` flushes + `os.fsync` per segment
+- [ ] Refactor `stop()`: steps 3 (mix) to 7 become one `_finish()` sequence shared with
+      `RecordingSession.recover()`
+- [ ] `storage/recovery.py`: `find_interrupted`, `repair_wav`, `pad_wav`, transcript repair,
+      `SessionRecovery.recover` (idempotent, error kept in `session.json`)
+- [ ] `bootstrap.build_recovery` + CLI `recover [<session_dir> | --all]`
+- [ ] API: `POST /sessions/{id}/recover`, `recovery_available` on WebSocket connect
+- [ ] UI: `IEngineClient.RecoverSessionAsync`, `recovery_available` event, recovery dialog
+      (`RecoveryViewModel`) with Recover / Later
+- [ ] Docs (architecture §6/§8/§9, api-contract), acceptance criteria, full suites, PR
+
+### Decisions and notes
+
+- `recover()` reuses the session's own stop steps: `stop()` now ends with `_finish()` (mix,
+  release transcriber, diarize, minutes, search index, `done`), and `RecordingSession.recover()`
+  runs the same `_finish()` on a repaired folder, so any step added there (e.g. phase 23 action
+  items after minutes) also runs on recovery.
