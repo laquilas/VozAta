@@ -67,6 +67,36 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Start_sends_the_meeting_terms_only_when_given()
+    {
+        var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);
+        var client = new EngineClient(handler.Client());
+
+        await client.StartSessionAsync(new StartSessionRequest(Language: "en", Vocabulary: ["Jessica", "N5"]));
+
+        Assert.Equal(
+            """{"mic_device_id":null,"system_device_id":null,"language":"en","template":null,"vocabulary":["Jessica","N5"]}""",
+            handler.Requests.Single().Body);
+    }
+
+    [Fact]
+    public async Task Vocabulary_is_read_and_replaced()
+    {
+        var handler = FakeHttpHandler.Json("""{"terms": ["Avalonia", "Jéssica"]}""");
+        var client = new EngineClient(handler.Client());
+
+        var read = await client.GetVocabularyAsync();
+        var saved = await client.UpdateVocabularyAsync([" Avalonia ", "Jessica"]);
+
+        Assert.Equal(["Avalonia", "Jéssica"], read);
+        Assert.Equal(["Avalonia", "Jéssica"], saved);
+        Assert.Equal((HttpMethod.Get, "/vocabulary", (string?)null), handler.Requests[0]);
+        Assert.Equal(HttpMethod.Put, handler.Requests[1].Method);
+        Assert.Equal("/vocabulary", handler.Requests[1].Path);
+        Assert.Equal("""{"terms":[" Avalonia ","Jessica"]}""", handler.Requests[1].Body);
+    }
+
+    [Fact]
     public async Task Templates_are_read_in_order()
     {
         var handler = FakeHttpHandler.Json("""

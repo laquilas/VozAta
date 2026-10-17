@@ -34,7 +34,12 @@ public sealed record StartSessionRequest(
     int? MicDeviceId = null,
     int? SystemDeviceId = null,
     string? Language = null,
-    string? Template = null);
+    string? Template = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<string>? Vocabulary = null);
+
+/// <summary><c>GET|PUT /vocabulary</c> (phase 19): the glossary terms, one per entry.</summary>
+public sealed record VocabularyTerms(IReadOnlyList<string> Terms);
 
 /// <summary>A minutes template (phase 20): stable id and name in the engine's app language.</summary>
 public sealed record MinutesTemplate(string Id, string Name)
