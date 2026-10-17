@@ -65,7 +65,7 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - **Branch:** `feature/24-ask-the-meeting`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** UI: `AskViewModel` (+ `AskViewModelTests.cs`), `AskView` in `HistoryView`, routing of answer events in `MainViewModel`
+- **Next step:** tick the acceptance criteria, write the manual check recipe, set README `done`, open the PR
 
 ### Steps
 
@@ -90,3 +90,10 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - Contract additions: `answer_done.error` (null or a localized message; the UI needs to know the
   answer failed), `409 answer_in_progress`, `503 ask_unavailable`. One question at a time in the
   engine too (VRAM). Before the LLM loads, a kept Whisper is released unless a recording uses it.
+- UI: one self-contained `AskView` (`AskViewModel`) docked under the session detail in History
+  instead of two panels: "Only the selected meeting" scopes the question to the selected session
+  (the scoped panel of the spec), unchecked asks about all sessions. This keeps phase 16/21 edits
+  to `SessionDetailViewModel` / the detail template conflict-free. Citations show as
+  `hh:mm:ss · date` links (the text shows `[hh:mm:ss]`) and open the session at the segment via
+  `HistoryViewModel.OpenSegmentAsync` (shared with search hits). Events that arrive before
+  `POST /ask` returns the `answer_id` are buffered and replayed.

@@ -39,6 +39,16 @@ public sealed partial class HistoryViewModel(
     public SearchViewModel Search =>
         _search ??= new SearchViewModel(client, localization, searchDelay) { OpenHit = OpenHitAsync };
 
+    private AskViewModel? _ask;
+
+    /// <summary>Questions about the selected meeting or all of them (phase 24).</summary>
+    public AskViewModel Ask =>
+        _ask ??= new AskViewModel(client, localization)
+        {
+            OpenCitation = citation => OpenSegmentAsync(citation.SessionId, citation.SegmentId),
+            SelectedSessionId = Selected?.Id,
+        };
+
     private static readonly Dictionary<string, string> LanguageKeys = new()
     {
         ["en"] = "LanguageEn",
@@ -113,13 +123,16 @@ public sealed partial class HistoryViewModel(
     public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
 
     /// <summary>Open a search hit: select its session (loading older pages if needed) at the segment.</summary>
-    public async Task OpenHitAsync(SearchHit hit)
+    public Task OpenHitAsync(SearchHit hit) => OpenSegmentAsync(hit.SessionId, hit.SegmentId);
+
+    /// <summary>Select a session (loading older pages if needed) and focus one of its segments.</summary>
+    public async Task OpenSegmentAsync(string sessionId, string segmentId)
     {
-        var row = Rows.FirstOrDefault(item => item.Id == hit.SessionId);
+        var row = Rows.FirstOrDefault(item => item.Id == sessionId);
         while (row is null && CanLoadMore && Error is null)
         {
             await LoadMoreAsync();
-            row = Rows.FirstOrDefault(item => item.Id == hit.SessionId);
+            row = Rows.FirstOrDefault(item => item.Id == sessionId);
         }
 
         if (row is null)
@@ -128,7 +141,7 @@ public sealed partial class HistoryViewModel(
         }
 
         Selected = row;
-        Detail?.FocusSegment(hit.SegmentId);
+        Detail?.FocusSegment(segmentId);
     }
 
     /// <summary>Rebuild the row texts after a UI language switch.</summary>
@@ -163,6 +176,7 @@ public sealed partial class HistoryViewModel(
 
     partial void OnSelectedChanged(SessionRow? value)
     {
+        Ask.SelectedSessionId = value?.Id;
         if (value?.Id == Detail?.Id)
         {
             return; // same session after a refresh: keep the open detail

@@ -150,6 +150,48 @@
   <data name="SearchNoResults" xml:space="preserve">
     <value>No hay coincidencias en ninguna transcripción.</value>
   </data>
+  <data name="AskHeader" xml:space="preserve">
+    <value>Pregunta a las reuniones</value>
+  </data>
+  <data name="AskPlaceholder" xml:space="preserve">
+    <value>Haz una pregunta, por ejemplo: ¿qué decidimos sobre la beta?</value>
+  </data>
+  <data name="AskButton" xml:space="preserve">
+    <value>Preguntar</value>
+  </data>
+  <data name="AskSelectedOnly" xml:space="preserve">
+    <value>Solo la reunión seleccionada</value>
+  </data>
+  <data name="AskThinking" xml:space="preserve">
+    <value>Buscando en las reuniones…</value>
+  </data>
+  <data name="AskSources" xml:space="preserve">
+    <value>Fuentes (haz clic para abrir):</value>
+  </data>
+  <data name="AskConnectionLost" xml:space="preserve">
+    <value>Se perdió la conexión con el motor antes de que terminara la respuesta. Vuelve a preguntar.</value>
+  </data>
+  <data name="AskHeader" xml:space="preserve">
+    <value>Pregunta a las reuniones</value>
+  </data>
+  <data name="AskPlaceholder" xml:space="preserve">
+    <value>Haz una pregunta, por ejemplo: ¿qué decidimos sobre la beta?</value>
+  </data>
+  <data name="AskButton" xml:space="preserve">
+    <value>Preguntar</value>
+  </data>
+  <data name="AskSelectedOnly" xml:space="preserve">
+    <value>Solo la reunión seleccionada</value>
+  </data>
+  <data name="AskThinking" xml:space="preserve">
+    <value>Buscando en las reuniones…</value>
+  </data>
+  <data name="AskSources" xml:space="preserve">
+    <value>Fuentes (haz clic para abrir):</value>
+  </data>
+  <data name="AskConnectionLost" xml:space="preserve">
+    <value>Se perdió la conexión con el motor antes de que terminara la respuesta. Vuelve a preguntar.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecciona una sesión para leer su transcripción y su acta.</value>
   </data>

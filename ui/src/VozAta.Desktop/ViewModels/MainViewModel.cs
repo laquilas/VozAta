@@ -454,6 +454,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             case ConnectionChangedEvent connection:
                 EngineStatus = connection.Connected ? EngineStatus.Connected : EngineStatus.Disconnected;
+                if (!connection.Connected)
+                {
+                    History.Ask.OnConnectionLost();
+                }
+
+                break;
+            case AnswerChunkEvent chunk:
+                History.Ask.OnAnswerChunk(chunk);
+                break;
+            case AnswerDoneEvent done:
+                History.Ask.OnAnswerDone(done);
                 break;
             case StatusEvent status:
                 OnStatus(status);

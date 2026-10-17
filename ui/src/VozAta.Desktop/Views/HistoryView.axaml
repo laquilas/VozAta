@@ -121,8 +121,10 @@
       </Panel>
     </DockPanel>
 
-    <!-- Selected session -->
-    <Panel Grid.Column="2">
+    <!-- Selected session; "Ask the meetings" (phase 24) below it -->
+    <DockPanel Grid.Column="2">
+    <views:AskView DockPanel.Dock="Bottom" DataContext="{Binding Ask}" />
+    <Panel>
       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistorySelect]}" Opacity="0.6"
                  Margin="8" TextWrapping="Wrap"
                  IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNull}}" />
@@ -209,5 +211,6 @@
         </ContentControl.ContentTemplate>
       </ContentControl>
     </Panel>
+    </DockPanel>
   </Grid>
 </UserControl>
