@@ -583,6 +583,39 @@ def test_invalid_diarization_values_are_rejected(env: dict[str, str], key: str) 
     assert caught.value.key == key
 
 
+def test_live_diarization_defaults_and_values() -> None:
+    defaults = load_settings(env={})
+    assert (defaults.live_diarization_enabled, defaults.speaker_similarity_threshold) == (
+        False,
+        0.7,
+    )
+
+    settings = load_settings(
+        env={"LIVE_DIARIZATION_ENABLED": "true", "SPEAKER_SIMILARITY_THRESHOLD": "0.55"}
+    )
+
+    assert (settings.live_diarization_enabled, settings.speaker_similarity_threshold) == (
+        True,
+        0.55,
+    )
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("LIVE_DIARIZATION_ENABLED", "maybe"),
+        ("SPEAKER_SIMILARITY_THRESHOLD", "0"),
+        ("SPEAKER_SIMILARITY_THRESHOLD", "1.01"),
+        ("SPEAKER_SIMILARITY_THRESHOLD", "high"),
+    ],
+)
+def test_invalid_live_diarization_values_raise(key: str, value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert caught.value.key == key
+
+
 def test_one_speaker_bound_alone_is_accepted() -> None:
     settings = load_settings(env={"MAX_SPEAKERS": "4"})
 

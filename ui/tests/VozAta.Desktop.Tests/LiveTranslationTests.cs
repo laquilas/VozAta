@@ -56,6 +56,25 @@ public sealed class LiveTranslationTests
     }
 
     [Fact]
+    public async Task Relabeled_live_lines_keep_their_translations()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, Segment("system-000001", "system", 1, "Hi."));
+        await SendAsync(viewModel, new TranslationEvent("s", "system-000001", "pt", "Oi."));
+        _client.Transcripts["s"] = new Transcript(
+            "diarized",
+            [new Segment("system-000001", "system", "system:1", "User 1", 1, 2, "Hi.", false, [], new SegmentTranslation("pt", "Oi."))]);
+
+        await SendAsync(viewModel, new SpeakersRelabeledEvent("s"));
+        await viewModel.HistoryRefresh;
+
+        Assert.Equal("User 1", viewModel.Segments.Single().Label);
+        Assert.Equal("Oi.", viewModel.Segments.Single().Translation);
+        await SendAsync(viewModel, new TranslationEvent("s", "system-000001", "pt", "Olá."));
+        Assert.Equal("Olá.", viewModel.Segments.Single().Translation); // the line index was rebuilt
+    }
+
+    [Fact]
     public async Task A_new_recording_forgets_the_lines_of_the_previous_one()
     {
         var viewModel = await ReadyAsync();

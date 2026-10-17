@@ -97,6 +97,10 @@ Text-to-speech of the translation; translating the minutes (they are already wri
   now splits each segment after `.`, `!`, `?`, `…` and translates the sentences in one batch.
   Real transcript `20261016_095109` (32 pt segments) → en: warm median 91 ms, max 221 ms per
   segment; first call 3.8 s with the model load.
+- Merged with phase 15 (live speakers): the translation sink sits inside the composite, after
+  `EchoFilter` → `LiveSpeakerSink`. When `speakers_relabeled` reloads the live lines, the UI keeps
+  the translations from `GET /sessions/{id}/transcript`. Segments that diarization split into
+  `<id>-1`, `<id>-2` have no translation there (they are looked up by `segment_id`).
 
 ### Manual check recipe (live part pending: run on the reference machine, one phase at a time)
 

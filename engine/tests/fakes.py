@@ -165,6 +165,27 @@ class FakeTranslator:
         self.closed = True
 
 
+class FakeEmbedder:
+    """Returns queued synthetic vectors in order (or raises `error`); records each clip."""
+
+    def __init__(
+        self, vectors: list[list[float]] | None = None, error: Exception | None = None
+    ) -> None:
+        self.vectors = [np.asarray(vector, dtype=np.float32) for vector in vectors or []]
+        self.error = error
+        self.calls: list[np.ndarray] = []
+        self.closed = False
+
+    def embed(self, samples: np.ndarray) -> np.ndarray:
+        self.calls.append(samples)
+        if self.error is not None:
+            raise self.error
+        return self.vectors.pop(0)
+
+    def close(self) -> None:
+        self.closed = True
+
+
 class FakeSpeechDetector:
     """Every non-zero sample is speech; spans are runs of them, in seconds. Counts calls."""
 
@@ -229,6 +250,9 @@ class FakeSessionObserver:
 
     def on_model_loading(self, loading: bool) -> None:
         self.events.append(("model_loading", loading))
+
+    def on_speakers_relabeled(self, session_id: str) -> None:
+        self.events.append(("speakers_relabeled", session_id))
 
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         self.events.append(("partial", channel, speaker_id, start, text))

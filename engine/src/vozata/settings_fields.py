@@ -95,6 +95,11 @@ FIELDS: tuple[Field, ...] = (
     Field("HF_TOKEN", "hf_token", "string", secret=True, group="speakers"),
     Field("MIN_SPEAKERS", "min_speakers", "integer", group="speakers"),
     Field("MAX_SPEAKERS", "max_speakers", "integer", group="speakers"),
+    # Live speaker identification (phase 15)
+    Field("LIVE_DIARIZATION_ENABLED", "live_diarization_enabled", "bool", group="speakers"),
+    Field(
+        "SPEAKER_SIMILARITY_THRESHOLD", "speaker_similarity_threshold", "number", group="speakers"
+    ),
     # Pause-based segmentation (phase 27)
     Field("CHUNK_MODE", "chunk_mode", "choice", ChunkMode, group="segmentation"),
     Field("VAD_THRESHOLD", "vad_threshold", "number", group="segmentation"),

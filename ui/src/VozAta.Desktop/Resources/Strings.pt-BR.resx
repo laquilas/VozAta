@@ -678,6 +678,18 @@
   <data name="SettingHelp_MAX_SPEAKERS" xml:space="preserve">
     <value>Maior número de pessoas remotas esperado (1 a 20). Deixe vazio para detectar.</value>
   </data>
+  <data name="Setting_LIVE_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Identificação de participantes ao vivo</value>
+  </data>
+  <data name="SettingHelp_LIVE_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Rotula os participantes remotos (Usuário 1, Usuário 2…) durante a gravação. Requer o extra de diarização e o HF_TOKEN; os rótulos são corrigidos quando a sessão termina.</value>
+  </data>
+  <data name="Setting_SPEAKER_SIMILARITY_THRESHOLD" xml:space="preserve">
+    <value>Similaridade de voz ao vivo</value>
+  </data>
+  <data name="SettingHelp_SPEAKER_SIMILARITY_THRESHOLD" xml:space="preserve">
+    <value>Quão parecida (0,05 a 1) uma voz precisa ser para entrar em um participante existente. Menor junta vozes, maior divide uma voz em várias.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Fechar</value>
   </data>

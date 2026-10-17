@@ -38,8 +38,11 @@ public sealed class EngineEventsTests
             new TranslationEvent("s1", "mic-000001", "pt", "Bom dia"),
             EngineEventParser.Parse("""{"type":"translation","session_id":"s1","data":{"segment_id":"mic-000001","language":"pt","text":"Bom dia"}}"""));
         Assert.Equal(
-            new UnknownEvent("s1", "speakers_relabeled"),
-            EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{}}"""));
+            new SpeakersRelabeledEvent("s1"),
+            EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{"session_id":"s1"}}"""));
+        Assert.Equal(
+            new UnknownEvent("s1", "action_items_ready"),
+            EngineEventParser.Parse("""{"type":"action_items_ready","session_id":"s1","data":{}}"""));
     }
 
     [Fact]

@@ -10,6 +10,7 @@ from tests.fakes import (
     FakeAudioSink,
     FakeAudioSource,
     FakeDiarizer,
+    FakeEmbedder,
     FakeLanguageModel,
     FakeLocalizer,
     FakeSessionObserver,
@@ -32,6 +33,7 @@ from vozata.domain import Channel, SpeakerTurn, TranscriptionResult, TranscriptS
         (FakeLocalizer(), ports.Localizer),
         (FakeSessionObserver(), ports.SessionObserver),
         (FakeDiarizer(), ports.Diarizer),
+        (FakeEmbedder(), ports.SpeakerEmbedder),
     ],
 )
 def test_fake_satisfies_its_port(fake: object, port: type) -> None:
@@ -129,9 +131,11 @@ def test_fake_session_observer_groups_events_by_name() -> None:
     observer = FakeSessionObserver()
 
     observer.on_minutes_ready("20261015_202358")
+    observer.on_speakers_relabeled("20261015_202358")
     observer.on_error("minutes_failed", "offline")
 
     assert observer.of("minutes_ready") == [("20261015_202358",)]
+    assert observer.of("speakers_relabeled") == [("20261015_202358",)]
     assert observer.of("error") == [("minutes_failed", "offline")]
 
 

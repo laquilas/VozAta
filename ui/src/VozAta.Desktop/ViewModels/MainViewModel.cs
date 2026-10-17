@@ -34,6 +34,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private string? _defaultTemplate;
     private string _defaultTranslation = "off";
     private readonly Dictionary<string, int> _lineOfSegment = [];
+    private string? _liveSessionId; // the session whose lines Segments shows
 
     public MainViewModel(
         IEngineClient client,
@@ -338,6 +339,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task StartAsync()
     {
         Segments.Clear();
+        _liveSessionId = null;
         Partials.Clear();
         _lineOfSegment.Clear();
         DetectedLanguage = _detectedLanguage = null;
@@ -507,11 +509,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case StatusEvent status:
                 OnStatus(status);
                 break;
-            case SegmentEvent { Segment: var segment }:
+            case SegmentEvent { Segment: var segment } segmentEvent:
+                _liveSessionId = segmentEvent.SessionId ?? _liveSessionId;
                 RemovePartial(segment.Channel);
-                _lineOfSegment[segment.SegmentId] = Segments.Count;
-                Segments.Add(new TranscriptLine(
-                    TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel));
+                AddLine(segment);
                 break;
             case TranslationEvent translation:
                 OnTranslation(translation);
@@ -536,6 +537,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Notify(_localization["MinutesReady"]);
                 HistoryRefresh = History.OnMinutesReadyAsync(minutes.SessionId);
                 break;
+            case SpeakersRelabeledEvent relabeled:
+                HistoryRefresh = OnSpeakersRelabeledAsync(relabeled.SessionId);
+                break;
             case ErrorEvent error:
                 Notify(error.Message);
                 History.OnError(error.SessionId, error.Message);
@@ -543,6 +547,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         HandledEvents++;
+    }
+
+    /// <summary>Append a transcript line and remember where its segment is (live translation, phase 29).</summary>
+    private void AddLine(Segment segment)
+    {
+        _lineOfSegment[segment.SegmentId] = Segments.Count;
+        Segments.Add(new TranscriptLine(
+            TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel)
+        {
+            Translation = segment.Translation?.Text,
+        });
     }
 
     /// <summary>Show a live translation under the line of its segment (phase 29).</summary>
@@ -560,6 +575,33 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var option = TranslationLanguages.FirstOrDefault(choice => choice.Value == value) ?? TranslationLanguages[0];
         _defaultTranslation = option.Value;
         SelectedTranslation = option;
+    }
+
+    /// <summary>A <c>speakers_relabeled</c> event: show the final speakers in the live lines and the open detail.</summary>
+    private async Task OnSpeakersRelabeledAsync(string? sessionId)
+    {
+        if (sessionId is not null && sessionId == _liveSessionId)
+        {
+            try
+            {
+                var transcript = await _client.GetTranscriptAsync(sessionId, _stop.Token);
+                if (sessionId == _liveSessionId)
+                {
+                    Segments.Clear();
+                    _lineOfSegment.Clear();
+                    foreach (var segment in transcript.Segments)
+                    {
+                        AddLine(segment); // keeps the live translations (phase 29)
+                    }
+                }
+            }
+            catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+            {
+                Notify(ErrorText(error));
+            }
+        }
+
+        await History.OnSpeakersRelabeledAsync(sessionId);
     }
 
     private void OnPartial(PartialEvent partial)

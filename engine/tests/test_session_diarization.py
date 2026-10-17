@@ -72,6 +72,9 @@ def test_whisper_is_released_before_diarizing_and_the_diarizer_before_the_minute
     assert paths.speakers_json.is_file()
     assert "labels.user(n=1): Hello there." in rig.llm.prompts[0][1]
     assert rig.observer.of("error") == []
+    assert rig.observer.of("speakers_relabeled") == [(rig.session.id,)]
+    names = [event[0] for event in rig.observer.events]
+    assert names.index("speakers_relabeled") < names.index("minutes_ready")
 
 
 def test_a_failing_diarizer_keeps_system_labels_reports_and_still_writes_minutes(
@@ -89,6 +92,7 @@ def test_a_failing_diarizer_keeps_system_labels_reports_and_still_writes_minutes
     assert code == "diarization_failed"
     assert "no token" in message and "python -m vozata diarize" in message
     assert not rig.session.paths.diarized_jsonl.exists()
+    assert rig.observer.of("speakers_relabeled") == []
     assert "labels.system: Hello there." in rig.llm.prompts[0][1]
     assert rig.session.status is SessionStatus.DONE
 
@@ -116,6 +120,7 @@ def test_without_system_speech_no_diarizer_is_loaded(tmp_path: Path) -> None:
 
     assert built == []
     assert not rig.session.paths.diarized_jsonl.exists()
+    assert rig.observer.of("speakers_relabeled") == []
 
 
 def test_a_configuration_error_is_reported_with_its_localized_message(tmp_path: Path) -> None:
