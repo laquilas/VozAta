@@ -54,12 +54,12 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - **Branch:** `feature/22-search`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** write `tests/storage/test_search_index.py` and make it pass with `storage/search_index.py` (`SearchIndex` behind a `TranscriptSearch` port)
+- **Next step:** add `search_index` to `SessionComponents` and index the transcript at stop step 6 in `session.py`; then the `reindex` CLI command
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] Engine: `SearchIndex` (FTS5, accent-insensitive, safe query, snippet markers) behind the `TranscriptSearch` port
+- [x] Engine: `SearchIndex` (FTS5, accent-insensitive, safe query, snippet markers) behind the `TranscriptSearch` port
 - [ ] Engine: index at stop step 6; `python -m vozata reindex`
 - [ ] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
 - [ ] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
@@ -69,3 +69,10 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 
 - FTS5 is available in the stdlib `sqlite3` of the venv Python 3.13 (SQLite 3.50.4) and of the
   CI `actions/setup-python` 3.13 build (both bundle a SQLite compiled with FTS5).
+- Port `ports.TranscriptSearch` (`index_session(session_id, segments)`, `search(query, limit)`);
+  `storage/search_index.SearchIndex` implements it plus `rebuild(store)` and `exists()`. Phases 21
+  and 24 should depend on the port. Each call opens its own SQLite connection (thread-safe).
+- Snippet markers are the control characters `\u0002` (start of match) and `\u0003` (end), as
+  `domain.SNIPPET_START` / `SNIPPET_END`: they never occur in transcript text, unlike brackets.
+- Safe query: every `\w+` word of the user text is quoted (implicit AND) and the last one gets a
+  prefix `*`; operators such as `OR` become plain words; text without words returns no hits.
