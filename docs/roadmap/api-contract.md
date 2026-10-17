@@ -35,8 +35,8 @@ own rows. Changing a row requires updating both sides.
 | PUT | `/settings` | 10 | `{values: {KEY: value}}` (`null` clears a key; the secret mask `********` means unchanged) | `{values, restart_required: [KEY]}` — validated by `config.py`, persisted to `.env` key by key (comments kept); `422 invalid_setting` with `error.key` |
 | POST | `/sessions/{id}/recover` | 17 | — | `202`; finalizes an `interrupted` session |
 | PUT | `/sessions/{id}/speakers` | 16 | `{speakers: {"system:1": {"name": "Alice"}}}` | `{speakers}` |
-| PUT | `/sessions/{id}/transcript` | 21 | `{segments: [Segment]}` | `{source: "edited"}` writes `transcript.edited.jsonl` |
-| DELETE | `/sessions/{id}/transcript/edits` | 21 | — | `204` reverts to the previous source |
+| PUT | `/sessions/{id}/transcript` | 21 | `{segments: [{segment_id, text}]}` (a full `Segment` is accepted; only `segment_id` and `text` are read; send only the changed segments) | `{source: "edited"}`: applies the texts to the current best transcript and writes the full copy to `transcript.edited.jsonl` (atomic); a segment whose text changed gets `edited: true` and `words: []`; the search index (22) is refreshed. `422 unknown_segment` (id not in the current best transcript), `422 empty_segment_text`, `409 transcript_still_recording`, `404 session_not_found` |
+| DELETE | `/sessions/{id}/transcript/edits` | 21 | — | `204` removes `transcript.edited.jsonl` (also when there was none) and reverts to the diarized or raw source; reindexes search; `409 transcript_still_recording`, `404 session_not_found` |
 | GET | `/templates` | 20 | — | `[{id, name}]` in display order, `name` in `APP_LANGUAGE` (ids: `general`, `daily`, `one_on_one`, `client`, `retrospective`) |
 | GET | `/vocabulary` | 19 | — | `{terms: [str]}` from `VOCABULARY_FILE` |
 | PUT | `/vocabulary` | 19 | `{terms: [str]}` | `{terms}` |
@@ -54,7 +54,8 @@ own rows. Changing a row requires updating both sides.
  "duration_seconds": 83.4, "language": "pt", "has_minutes": false}
 // SessionDetail = SessionSummary + full session.json fields + files: ["mic.wav", ...]
 //   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
-// Segment (labels resolved for display; raw files store only speaker_id; `edited` from phase 21)
+// Segment (labels resolved for display; raw files store only speaker_id; `edited` from phase 21:
+//   true when the user changed the text, then `words` is empty)
 {"segment_id": "system-000013", "channel": "system", "speaker_id": "system:2", "label": "User 2",
  "start": 83.12, "end": 87.9, "text": "...", "edited": false,
  "words": [{"text": "...", "start": 83.12, "end": 83.3, "probability": 0.98}]}

@@ -56,15 +56,15 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - **Branch:** `feature/21-editable-transcript`
 - **Status:** in progress
 - **Updated:** 2026-10-17 18:00
-- **Next step:** docs — document `edited`, the PUT/DELETE details and error codes in
-  `api-contract.md` and architecture §8.
+- **Next step:** UI — add `UpdateTranscriptAsync` / `RevertTranscriptAsync` to `IEngineClient`,
+  `EngineClient` and `FakeEngineClient`, with client tests.
 
 ### Steps
 
 - [x] Engine: `TranscriptSegment.edited`, edit applier, store write/delete (atomic) — `ec83130`
 - [x] Engine: `PUT /sessions/{id}/transcript`, `DELETE /sessions/{id}/transcript/edits`, reindex — `eeac8c9`
-- [x] Engine: `LOW_CONFIDENCE_THRESHOLD` in `config.py`, `settings_fields.py`, `.env.example`
-- [ ] Docs: `edited` in api-contract and architecture §8
+- [x] Engine: `LOW_CONFIDENCE_THRESHOLD` in `config.py`, `settings_fields.py`, `.env.example` — `b559d17`
+- [x] Docs: `edited` in api-contract and architecture §8
 - [ ] UI: client methods + DTOs, `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard)
 - [ ] UI: transcript tab Edit mode, low-confidence highlight, navigation guard, strings (en/pt-BR/es)
 - [ ] Acceptance criteria, README `done`, PR

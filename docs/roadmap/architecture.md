@@ -94,6 +94,7 @@ class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 @dataclass(frozen=True) class TranscriptSegment:
     segment_id: str; channel: Channel; speaker_id: str; start: float; end: float
     text: str; words: tuple[Word, ...]
+    edited: bool = False  # user-corrected text (21); words then empty
 @dataclass(frozen=True) class SpeakerTurn:     start, end, speaker_index: int
 @dataclass(frozen=True) class ExportDocument:  title, details, minutes_title, minutes_markdown, minutes_blocks: list[Block],
                                                no_minutes, transcript_title, columns, rows: list[Row]  # localized (11)
@@ -338,7 +339,13 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
  "words": [{"text": "We", "start": 83.12, "end": 83.30, "probability": 0.98}]}
 ```
 
-Segments in `transcript.edited.jsonl` (21) may also carry `"edited": true` (then `words` is empty).
+`transcript.edited.jsonl` (21) is the full best transcript (diarized, else raw) at the time of the
+first save, with the user's text corrections; `PUT /sessions/{id}/transcript` rewrites it atomically
+and `DELETE /sessions/{id}/transcript/edits` removes it. A segment whose text the user changed
+carries `"edited": true` and `"words": []` (the word timings and probabilities no longer match the
+text); the key is written only when true, so raw and diarized lines never have it and read back
+as `edited: false` (`TranscriptSegment.edited`). Ids, channels, speakers and times are never
+edited. Every save or revert reindexes the session for search (22).
 
 **Transcript precedence**: every reader (minutes, export, search, Q&A, UI viewer) loads the
 transcript through `SessionStore.load_transcript(session_id)`, which returns the first existing file
