@@ -61,8 +61,8 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - **Branch:** `feature/29-live-translation`
 - **Status:** in progress
 - **Updated:** 2026-10-17 14:30
-- **Next step:** UI client — `TranslationEvent` in `EngineEvents.cs`, `Translation` on `Segment`,
-  `TranslateTo` on `StartSessionRequest`, tests in `EngineEventsTests.cs` / `EngineClientTests.cs`.
+- **Next step:** UI — translation under each live line (`MainViewModel`, `MainWindow.axaml`),
+  "Translate to" picker, strings in the three `.resx`, tests in `LiveTranslationTests.cs`.
 
 ### Steps
 
@@ -72,7 +72,7 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - [x] Session wiring: extra sink in `session_pipeline.py`, `on_translation` observer, `translation`
       event, `translation_failed` error
 - [x] API: `translate_to` in `POST /sessions`, `translation` per segment in `GET .../transcript`
-- [ ] UI client: `TranslationEvent`, `Segment.Translation`, `StartSessionRequest.TranslateTo`
+- [x] UI client: `TranslationEvent`, `Segment.Translation`, `StartSessionRequest.TranslateTo`
 - [ ] UI: translated text under each live line, "Translate to" picker, strings en/pt-BR/es
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 

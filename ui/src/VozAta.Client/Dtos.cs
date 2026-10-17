@@ -36,7 +36,9 @@ public sealed record StartSessionRequest(
     string? Language = null,
     string? Template = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<string>? Vocabulary = null);
+    IReadOnlyList<string>? Vocabulary = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? TranslateTo = null);
 
 /// <summary><c>GET|PUT /vocabulary</c> (phase 19): the glossary terms, one per entry.</summary>
 public sealed record VocabularyTerms(IReadOnlyList<string> Terms);
@@ -77,6 +79,9 @@ public sealed record SessionDetail(
 
 public sealed record Word(string Text, double Start, double End, double Probability);
 
+/// <summary>A segment translated live (phase 29): the target language and the text.</summary>
+public sealed record SegmentTranslation(string Language, string Text);
+
 public sealed record Segment(
     string SegmentId,
     string Channel,
@@ -86,7 +91,8 @@ public sealed record Segment(
     double End,
     string Text,
     bool Edited,
-    IReadOnlyList<Word> Words);
+    IReadOnlyList<Word> Words,
+    SegmentTranslation? Translation = null);
 
 public sealed record Transcript(string Source, IReadOnlyList<Segment> Segments);
 
