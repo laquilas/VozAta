@@ -489,3 +489,16 @@ def test_an_invalid_external_stt_url_is_rejected() -> None:
         load_settings(env={"OPENAI_STT_URL": "api.openai.com"})
 
     assert (caught.value.key, caught.value.message_key) == ("OPENAI_STT_URL", "invalid_url")
+
+
+def test_minutes_template_defaults_to_general_and_accepts_bundled_ids() -> None:
+    assert load_settings(env={}).minutes_template == "general"
+    assert load_settings(env={"MINUTES_TEMPLATE": "daily"}).minutes_template == "daily"
+
+
+def test_unknown_minutes_template_names_the_bundled_ids() -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"MINUTES_TEMPLATE": "weekly"})
+
+    assert (caught.value.key, caught.value.message_key) == ("MINUTES_TEMPLATE", "invalid_choice")
+    assert caught.value.params == {"allowed": "general, daily, one_on_one, client, retrospective"}

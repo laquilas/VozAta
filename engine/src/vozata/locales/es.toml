@@ -26,6 +26,7 @@ unsupported_format = "Formato de exportación no admitido: \"{format}\". Usa uno
 settings_write_failed = "No se pudo guardar el archivo de configuración ({reason}). Cierra los programas que puedan estar usándolo, como una herramienta de sincronización, e inténtalo de nuevo."
 minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 empty_transcript = "La sesión \"{id}\" no tiene transcripción, así que no hay nada que resumir."
+unknown_template = "Plantilla de acta desconocida \"{id}\". Usa una de estas: {allowed}."
 not_found = "Este endpoint no existe."
 method_not_allowed = "Este método no está permitido en este endpoint."
 http_error = "La solicitud falló con el estado HTTP {status}."
@@ -47,21 +48,19 @@ auto = "el idioma hablado en la transcripción"
 [minutes]
 output_language = "español"
 system = "Redactas actas de reunión precisas y concisas. Usa solo hechos presentes en la transcripción o en las notas; nunca inventes nombres, fechas, números ni decisiones."
-instructions = """La reunión se realizó en {conversation_language}. Redacta el acta en {output_language}, en Markdown, con exactamente estos encabezados de nivel 2, en este orden:
+instructions = """La reunión se realizó en {conversation_language}. {template_instructions}
+Redacta el acta en {output_language}, en Markdown, con exactamente estos encabezados de nivel 2, en este orden:
 {sections}
-Enumera los elementos de acción con su responsable y fecha límite cuando se hayan mencionado. En una sección sin contenido, escribe "—"."""
-map_instructions = "Esta es la parte {part} de {total} de una reunión realizada en {conversation_language}. Escribe notas concisas en {output_language} con los temas, decisiones, elementos de acción (responsable, fecha límite) y asuntos pendientes de esta parte. Usa solo hechos de esta parte."
+Qué va en cada encabezado:
+{guidance}
+En un encabezado sin contenido, escribe "—"."""
+map_instructions = """Esta es la parte {part} de {total} de una reunión realizada en {conversation_language}. {template_instructions}
+Escribe notas concisas en {output_language} con lo que esta parte dice para estos encabezados:
+{guidance}
+Usa solo hechos de esta parte."""
 reduce_instructions = "Estas son notas de partes consecutivas de una misma reunión realizada en {conversation_language}. Combínalas en el acta de la reunión."
 transcript_label = "Transcripción:"
 notes_label = "Notas:"
-
-[minutes.section]
-context = "Contexto"
-summary = "Resumen"
-topics = "Temas"
-decisions = "Decisiones"
-action_items = "Elementos de acción"
-open_issues = "Asuntos pendientes"
 
 [cli]
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."

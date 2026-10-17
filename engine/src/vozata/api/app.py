@@ -11,7 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from vozata import __version__
 from vozata.api.container import ApiContainer
 from vozata.api.errors import install_error_handlers
-from vozata.api.routes import devices, export, health, search, sessions, settings
+from vozata.api.routes import devices, export, health, search, sessions, settings, templates
 from vozata.api.schemas import ErrorResponse
 
 ERROR_RESPONSES = {status: {"model": ErrorResponse} for status in (404, 409, 422, 500, 503)}
@@ -27,7 +27,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     app = FastAPI(title="VozAta engine", version=__version__, lifespan=lifespan)
     app.state.container = container
     install_error_handlers(app, container.localizer)
-    for module in (health, devices, sessions, export, settings, search):
+    for module in (health, devices, sessions, export, settings, search, templates):
         app.include_router(module.router, responses=ERROR_RESPONSES)
 
     @app.websocket("/ws")

@@ -18,6 +18,7 @@ from tests.fakes import (
     FakeSessionObserver,
     FakeSpeechDetector,
     FakeTranscriber,
+    minutes_template,
 )
 from vozata.audio.levels import rms_db
 from vozata.audio.vad_chunker import VadChunker
@@ -141,7 +142,9 @@ class _Rig:
                 clock=self.clock,
                 transcriber_factory=self._load_transcriber,
                 mixer=self.mixer,
-                minutes=MinutesGenerator(self.llm, localizer, 12000) if with_minutes else None,
+                minutes=MinutesGenerator(self.llm, localizer, 12000, minutes_template())
+                if with_minutes
+                else None,
                 localizer=localizer,
                 labeler=SpeakerLabeler(localizer),
                 release=lambda: self.log.entries.append("release"),
@@ -456,6 +459,7 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
         "language": "en",
         "language_source": "selected",
         "app_language": "en",
+        "template": "general",
         "devices": {"mic": "Headset Mic", "system": "Speakers [Loopback]"},
         "pauses": [],
         "settings": {

@@ -216,7 +216,7 @@ def test_regenerate_minutes_is_accepted_and_runs_in_the_background(api: Api) -> 
     response = api.client.post(f"/sessions/{SESSION}/minutes", json={"template": "general"})
 
     assert response.status_code == 202
-    assert api.regenerated == [SESSION]
+    assert api.regenerated == [(SESSION, "general")]
 
 
 def test_regenerate_minutes_of_the_recording_session_is_409(api: Api) -> None:
@@ -230,7 +230,7 @@ def test_regenerate_minutes_of_the_recording_session_is_409(api: Api) -> None:
 
 
 def test_unexpected_errors_become_a_500_envelope(api: Api) -> None:
-    def broken(session_id: str) -> None:
+    def broken(session_id: str, template: str | None) -> None:
         raise RuntimeError("boom")
 
     api.app.state.container = api.app.state.container.__class__(

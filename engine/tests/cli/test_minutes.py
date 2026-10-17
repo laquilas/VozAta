@@ -4,7 +4,7 @@ import io
 import json
 from pathlib import Path
 
-from tests.fakes import FakeLanguageModel, FakeLocalizer
+from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.minutes import run_minutes
 from vozata.config import Settings
@@ -36,8 +36,10 @@ def _run(folder: Path, llm: FakeLanguageModel) -> tuple[int, str]:
     labeler = SpeakerLabeler(localizer)
     console = ConsoleObserver(localizer, labeler, out)
 
-    def build(settings: Settings, loc: Localizer) -> MinutesGenerator:
-        return MinutesGenerator(llm, loc, settings.llm_max_chars)
+    def build(settings: Settings, loc: Localizer, template: str | None) -> MinutesGenerator:
+        return MinutesGenerator(
+            llm, loc, settings.llm_max_chars, minutes_template(template_id=template or "general")
+        )
 
     code = run_minutes(folder, Settings(), console, localizer, labeler, build)
     return code, out.getvalue()
@@ -55,6 +57,16 @@ def test_writes_minutes_in_the_stored_language(tmp_path: Path) -> None:
     _, prompt, _ = llm.prompts[0]
     assert "languages.pt" in prompt
     assert "[00:00:01] labels.mic: Olá." in prompt
+
+
+def test_regenerates_with_the_stored_template(tmp_path: Path) -> None:
+    folder = _session(tmp_path, {"template": "retrospective"})
+    llm = FakeLanguageModel(["# Retro"])
+
+    code, _ = _run(folder, llm)
+
+    assert code == 0
+    assert "## Went well" in llm.prompts[0][1]
 
 
 def test_a_session_without_a_detected_language_uses_auto(tmp_path: Path) -> None:

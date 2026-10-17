@@ -1,0 +1,62 @@
+# One-on-one: topics, feedback, agreements, follow-ups.
+order = 3
+
+[en]
+name = "One-on-one"
+instructions = "This is a one-on-one between two people. Capture what was discussed, the feedback given in both directions and what each person agreed to do. Be factual and neutral."
+
+[[en.sections]]
+heading = "Topics"
+guidance = "the subjects discussed, one bullet each with the main points"
+
+[[en.sections]]
+heading = "Feedback"
+guidance = "feedback given, saying who gave it to whom"
+
+[[en.sections]]
+heading = "Agreements"
+guidance = "what the two people agreed on"
+
+[[en.sections]]
+heading = "Follow-ups"
+guidance = "each next step with its owner and due date when they were mentioned, and topics for the next one-on-one"
+
+["pt-BR"]
+name = "One-on-one"
+instructions = "Esta é uma conversa individual (one-on-one) entre duas pessoas. Registre o que foi discutido, o feedback dado nos dois sentidos e o que cada pessoa se comprometeu a fazer. Seja factual e neutro."
+
+[["pt-BR".sections]]
+heading = "Tópicos"
+guidance = "os assuntos discutidos, um item cada com os pontos principais"
+
+[["pt-BR".sections]]
+heading = "Feedback"
+guidance = "o feedback dado, dizendo quem deu a quem"
+
+[["pt-BR".sections]]
+heading = "Combinados"
+guidance = "o que as duas pessoas combinaram"
+
+[["pt-BR".sections]]
+heading = "Próximos passos"
+guidance = "cada próximo passo com responsável e prazo quando tiverem sido mencionados, e temas para o próximo one-on-one"
+
+[es]
+name = "One-on-one"
+instructions = "Esta es una conversación individual (one-on-one) entre dos personas. Registra lo que se habló, el feedback dado en ambos sentidos y lo que cada persona se comprometió a hacer. Sé objetivo y neutral."
+
+[[es.sections]]
+heading = "Temas"
+guidance = "los asuntos tratados, un punto cada uno con las ideas principales"
+
+[[es.sections]]
+heading = "Feedback"
+guidance = "el feedback dado, indicando quién se lo dio a quién"
+
+[[es.sections]]
+heading = "Acuerdos"
+guidance = "lo que las dos personas acordaron"
+
+[[es.sections]]
+heading = "Próximos pasos"
+guidance = "cada próximo paso con su responsable y fecha límite cuando se hayan mencionado, y temas para el próximo one-on-one"

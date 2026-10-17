@@ -33,6 +33,7 @@ from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import (
     AudioMixer,
     Chunker,
@@ -91,6 +92,7 @@ MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
     MixMode.STEREO: StereoMixer,
 }
+MINUTES_TEMPLATES = bundled_templates()  # validated at import (phase 20)
 
 
 def _provider[T](registry: Mapping[str, T], key: str, value: str) -> T:
@@ -116,11 +118,17 @@ def build_search_index(settings: Settings) -> SearchIndex:
 
 
 def build_minutes_generator(
-    settings: Settings, localizer: Localizer | None = None
+    settings: Settings, localizer: Localizer | None = None, template: str | None = None
 ) -> MinutesGenerator:
+    """Minutes with `template` (default: `MINUTES_TEMPLATE`) in `APP_LANGUAGE`.
+
+    Raises `UnknownTemplateError` for an id that is not bundled.
+    """
     factory = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)
+    template_id = template or settings.minutes_template
+    localized = MINUTES_TEMPLATES.get(template_id).localized(settings.app_language)
     return MinutesGenerator(
-        factory(settings), localizer or build_localizer(settings), settings.llm_max_chars
+        factory(settings), localizer or build_localizer(settings), settings.llm_max_chars, localized
     )
 
 
@@ -132,17 +140,25 @@ def build_session(
     mic_device: int | None = None,
     system_device: int | None = None,
     shared: SharedTranscriber | None = None,
+    template: str | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
     Devices default to the WASAPI default microphone and the default output's loopback. Every
     PortAudio call runs on one `PortAudioThread`, closed by the session when capture ends. With a
     `shared` transcriber (`WHISPER_KEEP_LOADED`) the model stays loaded after the session unless
-    minutes follow (VRAM rule).
+    minutes follow (VRAM rule). `template` (default `MINUTES_TEMPLATE`) is the minutes template,
+    stored in `session.json` even when minutes are off.
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
-    minutes = build_minutes_generator(settings, localizer) if settings.generate_minutes else None
+    template = template or settings.minutes_template
+    MINUTES_TEMPLATES.get(template)  # an unknown template fails before any device is opened
+    minutes = (
+        build_minutes_generator(settings, localizer, template)
+        if settings.generate_minutes
+        else None
+    )
     try:
         audio = PortAudioThread()
     except TimeoutError:
@@ -175,6 +191,7 @@ def build_session(
         release=audio.close,
         chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
         search_index=build_search_index(settings),
+        minutes_template=template,
     )
     return RecordingSession(
         settings,
@@ -221,13 +238,14 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             language=options.language,
             mic_device=options.mic_device,
             system_device=options.system_device,
+            template=options.template,
             shared=shared,
         )
 
-    def minutes_generator() -> MinutesGenerator:
+    def minutes_generator(template: str | None = None) -> MinutesGenerator:
         if shared is not None:
             shared.release()  # VRAM rule: never Whisper and the LLM together
-        return build_minutes_generator(settings_file.current, localizer)
+        return build_minutes_generator(settings_file.current, None, template)  # current language
 
     def llm_reachable() -> bool:
         current = settings_file.current

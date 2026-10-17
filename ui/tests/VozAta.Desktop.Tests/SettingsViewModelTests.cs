@@ -45,6 +45,18 @@ public sealed class SettingsViewModelTests
         settings.Groups.SelectMany(group => group.Editors).Single(editor => editor.Key == key);
 
     [Fact]
+    public async Task Minutes_template_choices_show_the_template_names()
+    {
+        Add("MINUTES_TEMPLATE", "choice", "general", "minutes", choices: ["general", "daily", "one_on_one", "client", "retrospective"]);
+
+        var settings = await LoadedAsync();
+
+        Assert.Equal(
+            ["General meeting", "Daily stand-up", "One-on-one", "Client meeting", "Retrospective"],
+            Editor(settings, "MINUTES_TEMPLATE").Choices.Select(choice => choice.Label));
+    }
+
+    [Fact]
     public async Task Editors_are_grouped_in_page_order_with_a_kind_per_type()
     {
         var settings = await LoadedAsync();
