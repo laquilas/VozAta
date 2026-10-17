@@ -116,8 +116,10 @@
     <Setter Property="Height" Value="12" />
   </Style>
 
-  <!-- Link-like button (sources, exported work items) -->
+  <!-- Link-like button (sources, exported work items): no fill, so the text sits on the surface -->
   <Style Selector="Button.link">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}" />
   </Style>
   <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
