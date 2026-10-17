@@ -62,10 +62,11 @@ User-defined templates edited in the UI (backlog).
 
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** in progress
-- **Updated:** 2026-10-17 12:50
-- **Next step:** UI client — `TemplateInfo` DTO, `GetTemplatesAsync`, `Template` in
-  `StartSessionRequest`, `RegenerateMinutesAsync(id, template)`; tests in `EngineClientTests`
-  and `FakeEngineClient`.
+- **Updated:** 2026-10-17 13:10
+- **Next step:** UI — template ComboBox on the Start screen (`MainViewModel.Templates` /
+  `SelectedTemplate`, preselect `MINUTES_TEMPLATE`, send it in `StartSessionRequest`) and in the
+  regenerate action (`SessionDetailViewModel`, only around the regenerate button); tests in
+  `TemplateSelectionTests.cs`.
 
 ### Steps
 
@@ -78,8 +79,8 @@ User-defined templates edited in the UI (backlog).
 - [x] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
       — `2f77bce`
 - [x] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
-      (unknown → 422 `unknown_template`); api-contract + architecture §8/§12 — this commit
-- [ ] UI client: `GetTemplatesAsync`, template in start and regenerate requests
+      (unknown → 422 `unknown_template`); api-contract + architecture §8/§12 — `9141330`
+- [x] UI client: `GetTemplatesAsync`, template in start and regenerate requests — this commit
 - [ ] UI: template ComboBox on the Start screen and in the regenerate action
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 

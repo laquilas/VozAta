@@ -29,7 +29,11 @@ public interface IEngineClient
 
     Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default);
 
-    Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default);
+    /// <summary><c>POST /sessions/{id}/minutes</c>; a null template keeps the session's own.</summary>
+    Task RegenerateMinutesAsync(string id, string? templateId = null, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /templates</c>: the minutes templates in display order (phase 20).</summary>
+    Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default);
 
     /// <summary><c>GET /sessions/{id}/export?format=</c>: <c>md</c>, <c>docx</c> or <c>pdf</c>.</summary>
     Task<ExportedFile> ExportSessionAsync(string id, string format, CancellationToken cancellationToken = default);
@@ -96,11 +100,14 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         SendAsync<Minutes>(HttpMethod.Get, $"sessions/{Escape(id)}/minutes", null, cancellationToken);
 
     public async Task RegenerateMinutesAsync(
-        string id, CancellationToken cancellationToken = default)
+        string id, string? templateId = null, CancellationToken cancellationToken = default)
     {
         using var response = await SendRawAsync(
-            HttpMethod.Post, $"sessions/{Escape(id)}/minutes", new { }, cancellationToken);
+            HttpMethod.Post, $"sessions/{Escape(id)}/minutes", new { template = templateId }, cancellationToken);
     }
+
+    public Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<MinutesTemplate>>(HttpMethod.Get, "templates", null, cancellationToken);
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);

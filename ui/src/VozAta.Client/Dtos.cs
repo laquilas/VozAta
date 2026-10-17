@@ -33,7 +33,15 @@ public sealed record DeviceList(
 public sealed record StartSessionRequest(
     int? MicDeviceId = null,
     int? SystemDeviceId = null,
-    string? Language = null);
+    string? Language = null,
+    string? Template = null);
+
+/// <summary>A minutes template (phase 20): stable id and name in the engine's app language.</summary>
+public sealed record MinutesTemplate(string Id, string Name)
+{
+    /// <summary>The name: what pickers and screen readers show.</summary>
+    public override string ToString() => Name;
+}
 
 public sealed record SessionSummary(
     string Id,

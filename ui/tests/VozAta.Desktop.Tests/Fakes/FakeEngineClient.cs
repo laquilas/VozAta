@@ -133,10 +133,31 @@ internal sealed class FakeEngineClient : IEngineClient
             : Task.FromException<ExportedFile>(ExportError);
     }
 
-    public Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default)
+    /// <summary>The template of each regeneration, in the same order as <see cref="Regenerated"/>.</summary>
+    public List<string?> RegeneratedTemplates { get; } = [];
+
+    public Task RegenerateMinutesAsync(string id, string? templateId = null, CancellationToken cancellationToken = default)
     {
         Regenerated.Add(id);
+        RegeneratedTemplates.Add(templateId);
         return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
+    }
+
+    public List<MinutesTemplate> Templates { get; } =
+    [
+        new("general", "General meeting"),
+        new("daily", "Daily stand-up"),
+        new("client", "Client meeting"),
+    ];
+
+    public Exception? TemplatesError { get; set; }
+
+    public Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default)
+    {
+        Calls.Add("templates");
+        return TemplatesError is null
+            ? Task.FromResult<IReadOnlyList<MinutesTemplate>>([.. Templates])
+            : Task.FromException<IReadOnlyList<MinutesTemplate>>(TemplatesError);
     }
 
     public Exception? SettingsError { get; set; }
