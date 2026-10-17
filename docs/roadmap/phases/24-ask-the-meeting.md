@@ -69,9 +69,9 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 
 ### Steps
 
-- [x] Engine: domain `Citation`, locale prompt texts and stopwords (en, pt-BR, es)
-- [x] Engine: `qa/retriever.py` (single-session budget + neighbours, all-sessions ranking)
-- [ ] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context)
+- [x] Engine: domain `Citation`, locale prompt texts and stopwords (en, pt-BR, es) — `c8aec7c`
+- [x] Engine: `qa/retriever.py` (single-session budget + neighbours, all-sessions ranking) — `c8aec7c`
+- [x] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context)
 - [ ] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py`
 - [ ] Docs: api-contract and architecture
 - [ ] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent`
@@ -80,4 +80,10 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 
 ### Decisions and notes
 
-- (none yet)
+- `TranscriptSearch.search` ANDs every word, so the retriever searches each keyword on its own
+  and ranks segments by how many keywords they match, then by best rank (port unchanged).
+- Context lines use the full segment text from the session's best transcript (§8), not the
+  search snippet; sessions/segments indexed but no longer on disk are skipped.
+- A long single session without hits gives an empty context, so the answer is "not found".
+- Citations: a bracket may hold several items; a bare `[hh:mm:ss]` is accepted when the context
+  has one session; a time maps to the last context segment shown at or before it.
