@@ -64,14 +64,13 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:30
-- **Next step:** add `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` to `config.py`,
-  `settings_fields.py` and `engine/.env.example` (tests in `tests/test_config.py`).
+- **Updated:** 2026-10-17 13:53
+- **Next step:** add `transcription/context.py` (`RollingContext`) with tests, then the `prompt` argument and `avg_logprob` on the transcriber port.
 
 ### Steps
 
 - [x] `vocabulary.py`: store (comments, blanks, case-insensitive dedupe), merge, `build_hints`
-- [ ] `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` in `config.py`, `settings_fields.py`, `.env.example`
+- [x] `VOCABULARY_FILE` / `CONTEXT_PROMPT_CHARS` in `config.py`, `settings_fields.py`, `.env.example`
 - [ ] Rolling context prompt (`transcription/context.py`) wired into the stitcher; `prompt` and
       `avg_logprob` on the transcriber port; faster-whisper `initial_prompt` +
       `hallucination_silence_threshold`; OpenAI-compatible `prompt`
@@ -83,5 +82,4 @@ Automatic term extraction from previous meetings.
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 
 ### Decisions and notes
-
-- (none yet)
+- `VOCABULARY_FILE` is a `path` setting; empty (`None`) resolves in `bootstrap.py` to `vocabulary.txt` next to the `.env` file the engine reads.

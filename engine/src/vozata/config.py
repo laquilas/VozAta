@@ -102,6 +102,9 @@ class Settings:
     echo_dedupe_enabled: bool = True
     echo_similarity: float = 0.85
     echo_hold_seconds: float | None = None  # None: CHUNK_SECONDS + 3
+    # Custom vocabulary (phase 19)
+    vocabulary_file: Path | None = None  # None: `vocabulary.txt` next to `.env`
+    context_prompt_chars: int = 200  # rolling context prompt length, 0 = off
     # Minutes (phase 04)
     llm_provider: str = "ollama"
     ollama_url: str = "http://localhost:11434"
@@ -179,6 +182,8 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         echo_dedupe_enabled=_flag(raw, "ECHO_DEDUPE_ENABLED", True),
         echo_similarity=_number(raw, "ECHO_SIMILARITY", 0.85, minimum=0.5, maximum=1),
         echo_hold_seconds=_optional_number(raw, "ECHO_HOLD_SECONDS", minimum=1, maximum=60),
+        vocabulary_file=Path(raw["VOCABULARY_FILE"]) if "VOCABULARY_FILE" in raw else None,
+        context_prompt_chars=_integer(raw, "CONTEXT_PROMPT_CHARS", 200, minimum=0, maximum=1000),
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),

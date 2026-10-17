@@ -591,3 +591,23 @@ def test_unknown_minutes_template_names_the_bundled_ids() -> None:
 
     assert (caught.value.key, caught.value.message_key) == ("MINUTES_TEMPLATE", "invalid_choice")
     assert caught.value.params == {"allowed": "general, daily, one_on_one, client, retrospective"}
+
+
+def test_vocabulary_defaults_and_values() -> None:
+    defaults = load_settings(env={})
+    assert (defaults.vocabulary_file, defaults.context_prompt_chars) == (None, 200)
+
+    settings = load_settings(
+        env={"VOCABULARY_FILE": "C:/glossary/terms.txt", "CONTEXT_PROMPT_CHARS": "0"}
+    )
+
+    assert settings.vocabulary_file == Path("C:/glossary/terms.txt")
+    assert settings.context_prompt_chars == 0
+
+
+@pytest.mark.parametrize("value", ["-1", "1001", "2.5", "many"])
+def test_invalid_context_prompt_chars_raise(value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"CONTEXT_PROMPT_CHARS": value})
+
+    assert caught.value.key == "CONTEXT_PROMPT_CHARS"
