@@ -41,9 +41,8 @@ Template intent:
 - [x] Tests: repository validation (missing language → error), each template renders a prompt in each
       language, unknown template → 422, template persisted in `session.json`.
 - [x] UI tests: template list loaded, selection sent on start and regenerate.
-- [ ] Manual: the same transcript regenerated as `daily` and `client` gives clearly different minutes.
-      — pending manual run against Ollama (parallel wave: no Ollama/GPU checks in the session);
-      exact recipe under Progress → *Manual check recipe*.
+- [x] Manual: the same transcript regenerated as `daily` and `client` gives clearly different minutes.
+      — verified 2026-10-17 against Ollama `qwen2.5:7b` on a recorded session (recipe steps 2–6).
 - [x] Resource parity test passes.
 
 ## Tests
@@ -65,8 +64,10 @@ User-defined templates edited in the UI (backlog).
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 14:10
-- **Next step:** wait for CI on the PR, then run the manual check recipe below (needs Ollama with
-  `qwen2.5:7b`) before merging.
+- **Next step:** merge the PR (manual check passed: `GET /templates` lists five templates, `weekly`
+  returns 422 `unknown_template`, `daily` gives *Updates by person / Blockers / Follow-ups*,
+  `client` gives *Client needs / Commitments / Risks / Next steps / Deadlines*, and `session.json`
+  stores the template used).
 
 ### Steps
 
