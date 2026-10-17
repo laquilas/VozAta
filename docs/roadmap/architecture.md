@@ -52,10 +52,10 @@ engine/
                             stitcher.py, language_lock.py, worker.py, echo.py
     output/                 sinks.py
     llm/                    ollama.py
-    minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py
+    minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py
-    storage/                session_store.py, recovery.py, search_index.py
-    export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github}.py
+    storage/                session_store.py, recovery.py, search_index.py, action_items.py
+    export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github,http,session_export}.py
     qa/                     retriever.py, citations.py, answerer.py
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
