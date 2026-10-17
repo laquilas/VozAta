@@ -161,7 +161,7 @@ def parse_reply(reply: str) -> list[tuple[str, str | None, str | None, list[str]
                 description,
                 optional_text(item.get("owner")),
                 optional_text(item.get("due")),
-                [str(i) for i in ids],
+                [str(i).strip().strip("[]").strip() for i in ids],
             )
         )
     return parsed

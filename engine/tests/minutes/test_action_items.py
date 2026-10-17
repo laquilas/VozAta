@@ -163,3 +163,11 @@ def test_parse_reply_accepts_missing_optional_fields() -> None:
     assert parse_reply('{"items": [{"description": "Call", "due": 3}]}') == [
         ("Call", None, None, [])
     ]
+
+
+def test_parse_reply_strips_the_brackets_the_model_copies_from_the_line_ids() -> None:
+    # qwen2.5:7b answered ["[system-000004]"]: the ids are shown as "[id]" in the transcript lines
+    ids = '["[system-000004]", " mic-1 "]'
+    reply = '{"items": [{"description": "Fix", "source_segment_ids": ' + ids + "}]}"
+
+    assert parse_reply(reply) == [("Fix", None, None, ["system-000004", "mic-1"])]
