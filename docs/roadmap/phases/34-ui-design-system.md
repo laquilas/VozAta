@@ -67,8 +67,7 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Branch:** `feature/34-ui-design-system`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 10:00
-- **Next step:** open the PR (light/dark screenshots attached) and wait for the checks; then run the
-  manual check recipe below on the reference machine.
+- **Next step:** attach the light/dark screenshots to PR #44, run the manual check recipe below, then merge.
 
 ### Steps
 
@@ -78,7 +77,7 @@ Layout changes (35–38), custom fonts beyond Inter.
 - [x] Contrast test for the token pairs (≥ 4.5:1 in light and dark) — this commit
 - [x] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots — this commit
 - [x] Docs (architecture), acceptance criteria, full UI suite — this commit
-- [ ] PR opened and checks green
+- [x] PR #44 opened, CI (lint, format, build) green
 
 ### Decisions and notes
 
