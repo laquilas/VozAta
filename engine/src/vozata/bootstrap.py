@@ -417,7 +417,15 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
 
     _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
     search_index = build_search_index(settings)
-    manager = SessionManager(session_factory, store, broadcaster, labeler)
+    recovery = build_recovery(  # phase 17: only sessions not live in this process
+        settings,
+        store,
+        current=lambda: settings_file.current,
+        before_finish=shared.release if shared is not None else lambda: None,
+    )
+    manager = SessionManager(
+        session_factory, store, broadcaster, labeler, recovery=recovery, localizer=localizer
+    )
 
     def answerer() -> MeetingAnswerer:
         current = manager.current

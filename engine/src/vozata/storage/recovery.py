@@ -48,12 +48,12 @@ def find_interrupted(
     *,
     stale_after: float = 0.0,
 ) -> list[str]:
-    """Ids of the `interrupted` sessions, newest first.
+    """Ids of the `interrupted` sessions, newest first, except those in `live_ids`.
 
-    A session still `recording` / `paused` / `finalizing` that is not in `live_ids` (the sessions
-    this process is running) is marked `interrupted` first. With `stale_after` > 0 it must also
-    have had no heartbeat (else no start) for that many seconds, so a session another process is
-    recording right now is left alone.
+    `live_ids` are the sessions this process is running (recording or being recovered). Any other
+    session still `recording` / `paused` / `finalizing` is marked `interrupted` first. With
+    `stale_after` > 0 it must also have had no heartbeat (else no start) for that many seconds, so
+    a session another process is recording right now is left alone.
     """
     found: list[str] = []
     for session_id in store.list_sessions():
@@ -63,7 +63,9 @@ def find_interrupted(
             _log.warning("Skipping %s: unreadable session.json", session_id)
             continue
         status = meta.get("status")
-        if status in _ACTIVE and session_id not in live_ids:
+        if session_id in live_ids:
+            continue
+        if status in _ACTIVE:
             if stale_after > 0 and not _stale(meta, store.now(), stale_after):
                 continue
             store.write_meta(session_id, {**meta, "status": SessionStatus.INTERRUPTED.value})

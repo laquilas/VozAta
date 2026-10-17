@@ -9,7 +9,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from vozata.api.session_manager import NoActiveSessionError, SessionConflictError
+from vozata.api.session_manager import (
+    NoActiveSessionError,
+    SessionConflictError,
+    SessionNotInterruptedError,
+)
 from vozata.config import ConfigError
 from vozata.ports import Localizer
 from vozata.session import SessionStartError
@@ -48,6 +52,10 @@ def install_error_handlers(app: FastAPI, localizer: Localizer) -> None:
     @app.exception_handler(NoActiveSessionError)
     async def no_session(request: Request, error: NoActiveSessionError) -> JSONResponse:
         return respond(409, "no_active_session")
+
+    @app.exception_handler(SessionNotInterruptedError)
+    async def not_interrupted(request: Request, error: SessionNotInterruptedError) -> JSONResponse:
+        return respond(409, "session_not_interrupted", id=str(error))
 
     @app.exception_handler(SessionNotFoundError)
     async def not_found(request: Request, error: SessionNotFoundError) -> JSONResponse:

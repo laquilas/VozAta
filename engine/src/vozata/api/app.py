@@ -17,6 +17,7 @@ from vozata.api.routes import (
     devices,
     export,
     health,
+    recover,
     search,
     sessions,
     settings,
@@ -57,6 +58,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     ):
         app.include_router(module.router, responses=ERROR_RESPONSES)
     app.include_router(ask_routes.router, responses=ERROR_RESPONSES)  # phase 24
+    app.include_router(recover.router, responses=ERROR_RESPONSES)  # phase 17
     app.include_router(branding.router)
 
     @app.websocket("/ws")
@@ -65,6 +67,12 @@ def create_app(container: ApiContainer) -> FastAPI:
         client = container.broadcaster.subscribe()
         try:
             await websocket.send_json(container.manager.status_message())
+            interrupted = await asyncio.to_thread(container.manager.interrupted_sessions)
+            if interrupted:  # phase 17: offer to recover sessions a crash cut short
+                data = {"session_ids": interrupted}
+                await websocket.send_json(
+                    {"type": "recovery_available", "session_id": None, "data": data}
+                )
             receiver = asyncio.create_task(_until_disconnected(websocket))
             while not receiver.done():
                 getter = asyncio.create_task(client.get())

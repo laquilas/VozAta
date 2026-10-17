@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fakes import FakeSessionObserver
+from tests.fakes import FakeLanguageModel, FakeSessionObserver
 from tests.test_session_recover import make_session_folder
 from vozata import bootstrap
 from vozata.audio.mixer import MonoMixer, StereoMixer
@@ -89,6 +89,24 @@ def test_build_recovery_finishes_a_session_with_the_current_settings(tmp_path: P
     assert not store.paths(session_id).minutes_md.exists()
     [hit] = SearchIndex(tmp_path / "recordings" / "index.db").search("hello")
     assert hit.session_id == session_id
+
+
+@pytest.mark.parametrize("keep_loaded", [False, True])
+def test_the_api_container_recovers_through_its_session_manager(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keep_loaded: bool
+) -> None:
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    settings = _settings(
+        tmp_path, llm_provider="fake", generate_minutes=False, whisper_keep_loaded=keep_loaded
+    )
+    container = bootstrap.build_api_container(settings, env_file=tmp_path / ".env")
+    session_id = make_session_folder(container.store, status="finalizing")
+
+    assert container.manager.interrupted_sessions() == [session_id]
+    container.manager.recover(session_id)
+    assert container.manager.wait_until_finished(5)
+
+    assert container.store.read_meta(session_id)["status"] == "done"
 
 
 def test_the_cli_waits_two_autosaves_and_some_slack_before_calling_a_session_interrupted(

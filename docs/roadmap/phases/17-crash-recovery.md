@@ -65,9 +65,9 @@ Recovering audio still in memory buffers at crash time.
 - **Branch:** `feature/17-crash-recovery`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** API: `SessionManager.recover(id)` (shares the single-session slot),
-  `POST /sessions/{id}/recover`, `recovery_available` on WebSocket connect, wired in
-  `build_api_container`; tests in `tests/api/test_recover.py`.
+- **Next step:** UI: `IEngineClient.RecoverSessionAsync`, `RecoveryAvailable` engine event,
+  `RecoveryViewModel` + dialog (date, duration, Recover / Later), strings in en / pt-BR / es,
+  `RecoveryViewModelTests.cs`.
 
 ### Steps
 
@@ -79,7 +79,7 @@ Recovering audio still in memory buffers at crash time.
 - [x] `storage/recovery.py`: `find_interrupted`, transcript repair, `SessionRecovery.recover`
       (idempotent, error kept in `session.json`); `storage/wav_repair.py`: `repair_wav`, `pad_wav`
 - [x] `bootstrap.build_recovery` + CLI `recover [<session_dir> | --all]`
-- [ ] API: `POST /sessions/{id}/recover`, `recovery_available` on WebSocket connect
+- [x] API: `POST /sessions/{id}/recover`, `recovery_available` on WebSocket connect
 - [ ] UI: `IEngineClient.RecoverSessionAsync`, `recovery_available` event, recovery dialog
       (`RecoveryViewModel`) with Recover / Later
 - [ ] Docs (architecture §6/§8/§9, api-contract), acceptance criteria, full suites, PR
