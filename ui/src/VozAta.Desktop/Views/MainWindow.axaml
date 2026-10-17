@@ -6,6 +6,7 @@
         x:Class="VozAta.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="{Binding L[AppTitle]}"
+        Icon="/Assets/vozata.ico"
         Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}"
         MinWidth="640" MinHeight="420">
 
@@ -30,6 +31,8 @@
     <Border DockPanel.Dock="Bottom" Padding="12,6"
             Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
       <WrapPanel>
+        <Image Source="/Assets/vozata-64.png" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"
+               ToolTip.Tip="{Binding L[AppTitle]}" />
         <TextBlock Text="{Binding EngineText}" Margin="0,0,24,0" />
         <TextBlock Text="{Binding Health.GpuText}" Margin="0,0,24,0" />
         <TextBlock Text="{Binding Health.SpeechText}" Margin="0,0,24,0" />
