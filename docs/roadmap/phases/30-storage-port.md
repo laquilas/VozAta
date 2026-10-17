@@ -41,13 +41,14 @@ recovery code again. No user-visible change.
 
 ## Acceptance criteria
 
-- [ ] No module outside `storage/` and `bootstrap.py` builds a session path or opens a session
+- [x] No module outside `storage/` and `bootstrap.py` builds a session path or opens a session
       file (check with a grep for `SessionPaths`, `.wav"`, `minutes.md`, `.jsonl`).
-- [ ] Contract test suite passes for `FileSessionRepository` / `FileAudioStore`.
-- [ ] Full engine suite green, diff coverage ≥ 80 %.
+- [x] Contract test suite passes for `FileSessionRepository` / `FileAudioStore`.
+- [x] Full engine suite green, diff coverage ≥ 80 %.
 - [ ] Manual: record a 1-minute session from the desktop app, then open minutes, transcript, play
       audio, export docx, run `recover` on a simulated crash (phase 17 recipe A): same results as
-      before.
+      before. *(`recover` on a simulated crash done offline 2026-10-17; the recording part is
+      pending: see the manual check recipe in Progress.)*
 
 ## Tests
 
@@ -65,10 +66,10 @@ Any new storage backend (31, 32), migration (33), API shape changes.
 ## Progress
 
 - **Branch:** `feature/30-storage-port`
-- **Status:** in progress
-- **Updated:** 2026-10-17 12:30
-- **Next step:** document the storage ports in architecture §5/§8 and api-contract, tick the
-  acceptance criteria, run the full suites and open the PR
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 20:50
+- **Next step:** open the PR; before merge run part B of the manual check recipe below on the
+  reference machine (audio hardware, one phase at a time).
 
 ### Steps
 
@@ -81,7 +82,8 @@ Any new storage backend (31, 32), migration (33), API shape changes.
       `bootstrap.py`
 - [x] Minutes, action items, task export, API routes and payloads on the repository
 - [x] Recovery on `RecoverableStore`; CLI commands
-- [ ] Docs (architecture §5/§8), grep check, full suites, PR
+- [x] Docs (architecture §2/§5/§8, api-contract), grep check, full suites, manual check recipe
+- [ ] PR
 
 ### Decisions and notes
 
@@ -106,3 +108,50 @@ Any new storage backend (31, 32), migration (33), API shape changes.
   parent through `bootstrap.build_recovery(settings, output_dir)`.
 - The grep check uses fixed strings (`grep -F`): the only hits outside `storage/` and
   `bootstrap.py` are docstrings and the in-memory `audio.wav` upload name of the OpenAI STT.
+- Checks run in the phase session: full engine suite 1259 passed (3 deselected), coverage
+  99.92 % (every new or changed module 100 % of lines), `ruff check` / `ruff format --check`
+  clean. `ui/` not touched.
+
+### Manual check recipe
+
+Status: **A done 2026-10-17 (offline, minutes off); B pending** — run B on the reference machine,
+one phase at a time (audio is shared). Nothing about the files may differ from `main`: same
+names, same content, same messages.
+
+**A. Simulated crash, no microphone (done).** Phase 17 recipe A with the phase 17 script
+`make_crashed_session.py` (copy it from `17-crash-recovery.md`, recipe A step 1), from the repo
+root in PowerShell:
+
+```powershell
+.venv\Scripts\python make_crashed_session.py engine\recordings engine\tests\data\speech_en.wav
+cd engine
+..\.venv\Scripts\python -m vozata recover recordings\<printed id>   # exit 0, "Recovered: …"
+..\.venv\Scripts\python -m vozata recover recordings\<printed id>   # exit 1, "… was not interrupted …"
+```
+
+Expected (seen with `GENERATE_MINUTES=false`, `DIARIZATION_ENABLED=false`): the folder holds
+`mic.wav`, `system.wav`, `mixed.wav` (same length), `transcript.jsonl` (2 lines),
+`transcript.jsonl.damaged` (the half line), `session.json` with `status: done`,
+`duration_seconds: 5.699` and `ended_at`. With minutes on (Ollama running), `minutes.md` is also
+written (beta on Friday / Ana).
+
+**B. Real recording from the desktop app (pending, needs the microphone and speakers).**
+
+1. Note the newest folder in `engine/recordings`, then start the app
+   (`dotnet run --project ui/src/VozAta.Desktop`) and record ~1 minute while speaking and playing
+   a video (both channels). Stop and wait for *idle*.
+2. The new session folder has `session.json`, `mic.wav`, `system.wav`, `mixed.wav`,
+   `transcript.jsonl`, `transcript.md` and `minutes.md` (plus `action_items.json` with
+   `EXTRACT_ACTION_ITEMS=true`, `transcript.diarized.jsonl` + `speakers.json` with
+   `DIARIZATION_ENABLED=true`, `transcript.translated.jsonl` when translating) — the same set a
+   recording on `main` produces.
+3. History → the session: the transcript, minutes and speakers show; rename a speaker, edit a
+   line and revert it; "Open folder" opens the folder; the three WAVs play in the OS player with
+   the same length.
+4. Export → DOCX (and MD / PDF): the files open and contain the minutes and the transcript.
+5. Action items: extract again, edit one, export (with a configured tracker): the exported item
+   keeps its link after a reload; its description ends with "Session folder: <absolute folder>".
+6. API spot check while `serve` runs (`API_PORT`, default 8765):
+   `curl http://127.0.0.1:8765/sessions/<id>` lists `files` and the absolute `folder` as before;
+   `.../transcript`, `.../minutes` and `.../export?format=docx` answer 200.
+7. Run recipe A again with minutes on.
