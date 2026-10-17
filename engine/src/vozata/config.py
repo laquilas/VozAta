@@ -102,6 +102,8 @@ class Settings:
     echo_dedupe_enabled: bool = True
     echo_similarity: float = 0.85
     echo_hold_seconds: float | None = None  # None: CHUNK_SECONDS + 3
+    # Editable transcript (phase 21)
+    low_confidence_threshold: float = 0.5
     # Minutes (phase 04)
     llm_provider: str = "ollama"
     ollama_url: str = "http://localhost:11434"
@@ -179,6 +181,9 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         echo_dedupe_enabled=_flag(raw, "ECHO_DEDUPE_ENABLED", True),
         echo_similarity=_number(raw, "ECHO_SIMILARITY", 0.85, minimum=0.5, maximum=1),
         echo_hold_seconds=_optional_number(raw, "ECHO_HOLD_SECONDS", minimum=1, maximum=60),
+        low_confidence_threshold=_number(
+            raw, "LOW_CONFIDENCE_THRESHOLD", 0.5, minimum=0, maximum=1
+        ),
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
