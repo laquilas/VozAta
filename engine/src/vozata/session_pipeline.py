@@ -13,10 +13,18 @@ from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.levels import rms_db
 from vozata.audio.wav_writer import AlignedWavWriter
 from vozata.config import Settings
+from vozata.diarization.live import LiveSpeakerTagger
+from vozata.diarization.live_sink import AudioHistory, LiveSpeakerSink
 from vozata.domain import AudioChunk, Channel, TranscriptionResult, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
-from vozata.ports import Chunker, SessionObserver, Transcriber, TranscriptSink
+from vozata.ports import (
+    Chunker,
+    SessionObserver,
+    SpeakerEmbedder,
+    Transcriber,
+    TranscriptSink,
+)
 from vozata.storage.session_store import SessionPaths
 from vozata.transcription.context import RollingContext
 from vozata.transcription.echo import EchoFilter
@@ -95,6 +103,20 @@ def _echo_filter(
     )
 
 
+def _live_speakers(
+    settings: Settings, sinks: TranscriptSink, embedder: Callable[[], SpeakerEmbedder]
+) -> tuple[LiveSpeakerSink, AudioHistory]:
+    """Live speaker labels (phase 15) on their own thread, in front of the sinks."""
+    history = AudioHistory(settings.sample_rate, 60.0 + settings.max_carry_seconds)
+
+    def load() -> LiveSpeakerTagger:
+        return LiveSpeakerTagger(
+            embedder(), settings.speaker_similarity_threshold, max_seconds=settings.chunk_seconds
+        )
+
+    return LiveSpeakerSink(sinks, load, history), history
+
+
 class _ObserverSink:
     def __init__(self, observer: SessionObserver) -> None:
         self._observer = observer
@@ -124,7 +146,9 @@ class CapturePipeline:
     calls `on_load_failed` and the audio is only written to the WAVs. Chunkers come from
     `chunker_factory` (`CHUNKERS` in `bootstrap.py`); without one, fixed `CHUNK_SECONDS` windows
     are used. `hints` (the session vocabulary, phase 19) go with every transcription, and each
-    channel gets its own rolling context prompt of `CONTEXT_PROMPT_CHARS`.
+    channel gets its own rolling context prompt of `CONTEXT_PROMPT_CHARS`. With a
+    `speaker_embedder` (`LIVE_DIARIZATION_ENABLED`), system segments get live `system:<n>`
+    speakers from a `LiveSpeakerSink` between the echo filter and the sinks.
     """
 
     def __init__(
@@ -139,16 +163,19 @@ class CapturePipeline:
         chunker_factory: ChunkerFactory | None = None,
         on_load_failed: Callable[[Exception], None] = lambda error: None,
         hints: str | None = None,
+        speaker_embedder: Callable[[], SpeakerEmbedder] | None = None,
     ) -> None:
         self._rate = settings.sample_rate
         new_chunker = chunker_factory or _fixed_windows(settings)
         self._observer = observer
         self._accepting = False
         chunks: queue.Queue[AudioChunk] = queue.Queue()
+        self._history: AudioHistory | None = None
+        self._live: LiveSpeakerSink | None = None
         self._tracks = {
             channel: _Track(
                 AlignedWavWriter(paths.wav(channel), self._rate),
-                new_chunker(channel, chunks.put),
+                new_chunker(channel, self._queue(chunks)),
             )
             for channel in channels
         }
@@ -159,10 +186,13 @@ class CapturePipeline:
                 _ObserverSink(observer),
             ]
         )
+        if speaker_embedder is not None and Channel.SYSTEM in self._tracks:
+            self._live, self._history = _live_speakers(settings, sinks, speaker_embedder)
+        tagged: TranscriptSink = self._live or sinks
         self._echo = (
-            _echo_filter(settings, sinks, observer) if settings.echo_dedupe_enabled else None
+            _echo_filter(settings, tagged, observer) if settings.echo_dedupe_enabled else None
         )
-        self._sink: TranscriptSink = self._echo or sinks
+        self._sink: TranscriptSink = self._echo or tagged
         self._transcriber = _DeferredTranscriber(transcriber_factory, observer, on_load_failed)
         transcriber = self._transcriber
         ids = SegmentIds()
@@ -216,6 +246,8 @@ class CapturePipeline:
     def start_transcription(self) -> None:
         """Load the transcriber on the worker thread, then transcribe the queued chunks."""
         self._worker.start()
+        if self._live is not None:
+            self._live.start()
 
     def receiver(self, channel: Channel) -> Callable[[np.ndarray, float], None]:
         track = self._tracks[channel]
@@ -229,6 +261,16 @@ class CapturePipeline:
             self._observer.on_level(channel, rms_db(samples))
 
         return on_samples
+
+    def _queue(self, chunks: queue.Queue[AudioChunk]) -> Callable[[AudioChunk], None]:
+        """Queue a chunk for transcription; system chunks are also kept for live speakers."""
+
+        def put(chunk: AudioChunk) -> None:
+            if self._history is not None and chunk.channel is Channel.SYSTEM:
+                self._history.add(chunk)
+            chunks.put(chunk)
+
+        return put
 
     def _uncut_audio(self, channel: Channel) -> AudioChunk | None:
         """The chunker's audio not emitted yet (interim text); taken under the track lock."""

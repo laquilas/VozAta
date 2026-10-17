@@ -21,6 +21,9 @@ public sealed record LanguageDetectedEvent(string? SessionId, string Language) :
 
 public sealed record MinutesReadyEvent(string? SessionId) : EngineEvent(SessionId);
 
+/// <summary>Post-session speaker identification replaced the live speaker labels: reload the transcript.</summary>
+public sealed record SpeakersRelabeledEvent(string? SessionId) : EngineEvent(SessionId);
+
 public sealed record ErrorEvent(string? SessionId, string Code, string Message) : EngineEvent(SessionId);
 
 /// <summary>Interim text of a channel while someone speaks; replaced by the next segment, empty text clears it.</summary>
@@ -62,6 +65,7 @@ public static class EngineEventParser
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
                 "action_items_ready" => new ActionItemsReadyEvent(sessionId, data.GetProperty("count").GetInt32()),
+                "speakers_relabeled" => new SpeakersRelabeledEvent(sessionId),
                 "partial" => new PartialEvent(
                     sessionId,
                     data.GetProperty("channel").GetString() ?? "",

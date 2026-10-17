@@ -106,6 +106,7 @@ def test_observer_events_become_contract_envelopes(
     observer.on_language_detected(ConversationLanguage.ES)
     observer.on_minutes_ready("20261015_202358")
     observer.on_action_items_ready("20261015_202358", 2)
+    observer.on_speakers_relabeled("20261015_202358")
     observer.on_error("minutes_failed", "offline")
     manager.stop()
     assert manager.wait_until_finished(5)
@@ -119,6 +120,7 @@ def test_observer_events_become_contract_envelopes(
     assert broadcaster.of("action_items_ready") == [
         (session_id, {"session_id": session_id, "count": 2})
     ]
+    assert broadcaster.of("speakers_relabeled") == [(session_id, {"session_id": session_id})]
     assert broadcaster.of("error") == [
         (session_id, {"code": "minutes_failed", "message": "offline"})
     ]

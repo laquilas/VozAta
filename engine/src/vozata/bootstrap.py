@@ -30,6 +30,7 @@ from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
 from vozata.diarization.subprocess_diarizer import pyannote_from_settings
+from vozata.diarization.subprocess_embedder import pyannote_embedder_from_settings
 from vozata.domain import (
     AudioChunk,
     Channel,
@@ -57,6 +58,7 @@ from vozata.ports import (
     LanguageModel,
     Localizer,
     SessionObserver,
+    SpeakerEmbedder,
     TaskExporter,
     Transcriber,
     TranscriptSearch,
@@ -82,6 +84,9 @@ TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
 }
 DIARIZERS: dict[str, Callable[[Settings], Diarizer]] = {
     "pyannote": pyannote_from_settings,  # child process: keeps torch away from ctranslate2
+}
+EMBEDDERS: dict[str, Callable[[Settings], SpeakerEmbedder]] = {
+    "pyannote": pyannote_embedder_from_settings,  # long-lived child process (phase 15)
 }
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(
@@ -245,6 +250,15 @@ def build_diarizer(settings: Settings) -> Diarizer:
     return _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)(settings)
 
 
+def build_embedder_factory(settings: Settings) -> Callable[[], SpeakerEmbedder] | None:
+    """The live speaker embedder (`DIARIZATION_PROVIDER`), built on the live worker's thread;
+    None unless `LIVE_DIARIZATION_ENABLED`."""
+    if not settings.live_diarization_enabled:
+        return None
+    factory = _provider(EMBEDDERS, "DIARIZATION_PROVIDER", settings.diarization_provider)
+    return functools.partial(factory, settings)
+
+
 def build_session(
     settings: Settings,
     observer: SessionObserver,
@@ -314,6 +328,7 @@ def build_session(
         action_items=build_action_item_extractor(settings, localizer)
         if minutes is not None and settings.extract_action_items
         else None,
+        embedder_factory=build_embedder_factory(settings),
     )
     return RecordingSession(
         settings,

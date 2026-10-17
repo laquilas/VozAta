@@ -35,8 +35,11 @@ public sealed class EngineEventsTests
             new ModelLoadingEvent("s1", true),
             EngineEventParser.Parse("""{"type":"model_loading","session_id":"s1","data":{"loading":true}}"""));
         Assert.Equal(
-            new UnknownEvent("s1", "speakers_relabeled"),
-            EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{}}"""));
+            new SpeakersRelabeledEvent("s1"),
+            EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{"session_id":"s1"}}"""));
+        Assert.Equal(
+            new UnknownEvent("s1", "future_event"),
+            EngineEventParser.Parse("""{"type":"future_event","session_id":"s1","data":{}}"""));
     }
 
     [Fact]

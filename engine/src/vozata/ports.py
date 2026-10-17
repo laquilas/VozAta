@@ -134,6 +134,19 @@ class Diarizer(Protocol):
 
 
 @runtime_checkable
+class SpeakerEmbedder(Protocol):
+    """Turns a voice clip into a speaker embedding (phase 15, live speaker labels)."""
+
+    def embed(self, samples: np.ndarray) -> np.ndarray:
+        """A 1-D vector for float32 mono samples at the session rate; raises on failure."""
+        ...
+
+    def close(self) -> None:
+        """Release the model (and its process or GPU memory)."""
+        ...
+
+
+@runtime_checkable
 class DocumentExporter(Protocol):
     """Renders an `ExportDocument` (minutes + transcript) as one file format (phase 11)."""
 
@@ -192,6 +205,10 @@ class SessionObserver(Protocol):
 
     def on_action_items_ready(self, session_id: str, count: int) -> None:
         """Action items were extracted and saved (phase 23)."""
+        ...
+
+    def on_speakers_relabeled(self, session_id: str) -> None:
+        """The post-session speaker pass rewrote the speakers (phase 15); reload the transcript."""
         ...
 
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:

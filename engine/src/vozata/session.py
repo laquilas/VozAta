@@ -22,6 +22,7 @@ from vozata.ports import (
     Diarizer,
     Localizer,
     SessionObserver,
+    SpeakerEmbedder,
     Transcriber,
     TranscriptSearch,
 )
@@ -61,6 +62,7 @@ class SessionComponents:
     minutes_template: str = DEFAULT_TEMPLATE  # stored in session.json (phase 20)
     vocabulary: tuple[str, ...] = ()  # session + glossary terms (phase 19), session terms first
     action_items: Extractor | None = None  # None: no action items at stop (phase 23)
+    embedder_factory: Callable[[], SpeakerEmbedder] | None = None  # None: no live speakers
 
 
 class SessionStartError(RuntimeError):
@@ -135,6 +137,7 @@ class RecordingSession:
             self._c.chunker_factory,
             lambda error: self._error("model_failed", reason=str(error)),
             hints=build_hints(self._c.vocabulary),
+            speaker_embedder=self._live_embedder(),
         )
         self._c.clock.start()
         self._pipeline.accept()
@@ -239,12 +242,31 @@ class RecordingSession:
         except Exception:
             _log.exception("Releasing the transcriber failed")
 
+    def _live_embedder(self) -> Callable[[], SpeakerEmbedder] | None:
+        """The embedder for live speaker labels (phase 15); a failed load reports an error."""
+        factory = self._c.embedder_factory
+        if factory is None:
+            return None
+
+        def build() -> SpeakerEmbedder:
+            try:
+                return factory()
+            except Exception as error:
+                self._error("live_diarization_failed", reason=self._reason(error))
+                raise
+
+        return build
+
     def _identify_speakers(self) -> None:
-        """Diarize `system.wav` (Whisper is already released); a failure keeps `system` labels."""
+        """Diarize `system.wav` (Whisper is already released); a failure keeps `system` labels.
+
+        Once speakers are written, `speakers_relabeled` tells clients to reload the transcript:
+        the post-session speakers replace the live ones (phase 15).
+        """
         if self._c.diarizer_factory is None:
             return
         try:
-            diarize_session(
+            found = diarize_session(
                 self._store,
                 self.id,
                 self._c.diarizer_factory,
@@ -253,11 +275,12 @@ class RecordingSession:
             )
         except Exception as error:
             _log.warning("Speaker identification for %s failed: %s", self.id, error)
-            reason = (
-                error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)
-            )
+            reason = self._reason(error)
             command = f'python -m vozata diarize "{self.paths.root}"'
             self._error("diarization_failed", reason=reason, command=command)
+            return
+        if found is not None:
+            self._observer.on_speakers_relabeled(self.id)
 
     def _write_minutes(self) -> None:
         if self._c.minutes is None:
@@ -303,6 +326,9 @@ class RecordingSession:
         except Exception as error:
             _log.exception("Indexing %s for search failed", self.id)
             self._error("index_failed", reason=str(error))
+
+    def _reason(self, error: Exception) -> str:
+        return error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)
 
     def _on_language_detected(self, language: ConversationLanguage) -> None:
         self._meta.set_language(language, "detected")

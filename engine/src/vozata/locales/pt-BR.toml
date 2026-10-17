@@ -18,6 +18,7 @@ audio_unavailable = "O áudio do Windows não respondeu. Reinicie o serviço Áu
 device_timeout = "O dispositivo de áudio \"{device}\" não abriu em {seconds} s. Verifique se ele está conectado e não está em uso por outro aplicativo; se continuar falhando, reinicie o Áudio do Windows ou o PC."
 device_failed = "Não foi possível abrir o dispositivo de áudio \"{device}\": {reason}"
 diarization_failed = "Não foi possível identificar os participantes remotos ({reason}). A transcrição mantém o rótulo do sistema; tente de novo com: {command}"
+live_diarization_failed = "Os rótulos de participantes ao vivo estão desligados ({reason}). A gravação continua; as falas remotas mostram o rótulo do sistema até a sessão terminar."
 mix_failed = "Não foi possível criar o mixed.wav ({reason}). As faixas do microfone e do sistema foram mantidas."
 minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a transcrição foram mantidas; tente novamente com: {command}"
 model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."

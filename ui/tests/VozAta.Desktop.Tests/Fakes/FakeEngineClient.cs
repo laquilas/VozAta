@@ -113,8 +113,13 @@ internal sealed partial class FakeEngineClient : IEngineClient
     public Task<SessionDetail> GetSessionAsync(string id, CancellationToken cancellationToken = default) =>
         DetailError is null ? Task.FromResult(Details[id]) : Task.FromException<SessionDetail>(DetailError);
 
+    /// <summary>When set, <see cref="GetTranscriptAsync"/> fails with it.</summary>
+    public Exception? TranscriptError { get; set; }
+
     public Task<Transcript> GetTranscriptAsync(string id, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Transcripts.GetValueOrDefault(id) ?? new Transcript("raw", []));
+        TranscriptError is not null
+            ? Task.FromException<Transcript>(TranscriptError)
+            : Task.FromResult(Transcripts.GetValueOrDefault(id) ?? new Transcript("raw", []));
 
     public Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default) =>
         MinutesText.TryGetValue(id, out var markdown)

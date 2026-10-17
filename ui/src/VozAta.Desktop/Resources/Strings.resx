@@ -654,6 +654,18 @@
   <data name="SettingHelp_MAX_SPEAKERS" xml:space="preserve">
     <value>Largest number of remote people to expect (1 to 20). Leave empty to detect it.</value>
   </data>
+  <data name="Setting_LIVE_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Live speaker identification</value>
+  </data>
+  <data name="SettingHelp_LIVE_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Label remote speakers (User 1, User 2…) while recording. Needs the diarization extra and HF_TOKEN; the labels are corrected when the session stops.</value>
+  </data>
+  <data name="Setting_SPEAKER_SIMILARITY_THRESHOLD" xml:space="preserve">
+    <value>Live speaker similarity</value>
+  </data>
+  <data name="SettingHelp_SPEAKER_SIMILARITY_THRESHOLD" xml:space="preserve">
+    <value>How similar (0.05 to 1) a voice must be to join an existing speaker. Lower merges voices, higher splits one voice into several.</value>
+  </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>
   </data>
