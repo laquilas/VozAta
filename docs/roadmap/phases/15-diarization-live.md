@@ -59,8 +59,8 @@ Cross-session speaker recognition (remembering voices between meetings).
 
 - **Branch:** `feature/15-diarization-live`
 - **Status:** in progress
-- **Updated:** 2026-10-17 14:43
-- **Next step:** UI: parse `speakers_relabeled` in `EngineEvents.cs` and reload the transcript in `MainViewModel` (live lines of that session) and `HistoryViewModel` / `SessionDetailViewModel` (open detail), with ViewModel tests.
+- **Updated:** 2026-10-17 14:45
+- **Next step:** update architecture §6/§8/§11 for live speakers, tick the acceptance criteria (manual 3-person check pending), set README status `done`, merge `origin/main`, run the full suites and open the PR.
 
 ### Steps
 
@@ -71,7 +71,7 @@ Cross-session speaker recognition (remembering voices between meetings).
 - [x] pyannote embedder in a long-lived child process (`diarization/embedder.py`), `EMBEDDERS`
       registry in `bootstrap.py`
 - [x] `speakers_relabeled` after the post-session pass (observer, session, API)
-- [ ] UI: parse `speakers_relabeled`, reload the transcript (main window + session detail)
+- [x] UI: parse `speakers_relabeled`, reload the transcript (main window + session detail)
 - [ ] Docs (architecture §6/§9/§11, api-contract), acceptance criteria, full suites, PR
 
 ### Decisions and notes
