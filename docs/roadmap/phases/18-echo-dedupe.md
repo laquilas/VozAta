@@ -71,7 +71,7 @@ Acoustic echo cancellation on the audio signal (backlog).
 - [x] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
       `session.json.echo_dropped` (architecture §6 / §8)
 - [x] Acceptance criteria, README `done`, PR
-- [ ] Manual check (pending: shared audio hardware)
+- [ ] Manual check — pending manual: merged without it at the owner's request (2026-10-17) because the WASAPI mic hung (`SourceOpenTimeoutError`); run the recipe below after a Windows Audio restart
 
 ### Decisions and notes
 
