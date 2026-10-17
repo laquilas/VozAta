@@ -67,6 +67,38 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Transcript_edits_are_put_in_snake_case_and_reverted_with_delete()
+    {
+        var handler = FakeHttpHandler.Json("""{"source": "edited"}""");
+        var client = new EngineClient(handler.Client());
+
+        var result = await client.UpdateTranscriptAsync("20261015_202358", [new SegmentTextEdit("mic-000001", "Hello world.")]);
+        await client.RevertTranscriptAsync("20261015_202358");
+
+        Assert.Equal("edited", result.Source);
+        Assert.Equal(
+            [
+                (HttpMethod.Put, "/sessions/20261015_202358/transcript",
+                 (string?)"""{"segments":[{"segment_id":"mic-000001","text":"Hello world."}]}"""),
+                (HttpMethod.Delete, "/sessions/20261015_202358/transcript/edits", null),
+            ],
+            handler.Requests);
+    }
+
+    [Fact]
+    public async Task A_rejected_transcript_edit_throws_the_engine_error()
+    {
+        var handler = FakeHttpHandler.Json(
+            """{"error": {"code": "empty_segment_text", "message": "Segment cannot be empty."}}""",
+            System.Net.HttpStatusCode.UnprocessableEntity);
+
+        var error = await Assert.ThrowsAsync<EngineApiException>(
+            () => new EngineClient(handler.Client()).UpdateTranscriptAsync("20261015_202358", [new SegmentTextEdit("mic-000001", " ")]));
+
+        Assert.Equal("empty_segment_text", error.Code);
+    }
+
+    [Fact]
     public async Task Templates_are_read_in_order()
     {
         var handler = FakeHttpHandler.Json("""
