@@ -61,8 +61,8 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - **Branch:** `feature/29-live-translation`
 - **Status:** in progress
 - **Updated:** 2026-10-17 14:30
-- **Next step:** UI — translation under each live line (`MainViewModel`, `MainWindow.axaml`),
-  "Translate to" picker, strings in the three `.resx`, tests in `LiveTranslationTests.cs`.
+- **Next step:** docs — architecture (§5 port, §6 data flow, §8 `transcript.translated.jsonl`,
+  §9 keys, new §14 provider choice), tick acceptance criteria, write the manual check recipe.
 
 ### Steps
 
@@ -73,7 +73,7 @@ Text-to-speech of the translation; translating the minutes (they are already wri
       event, `translation_failed` error
 - [x] API: `translate_to` in `POST /sessions`, `translation` per segment in `GET .../transcript`
 - [x] UI client: `TranslationEvent`, `Segment.Translation`, `StartSessionRequest.TranslateTo`
-- [ ] UI: translated text under each live line, "Translate to" picker, strings en/pt-BR/es
+- [x] UI: translated text under each live line, "Translate to" picker, strings en/pt-BR/es
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 
 ### Decisions and notes

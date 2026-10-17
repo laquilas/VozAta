@@ -29,6 +29,11 @@ public sealed record TranscriptLine(string Timestamp, string Label, string Text,
     /// <summary>The engine's segment id (history detail only; search opens a session there).</summary>
     public string? SegmentId { get; init; }
 
+    /// <summary>The live translation shown under the line (phase 29); null until it arrives.</summary>
+    public string? Translation { get; init; }
+
+    public bool HasTranslation => !string.IsNullOrEmpty(Translation);
+
     /// <summary>The line a search result opened (highlighted and scrolled into view).</summary>
     public bool IsFocused { get; init; }
 
