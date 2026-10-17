@@ -33,7 +33,7 @@ from vozata.domain import (
 )
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
-from vozata.ports import Diarizer, LanguageModelError, TranscriptSearch
+from vozata.ports import Diarizer, LanguageModelError, SpeakerEmbedder, TranscriptSearch
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
 from vozata.storage.session_store import SessionStore
@@ -119,6 +119,7 @@ class _Rig:
         diarizer_factory: Callable[[], Diarizer] | None = None,
         search_index: TranscriptSearch | None = None,
         vocabulary: tuple[str, ...] = (),
+        embedder_factory: Callable[[], SpeakerEmbedder] | None = None,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -154,6 +155,7 @@ class _Rig:
                 diarizer_factory=diarizer_factory,
                 search_index=search_index,
                 vocabulary=vocabulary,
+                embedder_factory=embedder_factory,
             ),
             self.observer,
             language,

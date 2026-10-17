@@ -160,6 +160,24 @@ public sealed partial class SessionDetailViewModel(
         }
     }
 
+    /// <summary>A <c>speakers_relabeled</c> event: reload the transcript (and speakers) when it is ours.</summary>
+    public async Task OnSpeakersRelabeledAsync(string? sessionId)
+    {
+        if (sessionId != Id)
+        {
+            return;
+        }
+
+        try
+        {
+            await ShowTranscriptAsync(CancellationToken.None);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            Error = ErrorText(error);
+        }
+    }
+
     /// <summary>An <c>error</c> event: ends our regeneration with the engine's message.</summary>
     public void OnError(string? sessionId, string message)
     {

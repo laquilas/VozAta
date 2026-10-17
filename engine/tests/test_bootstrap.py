@@ -5,7 +5,13 @@ from typing import Any
 
 import pytest
 
-from tests.fakes import FakeDiarizer, FakeLanguageModel, FakeSessionObserver, FakeTranscriber
+from tests.fakes import (
+    FakeDiarizer,
+    FakeEmbedder,
+    FakeLanguageModel,
+    FakeSessionObserver,
+    FakeTranscriber,
+)
 from vozata import bootstrap
 from vozata.audio.capture import WasapiSource
 from vozata.audio.chunker import FixedWindowChunker
@@ -102,6 +108,7 @@ def test_build_session_uses_the_default_devices_and_settings(
     assert components.chunker_factory is not None
     assert isinstance(components.chunker_factory(Channel.MIC, lambda chunk: None), VadChunker)
     assert components.diarizer_factory is None  # DIARIZATION_ENABLED defaults to false
+    assert components.embedder_factory is None  # LIVE_DIARIZATION_ENABLED defaults to false
     assert session._language is ConversationLanguage.ES
     assert isinstance(components.search_index, SearchIndex)
     assert components.search_index._path == tmp_path / "recordings" / "index.db"
@@ -474,6 +481,44 @@ def test_a_shared_transcriber_is_not_kept_when_speakers_are_identified(
     assert session._c.diarizer_factory is not None
     assert shared.loaded is False  # VRAM rule: Whisper never stays next to the diarizer
     assert fake.closed
+
+
+def test_the_live_embedder_is_built_lazily_from_its_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    built: list[Settings] = []
+    fake = FakeEmbedder()
+    monkeypatch.setitem(bootstrap.EMBEDDERS, "fake", lambda s: built.append(s) or fake)
+    settings = Settings(live_diarization_enabled=True, diarization_provider="fake")
+
+    factory = bootstrap.build_embedder_factory(settings)
+
+    assert factory is not None and built == []
+    assert factory() is fake
+    assert built == [settings]
+    assert bootstrap.build_embedder_factory(Settings(diarization_provider="fake")) is None
+    with pytest.raises(ConfigError) as caught:
+        bootstrap.build_embedder_factory(
+            Settings(live_diarization_enabled=True, diarization_provider="nope")
+        )
+    assert caught.value.key == "DIARIZATION_PROVIDER"
+
+
+def test_the_embedder_registry_holds_pyannote_and_needs_a_token() -> None:
+    with pytest.raises(ConfigError) as caught:
+        bootstrap.EMBEDDERS["pyannote"](Settings())
+
+    assert caught.value.key == "HF_TOKEN"
+
+
+def test_build_session_wires_the_live_embedder_when_enabled(
+    tmp_path: Path, devices: list[int]
+) -> None:
+    settings = _settings(tmp_path, live_diarization_enabled=True, hf_token="hf")
+
+    session = bootstrap.build_session(settings, FakeSessionObserver())
+
+    assert session._c.embedder_factory is not None
 
 
 def test_build_diarizer_ignores_the_enabled_flag_for_explicit_runs(

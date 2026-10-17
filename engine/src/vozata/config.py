@@ -88,6 +88,9 @@ class Settings:
     hf_token: str | None = None
     min_speakers: int | None = None
     max_speakers: int | None = None
+    # Live speaker identification (phase 15)
+    live_diarization_enabled: bool = False
+    speaker_similarity_threshold: float = 0.7
     # Pause-based segmentation (phase 27)
     chunk_mode: ChunkMode = ChunkMode.VAD
     vad_threshold: float = 0.5
@@ -173,6 +176,10 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         hf_token=raw.get("HF_TOKEN"),
         min_speakers=min_speakers,
         max_speakers=max_speakers,
+        live_diarization_enabled=_flag(raw, "LIVE_DIARIZATION_ENABLED", False),
+        speaker_similarity_threshold=_number(
+            raw, "SPEAKER_SIMILARITY_THRESHOLD", 0.7, minimum=0.05, maximum=1
+        ),
         chunk_mode=_choice(raw, "CHUNK_MODE", ChunkMode, ChunkMode.VAD),
         vad_threshold=_number(raw, "VAD_THRESHOLD", 0.5, minimum=0.01, maximum=0.99),
         vad_min_silence_ms=_integer(raw, "VAD_MIN_SILENCE_MS", 600, minimum=100, maximum=5000),

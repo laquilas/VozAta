@@ -109,6 +109,9 @@ class _EventObserver:
     def on_minutes_ready(self, session_id: str) -> None:
         self._send("minutes_ready", {"session_id": session_id})
 
+    def on_speakers_relabeled(self, session_id: str) -> None:
+        self._send("speakers_relabeled", {"session_id": session_id})
+
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         label = self._labeler.label(speaker_id)
         self._send(

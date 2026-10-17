@@ -222,6 +222,55 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Speakers_relabeled_reloads_the_live_lines_and_the_open_detail()
+    {
+        const string id = "20261015_100000";
+        _client.Sessions.Add(new SessionSummary(id, "done", null, null, 60, "pt", false));
+        _client.Details[id] = new SessionDetail(id, "done", null, null, 60, "pt", false, [], @"C:\r");
+        _client.Transcripts[id] = new Transcript("raw", [Line("system", "Others", 1, "Hi.")]);
+        var viewModel = await ReadyAsync();
+        viewModel.History.Selected = viewModel.History.Rows[0];
+        await viewModel.History.DetailLoading;
+        await SendAsync(viewModel, new SegmentEvent(id, Line("system", "User 2", 1, "Hi.")));
+        _client.Transcripts[id] = new Transcript("diarized", [Line("system", "User 1", 1, "Hi.")]);
+
+        await SendAsync(viewModel, new SpeakersRelabeledEvent(id));
+        await viewModel.HistoryRefresh;
+
+        Assert.Equal(["User 1"], viewModel.Segments.Select(line => line.Label));
+        Assert.Equal(["User 1"], viewModel.History.Detail!.Lines.Select(line => line.Label));
+    }
+
+    [Fact]
+    public async Task Speakers_relabeled_for_another_session_leaves_the_live_lines()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new SegmentEvent("s1", Line("system", "User 2", 1, "Hi.")));
+        _client.Transcripts["s0"] = new Transcript("diarized", [Line("system", "User 1", 1, "Old.")]);
+
+        await SendAsync(viewModel, new SpeakersRelabeledEvent("s0"));
+        await viewModel.HistoryRefresh;
+        await SendAsync(viewModel, new SpeakersRelabeledEvent(null));
+        await viewModel.HistoryRefresh;
+
+        Assert.Equal(["Hi."], viewModel.Segments.Select(line => line.Text));
+    }
+
+    [Fact]
+    public async Task A_failed_reload_after_relabeling_is_notified()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new SegmentEvent("s1", Line("system", "User 2", 1, "Hi.")));
+        _client.TranscriptError = new EngineUnavailableException("refused", new HttpRequestException("refused"));
+
+        await SendAsync(viewModel, new SpeakersRelabeledEvent("s1"));
+        await viewModel.HistoryRefresh;
+
+        Assert.Contains(_localization["EngineUnavailable"], viewModel.Notifications);
+        Assert.Equal(["User 2"], viewModel.Segments.Select(line => line.Label));
+    }
+
+    [Fact]
     public async Task The_history_texts_follow_the_ui_language()
     {
         _client.Sessions.Add(new SessionSummary("20261015_100000", "done", null, null, 60, "pt", true));

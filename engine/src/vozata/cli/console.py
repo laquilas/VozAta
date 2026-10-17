@@ -90,6 +90,9 @@ class ConsoleObserver:
         with self._lock:
             self._print(self._t("cli.minutes_ready"))
 
+    def on_speakers_relabeled(self, session_id: str) -> None:
+        pass  # the console already printed the live lines; the files hold the final speakers
+
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         pass  # interim text is a desktop feature (phase 28 scope)
 
