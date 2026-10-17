@@ -48,6 +48,8 @@ internal_error = "Error inesperado del motor. Consulta el registro del motor par
 answer_failed = "No se pudo responder a la pregunta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 answer_in_progress = "Todavía se está respondiendo otra pregunta. Espera a que termine y vuelve a preguntar."
 ask_unavailable = "Hacer preguntas sobre las reuniones no está disponible en este motor."
+session_not_interrupted = "La sesión \"{id}\" no se interrumpió, así que no hay nada que recuperar."
+recovery_failed = "La sesión \"{id}\" no se pudo recuperar ({reason}). Sus archivos se conservaron; el motivo está en session.json."
 
 [languages]
 en = "inglés"
@@ -109,6 +111,11 @@ diarize_failed = "No se pudo identificar a los participantes remotos ({reason}).
 no_system_speech = "La sesión en {folder} no tiene voz en el audio del sistema, así que no hay nadie a quien identificar."
 reindexed = "Índice de búsqueda reconstruido. Sesiones indexadas: {count}."
 reindex_failed = "No se pudo reconstruir el índice de búsqueda ({reason})."
+recovering = "Recuperando la sesión interrumpida {id}..."
+recovered = "Recuperada: {folder}"
+recover_failed = "La sesión {id} no se pudo recuperar ({reason}). Sus archivos se conservaron."
+recover_none = "No se encontraron sesiones interrumpidas."
+recover_not_interrupted = "La sesión en {folder} no se interrumpió, así que no hay nada que recuperar."
 
 [cli.devices]
 microphones = "Micrófonos:"
@@ -128,6 +135,8 @@ session_dir = "carpeta de la sesión, por ejemplo recordings/20261015_202358"
 diarize = "identifica a los participantes remotos de una sesión grabada (Usuario 1, Usuario 2, ...)"
 diarize_minutes = "vuelve a generar el acta después"
 reindex = "reconstruye el índice de búsqueda a partir de todas las sesiones grabadas"
+recover = "repara y finaliza una sesión interrumpida por un fallo (audio, hablantes, acta)"
+recover_all = "recupera todas las sesiones interrumpidas en OUTPUT_DIR"
 
 [export]
 title = "Reunión del {date}"

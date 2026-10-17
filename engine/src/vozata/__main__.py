@@ -1,4 +1,5 @@
-"""Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex`."""
+"""Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex |
+recover [<dir> | --all]`."""
 
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from vozata.cli.console import ConsoleObserver
 from vozata.cli.diarize import run_diarize
 from vozata.cli.minutes import run_minutes
 from vozata.cli.record import print_devices, run_record
+from vozata.cli.recover import run_recover
 from vozata.cli.reindex import run_reindex
 from vozata.cli.serve import run_serve
 from vozata.config import ConfigError, Settings, load_settings
@@ -58,6 +60,10 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     diarize.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
     diarize.add_argument("--minutes", action="store_true", help=t("cli.help.diarize_minutes"))
     commands.add_parser("reindex", help=t("cli.help.reindex"))
+    recover = commands.add_parser("recover", help=t("cli.help.recover"))
+    target = recover.add_mutually_exclusive_group(required=True)
+    target.add_argument("session_dir", type=Path, nargs="?", help=t("cli.help.session_dir"))
+    target.add_argument("--all", action="store_true", help=t("cli.help.recover_all"))
     return parser
 
 
@@ -108,6 +114,15 @@ def main(
             return run_reindex(
                 bootstrap.build_store(settings),
                 bootstrap.build_search_index(settings),
+                console,
+                localizer,
+            )
+        if args.command == "recover":
+            return run_recover(
+                None if args.all else args.session_dir,
+                lambda store: bootstrap.build_recovery(
+                    settings, store, stale_after=bootstrap.cli_stale_after(settings)
+                ),
                 console,
                 localizer,
             )

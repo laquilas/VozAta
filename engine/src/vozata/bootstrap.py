@@ -43,6 +43,7 @@ from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.session_minutes import stored_template, stored_vocabulary
 from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import (
     AudioMixer,
@@ -59,6 +60,7 @@ from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
+from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_store import SessionStore
 from vozata.transcription import openai_compatible
@@ -272,6 +274,87 @@ def build_session(
         observer,
         language or settings.transcription_language,
     )
+
+
+class _CaptureOver:
+    """The clock of a recovered session: capture ended with the crash (phase 17)."""
+
+    def start(self) -> None:
+        pass
+
+    def now(self) -> float:
+        return 0.0
+
+
+def _no_transcriber() -> Transcriber:
+    raise RuntimeError("A recovered session is not transcribed again")
+
+
+def build_recovery_session(
+    settings: Settings, store: SessionStore, observer: SessionObserver, session_id: str
+) -> RecordingSession:
+    """A `RecordingSession` that finishes an interrupted session (phase 17).
+
+    Nothing is captured or transcribed; the minutes template, glossary and mix mode come from the
+    session's `session.json`, so the result matches what its own stop would have produced. The
+    search index is the one of `OUTPUT_DIR`, used only when the session lives there.
+    """
+    meta = store.read_meta(session_id)
+    localizer = build_localizer(settings)
+    template = stored_template(meta) or settings.minutes_template
+    minutes = (
+        build_minutes_generator(settings, localizer, template)
+        if settings.generate_minutes
+        else None
+    )
+    recorded = meta.get("settings")
+    mix_value = recorded.get("MIX_MODE") if isinstance(recorded, dict) else None
+    mix_mode = MixMode(mix_value) if mix_value in set(MixMode) else settings.mix_mode
+    in_output_dir = store.paths(session_id).root.parent.resolve() == settings.output_dir.resolve()
+    components = SessionComponents(
+        sources={},
+        device_names={},
+        clock=_CaptureOver(),
+        transcriber_factory=_no_transcriber,
+        mixer=MIXERS[mix_mode](),
+        minutes=minutes,
+        localizer=localizer,
+        labeler=build_labeler(settings, localizer),
+        diarizer_factory=build_diarizer_factory(settings),
+        search_index=build_search_index(settings) if in_output_dir else None,
+        minutes_template=template,
+        vocabulary=tuple(stored_vocabulary(meta)),
+    )
+    return RecordingSession(settings, store, components, observer, settings.transcription_language)
+
+
+def build_recovery(
+    settings: Settings,
+    store: SessionStore | None = None,
+    *,
+    stale_after: float = 0.0,
+    current: Callable[[], Settings] | None = None,
+    before_finish: Callable[[], None] = lambda: None,
+) -> SessionRecovery:
+    """Crash recovery over `store` (default: `OUTPUT_DIR`).
+
+    `current` gives the settings each recovery uses (`serve`: the ones saved through
+    `PUT /settings`); `before_finish` runs before the stop steps (`serve`: unload a kept Whisper,
+    VRAM rule). `stale_after` > 0 leaves alone sessions with a recent heartbeat (CLI).
+    """
+    store = store or build_store(settings)
+    settings_now = current or (lambda: settings)
+
+    def session(session_id: str, observer: SessionObserver) -> RecordingSession:
+        before_finish()
+        return build_recovery_session(settings_now(), store, observer, session_id)
+
+    return SessionRecovery(store, settings.sample_rate, session, stale_after)
+
+
+def cli_stale_after(settings: Settings) -> float:
+    """How old a heartbeat must be before the CLI treats a session as interrupted (phase 17)."""
+    return 2 * settings.autosave_seconds + 5
 
 
 def _devices(
