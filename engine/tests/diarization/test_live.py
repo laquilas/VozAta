@@ -159,6 +159,22 @@ def test_a_failing_embedder_disables_the_tagger(caplog: pytest.LogCaptureFixture
     assert len(embedder.calls) == 1
 
 
+def test_close_releases_the_embedder_and_logs_a_failure(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class _FailingClose(FakeEmbedder):
+        def close(self) -> None:
+            super().close()
+            raise RuntimeError("pipe closed")
+
+    embedder = _FailingClose()
+
+    _tagger(embedder).close()
+
+    assert embedder.closed
+    assert "Releasing the speaker embedder failed" in caplog.text
+
+
 def test_disable_turns_tagging_off() -> None:
     embedder = FakeEmbedder([[1, 0]])
     tagger = _tagger(embedder)

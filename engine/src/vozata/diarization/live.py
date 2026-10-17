@@ -55,6 +55,13 @@ class LiveSpeakerTagger:
             _log.warning("Live speaker identification disabled: %s", reason)
         self.disabled = True
 
+    def close(self) -> None:
+        """Release the embedder; a failure is logged (the session goes on)."""
+        try:
+            self._embedder.close()
+        except Exception:
+            _log.exception("Releasing the speaker embedder failed")
+
     def tag(self, segment: TranscriptSegment, samples: np.ndarray) -> TranscriptSegment:
         if segment.channel is not Channel.SYSTEM or self.disabled:
             return segment
