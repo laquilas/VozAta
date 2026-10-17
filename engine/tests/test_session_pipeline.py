@@ -22,11 +22,12 @@ def test_the_deferred_transcriber_delegates_once_loaded_and_leaves_closing_to_th
     deferred = _DeferredTranscriber(lambda: fake, observer, lambda error: None)
 
     assert deferred.load()
-    deferred.transcribe(np.ones(4, np.float32), "pt", "hint")
+    deferred.transcribe(np.ones(4, np.float32), "pt", "hint", prompt="context")
     deferred.close()
 
     assert deferred.loaded is fake
     assert [(language, hints) for _, language, hints in fake.calls] == [("pt", "hint")]
+    assert fake.prompts == ["context"]
     assert not fake.closed
     assert observer.of("model_loading") == [(True,), (False,)]
 

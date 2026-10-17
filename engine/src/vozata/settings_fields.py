@@ -102,6 +102,9 @@ FIELDS: tuple[Field, ...] = (
     Field("ECHO_DEDUPE_ENABLED", "echo_dedupe_enabled", "bool", group="transcription"),
     Field("ECHO_SIMILARITY", "echo_similarity", "number", group="transcription"),
     Field("ECHO_HOLD_SECONDS", "echo_hold_seconds", "number", group="transcription"),
+    # Custom vocabulary (phase 19)
+    Field("VOCABULARY_FILE", "vocabulary_file", "path", group="transcription"),
+    Field("CONTEXT_PROMPT_CHARS", "context_prompt_chars", "integer", group="transcription"),
     # Editable transcript (phase 21)
     Field("LOW_CONFIDENCE_THRESHOLD", "low_confidence_threshold", "number", group="transcription"),
     # Minutes (phase 04)

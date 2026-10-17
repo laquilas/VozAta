@@ -450,6 +450,51 @@
   <data name="SettingHelp_ECHO_HOLD_SECONDS" xml:space="preserve">
     <value>Cuánto esperan las líneas del micrófono a la línea correspondiente del sistema; aparecen ese tiempo después. Vacío: duración del fragmento + 3 s.</value>
   </data>
+  <data name="Setting_VOCABULARY_FILE" xml:space="preserve">
+    <value>Archivo de vocabulario</value>
+  </data>
+  <data name="SettingHelp_VOCABULARY_FILE" xml:space="preserve">
+    <value>Archivo de texto con un término por línea (# inicia un comentario), editado en la tarjeta Vocabulario de arriba. Vacío: vocabulary.txt junto al .env del motor.</value>
+  </data>
+  <data name="Setting_CONTEXT_PROMPT_CHARS" xml:space="preserve">
+    <value>Contexto para el modelo de voz (caracteres)</value>
+  </data>
+  <data name="SettingHelp_CONTEXT_PROMPT_CHARS" xml:space="preserve">
+    <value>Cuánto del texto reciente de cada canal se da al modelo de voz para mantener nombres y ortografía coherentes (0 a 1000, 0 = desactivado).</value>
+  </data>
+  <data name="VocabularyTitle" xml:space="preserve">
+    <value>Vocabulario</value>
+  </data>
+  <data name="VocabularyHelp" xml:space="preserve">
+    <value>Nombres, siglas y términos de producto que el modelo de voz debe reconocer y que el acta debe escribir así. Se usan en todas las grabaciones.</value>
+  </data>
+  <data name="VocabularyNewTerm" xml:space="preserve">
+    <value>Nuevo término</value>
+  </data>
+  <data name="VocabularyAdd" xml:space="preserve">
+    <value>Agregar</value>
+  </data>
+  <data name="VocabularyRemove" xml:space="preserve">
+    <value>Quitar</value>
+  </data>
+  <data name="VocabularyEmpty" xml:space="preserve">
+    <value>Todavía no hay términos.</value>
+  </data>
+  <data name="VocabularyImportHint" xml:space="preserve">
+    <value>Pega términos separados por comas o saltos de línea</value>
+  </data>
+  <data name="VocabularyImport" xml:space="preserve">
+    <value>Importar</value>
+  </data>
+  <data name="VocabularySaved" xml:space="preserve">
+    <value>Vocabulario guardado.</value>
+  </data>
+  <data name="SessionTerms" xml:space="preserve">
+    <value>Términos de esta reunión</value>
+  </data>
+  <data name="SessionTermsHint" xml:space="preserve">
+    <value>Nombres y términos, separados por comas o saltos de línea</value>
+  </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Proveedor del modelo del acta</value>
   </data>

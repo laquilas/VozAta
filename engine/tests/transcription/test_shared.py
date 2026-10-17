@@ -23,12 +23,13 @@ def test_leases_that_keep_the_model_reuse_one_load() -> None:
     first = shared.lease(keep=True)
     first.close()
     second = shared.lease(keep=True)
-    second.transcribe(np.ones(4, np.float32), "pt")
+    second.transcribe(np.ones(4, np.float32), "pt", "Avalonia", "Bom dia.")
 
     assert isinstance(first, Transcriber)
     assert len(loader.models) == 1
     assert not loader.models[0].closed
-    assert len(loader.models[0].calls) == 1
+    assert loader.models[0].calls[0][2] == "Avalonia"
+    assert loader.models[0].prompts == ["Bom dia."]
     assert shared.loaded
 
 

@@ -17,6 +17,7 @@ from vozata.transcription.cuda import register_cuda_dlls
 _log = logging.getLogger(__name__)
 
 ModelFactory = Callable[..., Any]
+HALLUCINATION_SILENCE_SECONDS = 2.0  # skip silent stretches where Whisper tends to invent text
 
 
 def _whisper_model(size: str, device: str, compute_type: str) -> Any:  # pragma: no cover - GPU
@@ -59,7 +60,11 @@ class FasterWhisperTranscriber:
         return "cpu", factory(settings.whisper_cpu_model, device="cpu", compute_type="int8")
 
     def transcribe(
-        self, samples: np.ndarray, language: str | None, hints: str | None = None
+        self,
+        samples: np.ndarray,
+        language: str | None,
+        hints: str | None = None,
+        prompt: str | None = None,
     ) -> TranscriptionResult:
         if self._model is None:
             raise RuntimeError("FasterWhisperTranscriber is closed")
@@ -70,16 +75,28 @@ class FasterWhisperTranscriber:
             vad_filter=True,
             condition_on_previous_text=False,
             beam_size=1,
-            hotwords=hints if hints and hints.strip() else None,
+            hotwords=_text(hints),
+            initial_prompt=_text(prompt),
+            hallucination_silence_threshold=HALLUCINATION_SILENCE_SECONDS,
         )
+        segments = list(segments)
         words = tuple(
             Word(word.word, word.start, word.end, min(1.0, max(0.0, word.probability)))
             for segment in segments
             for word in segment.words or ()
         )
-        return TranscriptionResult(words=words, language=info.language)
+        logprobs = [segment.avg_logprob for segment in segments]
+        return TranscriptionResult(
+            words=words,
+            language=info.language,
+            avg_logprob=sum(logprobs) / len(logprobs) if logprobs else None,
+        )
 
     def close(self) -> None:
         """Release the model (frees VRAM before diarization or the LLM run)."""
         self._model = None
         gc.collect()
+
+
+def _text(value: str | None) -> str | None:
+    return value if value and value.strip() else None

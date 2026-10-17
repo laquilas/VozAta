@@ -23,6 +23,7 @@ class FakeWord:
 @dataclass
 class FakeSegment:
     words: list[FakeWord] | None
+    avg_logprob: float = -0.2
 
 
 @dataclass
@@ -105,10 +106,12 @@ def test_transcribe_passes_streaming_options_and_maps_words() -> None:
     model = factory.models[0]
     model.segments = [
         FakeSegment([FakeWord(" Olá", 0.1, 0.4, 0.97), FakeWord(" mundo.", 0.5, 0.9, 1.2)]),
-        FakeSegment(None),
+        FakeSegment(None, avg_logprob=-0.4),
     ]
 
-    result = transcriber.transcribe(np.zeros(16000, dtype=np.float32), "pt", hints="Avalonia")
+    result = transcriber.transcribe(
+        np.zeros(16000, dtype=np.float32), "pt", hints="Avalonia", prompt="Bom dia."
+    )
 
     assert model.calls[-1] == {
         "language": "pt",
@@ -117,6 +120,8 @@ def test_transcribe_passes_streaming_options_and_maps_words() -> None:
         "condition_on_previous_text": False,
         "beam_size": 1,
         "hotwords": "Avalonia",
+        "initial_prompt": "Bom dia.",
+        "hallucination_silence_threshold": 2.0,
     }
     assert [(w.text, w.start, w.end) for w in result.words] == [
         (" Olá", 0.1, 0.4),
@@ -124,15 +129,18 @@ def test_transcribe_passes_streaming_options_and_maps_words() -> None:
     ]
     assert result.words[1].probability == 1.0  # clamped to [0, 1]
     assert result.language == "pt"
+    assert result.avg_logprob == pytest.approx(-0.3)
 
 
 def test_blank_hints_are_not_sent() -> None:
     factory = Factory()
     transcriber = make(WhisperDevice.CPU, factory)
 
-    transcriber.transcribe(np.zeros(10, dtype=np.float32), None, hints="  ")
+    result = transcriber.transcribe(np.zeros(10, dtype=np.float32), None, "  ", prompt=" ")
 
     assert factory.models[0].calls[-1]["hotwords"] is None
+    assert factory.models[0].calls[-1]["initial_prompt"] is None
+    assert result.avg_logprob is None  # no segments
 
 
 def test_close_releases_the_model() -> None:

@@ -28,6 +28,7 @@ unsupported_format = "Unsupported export format \"{format}\". Use one of: {allow
 settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
+vocabulary_failed = "The vocabulary file could not be read or saved ({reason})."
 unknown_template = "Unknown minutes template \"{id}\". Use one of: {allowed}."
 unknown_speaker = "Unknown speaker \"{id}\" for this session. Use one of: {allowed}."
 not_found = "This endpoint does not exist."
@@ -68,6 +69,7 @@ Write concise notes in {output_language} with what this part says for these head
 {guidance}
 Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
+glossary = "Glossary: these names and terms may appear in the transcript, possibly misheard. Use exactly these spellings: {terms}"
 transcript_label = "Transcript:"
 notes_label = "Notes:"
 

@@ -59,13 +59,19 @@ class FakeTranscriber:
 
     def __init__(self, results: list[TranscriptionResult] | None = None) -> None:
         self.results = list(results or [])
-        self.calls: list[tuple[np.ndarray, str | None, str | None]] = []
+        self.calls: list[tuple[np.ndarray, str | None, str | None]] = []  # samples, language, hints
+        self.prompts: list[str | None] = []  # rolling context prompt of each call (phase 19)
         self.closed = False
 
     def transcribe(
-        self, samples: np.ndarray, language: str | None, hints: str | None = None
+        self,
+        samples: np.ndarray,
+        language: str | None,
+        hints: str | None = None,
+        prompt: str | None = None,
     ) -> TranscriptionResult:
         self.calls.append((samples, language, hints))
+        self.prompts.append(prompt)
         if self.results and np.any(samples):
             return self.results.pop(0)
         return TranscriptionResult(words=(), language=language)

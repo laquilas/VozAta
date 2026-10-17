@@ -95,6 +95,24 @@ def test_auto_language_and_no_hints_send_no_fields_and_no_key_sends_no_header() 
     assert "authorization" not in api.requests[0].headers
 
 
+def test_vocabulary_and_context_share_the_prompt_field() -> None:
+    api = Api()
+
+    api.transcriber().transcribe(SPEECH, "pt", hints="VozAta", prompt="Bom dia a todos.")
+    api.transcriber().transcribe(SPEECH, "pt", hints=" ", prompt="Só contexto.")
+
+    assert fields(api.requests[0])["prompt"] == b"VozAta Bom dia a todos."
+    assert fields(api.requests[1])["prompt"] == "Só contexto.".encode()
+
+
+def test_avg_logprob_is_the_mean_of_the_reply_segments() -> None:
+    reply = {**REPLY, "segments": [{"avg_logprob": -0.2}, {"avg_logprob": -0.6}, {"id": 3}]}
+    api = Api(httpx.Response(200, json=reply), httpx.Response(200, json=REPLY))
+
+    assert api.transcriber().transcribe(SPEECH, None).avg_logprob == pytest.approx(-0.4)
+    assert api.transcriber().transcribe(SPEECH, None).avg_logprob is None
+
+
 def test_words_get_their_punctuation_back_and_the_language_becomes_a_code() -> None:
     result = Api().transcriber().transcribe(SPEECH, None)
 

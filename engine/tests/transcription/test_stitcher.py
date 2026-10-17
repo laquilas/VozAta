@@ -7,6 +7,7 @@ from tests.fakes import FakeTranscriber
 from tests.transcription.contract import check_transcriber_contract
 from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel, TranscriptionResult, Word
+from vozata.transcription.context import RollingContext
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 
 RATE = 16000
@@ -324,3 +325,98 @@ def test_partial_without_words_is_none() -> None:
     fake = FakeTranscriber([result()])
 
     assert make(fake).partial(chunk(start=0.0, seconds=2.0)) is None
+
+
+def context_stitcher(
+    fake: FakeTranscriber, language: FakeLanguage | None = None, chars: int = 200
+) -> CarryOverStitcher:
+    return CarryOverStitcher(
+        Channel.MIC,
+        fake,
+        Settings(),
+        language or FakeLanguage(),
+        SegmentIds().next,
+        hints="Avalonia",
+        context=RollingContext(chars),
+    )
+
+
+def test_committed_text_is_the_prompt_of_the_next_chunk_with_the_hints() -> None:
+    fake = FakeTranscriber([result(w(" Bom dia.", 0.1, 0.9)), result(w(" Vamos lá.", 0.1, 0.9))])
+    stitcher = context_stitcher(fake)
+
+    stitcher.on_chunk(complete_chunk(0.0))
+    stitcher.on_chunk(complete_chunk(2.0))
+    stitcher.on_chunk(complete_chunk(4.0))
+
+    assert fake.prompts == [None, "Bom dia.", "Bom dia. Vamos lá."]
+    assert [hints for _, _, hints in fake.calls] == ["Avalonia"] * 3
+
+
+def test_the_context_prompt_is_cut_to_the_configured_length() -> None:
+    fake = FakeTranscriber([result(w(" one two three four.", 0.1, 0.9))])
+    stitcher = context_stitcher(fake, chars=12)
+
+    stitcher.on_chunk(complete_chunk(0.0))
+    stitcher.on_chunk(complete_chunk(2.0))
+
+    assert fake.prompts[1] == "three four."
+
+
+def test_the_context_resets_when_the_language_locks() -> None:
+    language = FakeLanguage(code=None)
+    fake = FakeTranscriber([result(w(" Olá.", 0.1, 0.9), language="pt")])
+    stitcher = context_stitcher(fake, language)
+
+    stitcher.on_chunk(complete_chunk(0.0))
+    language.code = "pt"  # `auto` locked
+    stitcher.on_chunk(complete_chunk(2.0))
+
+    assert fake.prompts == [None, None]
+
+
+def test_the_context_is_skipped_for_the_next_chunk_after_a_repeated_segment() -> None:
+    fake = FakeTranscriber(
+        [
+            result(w(" Thank you.", 0.1, 0.9)),
+            result(w(" Thank you.", 0.1, 0.9)),
+            result(w(" Bye.", 0.1, 0.9)),
+        ]
+    )
+    stitcher = context_stitcher(fake)
+
+    for start in (0.0, 2.0, 4.0, 6.0):
+        stitcher.on_chunk(complete_chunk(start))
+
+    assert fake.prompts == [None, "Thank you.", None, "Thank you. Bye."]
+
+
+def test_the_context_is_skipped_after_a_very_unsure_transcription() -> None:
+    unsure = TranscriptionResult(words=(w(" Hmm.", 0.1, 0.9),), language="en", avg_logprob=-1.4)
+    fake = FakeTranscriber([result(w(" Hello.", 0.1, 0.9)), unsure])
+    stitcher = context_stitcher(fake)
+
+    for start in (0.0, 2.0, 4.0, 6.0):
+        stitcher.on_chunk(complete_chunk(start))
+
+    assert fake.prompts == [None, "Hello.", None, "Hello. Hmm."]
+
+
+def test_interim_text_uses_the_context_without_consuming_a_skip() -> None:
+    fake = FakeTranscriber([result(w(" Hello.", 0.1, 0.9)), result(w(" Hel", 0.1, 0.5))])
+    stitcher = context_stitcher(fake)
+    stitcher.on_chunk(complete_chunk(0.0))
+
+    stitcher.partial(complete_chunk(2.0, seconds=1.5))
+
+    assert fake.prompts == [None, "Hello."]
+
+
+def test_without_a_context_no_prompt_is_sent() -> None:
+    fake = FakeTranscriber([result(w(" Hello.", 0.1, 0.9))])
+    stitcher = make(fake)
+
+    stitcher.on_chunk(complete_chunk(0.0))
+    stitcher.on_chunk(complete_chunk(2.0))
+
+    assert fake.prompts == [None, None]

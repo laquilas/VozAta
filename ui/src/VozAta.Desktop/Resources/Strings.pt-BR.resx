@@ -450,6 +450,51 @@
   <data name="SettingHelp_ECHO_HOLD_SECONDS" xml:space="preserve">
     <value>Quanto tempo as linhas do microfone esperam a linha correspondente do sistema; elas aparecem esse tempo depois. Vazio: duração do trecho + 3 s.</value>
   </data>
+  <data name="Setting_VOCABULARY_FILE" xml:space="preserve">
+    <value>Arquivo de vocabulário</value>
+  </data>
+  <data name="SettingHelp_VOCABULARY_FILE" xml:space="preserve">
+    <value>Arquivo de texto com um termo por linha (# inicia um comentário), editado no cartão Vocabulário acima. Vazio: vocabulary.txt ao lado do .env do motor.</value>
+  </data>
+  <data name="Setting_CONTEXT_PROMPT_CHARS" xml:space="preserve">
+    <value>Contexto para o modelo de fala (caracteres)</value>
+  </data>
+  <data name="SettingHelp_CONTEXT_PROMPT_CHARS" xml:space="preserve">
+    <value>Quanto do texto recente de cada canal é dado ao modelo de fala para manter nomes e grafia consistentes (0 a 1000, 0 = desligado).</value>
+  </data>
+  <data name="VocabularyTitle" xml:space="preserve">
+    <value>Vocabulário</value>
+  </data>
+  <data name="VocabularyHelp" xml:space="preserve">
+    <value>Nomes, siglas e termos de produto que o modelo de fala deve reconhecer e que a ata deve escrever assim. Usados em todas as gravações.</value>
+  </data>
+  <data name="VocabularyNewTerm" xml:space="preserve">
+    <value>Novo termo</value>
+  </data>
+  <data name="VocabularyAdd" xml:space="preserve">
+    <value>Adicionar</value>
+  </data>
+  <data name="VocabularyRemove" xml:space="preserve">
+    <value>Remover</value>
+  </data>
+  <data name="VocabularyEmpty" xml:space="preserve">
+    <value>Nenhum termo ainda.</value>
+  </data>
+  <data name="VocabularyImportHint" xml:space="preserve">
+    <value>Cole termos separados por vírgulas ou quebras de linha</value>
+  </data>
+  <data name="VocabularyImport" xml:space="preserve">
+    <value>Importar</value>
+  </data>
+  <data name="VocabularySaved" xml:space="preserve">
+    <value>Vocabulário salvo.</value>
+  </data>
+  <data name="SessionTerms" xml:space="preserve">
+    <value>Termos desta reunião</value>
+  </data>
+  <data name="SessionTermsHint" xml:space="preserve">
+    <value>Nomes e termos, separados por vírgulas ou quebras de linha</value>
+  </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Provedor do modelo da ata</value>
   </data>

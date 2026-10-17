@@ -28,6 +28,7 @@ unsupported_format = "Formato de exportación no admitido: \"{format}\". Usa uno
 settings_write_failed = "No se pudo guardar el archivo de configuración ({reason}). Cierra los programas que puedan estar usándolo, como una herramienta de sincronización, e inténtalo de nuevo."
 minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 empty_transcript = "La sesión \"{id}\" no tiene transcripción, así que no hay nada que resumir."
+vocabulary_failed = "No se pudo leer ni guardar el archivo de vocabulario ({reason})."
 unknown_template = "Plantilla de acta desconocida \"{id}\". Usa una de estas: {allowed}."
 unknown_speaker = "Participante desconocido \"{id}\" en esta sesión. Usa uno de estos: {allowed}."
 not_found = "Este endpoint no existe."
@@ -68,6 +69,7 @@ Escribe notas concisas en {output_language} con lo que esta parte dice para esto
 {guidance}
 Usa solo hechos de esta parte."""
 reduce_instructions = "Estas son notas de partes consecutivas de una misma reunión realizada en {conversation_language}. Combínalas en el acta de la reunión."
+glossary = "Glosario: estos nombres y términos pueden aparecer en la transcripción, quizá mal reconocidos. Usa exactamente esta ortografía: {terms}"
 transcript_label = "Transcripción:"
 notes_label = "Notas:"
 

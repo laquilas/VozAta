@@ -60,6 +60,13 @@ public interface IEngineClient
 
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /vocabulary</c> (phase 19): the glossary terms.</summary>
+    Task<IReadOnlyList<string>> GetVocabularyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>PUT /vocabulary</c>: replaces the glossary; returns the terms as the engine cleaned them.</summary>
+    Task<IReadOnlyList<string>> UpdateVocabularyAsync(
+        IReadOnlyList<string> terms, CancellationToken cancellationToken = default);
+
     /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
     Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default);
@@ -162,6 +169,14 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);
+
+    public async Task<IReadOnlyList<string>> GetVocabularyAsync(CancellationToken cancellationToken = default) =>
+        (await SendAsync<VocabularyTerms>(HttpMethod.Get, "vocabulary", null, cancellationToken)).Terms;
+
+    public async Task<IReadOnlyList<string>> UpdateVocabularyAsync(
+        IReadOnlyList<string> terms, CancellationToken cancellationToken = default) =>
+        (await SendAsync<VocabularyTerms>(
+            HttpMethod.Put, "vocabulary", new VocabularyTerms(terms), cancellationToken)).Terms;
 
     public async Task<ExportedFile> ExportSessionAsync(
         string id, string format, CancellationToken cancellationToken = default)

@@ -23,6 +23,7 @@ from vozata.api.routes import (
     speakers,
     templates,
     transcript_edit,
+    vocabulary,
 )
 from vozata.api.schemas import ErrorResponse
 
@@ -52,6 +53,7 @@ def create_app(container: ApiContainer) -> FastAPI:
         settings,
         search,
         templates,
+        vocabulary,
     ):
         app.include_router(module.router, responses=ERROR_RESPONSES)
     app.include_router(ask_routes.router, responses=ERROR_RESPONSES)  # phase 24

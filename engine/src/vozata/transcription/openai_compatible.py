@@ -54,17 +54,25 @@ class OpenAICompatibleTranscriber:
             self._check_word_timestamps()
 
     def transcribe(
-        self, samples: np.ndarray, language: str | None, hints: str | None = None
+        self,
+        samples: np.ndarray,
+        language: str | None,
+        hints: str | None = None,
+        prompt: str | None = None,
     ) -> TranscriptionResult:
         if not np.any(samples):
             return TranscriptionResult(words=(), language=language)  # silence costs nothing
-        reply = self._request(samples, language, hints)
+        reply = self._request(samples, language, _joined(hints, prompt))
         if not isinstance(reply.get("words"), list):
             raise TranscriptionRequestError(
                 f"The speech API at {self._host} returned no word timestamps"
             )
         words = _with_punctuation(reply["words"], str(reply.get("text", "")))
-        return TranscriptionResult(words=words, language=_language_code(reply.get("language")))
+        return TranscriptionResult(
+            words=words,
+            language=_language_code(reply.get("language")),
+            avg_logprob=_avg_logprob(reply.get("segments")),
+        )
 
     def close(self) -> None:
         self._client.close()
@@ -150,6 +158,23 @@ def _with_punctuation(words: Sequence[dict[str, Any]], text: str) -> tuple[Word,
         result.append(Word(f" {spelled}", float(first["start"]), float(words[last]["end"]), 1.0))
         index = last + 1
     return tuple(result)
+
+
+def _joined(hints: str | None, prompt: str | None) -> str | None:
+    """One `prompt` field: the vocabulary, then the recent text (the model weighs the end most)."""
+    parts = [part.strip() for part in (hints, prompt) if part and part.strip()]
+    return " ".join(parts) or None
+
+
+def _avg_logprob(segments: object) -> float | None:
+    if not isinstance(segments, list):
+        return None
+    values = [
+        float(segment["avg_logprob"])
+        for segment in segments
+        if isinstance(segment, dict) and isinstance(segment.get("avg_logprob"), int | float)
+    ]
+    return sum(values) / len(values) if values else None
 
 
 def _core(text: str) -> str:

@@ -307,6 +307,39 @@ internal sealed class FakeEngineClient : IEngineClient
         return SearchError is null ? new SearchResults([.. SearchHits.Take(limit)]) : throw SearchError;
     }
 
+    /// <summary>The glossary (phase 19); updates replace it with trimmed, deduplicated terms.</summary>
+    public List<string> VocabularyTerms { get; } = [];
+
+    public List<IReadOnlyList<string>> VocabularyUpdates { get; } = [];
+
+    public Exception? VocabularyError { get; set; }
+
+    public Task<IReadOnlyList<string>> GetVocabularyAsync(CancellationToken cancellationToken = default)
+    {
+        Calls.Add("vocabulary");
+        return VocabularyError is null
+            ? Task.FromResult<IReadOnlyList<string>>([.. VocabularyTerms])
+            : Task.FromException<IReadOnlyList<string>>(VocabularyError);
+    }
+
+    public Task<IReadOnlyList<string>> UpdateVocabularyAsync(
+        IReadOnlyList<string> terms, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("update-vocabulary");
+        VocabularyUpdates.Add(terms);
+        if (VocabularyError is not null)
+        {
+            return Task.FromException<IReadOnlyList<string>>(VocabularyError);
+        }
+
+        VocabularyTerms.Clear();
+        VocabularyTerms.AddRange(terms
+            .Select(term => term.Trim())
+            .Where(term => term.Length > 0)
+            .DistinctBy(term => term.ToUpperInvariant()));
+        return Task.FromResult<IReadOnlyList<string>>([.. VocabularyTerms]);
+    }
+
     /// <summary>Every <c>POST /ask</c> (phase 24): question and scope.</summary>
     public List<(string Question, string? SessionId)> Questions { get; } = [];
 

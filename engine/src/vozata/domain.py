@@ -99,6 +99,7 @@ class TranscriptionResult:
 
     words: tuple[Word, ...]
     language: str | None
+    avg_logprob: float | None = None  # mean segment log probability, when the provider has it
 
 
 @dataclass(frozen=True)

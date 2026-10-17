@@ -16,6 +16,7 @@ import numpy as np
 from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel, TranscriptSegment, Word
 from vozata.ports import Transcriber
+from vozata.transcription.context import RollingContext
 
 _SENTENCE_END = (".", "?", "!", "…")
 MAX_WORD_TAIL_SECONDS = 0.3  # Whisper word ends run early; voiced audio may continue this long
@@ -41,7 +42,12 @@ class SegmentIds:
 
 
 class CarryOverStitcher:
-    """Turn one channel's windows into transcript segments ending at phrase boundaries."""
+    """Turn one channel's windows into transcript segments ending at phrase boundaries.
+
+    `hints` (vocabulary, phase 19) go with every transcription; `context` (the channel's rolling
+    context prompt, O4) gives each transcription the recent committed text and learns every
+    committed segment.
+    """
 
     def __init__(
         self,
@@ -51,6 +57,7 @@ class CarryOverStitcher:
         language_provider: LanguageProvider,
         id_factory: Callable[[Channel], str],
         hints: str | None = None,
+        context: RollingContext | None = None,
     ) -> None:
         self._channel = channel
         self._transcriber = transcriber
@@ -58,6 +65,7 @@ class CarryOverStitcher:
         self._language = language_provider
         self._next_id = id_factory
         self._hints = hints
+        self._context = context or RollingContext(0)
         self._pending = np.zeros(0, dtype=np.float32)
         self._pending_start = 0.0
 
@@ -67,7 +75,7 @@ class CarryOverStitcher:
         audio_start = self._pending_start if has_pending else chunk.start
         if not has_pending and _rms(audio) < self._settings.silence_rms_threshold:
             return []
-        words = self._transcribe(audio)
+        words = self._transcribe(audio, audio_start)
         if not words:
             self._clear()
             return []
@@ -104,7 +112,10 @@ class CarryOverStitcher:
         if self._voiced_seconds(audio) < MIN_PARTIAL_SPEECH_SECONDS:
             return None
         start = self._pending_start if len(self._pending) else tail.start  # type: ignore[union-attr]
-        result = self._transcriber.transcribe(audio, self._language.current(), self._hints)
+        language = self._language.current()
+        self._context.language(language)
+        prompt = self._context.prompt()
+        result = self._transcriber.transcribe(audio, language, self._hints, prompt)
         text = "".join(word.text for word in result.words).strip()
         return (start, text) if text else None
 
@@ -114,11 +125,15 @@ class CarryOverStitcher:
             return []
         audio, audio_start = self._pending, self._pending_start
         self._clear()
-        words = self._transcribe(audio)
+        words = self._transcribe(audio, audio_start)
         return [self._segment(words, audio_start)] if words else []
 
-    def _transcribe(self, audio: np.ndarray) -> tuple[Word, ...]:
-        result = self._transcriber.transcribe(audio, self._language.current(), self._hints)
+    def _transcribe(self, audio: np.ndarray, at: float) -> tuple[Word, ...]:
+        language = self._language.current()
+        self._context.language(language)
+        prompt = self._context.take(at)
+        result = self._transcriber.transcribe(audio, language, self._hints, prompt)
+        self._context.observe(result.avg_logprob)
         if result.words:
             speech = sum(word.end - word.start for word in result.words)
             self._language.observe(result.language, speech)
@@ -162,7 +177,7 @@ class CarryOverStitcher:
             Word(word.text.strip(), offset + word.start, offset + word.end, word.probability)
             for word in words
         )
-        return TranscriptSegment(
+        segment = TranscriptSegment(
             segment_id=self._next_id(self._channel),
             channel=self._channel,
             speaker_id=self._channel.value,
@@ -171,6 +186,8 @@ class CarryOverStitcher:
             text="".join(word.text for word in words).strip(),
             words=absolute,
         )
+        self._context.commit(segment.text, segment.end)
+        return segment
 
     def _clear(self) -> None:
         self._pending = np.zeros(0, dtype=np.float32)
