@@ -56,3 +56,25 @@ Calendar invites, Jira (another `TaskExporter` later).
 
 > Execute phase 23 of the roadmap (`docs/roadmap/phases/23-action-items.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/23-action-items`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** add `ActionItem` to `domain.py` and `action_items.json` read/write in `storage/`
+
+### Steps
+
+- [ ] Domain `ActionItem` + `storage/action_items.py` (`action_items.json`)
+- [ ] `minutes/action_items.py`: `ActionItemExtractor` (localized prompt, JSON schema, one retry)
+- [ ] Config keys `EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*` (secrets masked) + `.env.example`
+- [ ] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
+- [ ] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
+- [ ] API: `POST/GET/PUT /sessions/{id}/action-items`, `POST .../export`
+- [ ] UI: client methods + DTOs, `ActionItemsViewModel`, "Action items" tab, resources
+- [ ] Docs (architecture, api-contract), acceptance criteria, full suites, PR
+
+### Decisions and notes
+
+- (none yet)
