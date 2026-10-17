@@ -32,10 +32,10 @@ text snippets as a hint, name TextBox; Save → transcript refresh; when minutes
 
 ## Acceptance criteria
 
-- [ ] Engine tests: unknown id → 422, round trip, labels in transcript/export use names.
-- [ ] UI tests: rows built from transcript speakers, save payload, regenerate prompt shown only when
+- [x] Engine tests: unknown id → 422, round trip, labels in transcript/export use names.
+- [x] UI tests: rows built from transcript speakers, save payload, regenerate prompt shown only when
       minutes exist.
-- [ ] Resource parity test passes.
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -53,10 +53,9 @@ Remembering names across sessions.
 ## Progress
 
 - **Branch:** `feature/16-ui-speaker-rename`
-- **Status:** in progress
-- **Updated:** 2026-10-17 12:00
-- **Next step:** tick the acceptance criteria, write the manual check recipe, set the README
-  status to `done`, open the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 14:00
+- **Next step:** run the manual check below (no microphone needed), then merge the PR.
 
 ### Steps
 
@@ -64,7 +63,7 @@ Remembering names across sessions.
       (422 `unknown_speaker`), names in search hits; contract docs
 - [x] UI client: `GetSpeakersAsync` / `UpdateSpeakersAsync` + DTOs
 - [x] UI: `SpeakersViewModel` (rows, save, regenerate prompt) + "Speakers" tab in session detail
-- [ ] Acceptance criteria, README status, PR
+- [x] Acceptance criteria, README status, PR
 
 ### Decisions and notes
 
@@ -74,3 +73,29 @@ Remembering names across sessions.
 - `PUT` merges: ids left out keep their names. Accepted ids are those of the best transcript,
   including `mic` and an undiarized `system`.
 - Search hits (22) now also use the session's names.
+- UI: `SpeakersViewModel` + `Views/SpeakersPanel.axaml` are a third "Speakers" tab of the session
+  detail (hidden while live); `SessionDetailViewModel` only exposes `Speakers` and loads it after
+  the transcript, so phases 21 / 24 touch little shared code. Saving reloads the whole detail.
+- Re-running diarization (`python -m vozata diarize`) rewrites `speakers.json` without names.
+
+### Manual check (pending, no microphone or GPU needed)
+
+Real diarization is pending credentials (HF token), so use a hand-written diarized fixture:
+
+1. Copy any finished session folder under `OUTPUT_DIR` (with `session.json`,
+   `transcript.jsonl` and `minutes.md`) to a new folder named e.g. `20261017_100000`; set `"id"`
+   in its `session.json` to the new name.
+2. In it, write `transcript.diarized.jsonl` with one JSON segment per line, e.g.
+   `{"segment_id": "mic-000001", "channel": "mic", "speaker_id": "mic", "start": 1.0, "end": 2.0, "text": "Good morning.", "words": []}`,
+   `{"segment_id": "system-000001", "channel": "system", "speaker_id": "system:1", "start": 3.0, "end": 4.0, "text": "Hi, I am Alice.", "words": []}`,
+   `{"segment_id": "system-000002", "channel": "system", "speaker_id": "system:2", "start": 5.0, "end": 6.0, "text": "Bruno here.", "words": []}`
+   (copy the exact field set from a line of `transcript.jsonl` if it differs), and
+   `speakers.json` = `{"system:1": {"name": null}, "system:2": {"name": null}}`.
+3. Start the app (`dotnet run --project ui/src/VozAta.Desktop`), open History, select the session,
+   open the **Speakers** tab: rows `Me`, `User 1`, `User 2` with their lines as hints.
+4. Type `Alice` / `Bruno`, Save: the Transcript tab shows the names; the orange
+   "Regenerate minutes with the new names" prompt appears (the folder has `minutes.md`). Click it
+   (Ollama running): the minutes regenerate with the names.
+5. Clear `Bruno` and Save: `User 2` returns. `speakers.json` changed; `transcript*.jsonl` did not.
+6. Export Markdown: the names are in the transcript section. Switch the app language: the tab
+   texts follow.
