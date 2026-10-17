@@ -43,9 +43,8 @@ screen an expander "Terms for this meeting" (comma or newline separated).
       context prompt per channel (truncation, reset on language lock, skipped after a
       repeated segment).
 - [x] UI tests: editor add/remove/import, session terms sent on start.
-- [ ] Manual: a meeting mentioning an unusual name is transcribed correctly with the term and
-      incorrectly without it (note in the PR). *Pending manual: recipe in Progress (audio/GPU
-      checks run one phase at a time).*
+- [x] Manual: a meeting mentioning an unusual name is transcribed correctly with the term and
+      incorrectly without it (note in the PR). — verified 2026-10-17 on the GPU (see Progress).
 - [x] Resource parity test passes.
 
 ## Tests
@@ -66,8 +65,11 @@ Automatic term extraction from previous meetings.
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 18:00
-- **Next step:** run the manual check recipe below on the reference machine and paste the
-  WITHOUT / WITH lines in the PR; then merge.
+- **Next step:** none (phase done). Manual check 2026-10-17 (TTS "Microsoft Maria Desktop",
+  `large-v3` on CUDA): without hints "Hoje a Juscelia Trombetta apresenta o projeto Xilofonia para a
+  equipe da Vozata."; with `build_hints(['Jucélia Trombetta','Xylofonia','VozAta'])` "Hoje a Jucélia
+  Trombetta apresenta o projeto Xylofonia para a equipe da VozAta." (the context prompt alone gave
+  the same spelling).
 
 ### Steps
 
