@@ -63,8 +63,13 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 16:00
-- **Next step:** review and merge the PR; then run the manual check below (extraction with Ollama,
-  export with test credentials)
+- **Next step:** none (phase done). Extraction checked 2026-10-17 through the API with Ollama
+  `qwen2.5:7b` on a real pt-BR TTS meeting: `action_items_ready` fired and the items were Carlos (fix
+  the recovery tests) and Ana (release notes), in Portuguese. The check found that the model copies
+  the `[id]` brackets into `source_segment_ids`, which dropped every source; fixed by stripping them
+  (sources now link to the right lines). Known model limit: "até segunda-feira" became the meeting
+  date (2026-10-16) instead of Monday 2026-10-19. Export to Azure DevOps / GitHub is pending manual
+  (credentials); exporting to an unconfigured target returns the localized 422.
 
 ### Steps
 
