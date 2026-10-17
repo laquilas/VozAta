@@ -59,13 +59,13 @@ Cross-session speaker recognition (remembering voices between meetings).
 
 - **Branch:** `feature/15-diarization-live`
 - **Status:** in progress
-- **Updated:** 2026-10-17 14:29
-- **Next step:** add the `SpeakerEmbedder` port, `FakeEmbedder` in `tests/fakes.py` and `LiveSpeakerTagger` in `diarization/live.py` (tests in `tests/diarization/test_live.py`).
+- **Updated:** 2026-10-17 14:31
+- **Next step:** add the live tagging worker (own thread, `diarization/live_sink.py`) and the system audio buffer, then wire it in `session_pipeline.py` behind an optional embedder factory.
 
 ### Steps
 
 - [x] Config keys `LIVE_DIARIZATION_ENABLED`, `SPEAKER_SIMILARITY_THRESHOLD`
-- [ ] `SpeakerEmbedder` port, `FakeEmbedder`, `LiveSpeakerTagger` (`diarization/live.py`)
+- [x] `SpeakerEmbedder` port, `FakeEmbedder`, `LiveSpeakerTagger` (`diarization/live.py`)
 - [ ] Live tagging worker (own thread) between the echo filter and the sinks, fed by a system
       audio buffer; wired in `session_pipeline.py`
 - [ ] pyannote embedder in a long-lived child process (`diarization/embedder.py`), `EMBEDDERS`

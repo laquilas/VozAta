@@ -10,6 +10,7 @@ from tests.fakes import (
     FakeAudioSink,
     FakeAudioSource,
     FakeDiarizer,
+    FakeEmbedder,
     FakeLanguageModel,
     FakeLocalizer,
     FakeSessionObserver,
@@ -32,6 +33,7 @@ from vozata.domain import Channel, SpeakerTurn, TranscriptionResult, TranscriptS
         (FakeLocalizer(), ports.Localizer),
         (FakeSessionObserver(), ports.SessionObserver),
         (FakeDiarizer(), ports.Diarizer),
+        (FakeEmbedder(), ports.SpeakerEmbedder),
     ],
 )
 def test_fake_satisfies_its_port(fake: object, port: type) -> None:
