@@ -48,6 +48,13 @@ public sealed partial class SettingEditorViewModel : ObservableObject
             ["es"] = "LanguageEs",
             ["auto"] = "LanguageAuto",
         },
+        ["TRANSLATE_TO"] = new()
+        {
+            ["off"] = "TranslateOff",
+            ["en"] = "LanguageEn",
+            ["pt"] = "LanguagePt",
+            ["es"] = "LanguageEs",
+        },
         ["MINUTES_TEMPLATE"] = new()
         {
             ["general"] = "TemplateName_general",

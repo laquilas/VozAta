@@ -196,6 +196,36 @@ def test_transcript_is_sorted_with_display_labels(api: Api) -> None:
     assert [s["segment_id"] for s in body["segments"]] == ["mic-000001", "system-000001"]
     assert body["segments"][0]["label"] == "labels.mic"
     assert body["segments"][0]["edited"] is False
+    assert body["segments"][0]["translation"] is None
+
+
+def test_transcript_segments_carry_their_live_translation(api: Api) -> None:
+    root = _recorded(api)
+    (root / "transcript.translated.jsonl").write_text(
+        '{"segment_id": "system-000001", "language": "pt", "text": "Oi."}\n', encoding="utf-8"
+    )
+
+    segments = api.client.get(f"/sessions/{SESSION}/transcript").json()["segments"]
+
+    assert segments[0]["translation"] is None
+    assert segments[1]["translation"] == {"language": "pt", "text": "Oi."}
+
+
+@pytest.mark.parametrize(("value", "expected"), [("pt", "pt"), ("off", "off"), (None, None)])
+def test_start_passes_the_translation_choice(
+    api: Api, value: str | None, expected: str | None
+) -> None:
+    response = _start(api, translate_to=value) if value else _start(api)
+
+    assert response.status_code == 201
+    chosen = api.factory.sessions[0].options.translate_to
+    assert (chosen.value if chosen else None) == expected
+
+
+def test_start_rejects_an_unknown_translation_language(api: Api) -> None:
+    response = _start(api, translate_to="auto")
+
+    assert response.status_code == 422
 
 
 def test_minutes_markdown_or_404(api: Api) -> None:

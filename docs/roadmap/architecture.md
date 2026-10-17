@@ -57,6 +57,7 @@ engine/
     storage/                session_store.py, recovery.py, search_index.py
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github}.py
     qa/                     retriever.py, citations.py, answerer.py
+    translation/            worker.py, opus_mt.py, translations_file.py, live.py (29)
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
@@ -159,7 +160,11 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_speakers_relabeled(self, session_id: str) -> None: ...  # post-session speakers written (15)
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
+    def on_translation(self, segment_id: str, language: str, text: str) -> None: ...  # live translation (29)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
+class Translator(Protocol):           # OpusMtTranslator (29), CPU; built on the translation thread
+    def translate(self, text: str, source: str, target: str) -> str: ...  # raises TranslationError
+    def close(self) -> None: ...
 class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
     def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
     def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
@@ -179,7 +184,20 @@ WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
                                                          └─> Transcriber
                                                     └─> [EchoFilter] → [LiveSpeakerSink → LiveSpeakerTagger]
                                                     └─> CompositeSink → Console | Jsonl | Markdown | WebSocket
+                                                                        | [TranslationWorker] (29)
 ```
+
+**Live translation** (phase 29, `TRANSLATE_TO` or the Start screen choice): the
+`TranslationWorker` (`translation/worker.py`) is one more sink of the composite (passed to
+`CapturePipeline` as `extra_sinks`, so it sees segments after echo dedupe and live speakers). `emit` only enqueues;
+its own thread builds the translator (`TRANSLATORS[TRANSLATION_PROVIDER]`, model load off the
+transcription thread), then translates the queue in order on **CPU** and writes each result to
+`transcript.translated.jsonl` and the `translation` event (`SessionObserver.on_translation`). The
+source language is the session's `LanguageLock`: in `auto`, segments wait until it locks (and once
+more at stop). Segments already in the target language and blank texts are skipped. The first
+failure (missing extra, download, model error) reports `error` `translation_failed` once and
+disables translation for the session; transcription is never affected. Closing the composite at
+stop step 2 translates what is still queued, then frees the translator. Provider choice: §14.
 
 **Chunkers**: `CHUNKERS[CHUNK_MODE]` in `bootstrap.py` builds one per channel through
 `SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
@@ -320,6 +338,7 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 | `transcript.diarized.jsonl` | 14 | full transcript; system segments tagged `system:<n>`, a segment split at a speaker change becomes `<id>-1`, `<id>-2`, … |
 | `speakers.json` | 14 / 16 | `{"system:1": {"name": null}, "mic": {"name": "Ana"}}` (display label comes from the localizer unless `name` is set; 16 may add `mic` / `system`) |
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
+| `transcript.translated.jsonl` | 29 | live translations, append-only: `{"segment_id", "language", "text"}` per line (created with the first one; the last line of a segment wins); merged into `GET /sessions/{id}/transcript` as `translation` by `segment_id` |
 | `action_items.json` | 23 | extracted items + export results |
 
 `OUTPUT_DIR/index.db` — SQLite FTS5 search index (22): table `segments(session_id, segment_id,
@@ -457,7 +476,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `VAD_SPEECH_PAD_MS` | `200` | 27 | audio kept around detected speech |
 | `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
 | `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
-| `TRANSLATE_TO` / `TRANSLATION_PROVIDER` | *(empty)* / *(chosen in 29)* | 29 | live translation target (empty = off) and provider |
+| `TRANSLATE_TO` | `off` | 29 | live translation target: `off` \| `en` \| `pt` \| `es` (empty = off); `POST /sessions` `translate_to` overrides it per session |
+| `TRANSLATION_PROVIDER` | `opus_mt` | 29 | `TRANSLATORS` registry key (§14) |
+| `TRANSLATION_MODEL_DIR` | *(empty)* | 29 | folder holding `opus-mt-ROMANCE-en/` and `opus-mt-en-ROMANCE/`; empty = download into the Hugging Face cache on first use |
 | `CONTEXT_PROMPT_CHARS` | `200` | 19 | rolling context prompt length, 0–1000 (0 = off) |
 
 Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /settings`
@@ -568,3 +589,28 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
   session id takes the previous one in the bracket (or the only session of the context); a time
   maps to the last context segment whose displayed time is at or before it. Malformed times,
   sessions not in the context and duplicates are dropped → `{session_id, segment_id, start}`.
+
+## 14. Live translation provider (phase 29)
+
+Decision: **Opus-MT (MarianMT) models converted to CTranslate2**, registered as `opus_mt` in
+`TRANSLATORS` (`translation/opus_mt.py`).
+
+| Option | Why not / why |
+|--------|---------------|
+| NLLB-200 distilled 600M | weights are CC-BY-NC 4.0 (non-commercial) and need `torch` + `transformers` (~2 GB) |
+| Ollama (`qwen2.5`) | no new dependency, but competes with Whisper for the 6 GB of VRAM during recording (§6 VRAM rule) and is slow on CPU |
+| **Opus-MT on CTranslate2** | permissive licenses (Apache-2.0 / CC-BY 4.0); `ctranslate2` already ships with faster-whisper; int8 on CPU is ~80 ms per sentence; ~155 MB per model |
+
+- Two models cover every pair of `en` / `pt` / `es`: `michaelfeil/ct2fast-opus-mt-ROMANCE-en`
+  (pt, es → en) and `michaelfeil/ct2fast-opus-mt-en-ROMANCE` (en → pt with `>>pt_br<<`, en → es
+  with `>>es<<`). `pt` ↔ `es` pivots through English (two passes). A model is loaded on first use
+  and kept until the session ends.
+- Runs on CPU, `compute_type=int8`, 2 intra-op threads, beam 2: never touches the GPU, so the VRAM
+  rule is unchanged.
+- Marian stops after the first sentence, so each segment is split after `.` `!` `?` `…` and the
+  sentences are translated in one batch, then joined with spaces.
+- Optional extra `translation` (`sentencepiece`, `huggingface_hub`); both are imported lazily and
+  `require_extra()` fails fast, so the engine works without the extra and the session reports
+  `translation_failed` instead.
+- Models come from `TRANSLATION_MODEL_DIR` (`<dir>/opus-mt-<name>/` with `model.bin`,
+  `source.spm`, `target.spm`) or are downloaded once with `huggingface_hub.snapshot_download`.

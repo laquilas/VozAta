@@ -80,6 +80,19 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Start_sends_the_translation_language_only_when_chosen()
+    {
+        var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);
+        var client = new EngineClient(handler.Client());
+
+        await client.StartSessionAsync(new StartSessionRequest(Language: "en", TranslateTo: "pt"));
+
+        Assert.Equal(
+            """{"mic_device_id":null,"system_device_id":null,"language":"en","template":null,"translate_to":"pt"}""",
+            handler.Requests.Single().Body);
+    }
+
+    [Fact]
     public async Task Vocabulary_is_read_and_replaced()
     {
         var handler = FakeHttpHandler.Json("""{"terms": ["Avalonia", "Jéssica"]}""");
@@ -223,7 +236,8 @@ public sealed class EngineClientTests
             "/sessions/20261015_202358/transcript" => """
                 {"source": "raw", "segments": [{"segment_id": "mic-000001", "channel": "mic",
                  "speaker_id": "mic", "label": "Me", "start": 1.0, "end": 2.0, "text": "Oi.",
-                 "edited": false, "words": [{"text": "Oi.", "start": 1.0, "end": 2.0, "probability": 0.9}]}]}
+                 "edited": false, "words": [{"text": "Oi.", "start": 1.0, "end": 2.0, "probability": 0.9}],
+                 "translation": {"language": "en", "text": "Hi."}}]}
                 """,
             "/sessions/20261015_202358/minutes" => """{"markdown": "# Ata"}""",
             "/settings" => """
@@ -250,6 +264,7 @@ public sealed class EngineClientTests
         Assert.True(detail.Metadata!.ContainsKey("devices"));
         Assert.Equal("Me", transcript.Segments.Single().Label);
         Assert.Equal(0.9, transcript.Segments.Single().Words.Single().Probability);
+        Assert.Equal(new SegmentTranslation("en", "Hi."), transcript.Segments.Single().Translation);
         Assert.Equal("# Ata", minutes.Markdown);
         Assert.Equal("mono", settings.GetString("MIX_MODE"));
         Assert.Equal("5.0", settings.GetString("CHUNK_SECONDS"));

@@ -23,6 +23,7 @@ mix_failed = "Não foi possível criar o mixed.wav ({reason}). As faixas do micr
 minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a transcrição foram mantidas; tente novamente com: {command}"
 model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."
 index_failed = "Não foi possível adicionar a sessão ao índice de busca ({reason}). Reconstrua o índice com: python -m vozata reindex"
+translation_failed = "A tradução ao vivo parou ({reason}). A transcrição continua."
 
 [errors.api]
 unsupported_format = "Formato de exportação não suportado: \"{format}\". Use um destes: {allowed}."

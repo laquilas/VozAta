@@ -23,11 +23,14 @@ from vozata.ports import (
     SpeakerEmbedder,
     Transcriber,
     TranscriptSearch,
+    Translator,
 )
 from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.storage.session_store import SessionPaths, SessionStore
 from vozata.transcription.language_lock import LanguageLock
+from vozata.translation.live import live_translation
+from vozata.translation.worker import TranslationWorker
 from vozata.vocabulary import build_hints
 
 SOURCE_OPEN_TIMEOUT = 20.0  # a WASAPI open can hang in the driver (phase 02 notes)
@@ -60,6 +63,8 @@ class SessionComponents:
     minutes_template: str = DEFAULT_TEMPLATE  # stored in session.json (phase 20)
     vocabulary: tuple[str, ...] = ()  # session + glossary terms (phase 19), session terms first
     embedder_factory: Callable[[], SpeakerEmbedder] | None = None  # None: no live speakers
+    translate_to: str | None = None  # live translation language (phase 29); None = off
+    translator_factory: Callable[[], Translator] | None = None  # built on the translation thread
 
 
 class SessionStartError(RuntimeError):
@@ -123,6 +128,7 @@ class RecordingSession:
         self._meta = SessionMeta(self._store, self.id, started_at, self._settings, self._c)
         self._meta.set_language(self._language, "selected")
         self._lock = LanguageLock(self._language, self._on_language_detected)
+        translation = self._live_translation()
         self._pipeline = CapturePipeline(
             self._c.sources,
             self._paths,
@@ -135,12 +141,15 @@ class RecordingSession:
             lambda error: self._error("model_failed", reason=str(error)),
             hints=build_hints(self._c.vocabulary),
             speaker_embedder=self._live_embedder(),
+            extra_sinks=[translation] if translation else [],
         )
         self._c.clock.start()
         self._pipeline.accept()
         self._open_sources()
         self._set_status(SessionStatus.RECORDING)
         self._pipeline.start_transcription()
+        if translation:
+            translation.start()
 
     def pause(self) -> None:
         if self.status is not SessionStatus.RECORDING:
@@ -170,6 +179,19 @@ class RecordingSession:
         self._index_transcript()  # 6: search (phase 22)
         self._meta.ended(self._store.now())  # 7
         self._set_status(SessionStatus.DONE)
+
+    def _live_translation(self) -> TranslationWorker | None:
+        """The translation worker (phase 29), closed with the transcript files at step 2."""
+        if self._c.translate_to is None or self._c.translator_factory is None:
+            return None
+        return live_translation(
+            self._c.translate_to,
+            self._c.translator_factory,
+            self.paths.translated_jsonl,
+            self._lock.current,
+            self._observer,
+            lambda error: self._error("translation_failed", reason=str(error)),
+        )
 
     def _open_sources(self) -> None:
         opened: list[AudioSource] = []

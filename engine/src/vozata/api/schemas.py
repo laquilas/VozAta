@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ConversationLanguageValue = Literal["en", "pt", "es", "auto"]
+TranslationTargetValue = Literal["off", "en", "pt", "es"]
 
 
 class GpuStatus(BaseModel):
@@ -57,6 +58,7 @@ class StartSession(BaseModel):
     language: ConversationLanguageValue | None = None
     template: str | None = None  # phase 20
     vocabulary: list[str] | None = None  # phase 19
+    translate_to: TranslationTargetValue | None = None  # phase 29; None = TRANSLATE_TO
 
 
 class SessionSummary(BaseModel):
@@ -90,6 +92,11 @@ class WordModel(BaseModel):
     probability: float
 
 
+class TranslationModel(BaseModel):
+    language: str
+    text: str
+
+
 class Segment(BaseModel):
     segment_id: str
     channel: Literal["mic", "system"]
@@ -100,6 +107,7 @@ class Segment(BaseModel):
     text: str
     edited: bool
     words: list[WordModel]
+    translation: TranslationModel | None = None  # phase 29
 
 
 class Transcript(BaseModel):

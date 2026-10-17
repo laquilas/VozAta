@@ -23,13 +23,13 @@ own rows. Changing a row requires updating both sides.
 | GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}}` |
 | GET | `/favicon.ico` | — | — | the VozAta logo (`image/x-icon`, package data copied from `assets/web/favicon.ico`); not in the OpenAPI schema |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
-| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str]}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary` |
+| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es"}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none) |
 | POST | `/sessions/current/pause` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/resume` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
 | GET | `/sessions` | 06 | `?limit=&offset=` | `{items: [SessionSummary], total}` newest first |
 | GET | `/sessions/{id}` | 06 | — | `SessionDetail` |
-| GET | `/sessions/{id}/transcript` | 06 | — | `{source: "raw"\|"diarized"\|"edited", segments: [Segment]}` (precedence rule in architecture §8) |
+| GET | `/sessions/{id}/transcript` | 06 | — | `{source: "raw"\|"diarized"\|"edited", segments: [Segment]}` (precedence rule in architecture §8); each `Segment` has `translation` (29) from `transcript.translated.jsonl`, `null` when the segment was not translated |
 | GET | `/sessions/{id}/minutes` | 06 | — | `{markdown}` or `404 minutes_not_found` |
 | POST | `/sessions/{id}/minutes` | 06 | `{template?}` | `202`; result via `minutes_ready`. `template` (20): omitted = the one in `session.json`, else `MINUTES_TEMPLATE`; the template used is saved to `session.json`; `422 unknown_template` |
 | GET | `/sessions/{id}/export` | 11 | `?format=md\|docx\|pdf` (default `md`) | file download, `Content-Disposition: attachment; filename="<id>-minutes.<ext>"`; `400 unsupported_format`, `404 session_not_found` |
@@ -59,9 +59,12 @@ own rows. Changing a row requires updating both sides.
 //   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
 // Segment (labels resolved for display; raw files store only speaker_id; `edited` from phase 21:
 //   true when the user changed the text, then `words` is empty)
+//   `translation` from phase 29: {language, text} in GET /sessions/{id}/transcript, null when
+//   absent; never in `segment` events (the translation arrives later as a `translation` event)
 {"segment_id": "system-000013", "channel": "system", "speaker_id": "system:2", "label": "User 2",
  "start": 83.12, "end": 87.9, "text": "...", "edited": false,
- "words": [{"text": "...", "start": 83.12, "end": 83.3, "probability": 0.98}]}
+ "words": [{"text": "...", "start": 83.12, "end": 83.3, "probability": 0.98}],
+ "translation": {"language": "pt", "text": "..."}}
 // ActionItem
 {"id": "a1", "description": "...", "owner": "Alice", "due": "2026-10-20", "source_segment_ids": ["mic-000042"], "exported_url": null}
 ```
@@ -81,14 +84,14 @@ One connection per UI. Server → client messages only (commands go through HTTP
 | `segment` | 06 | `Segment` | each committed transcript segment |
 | `language_detected` | 06 | `{language}` | once, when `auto` locks the language |
 | `minutes_ready` | 06 | `{session_id}` | minutes written |
-| `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable; `diarization_failed` (14) when speaker identification fails at stop; `live_diarization_failed` (15) when the live speaker embedder cannot load: recording goes on and system lines keep `system`) |
+| `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable; `diarization_failed` (14) when speaker identification fails at stop; `live_diarization_failed` (15) when the live speaker embedder cannot load: recording goes on and system lines keep `system`; `translation_failed` (29) once when live translation stops, transcription continues) |
 | `speakers_relabeled` | 15 | `{session_id}` | sent during finalization (stop step 5, before `minutes_ready`) once post-session speaker identification wrote `transcript.diarized.jsonl`; its speakers replace the live `system:<n>` labels of the `segment` events, so the UI reloads the session transcript |
 | `recovery_available` | 17 | `{session_ids: [str]}` | on connect, when interrupted sessions exist |
 | `action_items_ready` | 23 | `{session_id, count}` | extraction finished |
 | `answer_chunk` | 24 | `{answer_id, text}` | streamed answer token(s), in order; envelope `session_id` = the question's scope (null = all sessions) |
 | `model_loading` | 26 | `{loading}` | the speech model started / finished loading while the session already records |
 | `partial` | 28 | `{channel, speaker_id, label, start, text}` | interim text of a channel; replaced by the next `segment`, empty `text` clears it |
-| `translation` | 29 | `{segment_id, language, text}` | translation of a committed segment |
+| `translation` | 29 | `{segment_id, language, text}` | translation of a committed segment, after its `segment` event (CPU worker, usually < 0.2 s later); segments already in the target language get none |
 | `answer_done` | 24 | `{answer_id, citations: [{session_id, segment_id, start}], error}` | answer complete; `error` is null, or a localized message when the LLM failed (then `citations` is empty). Citations appear in the text as `[session_id@hh:mm:ss]` |
 
 On connect the server sends one `status` message describing the current session (or

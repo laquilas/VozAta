@@ -11,7 +11,13 @@ from typing import Any, Protocol
 
 from vozata.api.payloads import segment_payload, session_summary
 from vozata.api.ws import EventBroadcaster
-from vozata.domain import Channel, ConversationLanguage, SessionStatus, TranscriptSegment
+from vozata.domain import (
+    Channel,
+    ConversationLanguage,
+    SessionStatus,
+    TranscriptSegment,
+    TranslationTarget,
+)
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver
 from vozata.storage.session_store import SessionStore
@@ -55,6 +61,9 @@ class StartOptions:
     system_device: int | None = None
     template: str | None = None  # minutes template id (phase 20); None = MINUTES_TEMPLATE
     vocabulary: tuple[str, ...] = ()  # this meeting's terms (phase 19), merged with the glossary
+    translate_to: TranslationTarget | None = (
+        None  # live translation (phase 29); None = TRANSLATE_TO
+    )
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]
@@ -113,6 +122,9 @@ class _EventObserver:
 
     def on_model_loading(self, loading: bool) -> None:
         self._send("model_loading", {"loading": loading})
+
+    def on_translation(self, segment_id: str, language: str, text: str) -> None:
+        self._send("translation", {"segment_id": segment_id, "language": language, "text": text})
 
     def on_error(self, code: str, message: str) -> None:
         self._send("error", {"code": code, "message": message})

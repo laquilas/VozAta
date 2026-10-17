@@ -78,7 +78,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 26 | [Capture first, load later](phases/26-capture-first.md) | 06, 07 | done |
 | 27 | [Pause-based segmentation (VAD)](phases/27-vad-segmentation.md) | 05 | done |
 | 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | done |
-| 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | todo |
+| 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29.

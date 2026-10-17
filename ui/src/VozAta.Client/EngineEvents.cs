@@ -33,6 +33,10 @@ public sealed record PartialEvent(string? SessionId, string Channel, string Spea
 /// <summary>The speech model started (true) or finished (false) loading while the session already records.</summary>
 public sealed record ModelLoadingEvent(string? SessionId, bool Loading) : EngineEvent(SessionId);
 
+/// <summary>A committed segment translated live (phase 29); arrives after its <see cref="SegmentEvent"/>.</summary>
+public sealed record TranslationEvent(string? SessionId, string SegmentId, string Language, string Text)
+    : EngineEvent(SessionId);
+
 /// <summary>An event type this client does not know yet (added by a later phase).</summary>
 public sealed record UnknownEvent(string? SessionId, string Type) : EngineEvent(SessionId);
 
@@ -73,6 +77,11 @@ public static class EngineEventParser
                     data.GetProperty("start").GetDouble(),
                     data.GetProperty("text").GetString() ?? ""),
                 "model_loading" => new ModelLoadingEvent(sessionId, data.GetProperty("loading").GetBoolean()),
+                "translation" => new TranslationEvent(
+                    sessionId,
+                    data.GetProperty("segment_id").GetString() ?? "",
+                    data.GetProperty("language").GetString() ?? "",
+                    data.GetProperty("text").GetString() ?? ""),
                 "answer_chunk" => new AnswerChunkEvent(
                     sessionId, data.GetProperty("answer_id").GetString() ?? "", data.GetProperty("text").GetString() ?? ""),
                 "answer_done" => new AnswerDoneEvent(
