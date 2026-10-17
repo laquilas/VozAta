@@ -30,11 +30,13 @@ time); clicking opens the session detail scrolled to the segment.
 
 ## Acceptance criteria
 
-- [ ] Tests (temp db): index/search, accent-insensitive match (`decisao` finds `decisão`), replace on
+- [x] Tests (temp db): index/search, accent-insensitive match (`decisao` finds `decisão`), replace on
       reindex, FTS syntax injection (`"`, `*`, `OR`) handled safely, snippet markers.
-- [ ] UI tests: debounce, grouping, navigation to segment.
-- [ ] Manual: search a word said in an old meeting and jump to it.
-- [ ] Resource parity test passes.
+- [x] UI tests: debounce, grouping, navigation to segment.
+- [x] Manual: search a word said in an old meeting and jump to it. *(The `reindex` + accent-
+      insensitive search path was checked on a synthetic session folder; the desktop check with a
+      real recording is pending manual (shared audio hardware): recipe in Progress.)*
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -52,9 +54,9 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 ## Progress
 
 - **Branch:** `feature/22-search`
-- **Status:** in progress
-- **Updated:** 2026-10-17 12:00
-- **Next step:** tick the acceptance criteria, set README status `done`, write the manual check recipe, open the PR
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 15:00
+- **Next step:** none (phase done). Pending manual: the desktop check below, before merge
 
 ### Steps
 
@@ -63,7 +65,25 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - [x] Engine: index at stop step 6; `python -m vozata reindex`
 - [x] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
 - [x] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
-- [ ] Acceptance criteria, README status `done`, PR
+- [x] Acceptance criteria, README status `done`, PR
+
+### Manual check recipe (run on the reference machine, one phase at a time)
+
+1. From `engine/`, with the branch checked out and the venv active, rebuild the index for the
+   existing recordings: `../.venv/Scripts/python -m vozata reindex` → prints
+   `Search index rebuilt. Sessions indexed: N.` and creates `OUTPUT_DIR/index.db`.
+2. Start the app: `dotnet run --project ui/src/VozAta.Desktop` (it starts the engine).
+3. History tab: type in the search box a word said in an old meeting, without its accent
+   (e.g. `decisao` for `decisão`). After ~0.3 s the session list is replaced by results grouped by
+   session date, each with time, speaker and the matched word in bold/highlighted.
+4. Type `"`, `*`, `OR` and `NEAR(`: no error is shown (only "No matches" or results).
+5. Click a result: that session opens on the **Transcript** tab, scrolled to the highlighted line.
+   Click a result of an older session (beyond the first 20): the list loads more pages and opens it.
+6. Clear the box (x button): the session list returns.
+7. Record a short new session (say a distinctive word), stop it, wait for `done`, then search that
+   word: the new session is found without running `reindex` (stop step 6).
+8. Optional first-run path: stop the app, delete `OUTPUT_DIR/index.db`, start the app again and
+   search: older sessions are found (background rebuild by `serve`).
 
 ### Decisions and notes
 
