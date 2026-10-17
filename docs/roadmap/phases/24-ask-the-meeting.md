@@ -43,8 +43,9 @@ citations rendered as links that open the session at that time.
       malformed, unknown session ignored), streaming order with `FakeLanguageModel`, empty-context
       answer, API events.
 - [x] UI tests: streamed text accumulation, citation navigation, concurrent questions blocked.
-- [ ] Manual: three questions in pt-BR about a recorded meeting return correct answers with working
-      citations. — **pending manual** (recipe in Progress; Ollama not run in the parallel session)
+- [x] Manual: three questions in pt-BR about a recorded meeting return correct answers with working
+      citations. — verified 2026-10-17 through the API with Ollama `qwen2.5:7b` (see Progress); the
+      desktop click-through is still pending.
 - [x] Resource parity test passes.
 
 ## Tests
@@ -65,7 +66,12 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - **Branch:** `feature/24-ask-the-meeting`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 15:00
-- **Next step:** run the manual check recipe below (Ollama `qwen2.5:7b`, recorded pt-BR sessions) before merging
+- **Next step:** none (phase done). API check 2026-10-17 (pt-BR, `qwen2.5:7b`, real TTS
+  meeting): "Para quando foi adiado o lançamento da beta?" → "próxima terça-feira" (correct, but
+  the citation pointed at `mic-000001` "Uhum." instead of the system line: the 7B model's citation
+  precision is the weak spot); "Quem vai corrigir os testes de recuperação?" → Carlos, cited
+  `system-000003` exactly; an undiscussed question → "Não encontrei isso nas reuniões."; a second
+  ask while streaming → 409. Desktop click-through pending.
 
 ### Steps
 
@@ -77,7 +83,7 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - [x] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent` (`VozAta.Client/Ask.cs`) — `9f66898`
 - [x] UI: `AskViewModel` + panel (History, scoped to the selected session or all sessions) — `e3e5a30`
 - [x] Acceptance criteria, manual check recipe, PR
-- [ ] Manual check (pending manual)
+- [x] Manual check (API, 2026-10-17; desktop click-through pending)
 
 ### Decisions and notes
 
