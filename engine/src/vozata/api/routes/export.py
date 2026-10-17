@@ -32,8 +32,7 @@ def export_session(
             400, "unsupported_format", format=export_format, allowed=", ".join(sorted(c.exporters))
         )
     summary = session_summary(c.store, session_id)
-    minutes_path = c.store.paths(session_id).minutes_md
-    minutes = minutes_path.read_text(encoding="utf-8") if minutes_path.is_file() else None
+    minutes = c.store.read_minutes(session_id)
     _, segments = c.store.load_transcript_with_source(session_id)
     labeler = c.labeler.with_names(c.store.speaker_names(session_id))
     document = build_document(summary, minutes, segments, labeler, c.localizer)

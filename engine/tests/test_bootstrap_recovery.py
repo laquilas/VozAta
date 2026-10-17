@@ -13,8 +13,9 @@ from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.config import Settings
 from vozata.domain import MixMode
 from vozata.minutes.action_items import ActionItemExtractor
+from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
-from vozata.storage.session_store import SessionStore
 
 
 def _settings(tmp_path: Path, **overrides: object) -> Settings:
@@ -33,7 +34,10 @@ def test_the_recovery_session_takes_template_glossary_and_mix_mode_from_session_
         settings={"MIX_MODE": "stereo"},
     )
 
-    session = bootstrap.build_recovery_session(settings, store, FakeSessionObserver(), session_id)
+    audio = bootstrap.build_audio_store(settings)
+    session = bootstrap.build_recovery_session(
+        settings, store, audio, FakeSessionObserver(), session_id
+    )
 
     components = session._c
     assert components.minutes is not None
@@ -58,10 +62,13 @@ def test_defaults_apply_when_session_json_lacks_them(tmp_path: Path) -> None:
         generate_minutes=False,
         diarization_enabled=True,
     )
-    other = SessionStore(tmp_path / "elsewhere")  # not OUTPUT_DIR: not indexed
+    other = bootstrap.build_store(settings, tmp_path / "elsewhere")  # not OUTPUT_DIR: not indexed
     session_id = make_session_folder(other, template="gone", vocabulary="bad", settings=[])
 
-    session = bootstrap.build_recovery_session(settings, other, FakeSessionObserver(), session_id)
+    audio = bootstrap.build_audio_store(settings, tmp_path / "elsewhere")
+    session = bootstrap.build_recovery_session(
+        settings, other, audio, FakeSessionObserver(), session_id
+    )
 
     components = session._c
     assert components.minutes is None
@@ -78,7 +85,10 @@ def test_action_items_follow_extract_action_items(tmp_path: Path) -> None:
     store = bootstrap.build_store(settings)
     session_id = make_session_folder(store)
 
-    session = bootstrap.build_recovery_session(settings, store, FakeSessionObserver(), session_id)
+    audio = bootstrap.build_audio_store(settings)
+    session = bootstrap.build_recovery_session(
+        settings, store, audio, FakeSessionObserver(), session_id
+    )
 
     assert session._c.minutes is not None
     assert session._c.action_items is None
@@ -128,5 +138,9 @@ def test_the_cli_waits_two_autosaves_and_some_slack_before_calling_a_session_int
 ) -> None:
     assert bootstrap.cli_stale_after(Settings(autosave_seconds=10)) == 25
     recovery = bootstrap.build_recovery(_settings(tmp_path), stale_after=25)
-    assert isinstance(recovery.store, SessionStore)
+    assert isinstance(recovery.store, FileSessionRepository)
+    assert [type(repair) for repair in recovery._repairs] == [
+        FileAudioStore,
+        FileSessionRepository,
+    ]
     assert isinstance(bootstrap.MIXERS[MixMode.MONO](), MonoMixer)

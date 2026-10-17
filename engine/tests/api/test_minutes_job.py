@@ -10,6 +10,7 @@ from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.ports import LanguageModelError
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
 
 
@@ -28,7 +29,7 @@ def _job(tmp_path: Path, llm: FakeLanguageModel, *, transcript: bool = True):  #
     broadcaster = RecordingBroadcaster()
     localizer = FakeLocalizer()
     job = MinutesJob(
-        store,
+        FileSessionRepository(store),
         lambda template: MinutesGenerator(
             llm, localizer, 12000, minutes_template(template_id=template or "general")
         ),

@@ -10,6 +10,7 @@ from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.ports import LanguageModelError
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
 
 REPLY = json.dumps({"items": [{"description": "Call Bob"}, {"description": "Book room"}]})
@@ -29,7 +30,11 @@ def _run(tmp_path: Path, build, *, transcript: bool = True):  # type: ignore[no-
     session_id = _session(store, transcript=transcript)
     broadcaster = RecordingBroadcaster()
     job = ActionItemsJob(
-        store, build, SpeakerLabeler(FakeLocalizer()), broadcaster, FakeLocalizer()
+        FileSessionRepository(store),
+        build,
+        SpeakerLabeler(FakeLocalizer()),
+        broadcaster,
+        FakeLocalizer(),
     )
     assert job.wait()  # nothing started yet
     job(session_id)

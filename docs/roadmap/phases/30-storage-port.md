@@ -66,22 +66,43 @@ Any new storage backend (31, 32), migration (33), API shape changes.
 
 - **Branch:** `feature/30-storage-port`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:00
-- **Next step:** add the storage ports to `ports.py` (`SessionRepository`, `AudioStore`,
-  `AudioReader`, `RecoverableStore`) with `tests/test_ports.py` checks
+- **Updated:** 2026-10-17 12:30
+- **Next step:** document the storage ports in architecture §5/§8 and api-contract, tick the
+  acceptance criteria, run the full suites and open the PR
 
 ### Steps
 
 - [x] Start the phase (status, Progress)
-- [ ] Storage ports in `ports.py`, `storage/files/` (`FileSessionRepository`, `FileAudioStore`)
-      and the shared contract suite (`tests/storage/repository_contract.py`)
-- [ ] Recording path on the ports: `session.py`, `session_pipeline.py`, live translation, mixer
+- [x] Storage ports in `ports.py`, `storage/files/` (`FileSessionRepository`, `FileAudioStore`)
+      and the shared contract suites (`tests/storage/repository_contract.py`,
+      `tests/storage/audio_contract.py`)
+- [x] Recording path on the ports: `session.py`, `session_pipeline.py`, live translation, mixer
       (`AudioReader`), diarization (`materialize_wav`); `REPOSITORIES` / `AUDIO_STORES` in
       `bootstrap.py`
-- [ ] Minutes, action items, task export, API routes and payloads on the repository
-- [ ] Recovery on `RecoverableStore`; CLI commands
+- [x] Minutes, action items, task export, API routes and payloads on the repository
+- [x] Recovery on `RecoverableStore`; CLI commands
 - [ ] Docs (architecture §5/§8), grep check, full suites, PR
 
 ### Decisions and notes
 
-- (none yet)
+- The port keeps the method names callers already used (`list_sessions()`,
+  `load_transcript()` → segments, `load_transcript_with_source()` → `(source, segments)`) instead
+  of the sketch's `list(limit, offset)` / `load_transcript() -> (segments, source)`: no caller
+  pages in storage today, and phase 31 can add paging behind the same port.
+- `append_segment` / `append_translation` became `open_transcript(id, labeler) -> TranscriptSink`
+  and `open_translations(id) -> TranslationWriter`: the file backend keeps its open handles,
+  per-segment fsync and `transcript.md`; SQLite returns sinks that insert rows.
+- `AudioStore.write_mix(id, mixer)` keeps the mix: the file backend writes `mixed.wav`, SQLite
+  (phase 32) can skip it and mix on the fly. Mixers read through `AudioReader`.
+- Recovery takes a list of `RecoverableStore`s, run in order (`[audio, repository]`): the audio
+  store repairs/pads WAVs and returns the length, the repository sets aside a cut transcript
+  line. Failures surface as `StoreRepairError` (same message as before).
+- `SessionNotFoundError` moved to `ports.py` (re-exported by `session_store`).
+- `RecordingSession.paths` became `folder` (messages only); `GET /sessions/{id}` keeps `files` /
+  `folder` for the file backend, the schema now allows them to be null for a backend without
+  folders (no change in any current response).
+- CLI `minutes` / `diarize <session_dir>` open a session folder through
+  `storage/files/folder.py` (file backend of the parent); `recover <dir>` gets the store of the
+  parent through `bootstrap.build_recovery(settings, output_dir)`.
+- The grep check uses fixed strings (`grep -F`): the only hits outside `storage/` and
+  `bootstrap.py` are docstrings and the in-memory `audio.wav` upload name of the OpenAI STT.

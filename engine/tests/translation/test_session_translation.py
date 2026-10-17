@@ -9,7 +9,7 @@ from tests.fakes import FakeTranslator
 from tests.test_session import _Rig, _voice, _words
 from vozata.domain import SessionStatus
 from vozata.ports import TranslationError, Translator
-from vozata.translation.translations_file import read_translations
+from vozata.storage.files.translations import read_translations
 
 
 def _with_translation(rig: _Rig, translator: Translator, target: str = "pt") -> None:
@@ -28,7 +28,7 @@ def test_committed_segments_are_translated_to_the_file_and_the_observer(tmp_path
     rig.session.stop()
 
     assert rig.observer.of("translation") == [("mic-000001", "pt", "[pt] Hello world.")]
-    translations = read_translations(rig.session.paths.translated_jsonl)
+    translations = read_translations(rig.paths.translated_jsonl)
     assert translations["mic-000001"].text == "[pt] Hello world."
     assert translator.calls == [("Hello world.", "en", "pt")]
     assert translator.closed
@@ -46,7 +46,7 @@ def test_a_meeting_already_in_the_target_language_is_not_translated(tmp_path: Pa
     rig.session.stop()
 
     assert translator.calls == []
-    assert not rig.session.paths.translated_jsonl.exists()
+    assert not rig.paths.translated_jsonl.exists()
 
 
 def test_a_failing_translator_reports_once_and_transcription_continues(tmp_path: Path) -> None:
@@ -73,4 +73,4 @@ def test_without_a_target_no_worker_runs(tmp_path: Path) -> None:
     rig.session.stop()
 
     assert rig.observer.of("translation") == []
-    assert not rig.session.paths.translated_jsonl.exists()
+    assert not rig.paths.translated_jsonl.exists()

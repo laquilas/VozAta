@@ -16,7 +16,7 @@ _STOP = object()
 
 
 class TranslationOutput(Protocol):
-    """Where translations go: `transcript.translated.jsonl` and the `translation` event."""
+    """Where translations go: the stored translations and the `translation` event."""
 
     def emit(self, translation: Translation) -> None: ...
 

@@ -16,14 +16,10 @@ from vozata.labels import SpeakerLabeler
 from vozata.session import SessionStartError
 
 
-class _Paths:
-    root = Path("recordings/20261015_202358")
-
-
 class _FakeSession:
     def __init__(self, start_error: SessionStartError | None = None) -> None:
         self.status: SessionStatus | None = None
-        self.paths = _Paths()
+        self.folder = Path("recordings/20261015_202358")
         self.calls: list[str] = []
         self._start_error = start_error
         self.paused_twice = threading.Event()

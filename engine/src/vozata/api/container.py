@@ -14,9 +14,14 @@ from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.template_repository import TemplateRepository, bundled_templates
-from vozata.ports import DocumentExporter, Localizer, TaskExporter, TranscriptSearch
+from vozata.ports import (
+    DocumentExporter,
+    Localizer,
+    SessionRepository,
+    TaskExporter,
+    TranscriptSearch,
+)
 from vozata.settings_file import SettingsFile
-from vozata.storage.session_store import SessionStore
 
 
 class AskRunner(Protocol):
@@ -41,7 +46,7 @@ class ApiContainer:
     settings_file: SettingsFile  # current settings; `PUT /settings` updates them and `.env`
     localizer: Localizer
     labeler: SpeakerLabeler
-    store: SessionStore
+    store: SessionRepository
     broadcaster: EventBroadcaster
     manager: SessionManager
     devices: DeviceCatalog

@@ -5,13 +5,12 @@ from __future__ import annotations
 import sqlite3
 
 from vozata.cli.console import ConsoleObserver
-from vozata.ports import Localizer
+from vozata.ports import Localizer, SessionRepository
 from vozata.storage.search_index import SearchIndex
-from vozata.storage.session_store import SessionStore
 
 
 def run_reindex(
-    store: SessionStore, index: SearchIndex, console: ConsoleObserver, localizer: Localizer
+    store: SessionRepository, index: SearchIndex, console: ConsoleObserver, localizer: Localizer
 ) -> int:
     """Replace the whole index with each session's best transcript."""
     try:

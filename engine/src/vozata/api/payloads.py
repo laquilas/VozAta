@@ -7,7 +7,7 @@ from typing import Any
 
 from vozata.domain import TranscriptSegment
 from vozata.labels import SpeakerLabeler
-from vozata.storage.session_store import SessionStore
+from vozata.ports import SessionRepository
 
 
 def segment_payload(segment: TranscriptSegment, labeler: SpeakerLabeler) -> dict[str, Any]:
@@ -19,9 +19,9 @@ def segment_payload(segment: TranscriptSegment, labeler: SpeakerLabeler) -> dict
 
 
 def session_summary(
-    store: SessionStore, session_id: str, live_duration: float | None = None
+    store: SessionRepository, session_id: str, live_duration: float | None = None
 ) -> dict[str, Any]:
-    """`SessionSummary` from `session.json`; `live_duration` for the session being recorded."""
+    """`SessionSummary` from the metadata; `live_duration` for the session being recorded."""
     meta = store.read_meta(session_id)
     return {
         "id": session_id,
@@ -30,7 +30,7 @@ def session_summary(
         "ended_at": meta.get("ended_at"),
         "duration_seconds": (live_duration if live_duration is not None else _duration(meta)),
         "language": meta.get("language"),
-        "has_minutes": store.paths(session_id).minutes_md.is_file(),
+        "has_minutes": store.has_minutes(session_id),
     }
 
 

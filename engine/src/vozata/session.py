@@ -1,10 +1,11 @@
-"""A recording session: capture → WAVs + live transcript → finalization (architecture §6)."""
+"""A recording session: capture → audio + live transcript → finalization (architecture §6)."""
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
@@ -22,7 +23,9 @@ from vozata.ports import (
     AudioSource,
     Diarizer,
     Localizer,
+    SessionAudio,
     SessionObserver,
+    SessionRepository,
     SpeakerEmbedder,
     Transcriber,
     TranscriptSearch,
@@ -30,7 +33,6 @@ from vozata.ports import (
 )
 from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
-from vozata.storage.session_store import SessionPaths, SessionStore
 from vozata.transcription.language_lock import LanguageLock
 from vozata.translation.live import live_translation
 from vozata.translation.worker import TranslationWorker
@@ -85,7 +87,8 @@ class RecordingSession:
     def __init__(
         self,
         settings: Settings,
-        store: SessionStore,
+        store: SessionRepository,
+        audio: SessionAudio,
         components: SessionComponents,
         observer: SessionObserver,
         language: ConversationLanguage,
@@ -93,25 +96,27 @@ class RecordingSession:
     ) -> None:
         self._settings = settings
         self._store = store
+        self._audio = audio
         self._c = components
         self._observer = observer
         self._language = language
         self._open_timeout = open_timeout
         self.status: SessionStatus | None = None
-        self._paths: SessionPaths | None = None
+        self._id: str | None = None
         self._captured: float | None = None  # recorded length, fixed once capture stops
         self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
         self._pipeline: CapturePipeline | None = None  # None until `start()`, and on `recover()`
 
     @property
-    def paths(self) -> SessionPaths:
-        if self._paths is None:
+    def id(self) -> str:
+        if self._id is None:
             raise RuntimeError("The session has not started")
-        return self._paths
+        return self._id
 
     @property
-    def id(self) -> str:
-        return self.paths.id
+    def folder(self) -> Path | None:
+        """The session folder (file backend), else None; for messages only."""
+        return self._store.folder(self.id)
 
     @property
     def duration_seconds(self) -> float:
@@ -121,27 +126,27 @@ class RecordingSession:
         return self._c.clock.now() if self.status is not None else 0.0
 
     def start(self) -> None:
-        """Create the session folder and open every source, then load the transcriber.
+        """Create the session and open every source, then load the transcriber.
 
         `recording` is reported as soon as the sources are open; the speech model loads on the
         transcription thread (`on_model_loading`) and audio captured meanwhile is transcribed
         once it is ready.
         """
-        if self._paths is not None:
+        if self._id is not None:
             raise RuntimeError("A session can only be started once")
         started_at = self._store.now()
-        self._paths = self._store.create(started_at)
+        self._id = self._store.create(started_at)
         self._meta = SessionMeta(self._store, self.id, started_at, self._settings, self._c)
         self._meta.set_language(self._language, "selected")
         self._lock = LanguageLock(self._language, self._on_language_detected)
         translation = self._live_translation()
         self._pipeline = CapturePipeline(
             self._c.sources,
-            self._paths,
+            lambda channel: self._audio.open_writer(self.id, channel),
+            self._store.open_transcript(self.id, self._c.labeler),
             self._settings,
             self._c.transcriber_factory,
             self._lock,
-            self._c.labeler,
             self._observer,
             self._c.chunker_factory,
             lambda error: self._error("model_failed", reason=str(error)),
@@ -183,15 +188,15 @@ class RecordingSession:
         self._finish()
 
     def recover(self, session_id: str, duration_seconds: float) -> None:
-        """Finish an interrupted session whose WAVs and transcript were repaired (phase 17).
+        """Finish an interrupted session whose audio and transcript were repaired (phase 17).
 
         Runs the same `_finish()` sequence as `stop()` (mix onwards), so every stop step also
-        runs on recovery. `duration_seconds` is the recorded length found in the repaired WAVs.
+        runs on recovery. `duration_seconds` is the recorded length found in the repaired audio.
         """
-        if self._paths is not None:
+        if self._id is not None:
             raise RuntimeError("A session can only be started or recovered once")
         meta = self._store.read_meta(session_id)
-        self._paths = self._store.paths(session_id)
+        self._id = session_id
         self._meta = SessionMeta.restore(self._store, session_id, meta)
         language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
         self._lock = LanguageLock(language, self._on_language_detected)
@@ -233,7 +238,7 @@ class RecordingSession:
         return live_translation(
             self._c.translate_to,
             self._c.translator_factory,
-            self.paths.translated_jsonl,
+            self._store.open_translations(self.id),
             self._lock.current,
             self._observer,
             lambda error: self._error("translation_failed", reason=str(error)),
@@ -289,11 +294,10 @@ class RecordingSession:
             _log.exception("Releasing the audio backend failed")
 
     def _mix(self) -> None:
-        paths = self.paths
         try:
-            self._c.mixer.mix(paths.wav(Channel.MIC), paths.wav(Channel.SYSTEM), paths.mixed_wav)
+            self._audio.write_mix(self.id, self._c.mixer)
         except Exception as error:
-            _log.exception("Mixing %s failed", paths.root)
+            _log.exception("Mixing %s failed", self.id)
             self._error("mix_failed", reason=str(error))
 
     def _release_transcriber(self) -> None:
@@ -321,7 +325,8 @@ class RecordingSession:
         return build
 
     def _identify_speakers(self) -> None:
-        """Diarize `system.wav` (Whisper is already released); a failure keeps `system` labels.
+        """Diarize the system track (Whisper is already released); a failure keeps `system`
+        labels.
 
         Once speakers are written, `speakers_relabeled` tells clients to reload the transcript:
         the post-session speakers replace the live ones (phase 15).
@@ -331,6 +336,7 @@ class RecordingSession:
         try:
             found = diarize_session(
                 self._store,
+                self._audio,
                 self.id,
                 self._c.diarizer_factory,
                 self._settings.min_speakers,
@@ -339,7 +345,7 @@ class RecordingSession:
         except Exception as error:
             _log.warning("Speaker identification for %s failed: %s", self.id, error)
             reason = self._reason(error)
-            command = f'python -m vozata diarize "{self.paths.root}"'
+            command = f'python -m vozata diarize "{self._command_target()}"'
             self._error("diarization_failed", reason=reason, command=command)
             return
         if found is not None:
@@ -359,10 +365,10 @@ class RecordingSession:
             )
         except Exception as error:
             _log.exception("Generating minutes for %s failed", self.id)
-            command = f'python -m vozata minutes "{self.paths.root}"'
+            command = f'python -m vozata minutes "{self._command_target()}"'
             self._error("minutes_failed", reason=str(error), command=command)
             return
-        self.paths.minutes_md.write_text(minutes + "\n", encoding="utf-8", newline="\n")
+        self._store.write_minutes(self.id, minutes + "\n")
         self._observer.on_minutes_ready(self.id)
 
     def _extract_action_items(self) -> None:
@@ -389,6 +395,11 @@ class RecordingSession:
         except Exception as error:
             _log.exception("Indexing %s for search failed", self.id)
             self._error("index_failed", reason=str(error))
+
+    def _command_target(self) -> str:
+        """What the CLI commands in error messages take: the session folder (file backend)."""
+        folder = self.folder
+        return str(folder) if folder is not None else self.id
 
     def _reason(self, error: Exception) -> str:
         return error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)

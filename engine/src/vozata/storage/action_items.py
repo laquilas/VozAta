@@ -8,8 +8,7 @@ import threading
 from collections.abc import Sequence
 
 from vozata.domain import ActionItem
-from vozata.storage.session_store import SessionPaths
-from vozata.storage.session_store import _write_atomic as write_atomic
+from vozata.storage.files.layout import SessionPaths, write_atomic
 
 SCHEMA_VERSION = 1
 # Held around every read-modify-write of `action_items.json` (extraction, edits, export).

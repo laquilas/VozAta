@@ -16,8 +16,7 @@ from datetime import datetime
 from vozata.domain import TranscriptSegment
 from vozata.formatting import render_line
 from vozata.labels import SpeakerLabeler
-from vozata.ports import Localizer, TranscriptSearch
-from vozata.storage.session_store import SessionNotFoundError, SessionStore
+from vozata.ports import Localizer, SessionNotFoundError, SessionRepository, TranscriptSearch
 
 NEIGHBOURS = 2  # segments kept on each side of a hit (single session)
 SEARCH_LIMIT = 200  # hits read per search term
@@ -56,7 +55,7 @@ def session_date(session_id: str) -> str:
 class Retriever:
     def __init__(
         self,
-        store: SessionStore,
+        store: SessionRepository,
         search: TranscriptSearch | None,
         labeler: SpeakerLabeler,
         localizer: Localizer,

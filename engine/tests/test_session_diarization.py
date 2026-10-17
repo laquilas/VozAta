@@ -66,7 +66,7 @@ def test_whisper_is_released_before_diarizing_and_the_diarizer_before_the_minute
         "llm.generate",
     ]
     [diarizer] = built
-    paths = rig.session.paths
+    paths = rig.paths
     assert diarizer.calls == [(paths.wav(Channel.SYSTEM), 2, 3)]
     assert [s.speaker_id for s in rig.store.load_transcript(rig.session.id)] == ["system:1"]
     assert paths.speakers_json.is_file()
@@ -91,7 +91,7 @@ def test_a_failing_diarizer_keeps_system_labels_reports_and_still_writes_minutes
     [(code, message)] = rig.observer.of("error")
     assert code == "diarization_failed"
     assert "no token" in message and "python -m vozata diarize" in message
-    assert not rig.session.paths.diarized_jsonl.exists()
+    assert not rig.paths.diarized_jsonl.exists()
     assert rig.observer.of("speakers_relabeled") == []
     assert "labels.system: Hello there." in rig.llm.prompts[0][1]
     assert rig.session.status is SessionStatus.DONE
@@ -108,7 +108,7 @@ def test_a_failing_diarizer_factory_is_reported_too(tmp_path: Path) -> None:
     rig.session.stop()
 
     assert [code for code, _ in rig.observer.of("error")] == ["diarization_failed"]
-    assert rig.session.paths.minutes_md.exists()
+    assert rig.paths.minutes_md.exists()
 
 
 def test_without_system_speech_no_diarizer_is_loaded(tmp_path: Path) -> None:
@@ -119,7 +119,7 @@ def test_without_system_speech_no_diarizer_is_loaded(tmp_path: Path) -> None:
     rig.session.stop()
 
     assert built == []
-    assert not rig.session.paths.diarized_jsonl.exists()
+    assert not rig.paths.diarized_jsonl.exists()
     assert rig.observer.of("speakers_relabeled") == []
 
 

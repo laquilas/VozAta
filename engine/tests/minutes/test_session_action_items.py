@@ -12,6 +12,7 @@ from vozata.labels import SpeakerLabeler
 from vozata.minutes.session_action_items import write_session_action_items
 from vozata.minutes.session_minutes import EmptyTranscriptError
 from vozata.storage.action_items import read_action_items, write_action_items
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
 
 
@@ -53,7 +54,7 @@ def test_items_are_extracted_with_the_stored_context_and_saved(tmp_path: Path) -
     extractor = _Extractor([ActionItem("a1", "Send")])
 
     items = write_session_action_items(
-        store, session_id, extractor, SpeakerLabeler(FakeLocalizer())
+        FileSessionRepository(store), session_id, extractor, SpeakerLabeler(FakeLocalizer())
     )
 
     assert items == [ActionItem("a1", "Send")]
@@ -69,7 +70,7 @@ def test_exported_items_are_kept_and_new_ids_do_not_collide(tmp_path: Path) -> N
     extractor = _Extractor([ActionItem("a1", "New one"), ActionItem("a2", "New two")])
 
     items = write_session_action_items(
-        store, session_id, extractor, SpeakerLabeler(FakeLocalizer())
+        FileSessionRepository(store), session_id, extractor, SpeakerLabeler(FakeLocalizer())
     )
 
     assert [(item.id, item.description) for item in items] == [
@@ -87,6 +88,9 @@ def test_an_empty_transcript_raises_and_writes_nothing(tmp_path: Path) -> None:
 
     with pytest.raises(EmptyTranscriptError):
         write_session_action_items(
-            store, session_id, _Extractor([]), SpeakerLabeler(FakeLocalizer())
+            FileSessionRepository(store),
+            session_id,
+            _Extractor([]),
+            SpeakerLabeler(FakeLocalizer()),
         )
     assert not store.paths(session_id).action_items_json.exists()

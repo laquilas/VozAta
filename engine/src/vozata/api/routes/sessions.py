@@ -22,7 +22,6 @@ from vozata.api.schemas import (
 )
 from vozata.api.session_manager import StartOptions
 from vozata.domain import ConversationLanguage, TranslationTarget
-from vozata.translation.translations_file import read_translations
 
 router = APIRouter(tags=["sessions"])
 Container = Annotated[ApiContainer, Depends(container)]
@@ -78,9 +77,12 @@ def list_sessions(
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
 def session_detail(session_id: str, c: Container) -> dict[str, Any]:
     meta = c.store.read_meta(session_id)
-    root = c.store.paths(session_id).root
-    files = sorted(item.name for item in root.iterdir() if item.is_file())
-    return {**meta, **_summary(c, session_id), "files": files, "folder": str(root.resolve())}
+    detail = {**meta, **_summary(c, session_id)}
+    folder = c.store.folder(session_id)
+    if folder is not None:  # file backend
+        detail["files"] = c.store.files(session_id)
+        detail["folder"] = str(folder.resolve())
+    return detail
 
 
 @router.get("/sessions/{session_id}/transcript", response_model=Transcript)
@@ -88,7 +90,7 @@ def transcript(session_id: str, c: Container) -> dict[str, Any]:
     source, segments = c.store.load_transcript_with_source(session_id)
     ordered = sorted(segments, key=lambda segment: segment.start)
     labeler = c.labeler.with_names(c.store.speaker_names(session_id))
-    translations = read_translations(c.store.paths(session_id).translated_jsonl)
+    translations = c.store.load_translations(session_id)
     payloads = []
     for segment in ordered:
         payload = segment_payload(segment, labeler)
@@ -101,10 +103,10 @@ def transcript(session_id: str, c: Container) -> dict[str, Any]:
 @router.get("/sessions/{session_id}/minutes", response_model=Minutes)
 def minutes(session_id: str, c: Container) -> dict[str, str]:
     c.store.read_meta(session_id)
-    path = c.store.paths(session_id).minutes_md
-    if not path.is_file():
+    markdown = c.store.read_minutes(session_id)
+    if markdown is None:
         raise ApiError(404, "minutes_not_found", id=session_id)
-    return {"markdown": path.read_text(encoding="utf-8")}
+    return {"markdown": markdown}
 
 
 @router.post("/sessions/{session_id}/minutes", status_code=status.HTTP_202_ACCEPTED)

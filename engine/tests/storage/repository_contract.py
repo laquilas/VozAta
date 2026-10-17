@@ -1,0 +1,254 @@
+"""Contract every `SessionRepository` must honour (phase 30; reused by SQLite in phase 31).
+
+Reuse from a backend's tests by subclassing and providing the `repository` fixture (an empty
+repository, one per test):
+
+    class TestSqliteRepository(RepositoryContract):
+        @pytest.fixture
+        def repository(self, tmp_path: Path) -> SessionRepository:
+            return SqliteSessionRepository(...)
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pytest
+
+from tests.fakes import FakeLocalizer
+from vozata.domain import ActionItem, Channel, TranscriptSegment, Translation, Word
+from vozata.labels import SpeakerLabeler
+from vozata.ports import (
+    SessionNotFoundError,
+    SessionRepository,
+    TranscriptSink,
+    TranslationWriter,
+)
+
+STARTED = datetime(2026, 10, 15, 20, 23, 58, tzinfo=timezone(timedelta(hours=-3)))
+SESSION_ID = re.compile(r"^\d{8}_\d{6}(_[1-9]\d*)?$")
+
+
+def segment(segment_id: str, start: float, text: str, speaker_id: str = "mic") -> TranscriptSegment:
+    channel = Channel.SYSTEM if speaker_id.startswith("system") else Channel.MIC
+    words = (Word(text, start, start + 0.5, 0.9),)
+    return TranscriptSegment(segment_id, channel, speaker_id, start, start + 0.5, text, words)
+
+
+RAW = [segment("mic-000001", 0.1, "Hello."), segment("system-000002", 0.6, "Hi.", "system")]
+
+
+class RepositoryContract:
+    """Behaviour shared by every storage backend; subclasses provide `repository`."""
+
+    @pytest.fixture
+    def repository(self) -> SessionRepository:  # pragma: no cover - overridden by subclasses
+        raise NotImplementedError
+
+    def _session(self, repository: SessionRepository, started_at: datetime = STARTED) -> str:
+        session_id = repository.create(started_at)
+        repository.write_meta(session_id, {"id": session_id, "status": "done"})
+        return session_id
+
+    # sessions and metadata
+
+    def test_satisfies_the_port(self, repository: SessionRepository) -> None:
+        assert isinstance(repository, SessionRepository)
+        now = repository.now()
+        assert isinstance(now, datetime) and now.tzinfo is not None
+
+    def test_create_names_sessions_after_their_start_and_never_reuses_an_id(
+        self, repository: SessionRepository
+    ) -> None:
+        first = repository.create(STARTED)
+        second = repository.create(STARTED)
+
+        assert first == "20261015_202358"
+        assert second != first
+        assert SESSION_ID.match(second)
+        assert SESSION_ID.match(repository.create())
+
+    def test_metadata_round_trips_and_lists_newest_first(
+        self, repository: SessionRepository
+    ) -> None:
+        older = self._session(repository, STARTED)
+        newer = self._session(repository, STARTED + timedelta(minutes=5))
+        meta = {"id": newer, "status": "recording", "language": "pt", "pauses": [{"start": 1.0}]}
+
+        repository.write_meta(newer, meta)
+
+        assert repository.read_meta(newer) == meta
+        assert repository.list_sessions() == [newer, older]
+
+    def test_a_session_without_metadata_is_not_listed_or_readable(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = repository.create(STARTED)
+
+        assert repository.list_sessions() == []
+        with pytest.raises(SessionNotFoundError):
+            repository.read_meta(session_id)
+
+    @pytest.mark.parametrize("session_id", ["20991231_000000", "../etc", "nope", ""])
+    def test_unknown_or_invalid_ids_are_not_found(
+        self, repository: SessionRepository, session_id: str
+    ) -> None:
+        with pytest.raises(SessionNotFoundError):
+            repository.read_meta(session_id)
+
+    def test_discard_removes_the_session(self, repository: SessionRepository) -> None:
+        session_id = self._session(repository)
+
+        repository.discard(session_id)
+
+        assert repository.list_sessions() == []
+        with pytest.raises(SessionNotFoundError):
+            repository.read_meta(session_id)
+
+    # transcripts
+
+    def test_a_live_transcript_is_readable_segment_by_segment(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        sink = repository.open_transcript(session_id, SpeakerLabeler(FakeLocalizer()))
+        assert isinstance(sink, TranscriptSink)
+
+        sink.emit(RAW[0])
+        assert repository.load_raw_transcript(session_id) == RAW[:1]  # durable before close
+        sink.emit(RAW[1])
+        sink.close()
+
+        assert repository.load_raw_transcript(session_id) == RAW
+        assert repository.load_transcript_with_source(session_id) == ("raw", RAW)
+        assert repository.load_transcript(session_id) == RAW
+
+    def test_a_session_without_transcript_has_an_empty_raw_one(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+
+        assert repository.load_transcript_with_source(session_id) == ("raw", [])
+        assert repository.load_raw_transcript(session_id) == []
+
+    def test_edited_then_diarized_then_raw_is_the_best_transcript(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        sink = repository.open_transcript(session_id, SpeakerLabeler(FakeLocalizer()))
+        for raw in RAW:
+            sink.emit(raw)
+        sink.close()
+        diarized = [RAW[0], segment("system-000002", 0.6, "Hi.", "system:1")]
+        corrected = TranscriptSegment(
+            "system-000002", Channel.SYSTEM, "system:1", 0.6, 1.1, "Hi there.", (), edited=True
+        )
+        edited = [RAW[0], corrected]
+
+        repository.write_diarized(session_id, diarized)
+        assert repository.load_transcript_with_source(session_id) == ("diarized", diarized)
+
+        repository.write_edited(session_id, edited)
+        assert repository.load_transcript_with_source(session_id) == ("edited", edited)
+
+        assert repository.delete_edited(session_id) is True
+        assert repository.delete_edited(session_id) is False
+        assert repository.load_transcript_with_source(session_id) == ("diarized", diarized)
+        assert repository.load_raw_transcript(session_id) == RAW  # never rewritten
+
+    # translations
+
+    def test_translations_are_stored_by_segment_and_the_last_one_wins(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        writer = repository.open_translations(session_id)
+        assert isinstance(writer, TranslationWriter)
+        assert repository.load_translations(session_id) == {}
+
+        writer.append(Translation("mic-000001", "pt", "Olá."))
+        writer.append(Translation("system-000002", "pt", "Oi"))
+        writer.append(Translation("system-000002", "pt", "Oi."))
+        writer.close()
+
+        assert repository.load_translations(session_id) == {
+            "mic-000001": Translation("mic-000001", "pt", "Olá."),
+            "system-000002": Translation("system-000002", "pt", "Oi."),
+        }
+
+    def test_a_translation_writer_closed_unused_stores_nothing(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+
+        repository.open_translations(session_id).close()
+
+        assert repository.load_translations(session_id) == {}
+
+    # speakers
+
+    def test_speakers_are_written_without_names_then_renamed(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        assert repository.speaker_names(session_id) == {}
+
+        repository.write_speakers(session_id, ["system:1", "system:2"])
+        assert repository.speaker_names(session_id) == {}
+
+        repository.rename_speakers(session_id, {"system:1": "  Ana ", "mic": "Me"})
+        assert repository.speaker_names(session_id) == {"system:1": "Ana", "mic": "Me"}
+
+        repository.rename_speakers(session_id, {"system:1": "  ", "mic": None})
+        assert repository.speaker_names(session_id) == {}
+
+    # minutes
+
+    def test_minutes_are_stored_exactly_as_written(self, repository: SessionRepository) -> None:
+        session_id = self._session(repository)
+        assert repository.read_minutes(session_id) is None
+        assert repository.has_minutes(session_id) is False
+
+        repository.write_minutes(session_id, "# Minutes\n\n- Ação\n")
+        assert repository.read_minutes(session_id) == "# Minutes\n\n- Ação\n"
+        assert repository.has_minutes(session_id) is True
+
+        repository.write_minutes(session_id, "# Again\n")
+        assert repository.read_minutes(session_id) == "# Again\n"
+
+    # action items
+
+    def test_action_items_round_trip_in_order_under_the_lock(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        items = [
+            ActionItem("a2", "Book the room", "Ana", "2026-10-20", ("mic-000001",)),
+            ActionItem("a1", "Send the report", exported_url="https://example.test/1"),
+        ]
+        assert repository.read_action_items(session_id) == []
+
+        with repository.action_items_lock():
+            repository.write_action_items(session_id, items)
+            assert repository.read_action_items(session_id) == items
+        repository.write_action_items(session_id, [])
+
+        assert repository.read_action_items(session_id) == []
+
+    # file backend extras (optional in the contract)
+
+    def test_folder_and_files_are_both_present_or_both_absent(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+
+        folder = repository.folder(session_id)
+        files = repository.files(session_id)
+
+        if folder is None:
+            assert files is None
+        else:
+            assert isinstance(folder, Path)
+            assert files == sorted(files or [])

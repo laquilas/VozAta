@@ -11,24 +11,25 @@ from tests.fakes import FakeSessionObserver
 from tests.test_session import ENDED, STARTED, _Rig
 from tests.test_session_recover import SEGMENTS, make_session_folder, write_wav
 from vozata.domain import Channel
-from vozata.ports import SessionObserver
-from vozata.storage.recovery import (
-    RecoveryError,
-    SessionRecovery,
-    find_interrupted,
-    repair_session_files,
-    repair_transcript,
-)
-from vozata.storage.session_store import SessionNotFoundError, SessionStore
+from vozata.ports import RecoverableStore, SessionNotFoundError, SessionObserver
+from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.repair import repair_transcript
+from vozata.storage.files.repository import FileSessionRepository
+from vozata.storage.recovery import RecoveryError, SessionRecovery, find_interrupted
+from vozata.storage.session_store import SessionStore
 
 RATE = 16000
 
 
-def _store(tmp_path: Path) -> SessionStore:
-    return SessionStore(tmp_path / "recordings", now=lambda: ENDED)
+def _store(tmp_path: Path) -> FileSessionRepository:
+    return FileSessionRepository(SessionStore(tmp_path / "recordings", now=lambda: ENDED))
 
 
-def _status(store: SessionStore, session_id: str) -> str:
+def _repairs(store: FileSessionRepository) -> list[RecoverableStore]:
+    return [FileAudioStore(store.store, RATE), store]
+
+
+def _status(store: FileSessionRepository, session_id: str) -> str:
     return store.read_meta(session_id)["status"]
 
 
@@ -47,7 +48,7 @@ def _break_header(path: Path, cut_bytes: int = 0) -> None:
 
 
 class _SpySession:
-    def __init__(self, store: SessionStore) -> None:
+    def __init__(self, store: FileSessionRepository) -> None:
         self.store = store
         self.calls: list[tuple[str, float]] = []
 
@@ -56,7 +57,9 @@ class _SpySession:
         self.store.write_meta(session_id, {**self.store.read_meta(session_id), "status": "done"})
 
 
-def _recovery(store: SessionStore) -> tuple[SessionRecovery, _SpySession, list[SessionObserver]]:
+def _recovery(
+    store: FileSessionRepository,
+) -> tuple[SessionRecovery, _SpySession, list[SessionObserver]]:
     spy = _SpySession(store)
     observers: list[SessionObserver] = []
 
@@ -64,7 +67,7 @@ def _recovery(store: SessionStore) -> tuple[SessionRecovery, _SpySession, list[S
         observers.append(observer)
         return spy
 
-    return SessionRecovery(store, RATE, build), spy, observers
+    return SessionRecovery(store, _repairs(store), build), spy, observers
 
 
 # find_interrupted
@@ -118,7 +121,7 @@ def test_with_stale_after_a_recent_heartbeat_is_left_for_its_process(tmp_path: P
 def test_an_unreadable_session_json_is_skipped(tmp_path: Path) -> None:
     store = _store(tmp_path)
     good = make_session_folder(store, status="recording")
-    bad = store.create(STARTED + timedelta(seconds=1))
+    bad = store.paths(store.create(STARTED + timedelta(seconds=1)))
     bad.meta.write_text("{not json", encoding="utf-8")
 
     assert find_interrupted(store) == [good]
@@ -134,7 +137,7 @@ def test_unequal_wavs_with_stale_headers_are_repaired_and_padded(tmp_path: Path)
     _break_header(paths.wav(Channel.MIC), cut_bytes=RATE // 2)  # the last 0.25 s never landed
     _break_header(paths.wav(Channel.SYSTEM))
 
-    duration = repair_session_files(paths, RATE)
+    duration = FileAudioStore(store.store, RATE).repair(session_id)
 
     assert duration == 0.75
     assert _frames(paths.wav(Channel.MIC)) == _frames(paths.wav(Channel.SYSTEM)) == RATE * 3 // 4
@@ -231,9 +234,12 @@ def test_find_interrupted_uses_the_configured_staleness(tmp_path: Path) -> None:
     fresh = make_session_folder(store, status="recording", last_heartbeat_at=ENDED.isoformat())
     spy = _SpySession(store)
 
-    assert SessionRecovery(store, RATE, lambda i, o: spy, stale_after=30).find_interrupted() == []
-    assert SessionRecovery(store, RATE, lambda i, o: spy).find_interrupted() == [fresh]
-    assert SessionRecovery(store, RATE, lambda i, o: spy).store is store
+    assert (
+        SessionRecovery(store, _repairs(store), lambda i, o: spy, stale_after=30).find_interrupted()
+        == []
+    )
+    assert SessionRecovery(store, _repairs(store), lambda i, o: spy).find_interrupted() == [fresh]
+    assert SessionRecovery(store, _repairs(store), lambda i, o: spy).store is store
 
 
 def test_recover_runs_the_real_stop_steps_on_a_crashed_folder(tmp_path: Path) -> None:
@@ -245,7 +251,9 @@ def test_recover_runs_the_real_stop_steps_on_a_crashed_folder(tmp_path: Path) ->
     _break_header(paths.wav(Channel.SYSTEM), cut_bytes=RATE)  # system lost its last 0.5 s
     with paths.transcript_jsonl.open("a", encoding="utf-8") as file:
         file.write('{"segment_id": "system-00')
-    recovery = SessionRecovery(rig.store, RATE, lambda session_id, observer: rig.session)
+    recovery = SessionRecovery(
+        rig.store, [rig.audio, rig.store], lambda session_id, observer: rig.session
+    )
 
     assert recovery.find_interrupted() == [session_id]
     assert recovery.recover(session_id, rig.observer) is True

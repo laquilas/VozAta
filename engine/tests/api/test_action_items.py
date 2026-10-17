@@ -5,6 +5,8 @@ from __future__ import annotations
 import dataclasses
 import json
 
+import pytest
+
 from tests.api.conftest import Api
 from tests.fakes import FakeTaskExporter
 from vozata.domain import ActionItem, Channel, TranscriptSegment
@@ -33,7 +35,7 @@ class _Rig:
 
     def session(self, items: list[ActionItem] = ITEMS) -> str:
         store = self.api.store
-        paths = store.create()
+        paths = store.paths(store.create())
         store.write_meta(paths.id, {"id": paths.id, "started_at": "2026-10-15T20:23:58-03:00"})
         segment = TranscriptSegment("mic-000002", Channel.MIC, "mic", 83.5, 85.0, "Report.", ())
         paths.transcript_jsonl.write_text(json.dumps(segment.to_dict()) + "\n", encoding="utf-8")
@@ -270,3 +272,20 @@ def test_a_session_without_a_start_time_uses_its_id_as_title(api: Api) -> None:
     )
 
     assert f'"Meeting of {session_id}"' in rig.exporter.drafts[0].body
+
+
+def test_an_export_without_a_session_folder_leaves_the_folder_line_out(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig = _Rig(api)
+    session_id = rig.session()
+    monkeypatch.setattr(api.store, "folder", lambda session_id: None)  # e.g. a database backend
+
+    api.client.post(
+        f"/sessions/{session_id}/action-items/export",
+        json={"target": "github", "item_ids": ["a1"]},
+    )
+
+    [draft] = rig.exporter.drafts
+    assert not any(line.startswith("Session folder") for line in draft.body.splitlines())
+    assert len(draft.body.splitlines()) == 4

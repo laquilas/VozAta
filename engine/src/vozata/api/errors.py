@@ -15,9 +15,8 @@ from vozata.api.session_manager import (
     SessionNotInterruptedError,
 )
 from vozata.config import ConfigError
-from vozata.ports import Localizer
+from vozata.ports import Localizer, SessionNotFoundError
 from vozata.session import SessionStartError
-from vozata.storage.session_store import SessionNotFoundError
 
 _log = logging.getLogger(__name__)
 

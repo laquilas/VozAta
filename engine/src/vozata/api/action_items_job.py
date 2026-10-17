@@ -10,8 +10,7 @@ from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.session_action_items import Extractor, write_session_action_items
 from vozata.minutes.session_minutes import EmptyTranscriptError
-from vozata.ports import LanguageModelError, Localizer
-from vozata.storage.session_store import SessionStore
+from vozata.ports import LanguageModelError, Localizer, SessionRepository
 
 _log = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class ActionItemsJob:
 
     def __init__(
         self,
-        store: SessionStore,
+        store: SessionRepository,
         build_extractor: Callable[[], Extractor],
         labeler: SpeakerLabeler,
         broadcaster: EventBroadcaster,

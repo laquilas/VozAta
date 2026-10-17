@@ -14,7 +14,7 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 from vozata.domain import SNIPPET_END, SNIPPET_START, SearchHit, TranscriptSegment
-from vozata.storage.session_store import SessionStore
+from vozata.ports import SessionRepository
 
 SNIPPET_TOKENS = 16  # words around the match in a snippet
 _ELLIPSIS = "…"
@@ -72,7 +72,7 @@ class SearchIndex:
             ).fetchall()
         return [SearchHit(str(a), str(b), float(c), str(d), str(e)) for a, b, c, d, e in rows]
 
-    def rebuild(self, store: SessionStore) -> int:
+    def rebuild(self, store: SessionRepository) -> int:
         """Re-index every session from its best transcript; returns how many were indexed."""
         sessions = store.list_sessions()
         with self._connect() as db:
@@ -82,7 +82,7 @@ class SearchIndex:
         _log.info("Search index rebuilt: %d sessions", len(sessions))
         return len(sessions)
 
-    def ensure(self, store: SessionStore) -> None:
+    def ensure(self, store: SessionRepository) -> None:
         """First run after an upgrade: rebuild when sessions exist but `index.db` does not.
 
         Meant for a background thread at startup, so failures are logged, never raised.

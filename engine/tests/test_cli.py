@@ -117,7 +117,7 @@ def test_reindex_command_rebuilds_the_index_in_the_output_dir(
     monkeypatch.setattr(
         cli,
         "run_reindex",
-        lambda store, index, *args: received.append((store._root, index._path)) or 0,
+        lambda store, index, *args: received.append((store.store._root, index._path)) or 0,
     )
 
     code, _ = _main(["reindex"], env={"OUTPUT_DIR": str(tmp_path)})
@@ -137,7 +137,7 @@ def test_recover_command_targets_a_folder_or_every_session(
 
     def fake_run(session_dir: Path | None, build: Any, *args: Any) -> int:
         recovery = build(None)
-        received.append((session_dir, recovery.store._root, recovery._stale_after))
+        received.append((session_dir, recovery.store.store._root, recovery._stale_after))
         return 0
 
     monkeypatch.setattr(cli, "run_recover", fake_run)

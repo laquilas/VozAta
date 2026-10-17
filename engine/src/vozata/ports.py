@@ -6,13 +6,16 @@ needs them.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import AbstractContextManager
+from datetime import datetime
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
 
 from vozata.domain import (
+    ActionItem,
     AudioChunk,
     Channel,
     ConversationLanguage,
@@ -23,7 +26,11 @@ from vozata.domain import (
     TaskDraft,
     TranscriptionResult,
     TranscriptSegment,
+    Translation,
 )
+
+if TYPE_CHECKING:
+    from vozata.labels import SpeakerLabeler
 
 
 @runtime_checkable
@@ -94,7 +101,9 @@ class SpeechDetector(Protocol):
 
 @runtime_checkable
 class AudioMixer(Protocol):
-    def mix(self, mic: Path, system: Path, destination: Path) -> None: ...
+    def mix(self, reader: AudioReader, session_id: str, destination: Path) -> None:
+        """Write the mic and system tracks of `session_id`, read through `reader`, as one WAV."""
+        ...
 
 
 class LanguageModelError(RuntimeError):
@@ -255,4 +264,188 @@ class TranscriptSearch(Protocol):
 
     def search(self, query: str, limit: int = 50) -> list[SearchHit]:
         """Best matches first for free user text; FTS syntax in `query` is never interpreted."""
+        ...
+
+
+# --- Storage (phase 30): every read and write of session data goes through these ports. ---
+
+
+class SessionNotFoundError(LookupError):
+    """No session with this id (or the id is not a session id)."""
+
+
+@runtime_checkable
+class TranslationWriter(Protocol):
+    """A recording's live translations (phase 29), appended one by one."""
+
+    def append(self, translation: Translation) -> None: ...
+
+    def close(self) -> None: ...
+
+
+@runtime_checkable
+class SessionRepository(Protocol):
+    """Sessions: metadata, transcripts, speakers, translations, minutes and action items.
+
+    Session ids are `YYYYMMDD_HHMMSS[_n]`; any other id raises `SessionNotFoundError`.
+    """
+
+    def now(self) -> datetime:
+        """The local time with its offset (start and end stamps, heartbeats)."""
+        ...
+
+    def create(self, started_at: datetime | None = None) -> str:
+        """A new, empty session named after `started_at` (default: now); returns its id."""
+        ...
+
+    def discard(self, session_id: str) -> None:
+        """Delete everything of a session (a recording that failed to start)."""
+        ...
+
+    def read_meta(self, session_id: str) -> dict[str, Any]:
+        """The metadata (architecture §8); `SessionNotFoundError` when the session has none."""
+        ...
+
+    def write_meta(self, session_id: str, meta: dict[str, Any]) -> None:
+        """Replace the metadata atomically (a crash leaves the old or the new one)."""
+        ...
+
+    def list_sessions(self) -> list[str]:
+        """Ids of the sessions that have metadata, newest first."""
+        ...
+
+    def open_transcript(self, session_id: str, labeler: SpeakerLabeler) -> TranscriptSink:
+        """The live, append-only raw transcript of a recording; each segment is durable once
+        `emit` returns (crash safety, phase 17)."""
+        ...
+
+    def load_transcript(self, session_id: str) -> list[TranscriptSegment]:
+        """The best transcript: edited, then diarized, then raw (empty when there is none)."""
+        ...
+
+    def load_transcript_with_source(self, session_id: str) -> tuple[str, list[TranscriptSegment]]:
+        """The best transcript and its source: `edited`, `diarized` or `raw`."""
+        ...
+
+    def load_raw_transcript(self, session_id: str) -> list[TranscriptSegment]:
+        """The transcript as captured (empty when there is none)."""
+        ...
+
+    def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
+        """Replace the speaker-labelled transcript (phase 14)."""
+        ...
+
+    def write_edited(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
+        """Replace the edited transcript with this full copy (phase 21)."""
+        ...
+
+    def delete_edited(self, session_id: str) -> bool:
+        """Drop the edited transcript; False when there was none (phase 21)."""
+        ...
+
+    def open_translations(self, session_id: str) -> TranslationWriter:
+        """Where a recording's live translations go; nothing is stored until the first one."""
+        ...
+
+    def load_translations(self, session_id: str) -> dict[str, Translation]:
+        """Translations by segment id (the last one wins); empty when there is none."""
+        ...
+
+    def speaker_names(self, session_id: str) -> dict[str, str]:
+        """Names given to speakers (empty when none or unreadable)."""
+        ...
+
+    def write_speakers(self, session_id: str, speaker_ids: Sequence[str]) -> None:
+        """Replace the speakers with these ids, without names (phase 14)."""
+        ...
+
+    def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:
+        """Merge trimmed names; an empty or None name clears it (phase 16)."""
+        ...
+
+    def read_minutes(self, session_id: str) -> str | None:
+        """The minutes Markdown exactly as written; None when there are none."""
+        ...
+
+    def write_minutes(self, session_id: str, markdown: str) -> None: ...
+
+    def has_minutes(self, session_id: str) -> bool: ...
+
+    def read_action_items(self, session_id: str) -> list[ActionItem]:
+        """The stored items in order; empty when none or unreadable (phase 23)."""
+        ...
+
+    def write_action_items(self, session_id: str, items: Sequence[ActionItem]) -> None:
+        """Replace the action items atomically."""
+        ...
+
+    def action_items_lock(self) -> AbstractContextManager[object]:
+        """Held around every read-modify-write of action items (extraction, edits, export)."""
+        ...
+
+    def folder(self, session_id: str) -> Path | None:
+        """The session folder (file backend); None for a backend without one."""
+        ...
+
+    def files(self, session_id: str) -> list[str] | None:
+        """Names of the files in the session folder, sorted; None without a folder."""
+        ...
+
+
+@runtime_checkable
+class AudioTrackWriter(AudioSink, Protocol):
+    """One channel of a recording, aligned to the session clock (`AlignedWavWriter`)."""
+
+    paused: bool  # blocks are written as silence while paused
+    samples_written: int
+
+
+@runtime_checkable
+class AudioStore(Protocol):
+    """Where a recording's audio goes."""
+
+    def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter:
+        """A writer for one channel; `finalize` completes the track and closes it."""
+        ...
+
+    def write_mix(self, session_id: str, mixer: AudioMixer) -> None:
+        """Mix the finished tracks with `mixer` and keep the result (stop step 3)."""
+        ...
+
+
+@runtime_checkable
+class AudioReader(Protocol):
+    """Reads a session's recorded tracks (mono 16-bit PCM)."""
+
+    def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray:
+        """Up to `count` int16 samples from sample `start` (fewer at the end of the track)."""
+        ...
+
+    def length(self, session_id: str, channel: Channel) -> int:
+        """The track length in samples."""
+        ...
+
+    def sample_rate(self, session_id: str, channel: Channel) -> int: ...
+
+    def materialize_wav(self, session_id: str, channel: Channel) -> Path:
+        """A WAV file of the track, for tools that need a file (the diarizer child process)."""
+        ...
+
+
+@runtime_checkable
+class SessionAudio(AudioStore, AudioReader, Protocol):
+    """Both sides of a storage backend's audio: what a recording session needs."""
+
+
+class StoreRepairError(RuntimeError):
+    """A store could not repair an interrupted session; the message says why."""
+
+
+@runtime_checkable
+class RecoverableStore(Protocol):
+    """A store that can make an interrupted session's data readable again (phase 17)."""
+
+    def repair(self, session_id: str) -> float | None:
+        """Repair what a crash left half-written. Returns the recorded length in seconds when
+        this store holds the audio, else None; raises `StoreRepairError` when it cannot."""
         ...

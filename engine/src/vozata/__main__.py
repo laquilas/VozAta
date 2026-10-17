@@ -120,8 +120,8 @@ def main(
         if args.command == "recover":
             return run_recover(
                 None if args.all else args.session_dir,
-                lambda store: bootstrap.build_recovery(
-                    settings, store, stale_after=bootstrap.cli_stale_after(settings)
+                lambda output_dir: bootstrap.build_recovery(
+                    settings, output_dir, stale_after=bootstrap.cli_stale_after(settings)
                 ),
                 console,
                 localizer,
