@@ -196,6 +196,7 @@ class Api:
         from vozata.settings_file import SettingsFile
 
         self.env_file = tmp_path / ".env"
+        self.vocabulary_file = tmp_path / "vocabulary.txt"
         self.settings_file = SettingsFile(self.env_file, self.settings, environ={})
 
         container = ApiContainer(
@@ -213,6 +214,7 @@ class Api:
             regenerate_minutes=lambda session_id, template: self.regenerated.append(
                 (session_id, template)
             ),
+            vocabulary_file=lambda: self.vocabulary_file,
         )
         self.app = create_app(container)
         self.client = TestClient(self.app, raise_server_exceptions=False)

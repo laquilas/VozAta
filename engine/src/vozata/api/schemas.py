@@ -130,6 +130,14 @@ class RegenerateMinutes(BaseModel):
     template: str | None = None  # phase 20
 
 
+class Vocabulary(BaseModel):
+    """`GET|PUT /vocabulary` (phase 19)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    terms: list[str]
+
+
 class TemplateInfo(BaseModel):
     id: str
     name: str

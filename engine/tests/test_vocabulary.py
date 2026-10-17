@@ -96,3 +96,12 @@ def test_store_write_of_nothing_empties_the_file(tmp_path: Path) -> None:
 
     assert VocabularyStore(path).write([]) == []
     assert path.read_text("utf-8") == ""
+
+
+def test_store_write_keeps_a_header_only_file_as_header(tmp_path: Path) -> None:
+    path = tmp_path / "vocabulary.txt"
+    path.write_text("# Team glossary\n", "utf-8")
+
+    VocabularyStore(path).write(["Avalonia"])
+
+    assert path.read_text("utf-8") == "# Team glossary\nAvalonia\n"

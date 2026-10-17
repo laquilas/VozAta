@@ -523,3 +523,14 @@ def test_build_session_merges_the_meeting_terms_with_the_glossary(
     )
 
     assert session._c.vocabulary == ("Jéssica", "Avalonia")
+
+
+def test_the_api_container_finds_the_glossary_next_to_its_env_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    settings = _settings(tmp_path, llm_provider="fake")
+
+    container = bootstrap.build_api_container(settings, tmp_path / ".env")
+
+    assert container.vocabulary_file() == tmp_path / "vocabulary.txt"

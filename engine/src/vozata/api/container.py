@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 from vozata.api.session_manager import SessionManager
@@ -45,3 +46,4 @@ class ApiContainer:
     exporters: Mapping[str, DocumentExporter] = field(default_factory=dict)  # by format (11)
     search_index: TranscriptSearch | None = None  # `GET /search` (22); None: no hits
     templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)
+    vocabulary_file: Callable[[], Path] = lambda: Path("vocabulary.txt")  # glossary (19)

@@ -28,6 +28,7 @@ unsupported_format = "Unsupported export format \"{format}\". Use one of: {allow
 settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
+vocabulary_failed = "The vocabulary file could not be read or saved ({reason})."
 unknown_template = "Unknown minutes template \"{id}\". Use one of: {allowed}."
 not_found = "This endpoint does not exist."
 method_not_allowed = "This method is not allowed on this endpoint."
