@@ -21,7 +21,7 @@ own rows. Changing a row requires updating both sides.
 |--------|------|-------|---------|----------|
 | GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}}` |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
-| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str]}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template` |
+| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str]}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary` |
 | POST | `/sessions/current/pause` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/resume` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
@@ -38,8 +38,8 @@ own rows. Changing a row requires updating both sides.
 | PUT | `/sessions/{id}/transcript` | 21 | `{segments: [Segment]}` | `{source: "edited"}` writes `transcript.edited.jsonl` |
 | DELETE | `/sessions/{id}/transcript/edits` | 21 | — | `204` reverts to the previous source |
 | GET | `/templates` | 20 | — | `[{id, name}]` in display order, `name` in `APP_LANGUAGE` (ids: `general`, `daily`, `one_on_one`, `client`, `retrospective`) |
-| GET | `/vocabulary` | 19 | — | `{terms: [str]}` from `VOCABULARY_FILE` |
-| PUT | `/vocabulary` | 19 | `{terms: [str]}` | `{terms}` |
+| GET | `/vocabulary` | 19 | — | `{terms: [str]}` from `VOCABULARY_FILE` (missing file = `[]`); `503 vocabulary_failed` when unreadable |
+| PUT | `/vocabulary` | 19 | `{terms: [str]}` | `{terms}` as saved: trimmed, blanks, `#` lines and case-insensitive duplicates dropped; comment lines at the top of the file are kept; `503 vocabulary_failed` when it cannot be written |
 | GET | `/search` | 22 | `?q=&limit=` (limit 1–200, default 50) | `{hits: [{session_id, segment_id, start, speaker_id, label, snippet}]}` best match first; `snippet` wraps each match in `\u0002` … `\u0003`; a query without words returns no hits |
 | POST | `/sessions/{id}/action-items` | 23 | — | `202`; result via `action_items_ready` |
 | GET | `/sessions/{id}/action-items` | 23 | — | `{items: [ActionItem]}` |

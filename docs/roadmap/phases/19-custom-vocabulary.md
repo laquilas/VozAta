@@ -89,3 +89,32 @@ Automatic term extraction from previous meetings.
 - The glossary is a separate `minutes.glossary` locale block added after the template instructions in the single, map and reduce prompts; templates (phase 20) are untouched.
 - `GET|PUT /vocabulary` answer `503 vocabulary_failed` when the file cannot be read or saved; PUT returns the cleaned terms. The route resolves the path on every call, so a `VOCABULARY_FILE` saved in settings applies at once.
 - UI: the "Vocabulary" editor is a card on the Settings page (add / remove chips / import pasted text, each change saved with PUT); the Start screen has an expander "Terms for this meeting" (comma, semicolon or newline separated), sent as `vocabulary` only when non-empty.
+
+### Manual check recipe (pending: run on the reference machine, one phase at a time)
+
+Offline, no microphone. From the repo root in PowerShell:
+
+1. Make a TTS WAV with an unusual name (16 kHz mono):
+
+   ```powershell
+   Add-Type -AssemblyName System.Speech
+   $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+   $s.SelectVoice("Microsoft Maria Desktop")
+   $fmt = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, [System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen, [System.Speech.AudioFormat.AudioChannel]::Mono)
+   $s.SetOutputToWaveFile("$env:TEMP\vozata19.wav", $fmt)
+   $s.Speak("Bom dia. Hoje a Jucélia Trombetta apresenta o projeto Xylofonia para a equipe da Vozata.")
+   $s.Dispose()
+   ```
+
+2. Transcribe it with and without the hint (GPU, `large-v3`, offline cache):
+
+   ```powershell
+   $env:HF_HUB_OFFLINE = "1"; $env:PYTHONPATH = "engine/src"
+   .venv/Scripts/python -c "import wave,numpy as np; from vozata.config import Settings; from vozata.transcription.faster_whisper import FasterWhisperTranscriber as T; from vozata.vocabulary import build_hints; w=wave.open(r'$env:TEMP\vozata19.wav'); a=np.frombuffer(w.readframes(w.getnframes()),np.int16).astype(np.float32)/32768; t=T(Settings(whisper_model='large-v3')); f=lambda r:''.join(x.text for x in r.words); print('WITHOUT:', f(t.transcribe(a,'pt'))); print('WITH:   ', f(t.transcribe(a,'pt',build_hints(['Jucélia Trombetta','Xylofonia','VozAta'])))); print('CONTEXT:', f(t.transcribe(a,'pt',None,'Jucélia Trombetta falou do Xylofonia.')))"
+   ```
+
+   Expected: `WITHOUT` misspells at least one of *Jucélia Trombetta* / *Xylofonia* / *VozAta*; `WITH`
+   spells them as in the glossary. Paste both lines in the PR.
+3. Optional end to end: put the three terms in the settings card "Vocabulary", record while
+   playing the WAV through the speakers, check `session.json.vocabulary` and the spelling in
+   `transcript.md` and `minutes.md`.

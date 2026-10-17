@@ -90,7 +90,8 @@ class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 @dataclass(frozen=True) class AudioChunk:      channel, start: float, samples: np.ndarray  # float32 mono, SAMPLE_RATE
                                                complete: bool = False  # ends in a pause (27)
 @dataclass(frozen=True) class Word:            text, start, end, probability
-@dataclass(frozen=True) class TranscriptionResult: words: tuple[Word, ...], language: str | None
+@dataclass(frozen=True) class TranscriptionResult: words: tuple[Word, ...], language: str | None,
+                                                   avg_logprob: float | None = None  # mean segment log probability (19)
 @dataclass(frozen=True) class TranscriptSegment:
     segment_id: str; channel: Channel; speaker_id: str; start: float; end: float
     text: str; words: tuple[Word, ...]
@@ -115,7 +116,8 @@ class AudioSink(Protocol):           # AlignedWavWriter
     def write(self, samples: np.ndarray, at: float) -> None: ...
     def finalize(self, total_seconds: float) -> None: ...
 class Transcriber(Protocol):
-    def transcribe(self, samples: np.ndarray, language: str | None, hints: str | None = None) -> TranscriptionResult: ...
+    def transcribe(self, samples: np.ndarray, language: str | None, hints: str | None = None,
+                   prompt: str | None = None) -> TranscriptionResult: ...  # hints = vocabulary, prompt = rolling context (19)
     def close(self) -> None: ...     # releases GPU memory
 class TranscriptSink(Protocol):
     def emit(self, segment: TranscriptSegment) -> None: ...
@@ -255,7 +257,7 @@ state per channel: pending: np.ndarray (may be empty), pending_start: float
 on_chunk(chunk):
     audio = concat(pending, chunk.samples); audio_start = pending_start if pending else chunk.start
     if pending is empty and rms(audio) < SILENCE_RMS_THRESHOLD: return []        # no STT call
-    result = transcriber.transcribe(audio, language, hints)
+    result = transcriber.transcribe(audio, language, hints, context.take(audio_start))  # (19)
     if no words: pending = empty; return []
     if chunk.complete: pending = empty; return [segment(words, offset=audio_start)]  # VAD cut (27)
     duration = len(audio) / SAMPLE_RATE
@@ -350,8 +352,10 @@ written at stop; `ended_at` is later, after finalization. `language` / `language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
 has neither key. `template` (20) is the minutes template id, written at start (even with
 `GENERATE_MINUTES=false`) and replaced by the template of the last regeneration; sessions recorded
-before phase 20 have no key and regenerate with `MINUTES_TEMPLATE`. `vocabulary` (19) is added by
-its phase.
+before phase 20 have no key and regenerate with `MINUTES_TEMPLATE`. `vocabulary` (19) is the session's
+terms (from `POST /sessions`) followed by the glossary file, deduplicated case-insensitively, written
+at start (an empty list when there are none); it is the minutes glossary at stop and on
+regeneration.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (step 2); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
@@ -359,6 +363,16 @@ off.
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
 Display labels are **never** stored in raw data; they are resolved from `speaker_id` +
 `speakers.json` + localizer at render time.
+
+**Custom vocabulary (19).** `build_hints(terms, max_chars=500)` joins whole terms with `, `, session
+terms first, and goes with every `transcribe` call (faster-whisper `hotwords`; OpenAI-compatible
+`prompt`). Each channel's stitcher also keeps a `RollingContext` (`transcription/context.py`): the
+last `CONTEXT_PROMPT_CHARS` of committed text, cut on a word boundary, passed as `prompt`
+(faster-whisper `initial_prompt`, `condition_on_previous_text` stays off,
+`hallucination_silence_threshold=2`; OpenAI-compatible: appended to the hints in `prompt`). It is
+cleared when the language changes (`auto` locks) or after 30 s without a committed segment, and
+skipped for the next chunk after a segment repeating the previous one or an `avg_logprob` below
+-1.0. Interim text (28) uses the prompt without consuming a skip.
 
 ## 9. Configuration keys
 
@@ -401,7 +415,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
 | `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
 | `ECHO_HOLD_SECONDS` | *(empty)* = `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment (1–60 s); mic lines are delayed by it |
-| `VOCABULARY_FILE` | *(empty)* | 19 | one term per line |
+| `VOCABULARY_FILE` | *(empty)* = `vocabulary.txt` next to `.env` | 19 | glossary: one term per line, `#` comments, case-insensitive dedupe; edited through `GET/PUT /vocabulary` |
 | `MINUTES_TEMPLATE` | `general` | 20 | default template |
 | `LOW_CONFIDENCE_THRESHOLD` | `0.5` | 21 | word probability below this is highlighted |
 | `EXTRACT_ACTION_ITEMS` | `true` | 23 | extract action items after minutes |
@@ -417,7 +431,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
 | `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
 | `TRANSLATE_TO` / `TRANSLATION_PROVIDER` | *(empty)* / *(chosen in 29)* | 29 | live translation target (empty = off) and provider |
-| `CONTEXT_PROMPT_CHARS` | `200` | 19 | rolling context prompt length (0 = off) |
+| `CONTEXT_PROMPT_CHARS` | `200` | 19 | rolling context prompt length, 0–1000 (0 = off) |
 
 Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /settings`
 (masked), and `.env` is git-ignored.
