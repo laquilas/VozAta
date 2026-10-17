@@ -64,8 +64,8 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 13:53
-- **Next step:** add `transcription/context.py` (`RollingContext`) with tests, then the `prompt` argument and `avg_logprob` on the transcriber port.
+- **Updated:** 2026-10-17 13:54
+- **Next step:** add the `prompt` argument and `TranscriptionResult.avg_logprob` to the transcriber port (faster-whisper `initial_prompt` + `hallucination_silence_threshold`, OpenAI-compatible `prompt`), then wire `RollingContext` into `CarryOverStitcher`.
 
 ### Steps
 
@@ -83,3 +83,4 @@ Automatic term extraction from previous meetings.
 
 ### Decisions and notes
 - `VOCABULARY_FILE` is a `path` setting; empty (`None`) resolves in `bootstrap.py` to `vocabulary.txt` next to the `.env` file the engine reads.
+- `RollingContext` (transcription/context.py) is done; a long silence is 30 s and a very low `avg_logprob` is < -1.0 (constants in the module).
