@@ -39,6 +39,9 @@
   <data name="ConversationLanguage" xml:space="preserve">
     <value>Meeting language</value>
   </data>
+  <data name="MinutesTemplate" xml:space="preserve">
+    <value>Minutes template</value>
+  </data>
   <data name="LanguageEn" xml:space="preserve">
     <value>English</value>
   </data>

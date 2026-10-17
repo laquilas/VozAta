@@ -22,7 +22,11 @@ public sealed record SessionRow(SessionSummary Summary, string Date, string Dura
 
 /// <summary>Past sessions, newest first, a page at a time; the selected one opens in <see cref="Detail"/>.</summary>
 public sealed partial class HistoryViewModel(
-    IEngineClient client, IShellService shell, ILocalizationService localization, IFileSaver saver)
+    IEngineClient client,
+    IShellService shell,
+    ILocalizationService localization,
+    IFileSaver saver,
+    MinutesTemplatesViewModel? templates = null)
     : ObservableObject
 {
     public const int PageSize = 20;
@@ -137,7 +141,7 @@ public sealed partial class HistoryViewModel(
             return; // same session after a refresh: keep the open detail
         }
 
-        Detail = value is null ? null : new SessionDetailViewModel(client, shell, localization, saver, value.Summary);
+        Detail = value is null ? null : new SessionDetailViewModel(client, shell, localization, saver, value.Summary, templates);
         DetailLoading = Detail?.LoadAsync() ?? Task.CompletedTask;
     }
 

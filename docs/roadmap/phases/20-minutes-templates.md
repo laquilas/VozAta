@@ -62,11 +62,9 @@ User-defined templates edited in the UI (backlog).
 
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** in progress
-- **Updated:** 2026-10-17 13:10
-- **Next step:** UI — template ComboBox on the Start screen (`MainViewModel.Templates` /
-  `SelectedTemplate`, preselect `MINUTES_TEMPLATE`, send it in `StartSessionRequest`) and in the
-  regenerate action (`SessionDetailViewModel`, only around the regenerate button); tests in
-  `TemplateSelectionTests.cs`.
+- **Updated:** 2026-10-17 13:50
+- **Next step:** tick the acceptance criteria, write the manual check recipe, set the README
+  status to `done`, Progress `ready for PR`, open the PR.
 
 ### Steps
 
@@ -80,8 +78,8 @@ User-defined templates edited in the UI (backlog).
       — `2f77bce`
 - [x] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
       (unknown → 422 `unknown_template`); api-contract + architecture §8/§12 — `9141330`
-- [x] UI client: `GetTemplatesAsync`, template in start and regenerate requests — this commit
-- [ ] UI: template ComboBox on the Start screen and in the regenerate action
+- [x] UI client: `GetTemplatesAsync`, template in start and regenerate requests — `b60515c`
+- [x] UI: template ComboBox on the Start screen and in the regenerate action — this commit
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 
 ### Decisions and notes
@@ -105,3 +103,7 @@ User-defined templates edited in the UI (backlog).
 - `GET /templates` names and regenerated minutes follow the *current* `APP_LANGUAGE` (after
   `PUT /settings`): the regeneration builds its localizer from the current settings, so the
   template text and the prompt frame are always in the same language.
+- UI: `MinutesTemplatesViewModel` (shared by the Start screen and the session detail) keeps the
+  same `TemplateOption` objects across reloads and only renames them, so pickers keep their
+  selection when the language changes. The session detail change is limited to a ComboBox next to
+  "Regenerate minutes", preselected from `session.json.template` (phase 22 also edits that view).

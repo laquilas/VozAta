@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VozAta.Client;
@@ -17,7 +18,8 @@ public sealed partial class SessionDetailViewModel(
     IShellService shell,
     ILocalizationService localization,
     IFileSaver saver,
-    SessionSummary summary) : ObservableObject
+    SessionSummary summary,
+    MinutesTemplatesViewModel? templates = null) : ObservableObject
 {
     /// <summary>Export formats and the file-type name shown in the save dialog.</summary>
     private static readonly Dictionary<string, string> ExportTypes = new()
@@ -77,6 +79,7 @@ public sealed partial class SessionDetailViewModel(
             var detail = await client.GetSessionAsync(Id, cancellationToken);
             _files = detail.Files;
             Folder = detail.Folder;
+            RegenerateTemplate ??= templates?.Find(SessionTemplate(detail));
             var transcript = await client.GetTranscriptAsync(Id, cancellationToken);
             Lines.Clear();
             foreach (var segment in transcript.Segments)
@@ -129,6 +132,13 @@ public sealed partial class SessionDetailViewModel(
         }
     }
 
+    /// <summary>Templates offered for "Regenerate minutes" (phase 20); none without a template list.</summary>
+    public IReadOnlyList<TemplateOption> Templates => templates?.Items ?? (IReadOnlyList<TemplateOption>)[];
+
+    /// <summary>Template of the next regeneration; the session's own once loaded (null = the engine picks).</summary>
+    [ObservableProperty]
+    public partial TemplateOption? RegenerateTemplate { get; set; }
+
     private bool CanRegenerate() => !IsBusy && !IsLive && Lines.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanRegenerate))]
@@ -138,7 +148,7 @@ public sealed partial class SessionDetailViewModel(
         IsBusy = true;
         try
         {
-            await client.RegenerateMinutesAsync(Id);
+            await client.RegenerateMinutesAsync(Id, RegenerateTemplate?.Id);
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
@@ -203,6 +213,11 @@ public sealed partial class SessionDetailViewModel(
             HasMinutes = false;
         }
     }
+
+    private static string? SessionTemplate(SessionDetail detail) =>
+        detail.Metadata?.TryGetValue("template", out var value) == true && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 
     private string ErrorText(Exception error) =>
         error is EngineUnavailableException ? localization["EngineUnavailable"] : error.Message;
