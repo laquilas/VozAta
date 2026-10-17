@@ -246,6 +246,24 @@ def test_write_diarized_is_read_back_first_and_leaves_the_raw_transcript(tmp_pat
     assert b"\r\n" not in paths.diarized_jsonl.read_bytes()
 
 
+def test_write_edited_wins_over_diarized_and_delete_edited_reverts(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    diarized = TranscriptSegment("system-000001", Channel.SYSTEM, "system:1", 0.0, 1.0, "Olá", ())
+    store.write_diarized(paths.id, [diarized])
+    edited = TranscriptSegment(
+        "system-000001", Channel.SYSTEM, "system:1", 0.0, 1.0, "Oi", (), edited=True
+    )
+
+    store.write_edited(paths.id, [edited])
+
+    assert store.load_transcript_with_source(paths.id) == ("edited", [edited])
+    assert b"\r\n" not in paths.edited_jsonl.read_bytes()
+    assert store.delete_edited(paths.id) is True
+    assert store.load_transcript_with_source(paths.id) == ("diarized", [diarized])
+    assert store.delete_edited(paths.id) is False
+
+
 def test_speakers_are_written_without_names_and_names_are_read_back(tmp_path: Path) -> None:
     store = SessionStore(tmp_path)
     paths = store.create()
