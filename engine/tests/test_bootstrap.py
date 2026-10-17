@@ -260,6 +260,8 @@ def test_build_api_container_wires_real_providers(
     assert isinstance(container.regenerate_minutes, MinutesJob)
     assert container.llm_reachable() is False
     assert container.store.list_sessions() == []
+    assert isinstance(container.search_index, SearchIndex)
+    assert container.search_index._path == tmp_path / "recordings" / "index.db"
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3))
     assert built == [{"language": None, "mic_device": 3, "system_device": None, "shared": None}]
     generator = container.regenerate_minutes._build_generator()

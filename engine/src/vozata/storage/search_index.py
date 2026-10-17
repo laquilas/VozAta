@@ -82,6 +82,18 @@ class SearchIndex:
         _log.info("Search index rebuilt: %d sessions", len(sessions))
         return len(sessions)
 
+    def ensure(self, store: SessionStore) -> None:
+        """First run after an upgrade: rebuild when sessions exist but `index.db` does not.
+
+        Meant for a background thread at startup, so failures are logged, never raised.
+        """
+        if self.exists() or not store.list_sessions():
+            return
+        try:
+            self.rebuild(store)
+        except Exception:
+            _log.exception("Building the search index failed")
+
     @contextlib.contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
         self._path.parent.mkdir(parents=True, exist_ok=True)

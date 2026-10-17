@@ -155,6 +155,9 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
+class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
+    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
+    def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
@@ -279,7 +282,13 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
 | `action_items.json` | 23 | extracted items + export results |
 
-`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22).
+`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22): table `segments(session_id, segment_id,
+start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`
+(case- and accent-insensitive). It is derived data: stop step 6 replaces the session's rows with
+its best transcript (precedence below), `python -m vozata reindex` rebuilds it from every session,
+and `serve` rebuilds it in the background when it is missing but sessions exist. User text becomes
+a safe FTS query (every word quoted, prefix `*` on the last one), so FTS syntax is never
+interpreted. Snippets mark matches with `U+0002` … `U+0003`.
 
 `session.json` (schema_version 1):
 

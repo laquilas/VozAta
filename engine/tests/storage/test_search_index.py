@@ -179,6 +179,53 @@ def test_rebuild_indexes_every_session_from_its_best_transcript(tmp_path: Path) 
     assert [hit.session_id for hit in index.search("meeting")] == [second.id]
 
 
+def _store_with_one_session(tmp_path: Path) -> SessionStore:
+    store = SessionStore(tmp_path / "recordings")
+    paths = store.create(datetime(2026, 10, 15, 20, 23, 58))
+    store.write_meta(paths.id, {"id": paths.id})
+    _write(paths.transcript_jsonl, _segment("mic-000001", "first words"))
+    return store
+
+
+def test_ensure_builds_a_missing_index_from_existing_sessions(tmp_path: Path) -> None:
+    index = SearchIndex(tmp_path / "recordings" / "index.db")
+
+    index.ensure(_store_with_one_session(tmp_path))
+
+    assert len(index.search("first")) == 1
+
+
+def test_ensure_keeps_an_existing_index(tmp_path: Path) -> None:
+    store = _store_with_one_session(tmp_path)
+    index = SearchIndex(tmp_path / "recordings" / "index.db")
+    index.index_session("20200101_000000", [_segment("mic-000001", "kept words")])
+
+    index.ensure(store)
+
+    assert index.search("first") == []
+    assert len(index.search("kept")) == 1
+
+
+def test_ensure_creates_nothing_without_sessions(tmp_path: Path) -> None:
+    index = SearchIndex(tmp_path / "recordings" / "index.db")
+
+    index.ensure(SessionStore(tmp_path / "recordings"))
+
+    assert not (tmp_path / "recordings").exists()
+
+
+def test_ensure_logs_a_failure_instead_of_raising(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    class Broken(SearchIndex):
+        def rebuild(self, store: SessionStore) -> int:
+            raise OSError("disk full")
+
+    Broken(tmp_path / "recordings" / "index.db").ensure(_store_with_one_session(tmp_path))
+
+    assert "Building the search index failed" in caplog.text
+
+
 def _write(path: Path, *segments: TranscriptSegment) -> None:
     lines = [json.dumps(segment.to_dict()) for segment in segments]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

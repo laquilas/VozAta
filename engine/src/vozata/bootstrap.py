@@ -6,6 +6,7 @@ New providers are added to a registry here; orchestrators never change.
 from __future__ import annotations
 
 import functools
+import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
@@ -239,6 +240,10 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
                 close()
 
     _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
+    search_index = build_search_index(settings)
+    threading.Thread(
+        target=search_index.ensure, args=(store,), name="search-index", daemon=True
+    ).start()  # sessions recorded before phase 22 become searchable
     return ApiContainer(
         settings=settings,
         settings_file=settings_file,
@@ -253,4 +258,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
         release_models=shared.release if shared is not None else lambda: None,
         exporters={name: build() for name, build in EXPORTERS.items()},
+        search_index=search_index,
     )

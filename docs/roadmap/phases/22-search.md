@@ -54,14 +54,14 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - **Branch:** `feature/22-search`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** add `routes/search.py` (`GET /search`) with `ApiContainer.search_index`, wire it in `bootstrap.build_api_container` (rebuild in the background when `index.db` is missing) and document it in api-contract/architecture
+- **Next step:** UI: add `SearchHit`/`SearchResults` DTOs and `IEngineClient.SearchAsync` (+ `FakeEngineClient`, client test), then `SearchViewModel`
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] Engine: `SearchIndex` (FTS5, accent-insensitive, safe query, snippet markers) behind the `TranscriptSearch` port
 - [x] Engine: index at stop step 6; `python -m vozata reindex`
-- [ ] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
+- [x] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
 - [ ] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
 - [ ] Acceptance criteria, README status `done`, PR
 
@@ -80,3 +80,7 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
   (`RecordingSession._index_transcript`, `SessionComponents.search_index`). A failure is
   non-fatal: logged and reported as `error` code `index_failed` (hint: `python -m vozata reindex`).
   Phase 17 (recovery) should reuse the same step; there is no recovery code yet.
+- `GET /search` hits also carry `label` (resolved like transcript segments), so the UI needs no
+  extra call. `ApiContainer.search_index` defaults to `None` (no hits) so other test containers
+  need no change. `serve` starts a daemon thread running `SearchIndex.ensure(store)`: sessions
+  recorded before this phase become searchable without running `reindex`.
