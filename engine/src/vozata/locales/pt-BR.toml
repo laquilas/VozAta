@@ -22,6 +22,7 @@ mix_failed = "Não foi possível criar o mixed.wav ({reason}). As faixas do micr
 minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a transcrição foram mantidas; tente novamente com: {command}"
 model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."
 index_failed = "Não foi possível adicionar a sessão ao índice de busca ({reason}). Reconstrua o índice com: python -m vozata reindex"
+action_items_failed = "Não foi possível extrair os itens de ação ({reason}). A ata foi mantida; extraia-os de novo na aba Itens de ação da sessão."
 
 [errors.api]
 unsupported_format = "Formato de exportação não suportado: \"{format}\". Use um destes: {allowed}."
@@ -48,6 +49,11 @@ internal_error = "Erro inesperado no motor. Consulte o log do motor para mais de
 answer_failed = "Não foi possível responder à pergunta ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
 answer_in_progress = "Outra pergunta ainda está sendo respondida. Aguarde até que termine e pergunte novamente."
 ask_unavailable = "Fazer perguntas sobre as reuniões não está disponível neste motor."
+action_items_failed = "Não foi possível extrair os itens de ação ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
+action_items_still_recording = "A sessão \"{id}\" ainda está gravando; os itens de ação são extraídos quando ela parar."
+unknown_action_item = "O item de ação \"{id}\" não está nesta sessão. Recarregue os itens de ação e tente de novo."
+empty_action_item = "O item de ação \"{id}\" precisa de uma descrição."
+unknown_task_target = "O destino de exportação \"{target}\" não está configurado. Destinos configurados: {allowed}."
 
 [languages]
 en = "inglês"
@@ -84,6 +90,30 @@ question_label = "Pergunta:"
 not_found = "Não encontrei isso nas reuniões."
 stopwords = "a ao aos aquela aquele aquilo as até com como da das de dela dele deles depois diga disse do dos e é ela ele eles em entre era essa esse esta está este eu fez fizemos foi foram há isso já lhe mais mas me mesmo meu minha muito na nas não nem no nos nós o os ou para pela pelo por porque qual quais quando que quem se sem ser seu sua são só sobre também te tem têm teve tinha um uma umas uns você vocês vos"
 
+[action_items]
+system = "Você extrai itens de ação de transcrições de reuniões: tarefas concretas que alguém combinou ou recebeu para fazer. Use apenas o que a transcrição diz; nunca invente tarefas, responsáveis ou datas."
+instructions = """A reunião foi realizada em {conversation_language}. Liste os itens de ação em JSON.
+Para cada item informe: "description", uma frase curta no imperativo em {output_language}; "owner", o nome ou rótulo da pessoa responsável como aparece na transcrição, ou null; "due", o prazo como AAAA-MM-DD quando for possível deduzi-lo, senão como foi dito, ou null; "source_segment_ids", os ids entre colchetes no início das linhas que mencionam a tarefa.
+Retorne {{"items": []}} quando não houver itens de ação."""
+meeting_date = "A reunião aconteceu em {date}."
+part = "Esta é a parte {part} de {total} da reunião."
+transcript_label = "Transcrição (cada linha começa com seu id):"
+
+[tasks]
+source = "Item de ação da reunião \"{title}\" (sessão {session_id}), em {time} da gravação."
+owner = "Responsável: {owner}"
+due = "Prazo: {due}"
+folder = "Pasta da sessão: {folder}"
+
+[errors.tasks]
+already_exported = "Já exportado: {url}"
+unknown_item = "O item de ação \"{id}\" não está nesta sessão."
+unauthorized = "{target} recusou as credenciais (HTTP {status}). Verifique o token nas configurações."
+not_found = "{target} não encontrou o projeto ou repositório (HTTP {status}). Verifique as configurações."
+http_error = "{target} respondeu com HTTP {status}: {detail}"
+unreachable = "Não foi possível acessar {target} ({reason})."
+invalid_reply = "{target} retornou uma resposta inesperada."
+
 [cli]
 serving = "API do motor escutando em {url} (Ctrl+C para parar)."
 serve_public_host = "Recusando escutar em {host}: a API do motor não tem autenticação. Use 127.0.0.1 ou localhost em API_HOST."
@@ -99,6 +129,7 @@ finalizing = "Parando: concluindo a transcrição, salvando o áudio e escrevend
 saved = "Salvo em {folder}"
 language_detected = "Idioma detectado: {language}"
 minutes_ready = "Ata salva em minutes.md."
+action_items_ready = "Itens de ação extraídos: {count}."
 minutes_written = "Ata salva em {path}"
 minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
 session_not_found = "Nenhuma sessão encontrada em {folder}."

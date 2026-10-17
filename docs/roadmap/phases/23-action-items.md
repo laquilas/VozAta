@@ -62,12 +62,13 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** write `minutes/action_items.py` (`ActionItemExtractor`) with its tests
+- **Next step:** add the config keys (`EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*`) to
+  `settings_fields.py`, `config.py`, `.env.example`
 
 ### Steps
 
 - [x] Domain `ActionItem` + `storage/action_items.py` (`action_items.json`)
-- [ ] `minutes/action_items.py`: `ActionItemExtractor` (localized prompt, JSON schema, one retry)
+- [x] `minutes/action_items.py`: `ActionItemExtractor` (localized prompt, JSON schema, one retry)
 - [ ] Config keys `EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*` (secrets masked) + `.env.example`
 - [ ] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
 - [ ] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
