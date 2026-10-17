@@ -38,11 +38,13 @@ Template intent:
 
 ## Acceptance criteria
 
-- [ ] Tests: repository validation (missing language → error), each template renders a prompt in each
+- [x] Tests: repository validation (missing language → error), each template renders a prompt in each
       language, unknown template → 422, template persisted in `session.json`.
-- [ ] UI tests: template list loaded, selection sent on start and regenerate.
+- [x] UI tests: template list loaded, selection sent on start and regenerate.
 - [ ] Manual: the same transcript regenerated as `daily` and `client` gives clearly different minutes.
-- [ ] Resource parity test passes.
+      — pending manual run against Ollama (parallel wave: no Ollama/GPU checks in the session);
+      exact recipe under Progress → *Manual check recipe*.
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -61,10 +63,10 @@ User-defined templates edited in the UI (backlog).
 ## Progress
 
 - **Branch:** `feature/20-minutes-templates`
-- **Status:** in progress
-- **Updated:** 2026-10-17 13:50
-- **Next step:** tick the acceptance criteria, write the manual check recipe, set the README
-  status to `done`, Progress `ready for PR`, open the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 14:10
+- **Next step:** wait for CI on the PR, then run the manual check recipe below (needs Ollama with
+  `qwen2.5:7b`) before merging.
 
 ### Steps
 
@@ -79,8 +81,36 @@ User-defined templates edited in the UI (backlog).
 - [x] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
       (unknown → 422 `unknown_template`); api-contract + architecture §8/§12 — `9141330`
 - [x] UI client: `GetTemplatesAsync`, template in start and regenerate requests — `b60515c`
-- [x] UI: template ComboBox on the Start screen and in the regenerate action — this commit
-- [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
+- [x] UI: template ComboBox on the Start screen and in the regenerate action — `f94206d`
+- [x] Docs (architecture, api-contract), acceptance criteria, manual check recipe — this commit
+
+### Manual check recipe
+
+Needs Ollama running with `qwen2.5:7b` (`ollama pull qwen2.5:7b`) and one recorded session with a
+real conversation (any folder under `OUTPUT_DIR`, e.g. `recordings/20261016_090000`). No audio
+hardware is used: only the stored transcript is summarized.
+
+1. From `engine/`: `../.venv/Scripts/python -m vozata serve` (wait for "API ... listening").
+2. In another shell (PowerShell), pick the session id `$id` and list the templates:
+   `Invoke-RestMethod http://127.0.0.1:8765/templates` → five rows, names in `APP_LANGUAGE`.
+3. Daily: `Invoke-RestMethod -Method Post http://127.0.0.1:8765/sessions/$id/minutes -ContentType application/json -Body '{"template":"daily"}'`;
+   wait for the `minutes_ready` event (or ~30–60 s), then
+   `Copy-Item recordings/$id/minutes.md $env:TEMP/minutes-daily.md`.
+   Expect: `## Updates by person` with one `###` per participant and `Done:` / `Doing:` /
+   `Blockers:` bullets, then `## Blockers`, `## Follow-ups`; `session.json` has `"template": "daily"`.
+4. Client: same call with `{"template":"client"}`, copy to `minutes-client.md`. Expect:
+   `## Client needs`, `## Commitments`, `## Risks`, `## Next steps`, `## Deadlines`;
+   `session.json` has `"template": "client"`.
+5. Compare: `code --diff $env:TEMP/minutes-daily.md $env:TEMP/minutes-client.md` — different
+   headings and a clearly different organization (per person vs. per commitment/risk).
+6. Unknown id: `{"template":"weekly"}` → HTTP 422 `unknown_template`.
+7. UI: `dotnet run --project ui/src/VozAta.Desktop`; the Start screen shows "Minutes template"
+   preselected with `MINUTES_TEMPLATE`; in History, open the session: the picker next to
+   "Regenerate minutes" shows `Client meeting` (stored template); pick `Daily stand-up`, click
+   "Regenerate minutes" → the minutes pane reloads with the daily sections. Switch the interface
+   language to Português: template names change in both pickers and the selection is kept.
+8. CLI: `../.venv/Scripts/python -m vozata minutes recordings/$id` regenerates with the stored
+   template (the last one used).
 
 ### Decisions and notes
 
