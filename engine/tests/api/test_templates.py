@@ -33,6 +33,12 @@ def test_template_names_follow_the_app_language(tmp_path: Path) -> None:
     assert names[3] == "Reunião com cliente"
 
 
+def test_template_names_follow_a_saved_app_language(api: Api) -> None:
+    api.client.put("/settings", json={"values": {"APP_LANGUAGE": "es"}})
+
+    assert api.client.get("/templates").json()[0] == {"id": "general", "name": "Reunión general"}
+
+
 def test_the_template_chosen_at_start_reaches_the_session(api: Api) -> None:
     response = api.client.post("/sessions", json={"template": "daily"})
 

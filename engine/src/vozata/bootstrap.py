@@ -238,7 +238,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     def minutes_generator(template: str | None = None) -> MinutesGenerator:
         if shared is not None:
             shared.release()  # VRAM rule: never Whisper and the LLM together
-        return build_minutes_generator(settings_file.current, localizer, template)
+        return build_minutes_generator(settings_file.current, None, template)  # current language
 
     def llm_reachable() -> bool:
         current = settings_file.current

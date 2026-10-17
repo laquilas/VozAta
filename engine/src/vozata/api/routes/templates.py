@@ -17,7 +17,7 @@ Container = Annotated[ApiContainer, Depends(container)]
 
 @router.get("/templates", response_model=list[TemplateInfo])
 def list_templates(c: Container) -> list[dict[str, str]]:
-    language = c.settings.app_language
+    language = c.settings_file.current.app_language  # follows `PUT /settings`
     return [
         {"id": template.id, "name": template.localized(language).name}
         for template in c.templates.all()

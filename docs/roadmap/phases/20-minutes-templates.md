@@ -102,3 +102,6 @@ User-defined templates edited in the UI (backlog).
   stored template (if still bundled) → `MINUTES_TEMPLATE`; the template used is saved back to
   `session.json`. The only `session.py` change is the `SessionComponents.minutes_template` field
   (the stop sequence is untouched, phases 14/22 edit it).
+- `GET /templates` names and regenerated minutes follow the *current* `APP_LANGUAGE` (after
+  `PUT /settings`): the regeneration builds its localizer from the current settings, so the
+  template text and the prompt frame are always in the same language.

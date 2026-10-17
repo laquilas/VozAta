@@ -411,3 +411,8 @@ def test_saved_settings_reach_the_next_session_and_the_llm_check(
     assert models[-1].ollama_model == "qwen2.5:3b"
     assert ClosingModel.closed == 1
     assert "CHUNK_SECONDS=8" in (tmp_path / ".env").read_text(encoding="utf-8")
+    container.settings_file.update({"APP_LANGUAGE": "es"})
+    regenerated = container.regenerate_minutes._build_generator("client")
+    assert regenerated.template_id == "client"
+    assert regenerated._template.name == "Reunión con cliente"
+    assert regenerated._localizer.t("minutes.output_language") == "español"  # same language
