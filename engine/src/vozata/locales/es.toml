@@ -18,6 +18,7 @@ audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Aud
 device_timeout = "El dispositivo de audio \"{device}\" no se abrió en {seconds} s. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando; si sigue fallando, reinicia Audio de Windows o el PC."
 device_failed = "No se pudo abrir el dispositivo de audio \"{device}\": {reason}"
 diarization_failed = "No se pudo identificar a los participantes remotos ({reason}). La transcripción mantiene la etiqueta del sistema; reintenta con: {command}"
+live_diarization_failed = "Las etiquetas de participantes en vivo están desactivadas ({reason}). La grabación continúa; las líneas remotas muestran la etiqueta del sistema hasta que se detenga la sesión."
 mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas del micrófono y del sistema."
 minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
 model_failed = "No se pudo cargar el modelo de voz ({reason}). La grabación continúa: el audio se guarda, pero no se transcribe."

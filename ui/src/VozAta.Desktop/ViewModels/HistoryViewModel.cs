@@ -127,6 +127,10 @@ public sealed partial class HistoryViewModel(
         await LoadAsync();
     }
 
+    /// <summary>A <c>speakers_relabeled</c> event: the open detail reloads its transcript when it is that session.</summary>
+    public Task OnSpeakersRelabeledAsync(string? sessionId) =>
+        Detail?.OnSpeakersRelabeledAsync(sessionId) ?? Task.CompletedTask;
+
     public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
 
     /// <summary>Open a search hit: select its session (loading older pages if needed) at the segment.</summary>

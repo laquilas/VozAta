@@ -104,6 +104,34 @@ public sealed class SessionDetailViewModelTests
     }
 
     [Fact]
+    public async Task Speakers_relabeled_reloads_only_our_transcript()
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+        _client.Transcripts[Id] = new Transcript(
+            "diarized", [new Segment("system-000001", "system", "system:1", "User 1", 65, 66, "Hi.", false, [])]);
+
+        await detail.OnSpeakersRelabeledAsync("another-session");
+        Assert.Equal("Others", detail.Lines[^1].Label);
+        await detail.OnSpeakersRelabeledAsync(Id);
+
+        Assert.Equal([new TranscriptLine("00:01:05", "User 1", "Hi.", "system") { SegmentId = "system-000001" }], detail.Lines);
+        Assert.Null(detail.Error);
+    }
+
+    [Fact]
+    public async Task A_failed_reload_after_relabeling_shows_the_error()
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+        _client.TranscriptError = new EngineApiException(System.Net.HttpStatusCode.NotFound, "session_not_found", "Gone.");
+
+        await detail.OnSpeakersRelabeledAsync(Id);
+
+        Assert.Equal("Gone.", detail.Error);
+    }
+
+    [Fact]
     public async Task A_failed_regeneration_reports_the_engine_error()
     {
         var detail = Create();

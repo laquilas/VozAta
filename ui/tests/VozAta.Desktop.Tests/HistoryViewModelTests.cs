@@ -160,6 +160,7 @@ public sealed class HistoryViewModelTests
         await history.LoadAsync();
 
         await history.OnMinutesReadyAsync("x");
+        await history.OnSpeakersRelabeledAsync("x");
         history.OnError("x", "message");
 
         Assert.Null(history.Detail);
