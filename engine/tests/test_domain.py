@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 
 import numpy as np
@@ -59,6 +60,20 @@ def test_segment_survives_a_jsonl_round_trip() -> None:
     line = json.dumps(_segment().to_dict())
 
     assert TranscriptSegment.from_dict(json.loads(line)) == _segment()
+
+
+def test_an_edited_segment_writes_the_flag_and_survives_a_round_trip() -> None:
+    edited = dataclasses.replace(_segment(), text="We ship on Friday.", words=(), edited=True)
+
+    data = edited.to_dict()
+
+    assert data["edited"] is True
+    assert TranscriptSegment.from_dict(json.loads(json.dumps(data))) == edited
+
+
+def test_a_raw_segment_has_no_edited_key_and_reads_back_unedited() -> None:
+    assert "edited" not in _segment().to_dict()
+    assert TranscriptSegment.from_dict(_segment().to_dict()).edited is False
 
 
 def test_from_dict_accepts_a_segment_without_words() -> None:

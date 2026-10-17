@@ -29,6 +29,13 @@ public interface IEngineClient
 
     Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary><c>PUT /sessions/{id}/transcript</c> (phase 21): save corrected texts of these segments.</summary>
+    Task<TranscriptEditResult> UpdateTranscriptAsync(
+        string id, IReadOnlyList<SegmentTextEdit> segments, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /sessions/{id}/transcript/edits</c> (phase 21): back to the original transcript.</summary>
+    Task RevertTranscriptAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary><c>POST /sessions/{id}/minutes</c>; a null template keeps the session's own.</summary>
     Task RegenerateMinutesAsync(string id, string? templateId = null, CancellationToken cancellationToken = default);
 
@@ -111,6 +118,17 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default) =>
         SendAsync<Minutes>(HttpMethod.Get, $"sessions/{Escape(id)}/minutes", null, cancellationToken);
+
+    public Task<TranscriptEditResult> UpdateTranscriptAsync(
+        string id, IReadOnlyList<SegmentTextEdit> segments, CancellationToken cancellationToken = default) =>
+        SendAsync<TranscriptEditResult>(
+            HttpMethod.Put, $"sessions/{Escape(id)}/transcript", new { segments }, cancellationToken);
+
+    public async Task RevertTranscriptAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Delete, $"sessions/{Escape(id)}/transcript/edits", null, cancellationToken);
+    }
 
     public async Task RegenerateMinutesAsync(
         string id, string? templateId = null, CancellationToken cancellationToken = default)

@@ -145,10 +145,19 @@ class SessionStore:
 
     def write_diarized(self, session_id: str, segments: list[TranscriptSegment]) -> None:
         """Replace `transcript.diarized.jsonl` atomically (phase 14)."""
-        lines = "".join(
-            json.dumps(segment.to_dict(), ensure_ascii=False) + "\n" for segment in segments
-        )
-        _write_atomic(self.paths(session_id).diarized_jsonl, lines)
+        _write_atomic(self.paths(session_id).diarized_jsonl, _jsonl(segments))
+
+    def write_edited(self, session_id: str, segments: list[TranscriptSegment]) -> None:
+        """Replace `transcript.edited.jsonl` atomically with the full edited copy (phase 21)."""
+        _write_atomic(self.paths(session_id).edited_jsonl, _jsonl(segments))
+
+    def delete_edited(self, session_id: str) -> bool:
+        """Remove `transcript.edited.jsonl`; False when there was none (phase 21)."""
+        path = self.paths(session_id).edited_jsonl
+        if not path.is_file():
+            return False
+        path.unlink()
+        return True
 
     def write_speakers(self, session_id: str, speaker_ids: list[str]) -> None:
         """Replace `speakers.json` with these ids and no names (`{"system:1": {"name": null}}`)."""
@@ -191,6 +200,10 @@ def _write_atomic(target: Path, text: str) -> None:
     except BaseException:
         Path(temp).unlink(missing_ok=True)
         raise
+
+
+def _jsonl(segments: list[TranscriptSegment]) -> str:
+    return "".join(json.dumps(segment.to_dict(), ensure_ascii=False) + "\n" for segment in segments)
 
 
 def _read_speakers(path: Path) -> dict[str, Any]:

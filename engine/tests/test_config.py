@@ -509,6 +509,15 @@ def test_echo_dedupe_defaults_and_values() -> None:
     ) == (False, 0.7, 12.0)
 
 
+def test_low_confidence_threshold_default_value_and_bounds() -> None:
+    assert load_settings(env={}).low_confidence_threshold == 0.5
+    assert load_settings(env={"LOW_CONFIDENCE_THRESHOLD": "0.7"}).low_confidence_threshold == 0.7
+    for value in ("-0.1", "1.5", "high"):
+        with pytest.raises(ConfigError) as caught:
+            load_settings(env={"LOW_CONFIDENCE_THRESHOLD": value})
+        assert caught.value.key == "LOW_CONFIDENCE_THRESHOLD"
+
+
 def test_echo_hold_defaults_to_chunk_seconds_plus_three() -> None:
     assert load_settings(env={}).effective_echo_hold_seconds == 8.0
     assert load_settings(env={"CHUNK_SECONDS": "10"}).effective_echo_hold_seconds == 13.0

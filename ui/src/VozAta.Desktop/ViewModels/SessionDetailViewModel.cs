@@ -19,7 +19,8 @@ public sealed partial class SessionDetailViewModel(
     ILocalizationService localization,
     IFileSaver saver,
     SessionSummary summary,
-    MinutesTemplatesViewModel? templates = null) : ObservableObject
+    MinutesTemplatesViewModel? templates = null,
+    IDialogService? dialogs = null) : ObservableObject
 {
     /// <summary>Export formats and the file-type name shown in the save dialog.</summary>
     private static readonly Dictionary<string, string> ExportTypes = new()
@@ -39,6 +40,16 @@ public sealed partial class SessionDetailViewModel(
     public bool IsLive => summary.Status is "recording" or "paused" or "finalizing";
 
     public ObservableCollection<TranscriptLine> Lines { get; } = [];
+
+    /// <summary>Some transcript word is highlighted as low confidence (the hint is shown).</summary>
+    [ObservableProperty]
+    public partial bool HasLowConfidence { get; private set; }
+
+    private TranscriptEditorViewModel? _editor;
+
+    /// <summary>Edit mode of the transcript tab (phase 21).</summary>
+    public TranscriptEditorViewModel Editor =>
+        _editor ??= new TranscriptEditorViewModel(client, localization, dialogs, Id) { IsLive = IsLive, Reload = ReloadTranscriptAsync };
 
     private SpeakersViewModel? _speakers;
 
@@ -113,23 +124,8 @@ public sealed partial class SessionDetailViewModel(
             _files = detail.Files;
             Folder = detail.Folder;
             RegenerateTemplate ??= templates?.Find(SessionTemplate(detail));
-            var transcript = await client.GetTranscriptAsync(Id, cancellationToken);
-            Lines.Clear();
-            foreach (var segment in transcript.Segments)
-            {
-                Lines.Add(new TranscriptLine(TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel)
-                {
-                    SegmentId = segment.SegmentId,
-                });
-            }
-
-            ApplyFocus();
-            if (!IsLive)
-            {
-                await Speakers.LoadAsync(transcript.Segments, cancellationToken);
-            }
-
-            RegenerateMinutesCommand.NotifyCanExecuteChanged();
+            await Editor.LoadThresholdAsync(cancellationToken);
+            await ShowTranscriptAsync(cancellationToken);
             await LoadMinutesAsync(cancellationToken);
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
@@ -188,6 +184,7 @@ public sealed partial class SessionDetailViewModel(
     {
         Error = null;
         IsBusy = true;
+        Editor.SuggestRegenerate = false;
         try
         {
             await client.RegenerateMinutesAsync(Id, RegenerateTemplate?.Id);
@@ -236,6 +233,33 @@ public sealed partial class SessionDetailViewModel(
     /// <summary>Open <c>mic</c>, <c>system</c> or <c>mixed</c> <c>.wav</c> in the default player.</summary>
     [RelayCommand(CanExecute = nameof(HasAudio))]
     private void OpenAudio(string? track) => shell.Open(Path.Combine(Folder!, $"{track}.wav"));
+
+    /// <summary>Load the best transcript into the read view (low-confidence words marked) and the editor.</summary>
+    private async Task ShowTranscriptAsync(CancellationToken cancellationToken)
+    {
+        var transcript = await client.GetTranscriptAsync(Id, cancellationToken);
+        Editor.Load(transcript);
+        Lines.Clear();
+        foreach (var segment in transcript.Segments)
+        {
+            Lines.Add(new TranscriptLine(TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel)
+            {
+                SegmentId = segment.SegmentId,
+                LowConfidenceParts = Editor.Highlight(segment),
+            });
+        }
+
+        HasLowConfidence = Lines.Any(line => line.LowConfidenceParts is not null);
+        ApplyFocus();
+        if (!IsLive)
+        {
+            await Speakers.LoadAsync(transcript.Segments, cancellationToken);
+        }
+
+        RegenerateMinutesCommand.NotifyCanExecuteChanged();
+    }
+
+    private Task ReloadTranscriptAsync() => ShowTranscriptAsync(CancellationToken.None);
 
     private async Task LoadMinutesAsync(CancellationToken cancellationToken)
     {

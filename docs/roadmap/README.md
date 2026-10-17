@@ -70,7 +70,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 18 | [Echo dedupe](phases/18-echo-dedupe.md) | 05, 27 | done |
 | 19 | [Custom vocabulary](phases/19-custom-vocabulary.md) | 06, 10 | todo |
 | 20 | [Minutes templates](phases/20-minutes-templates.md) | 04, 07 | done |
-| 21 | [Editable transcript](phases/21-editable-transcript.md) | 09 | todo |
+| 21 | [Editable transcript](phases/21-editable-transcript.md) | 09 | done |
 | 22 | [Cross-session search](phases/22-search.md) | 09 | done |
 | 23 | [Action items export](phases/23-action-items.md) | 04, 09 | todo |
 | 24 | [Ask the meeting](phases/24-ask-the-meeting.md) | 09, 22 | done |
