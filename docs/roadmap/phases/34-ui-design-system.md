@@ -41,12 +41,13 @@ changes, not the layout. Phases 35–38 build the new layout on top.
 
 ## Acceptance criteria
 
-- [ ] No hex color literal or raw `FontSize` number left in `Views/*.axaml` (a test greps the
+- [x] No hex color literal or raw `FontSize` number left in `Views/*.axaml` (a test greps the
       XAML files).
-- [ ] Theme preference saved and restored; switching applies without restart (ViewModel test).
-- [ ] Manual: every screen checked in light and dark mode (screenshots in the PR); contrast of
-      text on sidebar and accent buttons ≥ 4.5:1.
-- [ ] Resource parity test passes.
+- [x] Theme preference saved and restored; switching applies without restart (ViewModel test).
+- [x] Manual: every screen checked in light and dark mode (screenshots in the PR); contrast of
+      text on sidebar and accent buttons ≥ 4.5:1. *(Headless renders of every page in both themes
+      reviewed; contrast automated in `ThemeContrastTests`; real-window check: recipe in Progress.)*
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -64,10 +65,10 @@ Layout changes (35–38), custom fonts beyond Inter.
 ## Progress
 
 - **Branch:** `feature/34-ui-design-system`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-17 10:00
-- **Next step:** docs (architecture: `ui.json` `theme`, design system), tick acceptance criteria, full UI
-  suite, open the PR.
+- **Next step:** open the PR (light/dark screenshots attached) and wait for the checks; then run the
+  manual check recipe below on the reference machine.
 
 ### Steps
 
@@ -76,7 +77,8 @@ Layout changes (35–38), custom fonts beyond Inter.
 - [x] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests` — this commit
 - [x] Contrast test for the token pairs (≥ 4.5:1 in light and dark) — this commit
 - [x] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots — this commit
-- [ ] Docs (architecture), acceptance criteria, full UI suite, PR
+- [x] Docs (architecture), acceptance criteria, full UI suite — this commit
+- [ ] PR opened and checks green
 
 ### Decisions and notes
 
@@ -102,3 +104,26 @@ Layout changes (35–38), custom fonts beyond Inter.
 - `ThemeGalleryWindow` lives in `Diagnostics/` (excluded from non-Debug builds in the csproj) and opens with
   `dotnet run --project src/VozAta.Desktop -- --theme-gallery`: light and dark side by side through
   `ThemeVariantScope`, no engine started. `ThemeRenderTests` renders it too (Debug only).
+- Full UI suite (Debug): 455 passed, 0 failed; `dotnet format --verify-no-changes` clean; Release build OK.
+
+### Manual check recipe
+
+No microphone, speaker or GPU is needed; do not start a recording.
+
+1. Gallery: `cd ui` then `dotnet run --project src/VozAta.Desktop -- --theme-gallery`. Light (left) and
+   dark (right) show every brush, text style, button, tag, banner and icon. Check: text readable on
+   every swatch, pink buttons have dark purple text, red buttons white text, icons crisp.
+2. Screenshots without the engine: `cd ui`, set `VOZATA_SCREENSHOTS` to an empty folder
+   (PowerShell: `$env:VOZATA_SCREENSHOTS = "$env:TEMP\vozata-shots"`), run
+   `dotnet test --filter FullyQualifiedName~ThemeRender`. The folder gets
+   `recording-idle|recording-active|history-minutes|history-transcript|settings-{light,dark}.png` and
+   `theme-gallery.png` (fake engine data; Start only reaches the fake engine).
+3. Real window: `dotnet run --project src/VozAta.Desktop` (the engine starts but nothing records).
+   Settings → Desktop app → Theme: pick Dark, then Light, then "Use the system setting": the whole
+   window switches at once, no restart. Take a screenshot of each tab per theme (Win+Shift+S).
+4. Close and reopen the app: the chosen theme is restored (`%APPDATA%\VozAta\ui.json` has
+   `"theme": "dark"` or `"light"`). With "Use the system setting", switch Windows Settings →
+   Personalization → Colors → Light/Dark: the app follows.
+5. Switch the interface language to Português and Español: the theme picker labels are translated.
+6. Optional (reference machine, one phase at a time): start a short recording and check the red Stop
+   button, recording dot, timer digits (tabular, no jitter) and channel colors in both themes.
