@@ -62,10 +62,11 @@ User-defined templates edited in the UI (backlog).
 
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** in progress
-- **Updated:** 2026-10-17 11:40
-- **Next step:** store the session's template in `session.json` at start (`SessionComponents`
-  + `SessionMeta`), use it for the stop-time minutes, and make `write_session_minutes` / CLI
-  `minutes` regenerate with the stored template.
+- **Updated:** 2026-10-17 12:20
+- **Next step:** API — `GET /templates` (new `routes/templates.py`, `templates` in
+  `ApiContainer`), `template` in `POST /sessions` (`StartOptions.template`) and in
+  `POST /sessions/{id}/minutes` (`MinutesJob(session_id, template)`); unknown → 422
+  `unknown_template` (locale key in en, pt-BR, es).
 
 ### Steps
 
@@ -74,8 +75,9 @@ User-defined templates edited in the UI (backlog).
 - [x] Prompts and `MinutesGenerator` built from the selected template (general = phase-04
       sections) — `216e2f9`
 - [x] `MINUTES_TEMPLATE` config key (`config.py`, `settings_fields.py`, `.env.example`, settings
-      page label/help and template names) — this commit
-- [ ] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
+      page label/help and template names) — `2fb54c8`
+- [x] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
+      — this commit
 - [ ] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
       (unknown → 422 `unknown_template`)
 - [ ] UI client: `GetTemplatesAsync`, template in start and regenerate requests
@@ -95,3 +97,8 @@ User-defined templates edited in the UI (backlog).
 - `MINUTES_TEMPLATE` is a `choice` setting whose choices are the bundled ids (a `StrEnum` built
   from `bundled_templates()` in `settings_fields.py`); `config.py` rejects unknown ids with
   `invalid_choice`. The settings page shows the names from `TemplateName_<id>` resx keys.
+- `session.json.template` is written at start (also when `GENERATE_MINUTES=false`, so a later
+  regeneration uses it). `write_session_minutes` takes a generator factory: requested template →
+  stored template (if still bundled) → `MINUTES_TEMPLATE`; the template used is saved back to
+  `session.json`. The only `session.py` change is the `SessionComponents.minutes_template` field
+  (the stop sequence is untouched, phases 14/22 edit it).

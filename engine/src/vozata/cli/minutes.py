@@ -20,13 +20,17 @@ def run_minutes(
     console: ConsoleObserver,
     localizer: Localizer,
     labeler: SpeakerLabeler,
-    build_generator: Callable[[Settings, Localizer], MinutesGenerator],
+    build_generator: Callable[[Settings, Localizer, str | None], MinutesGenerator],
 ) -> int:
-    """Write `minutes.md` from the best transcript, in the language stored in `session.json`."""
+    """Write `minutes.md` from the best transcript, in the language and with the template stored
+    in `session.json`."""
     t = localizer.t
     folder = session_dir.resolve()
     store = SessionStore(folder.parent)
-    generator = build_generator(settings, localizer)
+
+    def generator(template: str | None) -> MinutesGenerator:
+        return build_generator(settings, localizer, template)
+
     try:
         path = write_session_minutes(store, folder.name, generator, labeler)
     except SessionNotFoundError:

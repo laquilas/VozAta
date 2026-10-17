@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Callable
 
 from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
-from vozata.minutes.generator import MinutesGenerator
-from vozata.minutes.session_minutes import EmptyTranscriptError, write_session_minutes
+from vozata.minutes.session_minutes import (
+    EmptyTranscriptError,
+    GeneratorFactory,
+    write_session_minutes,
+)
 from vozata.ports import LanguageModelError, Localizer
 from vozata.storage.session_store import SessionStore
 
@@ -25,7 +27,7 @@ class MinutesJob:
     def __init__(
         self,
         store: SessionStore,
-        build_generator: Callable[[], MinutesGenerator],
+        build_generator: GeneratorFactory,
         labeler: SpeakerLabeler,
         broadcaster: EventBroadcaster,
         localizer: Localizer,
@@ -51,7 +53,7 @@ class MinutesJob:
     def _run(self, session_id: str) -> None:
         publish = self._broadcaster.publish
         try:
-            write_session_minutes(self._store, session_id, self._build_generator(), self._labeler)
+            write_session_minutes(self._store, session_id, self._build_generator, self._labeler)
         except EmptyTranscriptError:
             message = self._t("errors.api.empty_transcript", id=session_id)
             publish("error", session_id, {"code": "empty_transcript", "message": message})

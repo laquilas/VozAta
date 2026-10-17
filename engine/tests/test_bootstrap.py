@@ -145,6 +145,22 @@ def test_build_session_honours_explicit_devices_language_and_mix_mode(
     assert isinstance(session._c.mixer, StereoMixer)
     assert session._c.minutes is None
     assert session._language is ConversationLanguage.AUTO
+    assert session._c.minutes_template == "general"  # stored even without minutes
+
+
+def test_build_session_uses_the_chosen_template(tmp_path: Path, devices: list[int]) -> None:
+    settings = _settings(tmp_path, minutes_template="daily")
+
+    default = bootstrap.build_session(settings, FakeSessionObserver())
+    chosen = bootstrap.build_session(settings, FakeSessionObserver(), template="client")
+
+    assert default._c.minutes_template == "daily"
+    assert default._c.minutes is not None and default._c.minutes.template_id == "daily"
+    assert chosen._c.minutes_template == "client"
+    assert chosen._c.minutes is not None and chosen._c.minutes.template_id == "client"
+    with pytest.raises(UnknownTemplateError):
+        bootstrap.build_session(settings, FakeSessionObserver(), template="weekly")
+    assert devices == []  # an unknown template fails before any device is opened
 
 
 def test_transcriber_factory_builds_the_registered_provider_lazily(

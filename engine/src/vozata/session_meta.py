@@ -20,6 +20,9 @@ class DeviceNames(Protocol):
     @property
     def device_names(self) -> Any: ...
 
+    @property
+    def minutes_template(self) -> str: ...
+
 
 class SessionMeta:
     """Thread-safe metadata, saved on every change (language may be detected on another thread).
@@ -47,6 +50,7 @@ class SessionMeta:
             "started_at": started_at.isoformat(timespec="seconds"),
             "ended_at": None,
             "app_language": settings.app_language.value,
+            "template": components.minutes_template,
             "devices": {channel.value: names[channel] for channel in Channel if channel in names},
             "pauses": [],
             "settings": {

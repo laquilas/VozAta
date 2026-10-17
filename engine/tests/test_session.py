@@ -457,6 +457,7 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
         "language": "en",
         "language_source": "selected",
         "app_language": "en",
+        "template": "general",
         "devices": {"mic": "Headset Mic", "system": "Speakers [Loopback]"},
         "pauses": [],
         "settings": {

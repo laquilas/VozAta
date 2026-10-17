@@ -12,6 +12,7 @@ from vozata.config import Settings
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.template_repository import DEFAULT_TEMPLATE
 from vozata.ports import AudioMixer, AudioSource, Localizer, SessionObserver, Transcriber
 from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
@@ -43,6 +44,7 @@ class SessionComponents:
     labeler: SpeakerLabeler
     release: Callable[[], None] = lambda: None  # frees the audio backend once capture ended
     chunker_factory: ChunkerFactory | None = None  # None: fixed CHUNK_SECONDS windows
+    minutes_template: str = DEFAULT_TEMPLATE  # stored in session.json (phase 20)
 
 
 class SessionStartError(RuntimeError):

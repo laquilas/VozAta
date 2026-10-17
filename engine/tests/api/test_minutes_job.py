@@ -29,7 +29,7 @@ def _job(tmp_path: Path, llm: FakeLanguageModel, *, transcript: bool = True):  #
     localizer = FakeLocalizer()
     job = MinutesJob(
         store,
-        lambda: MinutesGenerator(llm, localizer, 12000, minutes_template()),
+        lambda template: MinutesGenerator(llm, localizer, 12000, minutes_template()),
         SpeakerLabeler(localizer),
         broadcaster,
         localizer,
