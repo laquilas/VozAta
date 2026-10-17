@@ -185,6 +185,20 @@ changed text through `on_partial` (API `partial`), never to the transcript files
 replaces it; an empty `partial` clears it when the channel's next chunk commits nothing, and at
 stop.
 
+**Echo dedupe** (phase 18, `ECHO_DEDUPE_ENABLED`): without headphones the microphone also hears
+the remote participants from the speakers. `EchoFilter` (`transcription/echo.py`) wraps the
+composite sink: system segments pass through at once and are kept for 30 s; each mic segment is
+held for `ECHO_HOLD_SECONDS` (default `CHUNK_SECONDS + 3`) so the matching system segment can
+arrive, and is dropped when at least `ECHO_SIMILARITY` of its words (lowercased, punctuation-free,
+`difflib.SequenceMatcher` on word lists) are found, in order, in the system words spoken within
+its span ± 1 s. Partial echo (the user talking over the remote speaker) stays below the threshold
+and is kept. The worker calls `EchoFilter.tick()` after every chunk and idle wait to release
+expired holds; closing the sink at stop (step 2) releases whatever is still held. Cost: **mic
+lines reach the transcript files and the UI up to `ECHO_HOLD_SECONDS` later** than system lines
+(system lines are never delayed), so `transcript.jsonl` is not strictly ordered by `start`. A
+dropped mic segment also clears the mic interim text. The drop count is `session.json`
+`echo_dropped`.
+
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
 chunk queue backlog exceeds 3 chunks per channel, log a warning (transcription slower than real time).
@@ -297,6 +311,7 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
   "vocabulary": ["Avalonia", "N5 Sensors"],
   "devices": {"mic": "Headset Microphone", "system": "Headphones [Loopback]"},
   "pauses": [{"start": 120.5, "end": 180.0}],
+  "echo_dropped": 12,
   "settings": {"CHUNK_MODE": "vad", "CHUNK_SECONDS": 5, "WHISPER_MODEL": "large-v3-turbo", "MIX_MODE": "mono"}
 }
 ```
@@ -320,6 +335,9 @@ of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jso
 written at stop; `ended_at` is later, after finalization. `language` / `language_source` are written only when known: at start for a fixed language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
 has neither key. `template` (20) and `vocabulary` (19) are added by their phases.
+`echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
+the transcript is final (step 2); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
+off.
 
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
 Display labels are **never** stored in raw data; they are resolved from `speaker_id` +

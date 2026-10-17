@@ -80,6 +80,10 @@ class SessionMeta:
         """Recorded length (session time when capture stopped), pauses included."""
         self._update(duration_seconds=round(duration_seconds, 3))
 
+    def echo_dropped(self, count: int) -> None:
+        """Mic segments the echo filter dropped (phase 18), written once the transcript is final."""
+        self._update(echo_dropped=count)
+
     def ended(self, at: datetime) -> None:
         self._update(ended_at=at.isoformat(timespec="seconds"))
 

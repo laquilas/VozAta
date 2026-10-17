@@ -57,10 +57,9 @@ Acoustic echo cancellation on the audio signal (backlog).
 
 - **Branch:** `feature/18-echo-dedupe`
 - **Status:** in progress
-- **Updated:** 2026-10-17 11:00
-- **Next step:** add a `tick` hook to `TranscriptionWorker`, wrap the sinks in `EchoFilter` in
-  `CapturePipeline` when `ECHO_DEDUPE_ENABLED`, and write `echo_dropped` to `session.json` after
-  the drain (tests in `test_worker.py`, `test_session_pipeline.py`, `test_session.py`).
+- **Updated:** 2026-10-17 11:40
+- **Next step:** tick the acceptance criteria, set the README status to `done`, Progress to
+  `ready for PR`, then open the PR and watch CI.
 
 ### Steps
 
@@ -68,7 +67,7 @@ Acoustic echo cancellation on the audio signal (backlog).
 - [x] `EchoFilter` in `transcription/echo.py` with fake-clock tests
 - [x] Config keys `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` (config, fields,
       `.env.example`, UI labels, architecture §9)
-- [ ] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
+- [x] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
       `session.json.echo_dropped` (architecture §6 / §8)
 - [ ] Acceptance criteria, README `done`, PR
 
@@ -90,3 +89,26 @@ Acoustic echo cancellation on the audio signal (backlog).
 - "Engine only" exception: the UI test `Every_engine_setting_has_a_label_and_help_text` requires a
   `Setting_*` / `SettingHelp_*` string for every `.env.example` key, so the three `Strings*.resx`
   files got labels for the new keys (no UI code changes).
+- Wiring: `CapturePipeline` wraps its `CompositeSink` in `EchoFilter` when enabled;
+  `TranscriptionWorker` got an optional `tick` hook (run on the transcription thread after every
+  chunk and idle wait) that releases expired holds, so the filter needs no thread of its own.
+  `drain()` closes the filter, which flushes held segments. `RecordingSession._drain()` then
+  writes `echo_dropped` through `SessionMeta.echo_dropped()` (absent when the filter is off).
+- A dropped mic segment sends an empty mic `partial` (when `LIVE_PARTIALS`), because the worker
+  had already forgotten the interim text the segment was meant to replace.
+- Known limit: interim text (phase 28) is not deduplicated, so echoed speech can still flash as a
+  mic partial until the segment is dropped.
+
+### Manual check recipe (run alone, before merge: needs speakers and a microphone)
+
+1. From `engine/`, with the default `.env` (`ECHO_DEDUPE_ENABLED=true`), **no headphones**,
+   speakers at a normal volume: `../.venv/Scripts/python -m vozata record`.
+2. Play a video with clear speech (e.g. a news clip) for ~60 s and stay silent.
+3. Then, with the video paused, say two sentences of your own; resume the video and talk over it
+   for one sentence.
+4. Stop with Ctrl+C. Expected in the console and in `transcript.md`: the video's speech appears
+   only as the system label (`Others`); your own sentences appear as `Me` (about
+   `CHUNK_SECONDS + 3` s late); the sentence spoken over the video is kept.
+5. `session.json` has `"echo_dropped": N` with N > 0.
+6. Repeat with `ECHO_DEDUPE_ENABLED=false` and confirm the video's speech appears twice (`Me` and
+   `Others`) and `session.json` has no `echo_dropped` key.

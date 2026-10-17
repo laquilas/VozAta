@@ -471,6 +471,37 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
     assert meta["duration_seconds"] == 0.0  # recorded length, not wall time to the end
 
 
+def test_a_mic_echo_of_the_system_audio_is_dropped_and_counted(tmp_path: Path) -> None:
+    echo = _words("Ship", " it", " Friday.")
+    rig = _Rig(tmp_path, results=[echo, echo])
+    rig.session.start()
+
+    rig.system.push(_voice(1.0), 0.0)
+    rig.mic.push(_voice(1.0), 0.0)  # the speakers, heard again by the microphone
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    md = rig.session.paths.transcript_md.read_text(encoding="utf-8")
+    assert md == "[00:00:00] labels.system: Ship it Friday.\n"
+    assert [segment.channel for (segment,) in rig.observer.of("segment")] == [Channel.SYSTEM]
+    assert rig.store.read_meta(rig.session.id)["echo_dropped"] == 1
+
+
+def test_with_echo_dedupe_off_both_copies_are_kept_and_nothing_is_counted(tmp_path: Path) -> None:
+    echo = _words("Ship", " it", " Friday.")
+    settings = dataclasses.replace(SETTINGS, echo_dedupe_enabled=False)
+    rig = _Rig(tmp_path, results=[echo, echo], settings=settings)
+    rig.session.start()
+
+    rig.system.push(_voice(1.0), 0.0)
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    assert len(rig.observer.of("segment")) == 2
+    assert "echo_dropped" not in rig.store.read_meta(rig.session.id)
+
+
 def test_auto_language_is_stored_once_detected(tmp_path: Path) -> None:
     speech = TranscriptionResult(words=(Word("Olá.", 0.0, 3.0, 0.9),), language="pt")
     rig = _Rig(tmp_path, results=[speech], language=ConversationLanguage.AUTO)

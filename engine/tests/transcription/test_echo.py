@@ -191,6 +191,7 @@ def test_only_system_words_within_the_tolerance_are_compared() -> None:
 
 def test_segments_without_word_timings_use_the_segment_span() -> None:
     rig = _Rig()
+    rig.filter.emit(_system(0.0, "an earlier remark", words=False))  # outside the window
     rig.filter.emit(_system(10.0, ECHO, words=False))
     rig.filter.emit(_mic(10.5, ECHO, words=False))
 
