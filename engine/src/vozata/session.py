@@ -254,11 +254,15 @@ class RecordingSession:
         return build
 
     def _identify_speakers(self) -> None:
-        """Diarize `system.wav` (Whisper is already released); a failure keeps `system` labels."""
+        """Diarize `system.wav` (Whisper is already released); a failure keeps `system` labels.
+
+        Once speakers are written, `speakers_relabeled` tells clients to reload the transcript:
+        the post-session speakers replace the live ones (phase 15).
+        """
         if self._c.diarizer_factory is None:
             return
         try:
-            diarize_session(
+            found = diarize_session(
                 self._store,
                 self.id,
                 self._c.diarizer_factory,
@@ -270,6 +274,9 @@ class RecordingSession:
             reason = self._reason(error)
             command = f'python -m vozata diarize "{self.paths.root}"'
             self._error("diarization_failed", reason=reason, command=command)
+            return
+        if found is not None:
+            self._observer.on_speakers_relabeled(self.id)
 
     def _write_minutes(self) -> None:
         if self._c.minutes is None:

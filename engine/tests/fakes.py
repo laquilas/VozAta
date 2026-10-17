@@ -232,6 +232,9 @@ class FakeSessionObserver:
     def on_model_loading(self, loading: bool) -> None:
         self.events.append(("model_loading", loading))
 
+    def on_speakers_relabeled(self, session_id: str) -> None:
+        self.events.append(("speakers_relabeled", session_id))
+
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         self.events.append(("partial", channel, speaker_id, start, text))
 

@@ -59,8 +59,8 @@ Cross-session speaker recognition (remembering voices between meetings).
 
 - **Branch:** `feature/15-diarization-live`
 - **Status:** in progress
-- **Updated:** 2026-10-17 14:41
-- **Next step:** emit `speakers_relabeled` after a successful post-session pass: `SessionObserver.on_speakers_relabeled`, `RecordingSession._identify_speakers`, the API `_EventObserver`, the console observer and `FakeSessionObserver`.
+- **Updated:** 2026-10-17 14:43
+- **Next step:** UI: parse `speakers_relabeled` in `EngineEvents.cs` and reload the transcript in `MainViewModel` (live lines of that session) and `HistoryViewModel` / `SessionDetailViewModel` (open detail), with ViewModel tests.
 
 ### Steps
 
@@ -70,7 +70,7 @@ Cross-session speaker recognition (remembering voices between meetings).
       audio buffer; wired in `session_pipeline.py`
 - [x] pyannote embedder in a long-lived child process (`diarization/embedder.py`), `EMBEDDERS`
       registry in `bootstrap.py`
-- [ ] `speakers_relabeled` after the post-session pass (observer, session, API)
+- [x] `speakers_relabeled` after the post-session pass (observer, session, API)
 - [ ] UI: parse `speakers_relabeled`, reload the transcript (main window + session detail)
 - [ ] Docs (architecture §6/§9/§11, api-contract), acceptance criteria, full suites, PR
 
