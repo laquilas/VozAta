@@ -425,9 +425,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `VOCABULARY_FILE` | *(empty)* = `vocabulary.txt` next to `.env` | 19 | glossary: one term per line, `#` comments, case-insensitive dedupe; edited through `GET/PUT /vocabulary` |
 | `MINUTES_TEMPLATE` | `general` | 20 | default template |
 | `LOW_CONFIDENCE_THRESHOLD` | `0.5` | 21 | word probability below this is highlighted |
-| `EXTRACT_ACTION_ITEMS` | `true` | 23 | extract action items after minutes |
-| `AZDO_ORG_URL` / `AZDO_PROJECT` / `AZDO_PAT` | — | 23 | Azure DevOps export |
-| `GITHUB_REPO` / `GITHUB_TOKEN` | — | 23 | GitHub Issues export |
+| `EXTRACT_ACTION_ITEMS` | `true` | 23 | extract action items after minutes (only when `GENERATE_MINUTES` is true) |
+| `AZDO_ORG_URL` / `AZDO_PROJECT` / `AZDO_PAT` | — | 23 | Azure DevOps export (settings group `tasks`); offered only when all three are set |
+| `GITHUB_REPO` / `GITHUB_TOKEN` | — | 23 | GitHub Issues export (`owner/name`, group `tasks`); offered only when both are set |
 | `OLLAMA_KEEP_ALIVE` | `0` | 25 | how long Ollama keeps the model loaded after a minutes job |
 | `WHISPER_KEEP_LOADED` | `false` | 26 | keep the transcriber loaded between sessions in `serve` |
 | `CHUNK_MODE` | `vad` | 27 | `vad` (cut at pauses) / `fixed` (`CHUNK_SECONDS` windows) |

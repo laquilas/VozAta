@@ -28,7 +28,7 @@ class Field:
     applies: str = "next_session"  # or "restart": read once when the engine starts
 
 
-GROUPS = ("general", "audio", "segmentation", "transcription", "speakers", "minutes", "api")
+GROUPS = ("general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "api")
 
 FIELDS: tuple[Field, ...] = (
     Field("CHUNK_SECONDS", "chunk_seconds", "number", group="segmentation"),
@@ -116,6 +116,13 @@ FIELDS: tuple[Field, ...] = (
     Field("MINUTES_TEMPLATE", "minutes_template", "choice", MinutesTemplateId, group="minutes"),
     # LLM VRAM release (phase 25)
     Field("OLLAMA_KEEP_ALIVE", "ollama_keep_alive", "string", group="minutes"),
+    # Action items export (phase 23)
+    Field("EXTRACT_ACTION_ITEMS", "extract_action_items", "bool", group="minutes"),
+    Field("AZDO_ORG_URL", "azdo_org_url", "url", group="tasks"),
+    Field("AZDO_PROJECT", "azdo_project", "string", group="tasks"),
+    Field("AZDO_PAT", "azdo_pat", "string", secret=True, group="tasks"),
+    Field("GITHUB_REPO", "github_repo", "string", group="tasks"),
+    Field("GITHUB_TOKEN", "github_token", "string", secret=True, group="tasks"),
     # Session (phase 05)
     Field("GENERATE_MINUTES", "generate_minutes", "bool", group="general"),
     # API (phase 06)
