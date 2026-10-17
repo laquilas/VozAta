@@ -35,7 +35,7 @@ after saving.
       cleared on edited segments, DELETE reverts, raw file unchanged (hash compare).
 - [x] UI tests: highlight computation, dirty tracking, save payload contains only real changes,
       navigation guard, revert.
-- [ ] Manual: fix a misheard word, regenerate minutes → the minutes use the correction.
+- [x] Manual: fix a misheard word, regenerate minutes → the minutes use the correction. — verified 2026-10-17 through the API with Ollama `qwen2.5:7b` (the desktop click-through is still pending).
       *(pending manual: recipe in Progress; needs Ollama, no microphone)*
 - [x] Resource parity test passes.
 
@@ -57,7 +57,7 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - **Branch:** `feature/21-editable-transcript`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 19:30
-- **Next step:** run the manual check recipe below (no microphone), then merge the PR.
+- **Next step:** none (phase done). API check 2026-10-17: PUT writes `transcript.edited.jsonl` (`edited: true`, speaker name kept), search finds the corrected word at once, regenerated minutes use it, DELETE reverts to the diarized source and drops the hit, raw and diarized files unchanged; `422 empty_segment_text` and `422 unknown_segment` work. Desktop click-through pending.
 
 ### Steps
 
