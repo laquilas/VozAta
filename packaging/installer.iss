@@ -28,6 +28,8 @@ OutputBaseFilename=VozAta-Setup-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+; relative to this script's folder, so it resolves the same locally and in CI
+SetupIconFile=..\assets\desktop\windows\vozata.ico
 UninstallDisplayIcon={app}\VozAta.Desktop.exe
 CloseApplications=yes
 
@@ -50,8 +52,8 @@ Name: "{userappdata}\VozAta"; Flags: uninsneveruninstall
 Name: "{userdocs}\VozAta"; Flags: uninsneveruninstall
 
 [Icons]
-Name: "{userprograms}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"
-Name: "{userdesktop}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{userprograms}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"
+Name: "{userdesktop}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\VozAta.Desktop.exe"; Description: "{cm:LaunchProgram,VozAta}"; Flags: nowait postinstall skipifsilent

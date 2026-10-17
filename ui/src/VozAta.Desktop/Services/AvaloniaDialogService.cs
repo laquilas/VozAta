@@ -14,6 +14,7 @@ public sealed class AvaloniaDialogService(IClassicDesktopStyleApplicationLifetim
         var dialog = new Window
         {
             Title = title,
+            Icon = lifetime.MainWindow?.Icon,
             Width = 460,
             SizeToContent = SizeToContent.Height,
             CanResize = false,
