@@ -43,6 +43,7 @@ from vozata.ports import (
 )
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
+from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_store import SessionStore
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
@@ -109,6 +110,10 @@ def build_store(settings: Settings) -> SessionStore:
     return SessionStore(settings.output_dir)
 
 
+def build_search_index(settings: Settings) -> SearchIndex:
+    return SearchIndex(settings.output_dir / "index.db")
+
+
 def build_minutes_generator(
     settings: Settings, localizer: Localizer | None = None
 ) -> MinutesGenerator:
@@ -168,6 +173,7 @@ def build_session(
         labeler=build_labeler(settings, localizer),
         release=audio.close,
         chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
+        search_index=build_search_index(settings),
     )
     return RecordingSession(
         settings,

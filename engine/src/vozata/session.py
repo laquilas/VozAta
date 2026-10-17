@@ -12,7 +12,14 @@ from vozata.config import Settings
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
-from vozata.ports import AudioMixer, AudioSource, Localizer, SessionObserver, Transcriber
+from vozata.ports import (
+    AudioMixer,
+    AudioSource,
+    Localizer,
+    SessionObserver,
+    Transcriber,
+    TranscriptSearch,
+)
 from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.storage.session_store import SessionPaths, SessionStore
@@ -43,6 +50,7 @@ class SessionComponents:
     labeler: SpeakerLabeler
     release: Callable[[], None] = lambda: None  # frees the audio backend once capture ended
     chunker_factory: ChunkerFactory | None = None  # None: fixed CHUNK_SECONDS windows
+    search_index: TranscriptSearch | None = None  # None: the session is not indexed (22)
 
 
 class SessionStartError(RuntimeError):
@@ -148,6 +156,7 @@ class RecordingSession:
         self._release_transcriber()  # 4
         # 5: speaker identification (phase 14)
         self._write_minutes()  # 6
+        self._index_transcript()  # 6: search (phase 22)
         self._meta.ended(self._store.now())  # 7
         self._set_status(SessionStatus.DONE)
 
@@ -228,6 +237,15 @@ class RecordingSession:
             return
         self.paths.minutes_md.write_text(minutes + "\n", encoding="utf-8", newline="\n")
         self._observer.on_minutes_ready(self.id)
+
+    def _index_transcript(self) -> None:
+        if self._c.search_index is None:
+            return
+        try:
+            self._c.search_index.index_session(self.id, self._store.load_transcript(self.id))
+        except Exception as error:
+            _log.exception("Indexing %s for search failed", self.id)
+            self._error("index_failed", reason=str(error))
 
     def _on_language_detected(self, language: ConversationLanguage) -> None:
         self._meta.set_language(language, "detected")

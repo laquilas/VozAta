@@ -54,13 +54,13 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - **Branch:** `feature/22-search`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** add `search_index` to `SessionComponents` and index the transcript at stop step 6 in `session.py`; then the `reindex` CLI command
+- **Next step:** add `routes/search.py` (`GET /search`) with `ApiContainer.search_index`, wire it in `bootstrap.build_api_container` (rebuild in the background when `index.db` is missing) and document it in api-contract/architecture
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] Engine: `SearchIndex` (FTS5, accent-insensitive, safe query, snippet markers) behind the `TranscriptSearch` port
-- [ ] Engine: index at stop step 6; `python -m vozata reindex`
+- [x] Engine: index at stop step 6; `python -m vozata reindex`
 - [ ] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
 - [ ] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
 - [ ] Acceptance criteria, README status `done`, PR
@@ -76,3 +76,7 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
   `domain.SNIPPET_START` / `SNIPPET_END`: they never occur in transcript text, unlike brackets.
 - Safe query: every `\w+` word of the user text is quoted (implicit AND) and the last one gets a
   prefix `*`; operators such as `OR` become plain words; text without words returns no hits.
+- Stop step 6 indexes after the minutes, whether or not minutes are enabled
+  (`RecordingSession._index_transcript`, `SessionComponents.search_index`). A failure is
+  non-fatal: logged and reported as `error` code `index_failed` (hint: `python -m vozata reindex`).
+  Phase 17 (recovery) should reuse the same step; there is no recovery code yet.
