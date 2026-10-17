@@ -13,7 +13,7 @@ in the same branch.
 | GPU | NVIDIA RTX 3050 Laptop, **6 GB VRAM** |
 | Tools | ffmpeg, git, gh, docker |
 | Missing | **.NET SDK** (install .NET 10 LTS in phase 07), Ollama CLI not on PATH (install + `ollama pull` in phase 04) |
-| Repo | GitHub `laquilas/VozAta` (public), default branch `main`; CI on pull requests into and pushes to `main` |
+| Repo | GitHub `laquilas/VozAta` (public), default branch `main`; CI: quick checks (lint, format, compile) on pull requests into `main`; full test suites and the installer on `v*` tags and manual runs |
 
 ### Legacy code (`__legacy__/`, read-only reference)
 
