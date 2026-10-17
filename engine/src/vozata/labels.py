@@ -25,8 +25,16 @@ class SpeakerLabeler:
         names: Mapping[str, str] | None = None,
     ) -> None:
         self._localizer = localizer
+        self._mic_override = mic_override
+        self._system_override = system_override
         self._overrides = {Channel.MIC.value: mic_override, Channel.SYSTEM.value: system_override}
         self._names = {key: name.strip() for key, name in (names or {}).items() if name.strip()}
+
+    def with_names(self, names: Mapping[str, str]) -> SpeakerLabeler:
+        """A labeler for one session: same overrides, plus the names from its `speakers.json`."""
+        if not names:
+            return self
+        return SpeakerLabeler(self._localizer, self._mic_override, self._system_override, names)
 
     def label(self, speaker_id: str) -> str:
         if speaker_id in self._names:

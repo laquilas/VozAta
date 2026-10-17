@@ -58,6 +58,7 @@ def test_paths_name_every_session_file(tmp_path: Path) -> None:
     assert paths.minutes_md == root / "minutes.md"
     assert paths.diarized_jsonl == root / "transcript.diarized.jsonl"
     assert paths.edited_jsonl == root / "transcript.edited.jsonl"
+    assert paths.speakers_json == root / "speakers.json"
 
 
 @pytest.mark.parametrize("session_id", ["", "..", "../x", "2026", "20261015_202358/..", "a_b"])
@@ -217,3 +218,57 @@ def test_load_transcript_with_source_names_the_file_used(tmp_path: Path) -> None
     assert store.load_transcript_with_source(paths.id)[0] == "diarized"
     _write_jsonl(paths.edited_jsonl, segment)
     assert store.load_transcript_with_source(paths.id)[0] == "edited"
+
+
+def test_load_raw_transcript_ignores_derived_transcripts(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    assert store.load_raw_transcript(paths.id) == []
+    raw = _segment("system-000001", Channel.SYSTEM, 0.0, "raw")
+    _write_jsonl(paths.transcript_jsonl, raw)
+    _write_jsonl(paths.diarized_jsonl, _segment("system-000001", Channel.SYSTEM, 0.0, "x"))
+
+    assert store.load_raw_transcript(paths.id) == [raw]
+
+
+def test_write_diarized_is_read_back_first_and_leaves_the_raw_transcript(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    raw = _segment("system-000001", Channel.SYSTEM, 0.0, "Olá")
+    _write_jsonl(paths.transcript_jsonl, raw)
+    before = paths.transcript_jsonl.read_bytes()
+    diarized = TranscriptSegment("system-000001", Channel.SYSTEM, "system:1", 0.0, 1.0, "Olá", ())
+
+    store.write_diarized(paths.id, [diarized])
+
+    assert store.load_transcript_with_source(paths.id) == ("diarized", [diarized])
+    assert paths.transcript_jsonl.read_bytes() == before
+    assert b"\r\n" not in paths.diarized_jsonl.read_bytes()
+
+
+def test_speakers_are_written_without_names_and_names_are_read_back(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    assert store.speaker_names(paths.id) == {}
+
+    store.write_speakers(paths.id, ["system:1", "system:2"])
+
+    assert json.loads(paths.speakers_json.read_text(encoding="utf-8")) == {
+        "system:1": {"name": None},
+        "system:2": {"name": None},
+    }
+    assert store.speaker_names(paths.id) == {}
+    paths.speakers_json.write_text(
+        json.dumps({"system:1": {"name": "Ana"}, "system:2": {}, "system:3": "x"}),
+        encoding="utf-8",
+    )
+    assert store.speaker_names(paths.id) == {"system:1": "Ana"}
+
+
+@pytest.mark.parametrize("content", ["{not json", "[1, 2]"])
+def test_unreadable_speakers_files_give_no_names(tmp_path: Path, content: str) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    paths.speakers_json.write_text(content, encoding="utf-8")
+
+    assert store.speaker_names(paths.id) == {}

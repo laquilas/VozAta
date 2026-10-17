@@ -68,14 +68,14 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - **Branch:** `feature/14-diarization-post`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** `SessionStore` read/write of `speakers.json`, labeler built from speaker names, `diarization/session_diarization.py` (`diarize_session`).
+- **Next step:** session stop step 5 (`SessionComponents.diarizer_factory`, `tests/test_session_diarization.py`) and the `DIARIZERS` registry in `bootstrap.py`.
 
 ### Steps
 
 - [x] `SpeakerTurn`, `Diarizer` port, `FakeDiarizer`
 - [x] `assign_speakers` (pure) with tests
 - [x] Config keys (`DIARIZATION_*`, `HF_TOKEN`, `MIN_SPEAKERS`, `MAX_SPEAKERS`), `.env.example`, UI settings strings
-- [ ] `speakers.json` in the store, labels from speaker names, `diarize_session`
+- [x] `speakers.json` in the store, labels from speaker names, `diarize_session`
 - [ ] Session stop step 5 + `DIARIZERS` registry
 - [ ] pyannote adapter (subprocess) + optional extra `diarization`
 - [ ] CLI `diarize <session_dir>`

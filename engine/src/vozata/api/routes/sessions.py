@@ -81,7 +81,8 @@ def session_detail(session_id: str, c: Container) -> dict[str, Any]:
 def transcript(session_id: str, c: Container) -> dict[str, Any]:
     source, segments = c.store.load_transcript_with_source(session_id)
     ordered = sorted(segments, key=lambda segment: segment.start)
-    return {"source": source, "segments": [segment_payload(s, c.labeler) for s in ordered]}
+    labeler = c.labeler.with_names(c.store.speaker_names(session_id))
+    return {"source": source, "segments": [segment_payload(s, labeler) for s in ordered]}
 
 
 @router.get("/sessions/{session_id}/minutes", response_model=Minutes)

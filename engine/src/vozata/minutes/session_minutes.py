@@ -30,7 +30,8 @@ def write_session_minutes(
     if not segments:
         raise EmptyTranscriptError(session_id)
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
-    minutes = generator.generate(segments, labeler, language)
+    named = labeler.with_names(store.speaker_names(session_id))
+    minutes = generator.generate(segments, named, language)
     path = store.paths(session_id).minutes_md
     path.write_text(minutes + "\n", encoding="utf-8", newline="\n")
     return path
