@@ -48,3 +48,24 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 
 > Execute phase 22 of the roadmap (`docs/roadmap/phases/22-search.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/22-search`
+- **Status:** in progress
+- **Updated:** 2026-10-17 12:00
+- **Next step:** write `tests/storage/test_search_index.py` and make it pass with `storage/search_index.py` (`SearchIndex` behind a `TranscriptSearch` port)
+
+### Steps
+
+- [x] Start the phase (README status, Progress section)
+- [ ] Engine: `SearchIndex` (FTS5, accent-insensitive, safe query, snippet markers) behind the `TranscriptSearch` port
+- [ ] Engine: index at stop step 6; `python -m vozata reindex`
+- [ ] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
+- [ ] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
+- [ ] Acceptance criteria, README status `done`, PR
+
+### Decisions and notes
+
+- FTS5 is available in the stdlib `sqlite3` of the venv Python 3.13 (SQLite 3.50.4) and of the
+  CI `actions/setup-python` 3.13 build (both bundle a SQLite compiled with FTS5).
