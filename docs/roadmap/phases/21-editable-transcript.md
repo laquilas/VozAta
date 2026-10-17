@@ -56,8 +56,9 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - **Branch:** `feature/21-editable-transcript`
 - **Status:** in progress
 - **Updated:** 2026-10-17 18:00
-- **Next step:** UI — `LowConfidence.Split` + `TranscriptEditorViewModel` (with
-  `TranscriptEditorViewModelTests.cs`), then wire it into `SessionDetailViewModel` / `HistoryView`.
+- **Next step:** UI — wire `TranscriptEditorViewModel` into `SessionDetailViewModel` (`Editor`,
+  highlighted `Lines`), the guard into `HistoryViewModel` selection and `MainViewModel.ConfirmCloseAsync`,
+  and the Edit mode into `HistoryView.axaml`.
 
 ### Steps
 
@@ -65,8 +66,8 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - [x] Engine: `PUT /sessions/{id}/transcript`, `DELETE /sessions/{id}/transcript/edits`, reindex — `eeac8c9`
 - [x] Engine: `LOW_CONFIDENCE_THRESHOLD` in `config.py`, `settings_fields.py`, `.env.example` — `b559d17`
 - [x] Docs: `edited` in api-contract and architecture §8 — `79cff5a`
-- [x] UI: `UpdateTranscriptAsync` / `RevertTranscriptAsync` in the client and the fake
-- [ ] UI: `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard)
+- [x] UI: `UpdateTranscriptAsync` / `RevertTranscriptAsync` in the client and the fake — `e83f085`
+- [x] UI: `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard)
 - [ ] UI: transcript tab Edit mode, low-confidence highlight, navigation guard, strings (en/pt-BR/es)
 - [ ] Acceptance criteria, README `done`, PR
 
