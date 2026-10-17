@@ -45,9 +45,8 @@ segments `User 1`, `User 2`, … (localized) in the transcript, minutes and ever
 - [x] Session test with `FakeDiarizer`: order Whisper close → diarize → diarizer close → minutes;
       failure path continues.
 - [x] `load_transcript` returns the diarized file; labels show `User N` per app language.
-- [ ] Manual: a recorded call with 2–3 remote people → distinct `User N` labels; GPU memory
-      released between steps (check `nvidia-smi`). **Pending manual (credentials)**: no
-      `HF_TOKEN` in the parallel session; recipe in Progress.
+- [x] Manual: a recorded call with 2–3 remote people → distinct `User N` labels; GPU memory
+      released between steps (check `nvidia-smi`). Done 2026-10-17 (see Progress).
 - [x] Coverage ≥ 80 % (pyannote adapter excluded as hardware).
 
 ## Tests
@@ -68,8 +67,17 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 
 - **Branch:** `feature/14-diarization-post`
 - **Status:** ready for PR
-- **Updated:** 2026-10-17 12:00
-- **Next step:** run the manual check below (needs `HF_TOKEN`), then merge the PR.
+- **Updated:** 2026-10-17 18:30
+- **Next step:** none (phase done). Manual check run 2026-10-17: torch 2.11+cu128 and
+  `pyannote.audio` 4 installed in `.venv` (`pytest -m gpu` still passes with Whisper on CUDA),
+  token with the community-1 terms accepted. A 95 s TTS call with three voices (Maria pt,
+  Daniel pt, Zira en, 13 turns) played on the laptop speakers and recorded with
+  `DIARIZATION_ENABLED=true`: `transcript.diarized.jsonl` and `speakers.json` written,
+  `system:1` = Maria, `system:2` = Daniel, `system:3` = Zira on every whole turn; two Whisper
+  segments that spanned a turn change went to the previous voice, and the last 1-word fragment
+  became an extra `system:4`. `nvidia-smi`: Whisper ~3.8 GB → baseline 1.67 GB after it closed →
+  diarization child ~3.8 GB → released → Ollama ~5.8 GB for minutes and action items → 1.4 GB
+  at the end (never two models at once).
 
 ### Steps
 

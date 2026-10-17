@@ -42,9 +42,8 @@ clustering; the post-session pass (14) remains authoritative and corrects them a
       (`tests/diarization/test_live_sink.py`, `tests/test_session_live_speakers.py`: the live
       worker is a sink stage, see Decisions)
 - [x] API/UI: `speakers_relabeled` emitted after stop and the UI reloads the transcript.
-- [ ] Manual: live labels mostly stable during a 3-person call (note accuracy in the PR).
-      **pending manual (credentials)**: needs `HF_TOKEN`, the `diarization` extra and the audio
-      hardware; recipe in Progress.
+- [x] Manual: live labels mostly stable during a 3-person call (note accuracy in the PR).
+      Done 2026-10-17: 13 of 15 remote lines labelled correctly (see Progress).
 
 ## Tests
 
@@ -64,8 +63,17 @@ Cross-session speaker recognition (remembering voices between meetings).
 
 - **Branch:** `feature/15-diarization-live`
 - **Status:** ready for PR
-- **Updated:** 2026-10-17 14:47
-- **Next step:** open the PR and watch its checks (full suites pass locally); then run the manual check recipe below on the reference machine.
+- **Updated:** 2026-10-17 18:50
+- **Next step:** none (phase done). Manual check run 2026-10-17 (CLI `record`,
+  `LIVE_DIARIZATION_ENABLED=true`, `DIARIZATION_ENABLED=true`, threshold 0.7): the embedder child
+  smoke test printed `(256,)`; the 95 s three-voice TTS call (Maria, Daniel, Zira) played on the
+  laptop speakers showed `User 1` = Maria, `User 2` = Daniel, `User 3` = Zira live from the first
+  line (the playback started 15 s in, after the embedder loaded). 13 of 15 remote lines were
+  right: a short Zira line ("Eu concordo com o Daniel.") went to User 2 and a short Maria line
+  ("Muito bem. Mais algum assunto?") opened a new User 4 — short clips give weaker embeddings.
+  Peak GPU memory 5.9 GB (Whisper + embedder child, then Ollama), no `live_diarization_failed`.
+  Side note: one echoed `Me` line slipped past the echo filter because Whisper heard it
+  differently on the two channels ("poll" vs "pôr"), below `ECHO_SIMILARITY=0.85`.
 
 ### Steps
 
