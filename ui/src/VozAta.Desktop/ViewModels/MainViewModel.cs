@@ -56,7 +56,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _timer = timer;
         Devices = new DevicesViewModel(client, preferences);
         Templates = new MinutesTemplatesViewModel(client);
-        History = new HistoryViewModel(client, shell, localization, saver, Templates);
+        History = new HistoryViewModel(client, shell, localization, saver, Templates, dialogs: dialogs);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);
         Tray = new TrayViewModel(this, localization, preferences);
@@ -243,9 +243,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         EventLoop = FollowEventsAsync();
     }
 
-    /// <summary>Whether the window may close; while recording, asks and stops the session first.</summary>
+    /// <summary>Whether the window may close: asks about unsaved transcript edits, and while recording asks and stops the session first.</summary>
     public async Task<bool> ConfirmCloseAsync()
     {
+        if (!await History.ConfirmLeaveAsync())
+        {
+            return false; // unsaved transcript edits (phase 21)
+        }
+
         if (!IsRecording)
         {
             return true;

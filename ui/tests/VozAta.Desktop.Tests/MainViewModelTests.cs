@@ -621,6 +621,26 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Closing_with_unsaved_transcript_edits_asks_first()
+    {
+        _client.Sessions.Add(new SessionSummary("20261015_202358", "done", null, null, 5, "en", false));
+        _client.Details["20261015_202358"] = new SessionDetail("20261015_202358", "done", null, null, 5, "en", false, [], @"C:\r");
+        _client.Transcripts["20261015_202358"] = new Transcript("raw", [new Segment("mic-000001", "mic", "mic", "Me", 0, 1, "Helo.", false, [])]);
+        var viewModel = await ReadyAsync();
+        viewModel.History.Selected = viewModel.History.Rows[0];
+        await viewModel.History.DetailLoading;
+        var editor = viewModel.History.Detail!.Editor;
+        editor.EditCommand.Execute(null);
+        editor.Segments[0].Text = "Hello.";
+        _dialogs.Answer = false;
+
+        Assert.False(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal([_localization["ConfirmDiscardEditsTitle"]], _dialogs.Asked);
+        Assert.True(editor.IsDirty);
+    }
+
+    [Fact]
     public async Task Declining_the_close_keeps_recording()
     {
         var viewModel = await ReadyAsync();

@@ -56,9 +56,8 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - **Branch:** `feature/21-editable-transcript`
 - **Status:** in progress
 - **Updated:** 2026-10-17 18:00
-- **Next step:** UI — wire `TranscriptEditorViewModel` into `SessionDetailViewModel` (`Editor`,
-  highlighted `Lines`), the guard into `HistoryViewModel` selection and `MainViewModel.ConfirmCloseAsync`,
-  and the Edit mode into `HistoryView.axaml`.
+- **Next step:** write the manual check recipe, tick the acceptance criteria, set README `done`,
+  open the PR.
 
 ### Steps
 
@@ -67,8 +66,8 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - [x] Engine: `LOW_CONFIDENCE_THRESHOLD` in `config.py`, `settings_fields.py`, `.env.example` — `b559d17`
 - [x] Docs: `edited` in api-contract and architecture §8 — `79cff5a`
 - [x] UI: `UpdateTranscriptAsync` / `RevertTranscriptAsync` in the client and the fake — `e83f085`
-- [x] UI: `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard)
-- [ ] UI: transcript tab Edit mode, low-confidence highlight, navigation guard, strings (en/pt-BR/es)
+- [x] UI: `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard) — `7e1fe4e`
+- [x] UI: transcript tab Edit mode, low-confidence highlight, navigation guard, strings (en/pt-BR/es)
 - [ ] Acceptance criteria, README `done`, PR
 
 ### Decisions and notes
@@ -79,6 +78,12 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
   `422 empty_segment_text`, `409 transcript_still_recording` (also for `DELETE`).
 - `edited` is written to JSONL only when true, so raw/diarized lines keep their schema.
 - A failing search reindex is logged and never fails a saved edit.
+- UI: `SessionDetailViewModel.Editor` (`TranscriptEditorViewModel`) owns Edit mode; read-mode lines
+  get `LowConfidenceParts` from `LowConfidence.Split` (threshold read from `GET /settings`, default
+  0.5; edited segments are never highlighted) and render through `Views/ConfidenceText`.
+- Navigation guard: selecting another session in History (also via a search hit) and closing the
+  window ask before dropping unsaved edits; a cleared list selection (refresh) keeps the editor.
+  Switching the main tabs keeps the detail alive, so it needs no guard.
 
 - The manual check (fix a misheard word, regenerate minutes) needs no microphone; its recipe is
   written here once the UI lands.
