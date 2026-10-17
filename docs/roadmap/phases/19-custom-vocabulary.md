@@ -64,8 +64,8 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 13:56
-- **Next step:** session wiring: `SessionComponents.vocabulary`, `session.json.vocabulary`, hints + one `RollingContext` per channel in `CapturePipeline`, bootstrap merges the glossary file with the session terms.
+- **Updated:** 2026-10-17 13:58
+- **Next step:** minutes glossary: `vocabulary` argument on `MinutesGenerator.generate`, a `minutes.glossary` locale block (en/pt-BR/es) in every prompt (single, map, reduce), passed at stop and read from `session.json` on regeneration.
 
 ### Steps
 
@@ -74,7 +74,7 @@ Automatic term extraction from previous meetings.
 - [x] Rolling context prompt (`transcription/context.py`) wired into the stitcher; `prompt` and
       `avg_logprob` on the transcriber port; faster-whisper `initial_prompt` +
       `hallucination_silence_threshold`; OpenAI-compatible `prompt`
-- [ ] Session: merge global + session terms → `session.json.vocabulary`, hints to every
+- [x] Session: merge global + session terms → `session.json.vocabulary`, hints to every
       `transcribe` call
 - [ ] Minutes prompt glossary (live stop and regeneration)
 - [ ] API: `GET|PUT /vocabulary`, `vocabulary` in `POST /sessions`
@@ -85,3 +85,4 @@ Automatic term extraction from previous meetings.
 - `VOCABULARY_FILE` is a `path` setting; empty (`None`) resolves in `bootstrap.py` to `vocabulary.txt` next to the `.env` file the engine reads.
 - `RollingContext` (transcription/context.py) is done; a long silence is 30 s and a very low `avg_logprob` is < -1.0 (constants in the module).
 - Port: `Transcriber.transcribe(samples, language, hints=None, prompt=None)`; `prompt` is the rolling context only. faster-whisper sends the vocabulary as `hotwords` and the context as `initial_prompt` (both land in the same decoder prompt), OpenAI-compatible joins them into one `prompt` field. `TranscriptionResult.avg_logprob` (mean of segments, None when unknown).
+- `session.json.vocabulary` is always written at start (an empty list when there are no terms). An unreadable glossary file is logged and the session continues with its own terms.

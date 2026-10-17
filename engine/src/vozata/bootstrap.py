@@ -6,8 +6,9 @@ New providers are added to a registry here; orchestrators never change.
 from __future__ import annotations
 
 import functools
+import logging
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 from vozata.api.container import ApiContainer
@@ -52,6 +53,11 @@ from vozata.storage.session_store import SessionStore
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
+from vozata.vocabulary import VocabularyStore, merge_terms
+
+DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
+
+_log = logging.getLogger(__name__)
 
 TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
@@ -122,6 +128,25 @@ def build_search_index(settings: Settings) -> SearchIndex:
     return SearchIndex(settings.output_dir / "index.db")
 
 
+def vocabulary_path(settings: Settings, env_file: Path | None = None) -> Path:
+    """`VOCABULARY_FILE`, else `vocabulary.txt` next to the `.env` file (phase 19)."""
+    if settings.vocabulary_file is not None:
+        return settings.vocabulary_file
+    return (env_file or Path(".env")).parent / DEFAULT_VOCABULARY_FILE
+
+
+def session_vocabulary(
+    settings: Settings, session_terms: Sequence[str], env_file: Path | None = None
+) -> list[str]:
+    """The session terms, then the glossary; an unreadable glossary is logged and skipped."""
+    try:
+        glossary = VocabularyStore(vocabulary_path(settings, env_file)).read()
+    except (OSError, UnicodeDecodeError) as error:
+        _log.warning("Reading the vocabulary file failed: %s", error)
+        glossary = []
+    return merge_terms(session_terms, glossary)
+
+
 def build_minutes_generator(
     settings: Settings, localizer: Localizer | None = None, template: str | None = None
 ) -> MinutesGenerator:
@@ -159,6 +184,8 @@ def build_session(
     system_device: int | None = None,
     shared: SharedTranscriber | None = None,
     template: str | None = None,
+    vocabulary: Sequence[str] = (),
+    env_file: Path | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -166,7 +193,8 @@ def build_session(
     PortAudio call runs on one `PortAudioThread`, closed by the session when capture ends. With a
     `shared` transcriber (`WHISPER_KEEP_LOADED`) the model stays loaded after the session unless
     minutes follow (VRAM rule). `template` (default `MINUTES_TEMPLATE`) is the minutes template,
-    stored in `session.json` even when minutes are off.
+    stored in `session.json` even when minutes are off. `vocabulary` (this meeting's terms) is
+    merged with the glossary file (`vocabulary_path(settings, env_file)`), session terms first.
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -212,6 +240,7 @@ def build_session(
         diarizer_factory=diarizer_factory,
         search_index=build_search_index(settings),
         minutes_template=template,
+        vocabulary=tuple(session_vocabulary(settings, vocabulary, env_file)),
     )
     return RecordingSession(
         settings,
@@ -245,7 +274,8 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     labeler = build_labeler(settings, localizer)
     store = build_store(settings)
     broadcaster = EventBroadcaster()
-    settings_file = SettingsFile(env_file or Path(".env"), settings)
+    env_file = env_file or Path(".env")
+    settings_file = SettingsFile(env_file, settings)
     shared = None
     if settings.whisper_keep_loaded:
         transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
@@ -259,6 +289,8 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             mic_device=options.mic_device,
             system_device=options.system_device,
             template=options.template,
+            vocabulary=options.vocabulary,
+            env_file=env_file,
             shared=shared,
         )
 

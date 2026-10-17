@@ -18,6 +18,7 @@ from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
 from vozata.ports import Chunker, SessionObserver, Transcriber, TranscriptSink
 from vozata.storage.session_store import SessionPaths
+from vozata.transcription.context import RollingContext
 from vozata.transcription.echo import EchoFilter
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
@@ -122,7 +123,8 @@ class CapturePipeline:
     transcriber on the worker thread; chunks captured meanwhile wait in the queue. A failed load
     calls `on_load_failed` and the audio is only written to the WAVs. Chunkers come from
     `chunker_factory` (`CHUNKERS` in `bootstrap.py`); without one, fixed `CHUNK_SECONDS` windows
-    are used.
+    are used. `hints` (the session vocabulary, phase 19) go with every transcription, and each
+    channel gets its own rolling context prompt of `CONTEXT_PROMPT_CHARS`.
     """
 
     def __init__(
@@ -136,6 +138,7 @@ class CapturePipeline:
         observer: SessionObserver,
         chunker_factory: ChunkerFactory | None = None,
         on_load_failed: Callable[[Exception], None] = lambda error: None,
+        hints: str | None = None,
     ) -> None:
         self._rate = settings.sample_rate
         new_chunker = chunker_factory or _fixed_windows(settings)
@@ -164,7 +167,15 @@ class CapturePipeline:
         transcriber = self._transcriber
         ids = SegmentIds()
         stitchers = {
-            channel: CarryOverStitcher(channel, transcriber, settings, language, ids.next)
+            channel: CarryOverStitcher(
+                channel,
+                transcriber,
+                settings,
+                language,
+                ids.next,
+                hints=hints,
+                context=RollingContext(settings.context_prompt_chars),
+            )
             for channel in self._tracks
         }
         partials = None

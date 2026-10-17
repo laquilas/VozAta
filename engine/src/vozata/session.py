@@ -27,6 +27,7 @@ from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.storage.session_store import SessionPaths, SessionStore
 from vozata.transcription.language_lock import LanguageLock
+from vozata.vocabulary import build_hints
 
 SOURCE_OPEN_TIMEOUT = 20.0  # a WASAPI open can hang in the driver (phase 02 notes)
 
@@ -56,6 +57,7 @@ class SessionComponents:
     diarizer_factory: Callable[[], Diarizer] | None = None  # None: no speaker identification
     search_index: TranscriptSearch | None = None  # None: the session is not indexed (22)
     minutes_template: str = DEFAULT_TEMPLATE  # stored in session.json (phase 20)
+    vocabulary: tuple[str, ...] = ()  # session + glossary terms (phase 19), session terms first
 
 
 class SessionStartError(RuntimeError):
@@ -129,6 +131,7 @@ class RecordingSession:
             self._observer,
             self._c.chunker_factory,
             lambda error: self._error("model_failed", reason=str(error)),
+            hints=build_hints(self._c.vocabulary),
         )
         self._c.clock.start()
         self._pipeline.accept()

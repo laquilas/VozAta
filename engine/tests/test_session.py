@@ -118,6 +118,7 @@ class _Rig:
         settings: Settings = SETTINGS,
         diarizer_factory: Callable[[], Diarizer] | None = None,
         search_index: TranscriptSearch | None = None,
+        vocabulary: tuple[str, ...] = (),
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -152,6 +153,7 @@ class _Rig:
                 chunker_factory=chunker_factory,
                 diarizer_factory=diarizer_factory,
                 search_index=search_index,
+                vocabulary=vocabulary,
             ),
             self.observer,
             language,
@@ -462,6 +464,7 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
         "language_source": "selected",
         "app_language": "en",
         "template": "general",
+        "vocabulary": [],
         "devices": {"mic": "Headset Mic", "system": "Speakers [Loopback]"},
         "pauses": [],
         "settings": {
@@ -687,3 +690,22 @@ def test_status_after_capture_reports_the_recorded_length(tmp_path: Path) -> Non
     statuses = rig.observer.of("status")
     assert statuses[-2:] == [(SessionStatus.FINALIZING, 30.0), (SessionStatus.DONE, 30.0)]
     assert rig.session.duration_seconds == 30.0
+
+
+def test_the_vocabulary_is_stored_and_reaches_every_transcription_as_hints(
+    tmp_path: Path,
+) -> None:
+    rig = _Rig(
+        tmp_path,
+        results=[_words("Hello", " world.")],
+        vocabulary=("Jéssica", "Avalonia"),
+    )
+    rig.session.start()
+
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    assert rig.store.read_meta(rig.session.id)["vocabulary"] == ["Jéssica", "Avalonia"]
+    assert rig.transcriber.calls
+    assert {hints for _, _, hints in rig.transcriber.calls} == {"Jéssica, Avalonia"}

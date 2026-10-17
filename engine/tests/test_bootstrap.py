@@ -299,6 +299,8 @@ def test_build_api_container_wires_real_providers(
             "mic_device": 3,
             "system_device": None,
             "template": "daily",
+            "vocabulary": (),
+            "env_file": Path(".env"),
             "shared": None,
         }
     ]
@@ -481,3 +483,43 @@ def test_build_diarizer_ignores_the_enabled_flag_for_explicit_runs(
     monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda settings: fake)
 
     assert bootstrap.build_diarizer(Settings(diarization_provider="fake")) is fake
+
+
+def test_vocabulary_path_defaults_to_a_file_next_to_the_env_file(tmp_path: Path) -> None:
+    assert bootstrap.vocabulary_path(Settings()) == Path("vocabulary.txt")
+    assert bootstrap.vocabulary_path(Settings(), tmp_path / ".env") == tmp_path / "vocabulary.txt"
+    chosen = Settings(vocabulary_file=tmp_path / "glossary.txt")
+    assert bootstrap.vocabulary_path(chosen, tmp_path / ".env") == tmp_path / "glossary.txt"
+
+
+def test_session_vocabulary_puts_session_terms_before_the_glossary(tmp_path: Path) -> None:
+    (tmp_path / "vocabulary.txt").write_text("# glossary\nAvalonia\nvozata\n", "utf-8")
+
+    terms = bootstrap.session_vocabulary(Settings(), ["VozAta", "Jéssica"], tmp_path / ".env")
+
+    assert terms == ["VozAta", "Jéssica", "Avalonia"]
+
+
+def test_an_unreadable_glossary_is_skipped_with_a_warning(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / "glossary.txt").write_bytes(b"\xff\xfe\xfa bad")
+    settings = Settings(vocabulary_file=tmp_path / "glossary.txt")
+
+    assert bootstrap.session_vocabulary(settings, ["Jéssica"]) == ["Jéssica"]
+    assert "vocabulary file" in caplog.text
+
+
+def test_build_session_merges_the_meeting_terms_with_the_glossary(
+    tmp_path: Path, devices: list[int]
+) -> None:
+    (tmp_path / "vocabulary.txt").write_text("Avalonia\n", "utf-8")
+
+    session = bootstrap.build_session(
+        _settings(tmp_path),
+        FakeSessionObserver(),
+        vocabulary=["Jéssica"],
+        env_file=tmp_path / ".env",
+    )
+
+    assert session._c.vocabulary == ("Jéssica", "Avalonia")

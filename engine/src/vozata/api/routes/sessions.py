@@ -35,6 +35,7 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
         mic_device=body.mic_device_id,
         system_device=body.system_device_id,
         template=body.template,
+        vocabulary=tuple(body.vocabulary or ()),
     )
     try:
         return c.manager.start(options)

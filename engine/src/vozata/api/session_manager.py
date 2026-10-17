@@ -54,6 +54,7 @@ class StartOptions:
     mic_device: int | None = None
     system_device: int | None = None
     template: str | None = None  # minutes template id (phase 20); None = MINUTES_TEMPLATE
+    vocabulary: tuple[str, ...] = ()  # this meeting's terms (phase 19), merged with the glossary
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]
