@@ -1,6 +1,7 @@
 # VozAta — Parallel waves
 
-The phases still `todo` in [README.md](README.md), grouped into waves. Phases in the same wave run
+Phases of [README.md](README.md) grouped into waves (M4 waves 1–3 are done; M6 waves A–D are
+next). Phases in the same wave run
 at the same time, each in its own session or agent and on its own `feature/<NN-slug>` branch. A
 wave starts once every PR of the previous wave is merged into `main`.
 
@@ -148,3 +149,109 @@ Paste a prompt into a fresh session, either to start the phase or to resume it.
 > - The CPU translator runs in its own worker.
 > - Record the provider choice in architecture.
 > - If the model download is impractical, the real check stays pending.
+
+## M6 — Storage and UI refresh (waves A–D)
+
+Hotspots in M6:
+
+- Storage (`storage/`, `ports.py`, `bootstrap.py`, `session.py`): 30, 31, 32, 33 — kept in
+  consecutive waves, never two at once.
+- Shell and pages (`MainWindow`, `MainViewModel`, page views): 35 first, then 36, 37 and 38 each
+  own their page.
+- Shared additive files: `api-contract.md`, `Dtos.cs`, `EngineClient.cs`, `FakeEngineClient.cs`,
+  `Strings*.resx`, `settings_fields.py`, `.env.example`.
+
+| Wave | Phases | Notes |
+|------|--------|-------|
+| A | 30, 34 | engine storage refactor and UI styles only — no shared files |
+| B | 31, 35 | 31 is engine storage; 35 is the UI shell plus the small `title` contract, which goes through the phase 30 port so it works on both backends |
+| C | 32, 36, 38 | audio storage, Meetings page, Config page — separate pages; additive conflicts only |
+| D | 33, 37 | migration (engine) and the detail page with the player (UI) |
+
+```mermaid
+graph LR
+  WA[Wave A: 30 34] --> WB[Wave B: 31 35]
+  WB --> WC[Wave C: 32 36 38]
+  WC --> WD[Wave D: 33 37]
+```
+
+Extra rules for M6 (on top of the rules above):
+
+- Each agent uses its own scratch subfolder (`scratchpad/phaseNN/`), never a shared one.
+- In a git worktree, run tests with `PYTHONPATH=<worktree>/engine/src` (the `.venv` editable
+  install points at the main checkout).
+- Crash and recovery checks (31, 32, 33) hard-kill a recording engine, which can wedge WASAPI on
+  the reference machine: run them last and ask the user to restart Windows Audio afterwards.
+- UI phases attach light and dark screenshots to the PR.
+
+### Wave A
+
+**30 — Storage port**
+> Execute (or resume) phase 30 of the roadmap (`docs/roadmap/phases/30-storage-port.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phase 34.
+> - Pure refactor: no behavior or API change; every existing test keeps passing.
+> - Write the shared repository contract suite that phase 31 will reuse.
+
+**34 — UI design system**
+> Execute (or resume) phase 34 of the roadmap (`docs/roadmap/phases/34-ui-design-system.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phase 30.
+> - Look only: tokens, icons and styles; no layout change.
+> - Check contrast in light and dark; screenshots in the PR.
+
+### Wave B
+
+**31 — SQLite session database**
+> Execute (or resume) phase 31 of the roadmap (`docs/roadmap/phases/31-sqlite-database.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phase 35.
+> - Implement the phase 30 ports; reuse the contract suite.
+> - Audio stays in WAV files in this phase.
+> - Warn when the database is in a OneDrive folder.
+
+**35 — Toggl-style shell and timer bar**
+> Execute (or resume) phase 35 of the roadmap (`docs/roadmap/phases/35-toggl-shell.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phase 31.
+> - Split `MainViewModel` into page ViewModels; keep `MainWindow` as the window class.
+> - The `title` contract goes through the phase 30 repository port (both backends).
+
+### Wave C
+
+**32 — Audio in SQLite**
+> Execute (or resume) phase 32 of the roadmap (`docs/roadmap/phases/32-audio-in-sqlite.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phases 36 and 38.
+> - The capture callback never waits on SQLite.
+> - Run the hard-kill recovery check last, then ask for a Windows Audio restart.
+
+**36 — Meetings list grouped by day**
+> Execute (or resume) phase 36 of the roadmap (`docs/roadmap/phases/36-meetings-by-day.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phases 32 and 38.
+> - Only the Meetings page; the detail stays as it is until phase 37.
+> - File-backend delete goes to the Recycle Bin, never permanent.
+
+**38 — Config page redesign**
+> Execute (or resume) phase 38 of the roadmap (`docs/roadmap/phases/38-config-page.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phases 32 and 36.
+> - `.env` stays the source; editors stay generated from `GET /settings`.
+> - Test buttons use mocked HTTP in unit tests; real checks need the user's tokens.
+
+### Wave D
+
+**33 — Folder to database migration**
+> Execute (or resume) phase 33 of the roadmap (`docs/roadmap/phases/33-folder-migration.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phase 37.
+> - Never delete or modify the legacy folders (except phase 17 repair of interrupted ones).
+> - Manual check on a scratch copy of `engine/recordings`, comparing hashes afterwards.
+
+**37 — Session detail page and audio player**
+> Execute (or resume) phase 37 of the roadmap (`docs/roadmap/phases/37-detail-and-player.md`),
+> following `docs/roadmap/README.md` and the rules in `docs/roadmap/waves.md`. It runs in parallel
+> with phase 33.
+> - Player behind an `IAudioPlayer` port; LibVLCSharp unless the installer size rules it out
+>   (record the decision).

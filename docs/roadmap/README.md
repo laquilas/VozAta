@@ -79,9 +79,19 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 27 | [Pause-based segmentation (VAD)](phases/27-vad-segmentation.md) | 05 | done |
 | 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | done |
 | 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | done |
+| 30 | [Storage port](phases/30-storage-port.md) | 17, 23 | todo |
+| 31 | [SQLite session database](phases/31-sqlite-database.md) | 30 | todo |
+| 32 | [Audio in SQLite](phases/32-audio-in-sqlite.md) | 31 | todo |
+| 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | todo |
+| 34 | [UI design system](phases/34-ui-design-system.md) | 13 | todo |
+| 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | todo |
+| 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | todo |
+| 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | todo |
+| 38 | [Config page redesign](phases/38-config-page.md) | 35 | todo |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
-12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29.
+12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·
+32 / 36 / 38 · 33 / 37.
 
 **Milestones**
 - **M1 — CLI MVP** (00–05): record, live transcript in the terminal, three WAVs, minutes.
@@ -91,6 +101,9 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
   search, action items, Q&A.
 - **M5 — Live quality** (25–29, from [optimizations.md](optimizations.md)): GPU release after
   minutes, instant start, pause-based segmentation, live interim text, live translation.
+- **M6 — Storage and UI refresh** (30–38): sessions, transcripts and audio in one SQLite database
+  (`vozata.db`) with automatic migration of old folders; a Toggl Track–style desktop UI (sidebar,
+  timer bar, meetings by day, in-app player) and a redesigned Config page (`.env` stays the source).
 
 ## Dependency graph
 
@@ -138,6 +151,19 @@ graph LR
   P07 --> P28
   P06 --> P29[29 Live translation]
   P07 --> P29
+  P17 --> P30[30 Storage port]
+  P23 --> P30
+  P30 --> P31[31 SQLite database]
+  P31 --> P32[32 Audio in SQLite]
+  P31 --> P33[33 Folder migration]
+  P32 --> P33
+  P13 --> P34[34 UI design system]
+  P34 --> P35[35 Toggl shell]
+  P35 --> P36[36 Meetings by day]
+  P31 --> P36
+  P36 --> P37[37 Detail + player]
+  P32 --> P37
+  P35 --> P38[38 Config page]
 ```
 
 ## Backlog (not scheduled)
