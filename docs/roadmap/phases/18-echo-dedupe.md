@@ -36,9 +36,8 @@ mic segments.
 - [x] Tests (fake clock): identical text overlapping → dropped; different text → kept; matching
       text outside the time window → kept; system segment arriving later within hold → dropped;
       `flush()` releases held segments; counter updated.
-- [ ] Manual: record without headphones while a video plays → `Me` lines with the video's speech
-      are gone; own speech still appears. *Pending manual (shared audio hardware): recipe in
-      Progress.*
+- [x] Manual: record without headphones while a video plays → `Me` lines with the video's speech
+      are gone; own speech still appears. Done 2026-10-17 (see Progress).
 - [x] Coverage ≥ 80 % (engine total 100 %, `echo.py` 100 %).
 
 ## Tests
@@ -58,9 +57,8 @@ Acoustic echo cancellation on the audio signal (backlog).
 
 - **Branch:** `feature/18-echo-dedupe`
 - **Status:** ready for PR
-- **Updated:** 2026-10-17 12:00
-- **Next step:** run the manual check recipe below on the reference machine (alone, no other
-  phase using the audio hardware), then merge the PR.
+- **Updated:** 2026-10-17 17:10
+- **Next step:** none (phase done, manual check passed 2026-10-17).
 
 ### Steps
 
@@ -71,7 +69,14 @@ Acoustic echo cancellation on the audio signal (backlog).
 - [x] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
       `session.json.echo_dropped` (architecture §6 / §8)
 - [x] Acceptance criteria, README `done`, PR
-- [ ] Manual check — pending manual: merged without it at the owner's request (2026-10-17) because the WASAPI mic hung (`SourceOpenTimeoutError`); run the recipe below after a Windows Audio restart
+- [x] Manual check (2026-10-17, after a Windows Audio restart). The default output is the JBL
+      headset, which the mic cannot hear, so the TTS meeting (~58 s, pt) was played on the
+      Realtek laptop speakers and recorded with `record --mic 15 --system 16`
+      (`WHISPER_MODEL=large-v3`, `TRANSCRIPTION_LANGUAGE=pt`). `ECHO_DEDUPE_ENABLED=false`: 5 of
+      the 10 meeting lines also came out as `Me`, no `echo_dropped` key. `true`: no meeting line
+      as `Me`, `"echo_dropped": 2` (5 on a rerun). With the owner speaking into the mic before and
+      during the playback, their sentences ("Pronto…", and "Sim." said over the meeting) were
+      kept as `Me`, about `CHUNK_SECONDS + 3` s late as designed.
 
 ### Decisions and notes
 
