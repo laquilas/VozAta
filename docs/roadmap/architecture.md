@@ -56,7 +56,7 @@ engine/
     diarization/            pyannote.py, assign.py, embedder.py, live.py
     storage/                session_store.py, recovery.py, search_index.py
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github}.py
-    qa/                     retriever.py, answerer.py
+    qa/                     retriever.py, citations.py, answerer.py
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
@@ -95,6 +95,7 @@ class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 @dataclass(frozen=True) class TranscriptSegment:
     segment_id: str; channel: Channel; speaker_id: str; start: float; end: float
     text: str; words: tuple[Word, ...]
+    edited: bool = False  # user-corrected text (21); words then empty
 @dataclass(frozen=True) class SpeakerTurn:     start, end, speaker_index: int
 @dataclass(frozen=True) class ExportDocument:  title, details, minutes_title, minutes_markdown, minutes_blocks: list[Block],
                                                no_minutes, transcript_title, columns, rows: list[Row]  # localized (11)
@@ -340,7 +341,13 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
  "words": [{"text": "We", "start": 83.12, "end": 83.30, "probability": 0.98}]}
 ```
 
-Segments in `transcript.edited.jsonl` (21) may also carry `"edited": true` (then `words` is empty).
+`transcript.edited.jsonl` (21) is the full best transcript (diarized, else raw) at the time of the
+first save, with the user's text corrections; `PUT /sessions/{id}/transcript` rewrites it atomically
+and `DELETE /sessions/{id}/transcript/edits` removes it. A segment whose text the user changed
+carries `"edited": true` and `"words": []` (the word timings and probabilities no longer match the
+text); the key is written only when true, so raw and diarized lines never have it and read back
+as `edited: false` (`TranscriptSegment.edited`). Ids, channels, speakers and times are never
+edited. Every save or revert reindexes the session for search (22).
 
 **Transcript precedence**: every reader (minutes, export, search, Q&A, UI viewer) loads the
 transcript through `SessionStore.load_transcript(session_id)`, which returns the first existing file
@@ -507,3 +514,30 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
 - The prompt states both the conversation language and `APP_LANGUAGE` (minutes language).
 - If the LLM is unreachable: keep everything else, log a clear warning; `minutes <dir>` or
   `POST /sessions/{id}/minutes` regenerates later.
+
+## 13. Ask the meeting
+
+- `POST /ask {question, session_id?}` (24) starts `AskJob` (`api/ask_job.py`) on a background
+  thread and returns `answer_id`; one question at a time (`409 answer_in_progress`). The answer
+  streams as `answer_chunk` events and always ends with `answer_done` (citations, or a localized
+  `error` when the LLM fails). Event envelopes carry the scope as `session_id` (null = all).
+- **Retrieval** (`qa/retriever.py`): context lines are `[hh:mm:ss] Label: text` from each
+  session's best transcript (§8 precedence, speaker names applied) under a header
+  `Session <id> (<date>):`, and the context never exceeds `LLM_MAX_CHARS`.
+  - One session: the whole transcript when it fits; else the search hits of that session with
+    2 neighbouring segments on each side (the hit alone when its neighbours do not fit), in time
+    order. No hits → empty context.
+  - All sessions: search hits grouped per session (sessions ordered by their best hit), trimmed to
+    the budget.
+  - Search terms: the question's words minus the `APP_LANGUAGE` stopwords (`qa.stopwords`).
+    `TranscriptSearch.search` ANDs words, so each term is searched on its own (prefix match) and
+    segments matching more terms rank first, then by best FTS rank.
+- **Answer** (`qa/answerer.py`, `MeetingAnswerer`): localized prompt (`qa.*`) in `APP_LANGUAGE`
+  that allows only the given excerpts and requires citations `[session_id@hh:mm:ss]`; streamed
+  through `LanguageModel.stream`; the model is released afterwards (VRAM rule). An empty context
+  answers `qa.not_found` without calling the model. Before the LLM loads, a kept Whisper
+  (`WHISPER_KEEP_LOADED`) is released unless a recording is using it.
+- **Citations** (`qa/citations.py`): each `[...]` may hold several items; an item without a
+  session id takes the previous one in the bracket (or the only session of the context); a time
+  maps to the last context segment whose displayed time is at or before it. Malformed times,
+  sessions not in the context and duplicates are dropped → `{session_id, segment_id, start}`.

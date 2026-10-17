@@ -19,6 +19,12 @@ from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
 
 
+class AskRunner(Protocol):
+    def start(self, answer_id: str, question: str, session_id: str | None) -> bool:
+        """Answer in the background (phase 24); False while another answer is streaming."""
+        ...
+
+
 class DeviceCatalog(Protocol):
     def inputs(self) -> list[DeviceInfo]: ...
 
@@ -47,3 +53,4 @@ class ApiContainer:
     search_index: TranscriptSearch | None = None  # `GET /search` (22); None: no hits
     templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)
     vocabulary_file: Callable[[], Path] = lambda: Path("vocabulary.txt")  # glossary (19)
+    ask: AskRunner | None = None  # `POST /ask` (24); None: 503 ask_unavailable

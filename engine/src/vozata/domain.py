@@ -111,10 +111,14 @@ class TranscriptSegment:
     end: float
     text: str
     words: tuple[Word, ...]
+    edited: bool = False  # the user changed the text (phase 21); `words` is then empty
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to one `transcript.jsonl` line (architecture §8)."""
-        return {
+        """Serialize to one `transcript.jsonl` line (architecture §8).
+
+        `"edited": true` is written only for user-edited segments, so raw lines keep their schema.
+        """
+        data: dict[str, Any] = {
             "segment_id": self.segment_id,
             "channel": self.channel.value,
             "speaker_id": self.speaker_id,
@@ -123,6 +127,9 @@ class TranscriptSegment:
             "text": self.text,
             "words": [word.to_dict() for word in self.words],
         }
+        if self.edited:
+            data["edited"] = True
+        return data
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> TranscriptSegment:
@@ -134,6 +141,7 @@ class TranscriptSegment:
             end=float(data["end"]),
             text=str(data["text"]),
             words=tuple(Word.from_dict(word) for word in data.get("words", ())),
+            edited=bool(data.get("edited", False)),
         )
 
 
@@ -216,3 +224,18 @@ class SearchHit:
             "speaker_id": self.speaker_id,
             "snippet": self.snippet,
         }
+
+
+# Ask the meeting (phase 24).
+
+
+@dataclass(frozen=True)
+class Citation:
+    """A transcript segment an answer cites, as `[session_id@hh:mm:ss]` in the answer text."""
+
+    session_id: str
+    segment_id: str
+    start: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"session_id": self.session_id, "segment_id": self.segment_id, "start": self.start}

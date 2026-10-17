@@ -105,6 +105,8 @@ class Settings:
     # Custom vocabulary (phase 19)
     vocabulary_file: Path | None = None  # None: `vocabulary.txt` next to `.env`
     context_prompt_chars: int = 200  # rolling context prompt length, 0 = off
+    # Editable transcript (phase 21)
+    low_confidence_threshold: float = 0.5
     # Minutes (phase 04)
     llm_provider: str = "ollama"
     ollama_url: str = "http://localhost:11434"
@@ -184,6 +186,9 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         echo_hold_seconds=_optional_number(raw, "ECHO_HOLD_SECONDS", minimum=1, maximum=60),
         vocabulary_file=Path(raw["VOCABULARY_FILE"]) if "VOCABULARY_FILE" in raw else None,
         context_prompt_chars=_integer(raw, "CONTEXT_PROMPT_CHARS", 200, minimum=0, maximum=1000),
+        low_confidence_threshold=_number(
+            raw, "LOW_CONFIDENCE_THRESHOLD", 0.5, minimum=0, maximum=1
+        ),
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),

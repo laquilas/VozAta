@@ -121,6 +121,53 @@ internal sealed class FakeEngineClient : IEngineClient
             ? Task.FromResult(new Minutes(markdown))
             : Task.FromException<Minutes>(new EngineApiException(HttpStatusCode.NotFound, "minutes_not_found", "No minutes yet."));
 
+    /// <summary>Every transcript save (phase 21), in order.</summary>
+    public List<(string Id, IReadOnlyList<SegmentTextEdit> Segments)> TranscriptUpdates { get; } = [];
+
+    public List<string> TranscriptReverts { get; } = [];
+
+    public Exception? TranscriptUpdateError { get; set; }
+
+    public Exception? TranscriptRevertError { get; set; }
+
+    private readonly Dictionary<string, Transcript> _originalTranscripts = [];
+
+    /// <summary>Applies the texts like the engine: changed segments become edited, without words.</summary>
+    public Task<TranscriptEditResult> UpdateTranscriptAsync(
+        string id, IReadOnlyList<SegmentTextEdit> segments, CancellationToken cancellationToken = default)
+    {
+        TranscriptUpdates.Add((id, segments));
+        if (TranscriptUpdateError is not null)
+        {
+            return Task.FromException<TranscriptEditResult>(TranscriptUpdateError);
+        }
+
+        var current = Transcripts.GetValueOrDefault(id) ?? new Transcript("raw", []);
+        _originalTranscripts.TryAdd(id, current);
+        var texts = segments.ToDictionary(segment => segment.SegmentId, segment => segment.Text);
+        Transcripts[id] = new Transcript("edited", [.. current.Segments.Select(segment =>
+            texts.TryGetValue(segment.SegmentId, out var text) && text != segment.Text
+                ? segment with { Text = text, Edited = true, Words = [] }
+                : segment)]);
+        return Task.FromResult(new TranscriptEditResult("edited"));
+    }
+
+    public Task RevertTranscriptAsync(string id, CancellationToken cancellationToken = default)
+    {
+        TranscriptReverts.Add(id);
+        if (TranscriptRevertError is not null)
+        {
+            return Task.FromException(TranscriptRevertError);
+        }
+
+        if (_originalTranscripts.Remove(id, out var original))
+        {
+            Transcripts[id] = original;
+        }
+
+        return Task.CompletedTask;
+    }
+
     public List<(string Id, string Format)> Exports { get; } = [];
 
     public Exception? ExportError { get; set; }
@@ -291,6 +338,29 @@ internal sealed class FakeEngineClient : IEngineClient
             .Where(term => term.Length > 0)
             .DistinctBy(term => term.ToUpperInvariant()));
         return Task.FromResult<IReadOnlyList<string>>([.. VocabularyTerms]);
+    }
+
+    /// <summary>Every <c>POST /ask</c> (phase 24): question and scope.</summary>
+    public List<(string Question, string? SessionId)> Questions { get; } = [];
+
+    /// <summary>The id answered by the next <see cref="AskAsync"/>.</summary>
+    public string NextAnswerId { get; set; } = "answer-1";
+
+    public Exception? AskError { get; set; }
+
+    /// <summary>When set, <see cref="AskAsync"/> waits for it (events may arrive before its answer).</summary>
+    public TaskCompletionSource? AskGate { get; set; }
+
+    public async Task<AskAccepted> AskAsync(
+        string question, string? sessionId = null, CancellationToken cancellationToken = default)
+    {
+        Questions.Add((question, sessionId));
+        if (AskGate is not null)
+        {
+            await AskGate.Task.WaitAsync(cancellationToken);
+        }
+
+        return AskError is null ? new AskAccepted(NextAnswerId) : throw AskError;
     }
 
     public static EngineApiException ApiError(string code, string message) =>

@@ -105,6 +105,8 @@ FIELDS: tuple[Field, ...] = (
     # Custom vocabulary (phase 19)
     Field("VOCABULARY_FILE", "vocabulary_file", "path", group="transcription"),
     Field("CONTEXT_PROMPT_CHARS", "context_prompt_chars", "integer", group="transcription"),
+    # Editable transcript (phase 21)
+    Field("LOW_CONFIDENCE_THRESHOLD", "low_confidence_threshold", "number", group="transcription"),
     # Minutes (phase 04)
     Field("LLM_PROVIDER", "llm_provider", "string", group="minutes"),
     Field("OLLAMA_URL", "ollama_url", "url", group="minutes"),

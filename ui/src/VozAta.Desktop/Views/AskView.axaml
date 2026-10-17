@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             x:Class="VozAta.Desktop.Views.AskView"
+             x:DataType="vm:AskViewModel">
+
+  <!-- Ask the meetings (phase 24): one question at a time, streamed answer, clickable sources -->
+  <Expander HorizontalAlignment="Stretch" Margin="0,8,0,0"
+            Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskHeader]}">
+    <DockPanel MaxHeight="320">
+      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+        <Button DockPanel.Dock="Right" Margin="6,0,0,0"
+                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskButton]}"
+                Command="{Binding AskCommand}" />
+        <TextBox Text="{Binding Question}" MaxLength="2000"
+                 PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskPlaceholder]}"
+                 AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskPlaceholder]}">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding AskCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+      </DockPanel>
+      <CheckBox DockPanel.Dock="Top" Margin="0,0,0,6"
+                IsChecked="{Binding SelectedOnly}" IsEnabled="{Binding HasSelection}"
+                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskSelectedOnly]}" />
+      <ScrollViewer>
+        <StackPanel Spacing="6" Margin="0,0,8,0">
+          <TextBlock Text="{Binding AskedQuestion}" FontWeight="SemiBold" TextWrapping="Wrap"
+                     IsVisible="{Binding AskedQuestion, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskThinking]}"
+                     FontStyle="Italic" Opacity="0.7" IsVisible="{Binding IsThinking}" />
+          <SelectableTextBlock Text="{Binding DisplayAnswer}" TextWrapping="Wrap" FontSize="15" />
+          <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                     IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskSources]}"
+                     Opacity="0.75" IsVisible="{Binding !!Citations.Count}" />
+          <ItemsControl ItemsSource="{Binding Citations}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CitationLink">
+                <Button Margin="0,0,6,4" Padding="6,2" Content="{Binding}"
+                        FontFamily="Consolas, monospace" Foreground="#1565C0"
+                        Command="{Binding $parent[UserControl].((vm:AskViewModel)DataContext).OpenCommand}"
+                        CommandParameter="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Expander>
+</UserControl>

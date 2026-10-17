@@ -29,6 +29,13 @@ public interface IEngineClient
 
     Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary><c>PUT /sessions/{id}/transcript</c> (phase 21): save corrected texts of these segments.</summary>
+    Task<TranscriptEditResult> UpdateTranscriptAsync(
+        string id, IReadOnlyList<SegmentTextEdit> segments, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /sessions/{id}/transcript/edits</c> (phase 21): back to the original transcript.</summary>
+    Task RevertTranscriptAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary><c>POST /sessions/{id}/minutes</c>; a null template keeps the session's own.</summary>
     Task RegenerateMinutesAsync(string id, string? templateId = null, CancellationToken cancellationToken = default);
 
@@ -47,6 +54,9 @@ public interface IEngineClient
 
     /// <summary><c>GET /search</c> (phase 22): best matches first across every transcript.</summary>
     Task<SearchResults> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /ask</c> (phase 24): the answer streams as <see cref="AnswerChunkEvent"/>s, then <see cref="AnswerDoneEvent"/>.</summary>
+    Task<AskAccepted> AskAsync(string question, string? sessionId = null, CancellationToken cancellationToken = default);
 
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
@@ -116,6 +126,17 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default) =>
         SendAsync<Minutes>(HttpMethod.Get, $"sessions/{Escape(id)}/minutes", null, cancellationToken);
 
+    public Task<TranscriptEditResult> UpdateTranscriptAsync(
+        string id, IReadOnlyList<SegmentTextEdit> segments, CancellationToken cancellationToken = default) =>
+        SendAsync<TranscriptEditResult>(
+            HttpMethod.Put, $"sessions/{Escape(id)}/transcript", new { segments }, cancellationToken);
+
+    public async Task RevertTranscriptAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Delete, $"sessions/{Escape(id)}/transcript/edits", null, cancellationToken);
+    }
+
     public async Task RegenerateMinutesAsync(
         string id, string? templateId = null, CancellationToken cancellationToken = default)
     {
@@ -141,6 +162,10 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         string query, int limit = 50, CancellationToken cancellationToken = default) =>
         SendAsync<SearchResults>(
             HttpMethod.Get, $"search?q={Uri.EscapeDataString(query)}&limit={limit}", null, cancellationToken);
+
+    public Task<AskAccepted> AskAsync(
+        string question, string? sessionId = null, CancellationToken cancellationToken = default) =>
+        SendAsync<AskAccepted>(HttpMethod.Post, "ask", new AskRequest(question, sessionId), cancellationToken);
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);

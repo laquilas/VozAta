@@ -28,7 +28,8 @@ public sealed partial class HistoryViewModel(
     ILocalizationService localization,
     IFileSaver saver,
     MinutesTemplatesViewModel? templates = null,
-    Func<TimeSpan, CancellationToken, Task>? searchDelay = null)
+    Func<TimeSpan, CancellationToken, Task>? searchDelay = null,
+    IDialogService? dialogs = null)
     : ObservableObject
 {
     public const int PageSize = 20;
@@ -38,6 +39,16 @@ public sealed partial class HistoryViewModel(
     /// <summary>Search across every transcript (phase 22); its results replace the list while active.</summary>
     public SearchViewModel Search =>
         _search ??= new SearchViewModel(client, localization, searchDelay) { OpenHit = OpenHitAsync };
+
+    private AskViewModel? _ask;
+
+    /// <summary>Questions about the selected meeting or all of them (phase 24).</summary>
+    public AskViewModel Ask =>
+        _ask ??= new AskViewModel(client, localization)
+        {
+            OpenCitation = citation => OpenSegmentAsync(citation.SessionId, citation.SegmentId),
+            SelectedSessionId = Selected?.Id,
+        };
 
     private static readonly Dictionary<string, string> LanguageKeys = new()
     {
@@ -70,6 +81,12 @@ public sealed partial class HistoryViewModel(
 
     /// <summary>The load started by the last selection (tests await it).</summary>
     public Task DetailLoading { get; private set; } = Task.CompletedTask;
+
+    /// <summary>The unsaved-edits question started by the last selection (phase 21; tests await it).</summary>
+    public Task SelectionGuard { get; private set; } = Task.CompletedTask;
+
+    /// <summary>Whether the open session may be left; asks first when its transcript has unsaved edits.</summary>
+    public Task<bool> ConfirmLeaveAsync() => Detail?.Editor.ConfirmLeaveAsync() ?? Task.FromResult(true);
 
     public bool CanLoadMore => Rows.Count < Total;
 
@@ -113,13 +130,16 @@ public sealed partial class HistoryViewModel(
     public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
 
     /// <summary>Open a search hit: select its session (loading older pages if needed) at the segment.</summary>
-    public async Task OpenHitAsync(SearchHit hit)
+    public Task OpenHitAsync(SearchHit hit) => OpenSegmentAsync(hit.SessionId, hit.SegmentId);
+
+    /// <summary>Select a session (loading older pages if needed) and focus one of its segments.</summary>
+    public async Task OpenSegmentAsync(string sessionId, string segmentId)
     {
-        var row = Rows.FirstOrDefault(item => item.Id == hit.SessionId);
+        var row = Rows.FirstOrDefault(item => item.Id == sessionId);
         while (row is null && CanLoadMore && Error is null)
         {
             await LoadMoreAsync();
-            row = Rows.FirstOrDefault(item => item.Id == hit.SessionId);
+            row = Rows.FirstOrDefault(item => item.Id == sessionId);
         }
 
         if (row is null)
@@ -128,7 +148,11 @@ public sealed partial class HistoryViewModel(
         }
 
         Selected = row;
-        Detail?.FocusSegment(hit.SegmentId);
+        await SelectionGuard;
+        if (Detail?.Id == row.Id)
+        {
+            Detail.FocusSegment(segmentId);
+        }
     }
 
     /// <summary>Rebuild the row texts after a UI language switch.</summary>
@@ -161,14 +185,39 @@ public sealed partial class HistoryViewModel(
         }
     }
 
-    partial void OnSelectedChanged(SessionRow? value)
+    partial void OnSelectedChanged(SessionRow? oldValue, SessionRow? newValue)
     {
-        if (value?.Id == Detail?.Id)
+        Ask.SelectedSessionId = newValue?.Id;
+        if (newValue?.Id == Detail?.Id)
         {
             return; // same session after a refresh: keep the open detail
         }
 
-        Detail = value is null ? null : new SessionDetailViewModel(client, shell, localization, saver, value.Summary, templates);
+        if (Detail?.Editor.IsDirty == true)
+        {
+            // Unsaved transcript edits (phase 21): a list reset (null) keeps them; another session asks first.
+            SelectionGuard = newValue is null ? Task.CompletedTask : GuardSelectionAsync(oldValue, newValue);
+            return;
+        }
+
+        Open(newValue);
+    }
+
+    private async Task GuardSelectionAsync(SessionRow? previous, SessionRow target)
+    {
+        if (await Detail!.Editor.ConfirmLeaveAsync())
+        {
+            Open(target);
+        }
+        else
+        {
+            Selected = previous; // back to the session being edited
+        }
+    }
+
+    private void Open(SessionRow? row)
+    {
+        Detail = row is null ? null : new SessionDetailViewModel(client, shell, localization, saver, row.Summary, templates, dialogs);
         DetailLoading = Detail?.LoadAsync() ?? Task.CompletedTask;
     }
 

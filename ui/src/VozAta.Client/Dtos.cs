@@ -90,6 +90,12 @@ public sealed record Segment(
 
 public sealed record Transcript(string Source, IReadOnlyList<Segment> Segments);
 
+/// <summary>A corrected segment text for <c>PUT /sessions/{id}/transcript</c> (phase 21).</summary>
+public sealed record SegmentTextEdit(string SegmentId, string Text);
+
+/// <summary>The <c>PUT /sessions/{id}/transcript</c> answer: the transcript source is now <c>edited</c>.</summary>
+public sealed record TranscriptEditResult(string Source);
+
 public sealed record Minutes(string Markdown);
 
 /// <summary>A speaker of one session (phase 16): the given name (null = unset) and the label without it.</summary>

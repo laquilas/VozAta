@@ -11,6 +11,7 @@ import threading
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
+from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
 from vozata.api.minutes_job import MinutesJob
 from vozata.api.session_manager import SessionManager, StartOptions
@@ -27,7 +28,14 @@ from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
 from vozata.diarization.subprocess_diarizer import pyannote_from_settings
-from vozata.domain import AudioChunk, Channel, ChunkMode, ConversationLanguage, MixMode
+from vozata.domain import (
+    AudioChunk,
+    Channel,
+    ChunkMode,
+    ConversationLanguage,
+    MixMode,
+    SessionStatus,
+)
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
 from vozata.export.pdf import PdfExporter
@@ -45,7 +53,10 @@ from vozata.ports import (
     Localizer,
     SessionObserver,
     Transcriber,
+    TranscriptSearch,
 )
+from vozata.qa.answerer import MeetingAnswerer
+from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
 from vozata.storage.search_index import SearchIndex
@@ -103,6 +114,7 @@ MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
     MixMode.STEREO: StereoMixer,
 }
+_ACTIVE = (SessionStatus.RECORDING, SessionStatus.PAUSED, SessionStatus.FINALIZING)
 MINUTES_TEMPLATES = bundled_templates()  # validated at import (phase 20)
 
 
@@ -160,6 +172,17 @@ def build_minutes_generator(
     return MinutesGenerator(
         factory(settings), localizer or build_localizer(settings), settings.llm_max_chars, localized
     )
+
+
+def build_answerer(
+    settings: Settings, store: SessionStore, search_index: TranscriptSearch | None
+) -> MeetingAnswerer:
+    """Answers about the meetings (phase 24) in `APP_LANGUAGE`, within `LLM_MAX_CHARS`."""
+    llm = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
+    localizer = build_localizer(settings)
+    labeler = build_labeler(settings, localizer)
+    retriever = Retriever(store, search_index, labeler, localizer, settings.llm_max_chars)
+    return MeetingAnswerer(llm, retriever, localizer)
 
 
 def build_diarizer_factory(settings: Settings) -> Callable[[], Diarizer] | None:
@@ -311,6 +334,15 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
 
     _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
     search_index = build_search_index(settings)
+    manager = SessionManager(session_factory, store, broadcaster, labeler)
+
+    def answerer() -> MeetingAnswerer:
+        current = manager.current
+        recording = current is not None and current.status in _ACTIVE
+        if shared is not None and not recording:
+            shared.release()  # VRAM rule, unless a recording is using the model right now
+        return build_answerer(settings_file.current, store, search_index)  # current language
+
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
@@ -321,7 +353,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         labeler=labeler,
         store=store,
         broadcaster=broadcaster,
-        manager=SessionManager(session_factory, store, broadcaster, labeler),
+        manager=manager,
         devices=WasapiCatalog(),
         gpu_info=functools.cache(query_gpu),  # the GPU does not change while running
         llm_reachable=llm_reachable,
@@ -330,4 +362,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         exporters={name: build() for name, build in EXPORTERS.items()},
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
+        ask=AskJob(answerer, broadcaster, localizer),
     )

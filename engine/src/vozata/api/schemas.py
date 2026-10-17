@@ -107,6 +107,25 @@ class Transcript(BaseModel):
     segments: list[Segment]
 
 
+class SegmentText(BaseModel):
+    """A corrected segment of `PUT /sessions/{id}/transcript`; other `Segment` keys are ignored."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    segment_id: str
+    text: str
+
+
+class EditTranscript(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    segments: list[SegmentText]
+
+
+class TranscriptEdited(BaseModel):
+    source: Literal["edited"] = "edited"
+
+
 class Minutes(BaseModel):
     markdown: str
 
@@ -201,3 +220,16 @@ class ErrorDetail(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: ErrorDetail
+
+
+class AskQuestion(BaseModel):
+    """`POST /ask` (phase 24); no `session_id` asks about every session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=2000, pattern=r"\S")
+    session_id: str | None = None
+
+
+class AskAccepted(BaseModel):
+    answer_id: str

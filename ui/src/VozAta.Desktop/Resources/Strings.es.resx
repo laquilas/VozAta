@@ -150,6 +150,27 @@
   <data name="SearchNoResults" xml:space="preserve">
     <value>No hay coincidencias en ninguna transcripción.</value>
   </data>
+  <data name="AskHeader" xml:space="preserve">
+    <value>Pregunta a las reuniones</value>
+  </data>
+  <data name="AskPlaceholder" xml:space="preserve">
+    <value>Haz una pregunta, por ejemplo: ¿qué decidimos sobre la beta?</value>
+  </data>
+  <data name="AskButton" xml:space="preserve">
+    <value>Preguntar</value>
+  </data>
+  <data name="AskSelectedOnly" xml:space="preserve">
+    <value>Solo la reunión seleccionada</value>
+  </data>
+  <data name="AskThinking" xml:space="preserve">
+    <value>Buscando en las reuniones…</value>
+  </data>
+  <data name="AskSources" xml:space="preserve">
+    <value>Fuentes (haz clic para abrir):</value>
+  </data>
+  <data name="AskConnectionLost" xml:space="preserve">
+    <value>Se perdió la conexión con el motor antes de que terminara la respuesta. Vuelve a preguntar.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecciona una sesión para leer su transcripción y su acta.</value>
   </data>
@@ -647,6 +668,63 @@
   </data>
   <data name="ConfirmCloseNo" xml:space="preserve">
     <value>Seguir grabando</value>
+  </data>
+  <data name="Setting_LOW_CONFIDENCE_THRESHOLD" xml:space="preserve">
+    <value>Umbral de baja confianza</value>
+  </data>
+  <data name="SettingHelp_LOW_CONFIDENCE_THRESHOLD" xml:space="preserve">
+    <value>Las palabras reconocidas con una probabilidad inferior a este valor (0 a 1) se resaltan en la transcripción de la sesión.</value>
+  </data>
+  <data name="TranscriptEdit" xml:space="preserve">
+    <value>Editar transcripción</value>
+  </data>
+  <data name="TranscriptSave" xml:space="preserve">
+    <value>Guardar correcciones</value>
+  </data>
+  <data name="TranscriptCancelEdit" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="TranscriptRevert" xml:space="preserve">
+    <value>Volver al original</value>
+  </data>
+  <data name="TranscriptSaving" xml:space="preserve">
+    <value>Guardando…</value>
+  </data>
+  <data name="TranscriptSaved" xml:space="preserve">
+    <value>Transcripción actualizada. Vuelve a generar el acta para que la use.</value>
+  </data>
+  <data name="TranscriptHasEdits" xml:space="preserve">
+    <value>Esta transcripción incluye tus correcciones.</value>
+  </data>
+  <data name="TranscriptLowConfidenceHint" xml:space="preserve">
+    <value>Las palabras resaltadas se reconocieron con baja confianza.</value>
+  </data>
+  <data name="TranscriptEmptySegment" xml:space="preserve">
+    <value>Una línea no puede quedar vacía. Escribe su texto o cancela el cambio.</value>
+  </data>
+  <data name="ConfirmDiscardEditsTitle" xml:space="preserve">
+    <value>Correcciones sin guardar</value>
+  </data>
+  <data name="ConfirmDiscardEditsMessage" xml:space="preserve">
+    <value>Tus correcciones de la transcripción no se han guardado. ¿Descartarlas?</value>
+  </data>
+  <data name="ConfirmDiscardEditsYes" xml:space="preserve">
+    <value>Descartar</value>
+  </data>
+  <data name="ConfirmDiscardEditsNo" xml:space="preserve">
+    <value>Seguir editando</value>
+  </data>
+  <data name="ConfirmRevertTitle" xml:space="preserve">
+    <value>Volver al original</value>
+  </data>
+  <data name="ConfirmRevertMessage" xml:space="preserve">
+    <value>¿Quitar todas tus correcciones y volver a mostrar la transcripción original? El acta solo cambia cuando la vuelvas a generar.</value>
+  </data>
+  <data name="ConfirmRevertYes" xml:space="preserve">
+    <value>Revertir</value>
+  </data>
+  <data name="ConfirmRevertNo" xml:space="preserve">
+    <value>Cancelar</value>
   </data>
   <data name="TabSpeakers" xml:space="preserve">
     <value>Participantes</value>
