@@ -56,7 +56,10 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - **Branch:** `feature/22-search`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 15:00
-- **Next step:** none (phase done). Pending manual: the desktop check below, before merge
+- **Next step:** none (phase done). Checked 2026-10-17 on three real recorded sessions: `reindex`
+  indexed 3, `GET /search` matches `terca`→`terça` and `recuperacao`→`recuperação` with highlighted
+  snippets, and `"`, `*`, `OR`, `NEAR(` return no hits without errors. Still pending manual: the
+  desktop click-through and step 7 (search right after a recording), blocked by the WASAPI hang
 
 ### Steps
 
