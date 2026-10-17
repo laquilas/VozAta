@@ -759,4 +759,19 @@
   <data name="SpeakersEmpty" xml:space="preserve">
     <value>Todavía no hay participantes: esta sesión no tiene transcripción.</value>
   </data>
+  <data name="RecoveryTitle" xml:space="preserve">
+    <value>Recuperar grabaciones interrumpidas</value>
+  </data>
+  <data name="RecoveryMessage" xml:space="preserve">
+    <value>VozAta se cerró mientras estas sesiones grababan. Recupéralas para reparar el audio y completar la transcripción, los hablantes y el acta con lo que se guardó. Pueden faltar los últimos segundos antes del fallo.</value>
+  </data>
+  <data name="RecoveryRecover" xml:space="preserve">
+    <value>Recuperar</value>
+  </data>
+  <data name="RecoveryLater" xml:space="preserve">
+    <value>Más tarde</value>
+  </data>
+  <data name="SessionRecovered" xml:space="preserve">
+    <value>La sesión de {0} se recuperó.</value>
+  </data>
 </root>

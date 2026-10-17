@@ -40,6 +40,18 @@ public sealed class EngineEventsTests
     }
 
     [Fact]
+    public void Parser_reads_the_recovery_offer()
+    {
+        var parsed = EngineEventParser.Parse(
+            """{"type":"recovery_available","session_id":null,"data":{"session_ids":["20261015_202358","20261014_090000"]}}""");
+
+        var offer = Assert.IsType<RecoveryAvailableEvent>(parsed);
+        Assert.Null(offer.SessionId);
+        Assert.Equal(["20261015_202358", "20261014_090000"], offer.SessionIds);
+        Assert.Null(EngineEventParser.Parse("""{"type":"recovery_available","session_id":null,"data":{"session_ids":null}}"""));
+    }
+
+    [Fact]
     public void Parser_reads_segments_with_labels()
     {
         var parsed = EngineEventParser.Parse("""

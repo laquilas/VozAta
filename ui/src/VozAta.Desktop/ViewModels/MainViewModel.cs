@@ -61,6 +61,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Settings = new SettingsViewModel(client, process, localization);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(this, localization, preferences);
+        Recovery = new RecoveryViewModel(client, localization, Notify);
         Settings.Saved += OnSettingsSaved;
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
@@ -103,6 +104,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public Task TemplatesRefresh { get; private set; } = Task.CompletedTask;
 
     public HistoryViewModel History { get; }
+
+    /// <summary>Crash recovery dialog (phase 17), opened by <c>recovery_available</c>.</summary>
+    public RecoveryViewModel Recovery { get; }
+
+    /// <summary>The last recovery step started by an event (tests await it).</summary>
+    public Task RecoveryRefresh { get; private set; } = Task.CompletedTask;
 
     /// <summary>The last history reload started by an event (tests await it).</summary>
     public Task HistoryRefresh { get; private set; } = Task.CompletedTask;
@@ -473,6 +480,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (!connection.Connected)
                 {
                     History.Ask.OnConnectionLost();
+                    Recovery.OnConnectionLost();
                 }
 
                 break;
@@ -484,6 +492,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 break;
             case StatusEvent status:
                 OnStatus(status);
+                RecoveryRefresh = Recovery.OnStatusAsync(status);
+                break;
+            case RecoveryAvailableEvent offer:
+                RecoveryRefresh = Recovery.OfferAsync(offer.SessionIds);
                 break;
             case SegmentEvent { Segment: var segment }:
                 RemovePartial(segment.Channel);
@@ -513,6 +525,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case ErrorEvent error:
                 Notify(error.Message);
                 History.OnError(error.SessionId, error.Message);
+                RecoveryRefresh = Recovery.OnErrorAsync(error);
                 break;
         }
 

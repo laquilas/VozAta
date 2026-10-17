@@ -717,4 +717,47 @@ public sealed class MainViewModelTests
 
         Assert.Equal(RecordingState.Idle, viewModel.State);
     }
+
+    [Fact]
+    public async Task A_recovery_offer_opens_the_dialog_and_recovery_progress_shows_as_status()
+    {
+        const string id = "20261015_202358";
+        _client.Details[id] = new SessionDetail(id, "interrupted", null, null, 90, "pt", false, [], @"C:\r");
+        var viewModel = await ReadyAsync();
+
+        await SendAsync(viewModel, new RecoveryAvailableEvent(null, [id]));
+        await viewModel.RecoveryRefresh;
+        Assert.True(viewModel.Recovery.IsOpen);
+
+        await viewModel.Recovery.RecoverCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new StatusEvent(id, "finalizing", 90));
+        Assert.Equal(RecordingState.Finalizing, viewModel.State); // Start waits for the recovery
+        Assert.False(viewModel.StartCommand.CanExecute(null));
+
+        await SendAsync(viewModel, new StatusEvent(id, "done", 90));
+        await viewModel.RecoveryRefresh;
+        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.Contains(_localization.Format("SessionRecovered", id), viewModel.Notifications);
+        Assert.Equal([id], _client.Recovered);
+    }
+
+    [Fact]
+    public async Task A_failed_recovery_and_a_lost_engine_reach_the_recovery_dialog()
+    {
+        const string id = "20261015_202358";
+        _client.Details[id] = new SessionDetail(id, "interrupted", null, null, 90, "pt", false, [], @"C:\r");
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new RecoveryAvailableEvent(null, [id]));
+        await viewModel.RecoveryRefresh;
+        await viewModel.Recovery.RecoverCommand.ExecuteAsync(null);
+
+        await SendAsync(viewModel, new ErrorEvent(id, "recovery_failed", "Bad header."));
+        Assert.Null(viewModel.Recovery.Recovering);
+        Assert.Contains("Bad header.", viewModel.Notifications);
+
+        await SendAsync(viewModel, new RecoveryAvailableEvent(null, [id]));
+        await viewModel.RecoveryRefresh;
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+        Assert.False(viewModel.Recovery.IsOpen);
+    }
 }

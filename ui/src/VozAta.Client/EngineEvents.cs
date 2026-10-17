@@ -30,6 +30,9 @@ public sealed record PartialEvent(string? SessionId, string Channel, string Spea
 /// <summary>The speech model started (true) or finished (false) loading while the session already records.</summary>
 public sealed record ModelLoadingEvent(string? SessionId, bool Loading) : EngineEvent(SessionId);
 
+/// <summary>Sessions a crash cut short (phase 17), sent on connect; recover them with <c>POST /sessions/{id}/recover</c>.</summary>
+public sealed record RecoveryAvailableEvent(string? SessionId, IReadOnlyList<string> SessionIds) : EngineEvent(SessionId);
+
 /// <summary>An event type this client does not know yet (added by a later phase).</summary>
 public sealed record UnknownEvent(string? SessionId, string Type) : EngineEvent(SessionId);
 
@@ -69,6 +72,9 @@ public static class EngineEventParser
                     data.GetProperty("start").GetDouble(),
                     data.GetProperty("text").GetString() ?? ""),
                 "model_loading" => new ModelLoadingEvent(sessionId, data.GetProperty("loading").GetBoolean()),
+                "recovery_available" => new RecoveryAvailableEvent(
+                    sessionId,
+                    data.GetProperty("session_ids").Deserialize<List<string>>(EngineJson.Options) ?? throw new JsonException()),
                 "answer_chunk" => new AnswerChunkEvent(
                     sessionId, data.GetProperty("answer_id").GetString() ?? "", data.GetProperty("text").GetString() ?? ""),
                 "answer_done" => new AnswerDoneEvent(

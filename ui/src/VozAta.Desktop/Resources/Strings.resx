@@ -759,4 +759,19 @@
   <data name="SpeakersEmpty" xml:space="preserve">
     <value>No speakers yet: this session has no transcript.</value>
   </data>
+  <data name="RecoveryTitle" xml:space="preserve">
+    <value>Recover interrupted recordings</value>
+  </data>
+  <data name="RecoveryMessage" xml:space="preserve">
+    <value>VozAta closed while these sessions were recording. Recover them to repair the audio and finish the transcript, speakers and minutes with what was saved. The last few seconds before the crash may be missing.</value>
+  </data>
+  <data name="RecoveryRecover" xml:space="preserve">
+    <value>Recover</value>
+  </data>
+  <data name="RecoveryLater" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="SessionRecovered" xml:space="preserve">
+    <value>The session of {0} was recovered.</value>
+  </data>
 </root>

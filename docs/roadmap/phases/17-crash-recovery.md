@@ -65,9 +65,9 @@ Recovering audio still in memory buffers at crash time.
 - **Branch:** `feature/17-crash-recovery`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** UI: `IEngineClient.RecoverSessionAsync`, `RecoveryAvailable` engine event,
-  `RecoveryViewModel` + dialog (date, duration, Recover / Later), strings in en / pt-BR / es,
-  `RecoveryViewModelTests.cs`.
+- **Next step:** docs: architecture §6 (recovery after stop order), §8 (`interrupted`,
+  `last_heartbeat_at`, `recovery_error`, `transcript.jsonl.damaged`), §9 (`AUTOSAVE_SECONDS`),
+  api-contract rows; then acceptance criteria, merge `origin/main`, full suites, PR.
 
 ### Steps
 
@@ -80,7 +80,7 @@ Recovering audio still in memory buffers at crash time.
       (idempotent, error kept in `session.json`); `storage/wav_repair.py`: `repair_wav`, `pad_wav`
 - [x] `bootstrap.build_recovery` + CLI `recover [<session_dir> | --all]`
 - [x] API: `POST /sessions/{id}/recover`, `recovery_available` on WebSocket connect
-- [ ] UI: `IEngineClient.RecoverSessionAsync`, `recovery_available` event, recovery dialog
+- [x] UI: `IEngineClient.RecoverSessionAsync`, `recovery_available` event, recovery dialog
       (`RecoveryViewModel`) with Recover / Later
 - [ ] Docs (architecture §6/§8/§9, api-contract), acceptance criteria, full suites, PR
 
@@ -99,3 +99,16 @@ Recovering audio still in memory buffers at crash time.
   (sessions not live in this process), so a session killed seconds ago is offered at once. The CLI
   passes `stale_after = 2 * AUTOSAVE_SECONDS + 5` so it never touches a session another process
   (e.g. a running `serve`) is still recording; without a heartbeat it falls back to `started_at`.
+- API: `SessionManager.recover(id)` uses the single active-session slot (VRAM rule): while a
+  recovery runs, `POST /sessions` and another recover get `409 session_already_active`; recovering
+  during a recording is refused the same way. Not interrupted: `409 session_not_interrupted`.
+  A failed repair publishes `error` `recovery_failed` (localized). Progress: `status` events
+  (`finalizing` → `done`) carrying the recovered session's id. `recovery_available` is sent once
+  per WebSocket connect, right after the first `status` message, only when the list is not empty.
+- UI: the "dialog" is an in-window card docked under the notifications of `MainWindow` (bound to
+  `MainViewModel.Recovery`), not a separate window: no code-behind, and only an insertion in
+  `MainWindow.axaml` (phases 19/20/29 also edit it). "Recover" queues every listed session and
+  recovers them one at a time (the engine allows one), moving on at `status done` /
+  `interrupted` or `error recovery_failed`; recovery `status` events also drive the main state
+  (`finalizing` disables Start, `done` reloads History). "Later" closes it; the engine offers
+  the sessions again on the next connect.
