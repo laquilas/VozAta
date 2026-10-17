@@ -50,3 +50,26 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 
 > Execute phase 21 of the roadmap (`docs/roadmap/phases/21-editable-transcript.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/21-editable-transcript`
+- **Status:** in progress
+- **Updated:** 2026-10-17 18:00
+- **Next step:** engine — add `edited` to `TranscriptSegment`, the pure edit applier and
+  `SessionStore.write_edited` / `delete_edited`, with tests.
+
+### Steps
+
+- [ ] Engine: `TranscriptSegment.edited`, edit applier, store write/delete (atomic)
+- [ ] Engine: `PUT /sessions/{id}/transcript`, `DELETE /sessions/{id}/transcript/edits`, reindex
+- [ ] Engine: `LOW_CONFIDENCE_THRESHOLD` in `config.py`, `settings_fields.py`, `.env.example`
+- [ ] Docs: `edited` in api-contract and architecture §8
+- [ ] UI: client methods + DTOs, `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard)
+- [ ] UI: transcript tab Edit mode, low-confidence highlight, navigation guard, strings (en/pt-BR/es)
+- [ ] Acceptance criteria, README `done`, PR
+
+### Decisions and notes
+
+- The manual check (fix a misheard word, regenerate minutes) needs no microphone; its recipe is
+  written here once the UI lands.
