@@ -67,14 +67,14 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
 - **Next step:** headless render test (`Avalonia.Headless` in the test project) that loads every view in
-  light and dark and can save screenshots; contrast test over `Tokens.axaml` pairs.
+  light and dark and can save screenshots.
 
 ### Steps
 
 - [x] Tokens, icons (with license) and control styles merged in `App.axaml` — this commit
 - [x] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app — this commit
 - [x] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests` — this commit
-- [ ] Contrast test for the token pairs (≥ 4.5:1 in light and dark)
+- [x] Contrast test for the token pairs (≥ 4.5:1 in light and dark) — this commit
 - [ ] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots
 - [ ] Docs (architecture), acceptance criteria, full UI suite, PR
 
@@ -94,4 +94,5 @@ Layout changes (35–38), custom fonts beyond Inter.
   views pick `Brush.Channel*` through the `channel` / `mic` / `system` classes, so dark mode gets
   lighter speaker colors. Faded text (`Opacity=0.6`) became `Brush.TextSecondary` (`secondary` /
   `hint` / `caption` classes) so its contrast is measurable. Small item margins stay numeric; page,
-  card and banner insets use `Inset.*` tokens (layout unchanged).
+  card and banner insets use `Inset.*` tokens (layout unchanged).- `ThemeContrastTests` reads `Tokens.axaml` and checks 26 text/background pairs per theme; it caught
+  `OnAccent` on the light `AccentPressed` (4.2:1), so the pressed accent is now lighter (`#EE9BE3`).

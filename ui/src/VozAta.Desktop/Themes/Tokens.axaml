@@ -21,7 +21,7 @@
       <!-- Accent: start button, selection, tags -->
       <SolidColorBrush x:Key="Brush.Accent" Color="#E57CD8" />
       <SolidColorBrush x:Key="Brush.AccentHover" Color="#D965CB" />
-      <SolidColorBrush x:Key="Brush.AccentPressed" Color="#C94FBB" />
+      <SolidColorBrush x:Key="Brush.AccentPressed" Color="#EE9BE3" />
       <SolidColorBrush x:Key="Brush.OnAccent" Color="#2C1338" />
       <SolidColorBrush x:Key="Brush.AccentText" Color="#A12597" />
       <SolidColorBrush x:Key="Brush.AccentSubtle" Color="#FBE8F8" />
