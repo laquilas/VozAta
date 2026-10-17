@@ -32,6 +32,7 @@ KEYS = tuple(field.key for field in FIELDS)
 _TRUE = ("true", "1", "yes", "on")
 _FALSE = ("false", "0", "no", "off")
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
+MAX_SPEAKERS_LIMIT = 20
 # Ollama `keep_alive`: whole seconds (`0`, `-1`, `300`) or a Go duration (`5m`, `1h30m`, `250ms`).
 _DURATION = re.compile(r"-?\d+|-?(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+")
 
@@ -80,6 +81,13 @@ class Settings:
     openai_stt_url: str = "https://api.openai.com/v1"
     openai_stt_key: str | None = None
     openai_stt_model: str = "whisper-1"
+    # Speaker identification (phase 14); the device uses the same auto / cuda / cpu choices
+    diarization_enabled: bool = False
+    diarization_provider: str = "pyannote"
+    diarization_device: WhisperDevice = WhisperDevice.AUTO
+    hf_token: str | None = None
+    min_speakers: int | None = None
+    max_speakers: int | None = None
     # Pause-based segmentation (phase 27)
     chunk_mode: ChunkMode = ChunkMode.VAD
     vad_threshold: float = 0.5
@@ -113,6 +121,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
     """
     raw = _read(env, env_file)
     app_language = _choice(raw, "APP_LANGUAGE", AppLanguage, AppLanguage.EN)
+    min_speakers, max_speakers = _speaker_bounds(raw)
     return Settings(
         chunk_seconds=_number(raw, "CHUNK_SECONDS", 5.0, minimum=1, maximum=60),
         sample_rate=_sample_rate(raw),
@@ -140,6 +149,12 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         openai_stt_url=_url(raw, "OPENAI_STT_URL", "https://api.openai.com/v1"),
         openai_stt_key=raw.get("OPENAI_STT_KEY"),
         openai_stt_model=raw.get("OPENAI_STT_MODEL", "whisper-1"),
+        diarization_enabled=_flag(raw, "DIARIZATION_ENABLED", False),
+        diarization_provider=raw.get("DIARIZATION_PROVIDER", "pyannote"),
+        diarization_device=_choice(raw, "DIARIZATION_DEVICE", WhisperDevice, WhisperDevice.AUTO),
+        hf_token=raw.get("HF_TOKEN"),
+        min_speakers=min_speakers,
+        max_speakers=max_speakers,
         chunk_mode=_choice(raw, "CHUNK_MODE", ChunkMode, ChunkMode.VAD),
         vad_threshold=_number(raw, "VAD_THRESHOLD", 0.5, minimum=0.01, maximum=0.99),
         vad_min_silence_ms=_integer(raw, "VAD_MIN_SILENCE_MS", 600, minimum=100, maximum=5000),
@@ -200,6 +215,23 @@ def _integer(raw: Mapping[str, str], key: str, default: int, *, minimum: int, ma
     if value != int(value):
         raise ConfigError(key, raw[key], "out_of_range", min=minimum, max=maximum)
     return int(value)
+
+
+def _optional_integer(
+    raw: Mapping[str, str], key: str, *, minimum: int, maximum: int
+) -> int | None:
+    if key not in raw:
+        return None
+    return _integer(raw, key, minimum, minimum=minimum, maximum=maximum)
+
+
+def _speaker_bounds(raw: Mapping[str, str]) -> tuple[int | None, int | None]:
+    """`MIN_SPEAKERS` / `MAX_SPEAKERS` hints (1-20, empty = let the diarizer decide)."""
+    low = _optional_integer(raw, "MIN_SPEAKERS", minimum=1, maximum=MAX_SPEAKERS_LIMIT)
+    high = _optional_integer(raw, "MAX_SPEAKERS", minimum=1, maximum=MAX_SPEAKERS_LIMIT)
+    if low is not None and high is not None and low > high:
+        raise ConfigError("MIN_SPEAKERS", raw["MIN_SPEAKERS"], "out_of_range", min=1, max=high)
+    return low, high
 
 
 def _flag(raw: Mapping[str, str], key: str, default: bool) -> bool:

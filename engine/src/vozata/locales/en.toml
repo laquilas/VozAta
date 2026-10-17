@@ -11,11 +11,13 @@ invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
 unknown_key = "Unknown setting {key}."
 no_word_timestamps = "The speech API at {host} returned no word timestamps for model \"{value}\". Choose a model that supports timestamp_granularities=word."
+missing_hf_token = "{key} is not set. Speaker identification needs a Hugging Face access token: create one at huggingface.co, accept the terms of the pyannote model, then set {key} in the settings."
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
 device_timeout = "The audio device \"{device}\" did not open within {seconds} s. Check that it is connected and not in use by another app; if it keeps failing, restart Windows Audio or the PC."
 device_failed = "The audio device \"{device}\" could not be opened: {reason}"
+diarization_failed = "The remote speakers could not be identified ({reason}). The transcript keeps the system label; retry with: {command}"
 mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
@@ -82,6 +84,9 @@ minutes_failed = "The minutes could not be generated ({reason}). Check that Olla
 session_not_found = "No session found in {folder}."
 empty_transcript = "The session in {folder} has no transcript, so there is nothing to summarize."
 device_not_found = "Audio device not found: {reason}. Run \"python -m vozata record --list-devices\" to see the ids."
+diarized = "Found {count} remote speaker(s); speaker-labelled transcript written to {path}"
+diarize_failed = "The remote speakers could not be identified ({reason})."
+no_system_speech = "The session in {folder} has no system-audio speech, so there is nobody to identify."
 reindexed = "Search index rebuilt. Sessions indexed: {count}."
 reindex_failed = "The search index could not be rebuilt ({reason})."
 
@@ -100,6 +105,8 @@ system = "loopback device id (default: the default output's loopback)"
 list_devices = "list the audio devices and exit"
 minutes = "generate the minutes of a recorded session again"
 session_dir = "session folder, e.g. recordings/20261015_202358"
+diarize = "identify the remote speakers of a recorded session (User 1, User 2, ...)"
+diarize_minutes = "generate the minutes again afterwards"
 reindex = "rebuild the search index from every recorded session"
 
 [export]

@@ -119,3 +119,17 @@ def test_errors_propagate_and_nothing_is_written(tmp_path: Path) -> None:
         write_session_minutes(store, "20991231_000000", _generator(FakeLanguageModel()), labeler)
 
     assert not store.paths(failing).minutes_md.exists()
+
+
+def test_diarized_speakers_appear_with_their_stored_names(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    session_id = _session(store, {"language": "en"}, transcript=False)
+    paths = store.paths(session_id)
+    segment = TranscriptSegment("system-000001", Channel.SYSTEM, "system:1", 1.0, 2.0, "Hi.", ())
+    paths.diarized_jsonl.write_text(json.dumps(segment.to_dict()) + "\n", encoding="utf-8")
+    paths.speakers_json.write_text(json.dumps({"system:1": {"name": "Ana"}}), encoding="utf-8")
+    llm = FakeLanguageModel(["# Minutes"])
+
+    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+
+    assert "Ana: Hi." in llm.prompts[0][1]

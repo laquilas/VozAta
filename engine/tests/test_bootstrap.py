@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
+from tests.fakes import FakeDiarizer, FakeLanguageModel, FakeSessionObserver, FakeTranscriber
 from vozata import bootstrap
 from vozata.audio.capture import WasapiSource
 from vozata.audio.chunker import FixedWindowChunker
@@ -101,6 +101,7 @@ def test_build_session_uses_the_default_devices_and_settings(
     assert isinstance(components.minutes, MinutesGenerator)
     assert components.chunker_factory is not None
     assert isinstance(components.chunker_factory(Channel.MIC, lambda chunk: None), VadChunker)
+    assert components.diarizer_factory is None  # DIARIZATION_ENABLED defaults to false
     assert session._language is ConversationLanguage.ES
     assert isinstance(components.search_index, SearchIndex)
     assert components.search_index._path == tmp_path / "recordings" / "index.db"
@@ -421,3 +422,62 @@ def test_saved_settings_reach_the_next_session_and_the_llm_check(
     assert regenerated.template_id == "client"
     assert regenerated._template.name == "Reunión con cliente"
     assert regenerated._localizer.t("minutes.output_language") == "español"  # same language
+
+
+def test_the_diarizer_registry_holds_pyannote_behind_a_child_process() -> None:
+    from vozata.diarization.subprocess_diarizer import SubprocessDiarizer
+
+    diarizer = bootstrap.DIARIZERS["pyannote"](Settings(hf_token="hf"))
+
+    assert isinstance(diarizer, SubprocessDiarizer)
+
+
+def test_an_enabled_diarizer_is_built_lazily_from_its_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    built: list[Settings] = []
+    fake = FakeDiarizer()
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda s: built.append(s) or fake)
+    settings = Settings(diarization_enabled=True, diarization_provider="fake")
+
+    factory = bootstrap.build_diarizer_factory(settings)
+
+    assert factory is not None and built == []
+    assert factory() is fake
+    assert built == [settings]
+    with pytest.raises(ConfigError) as caught:
+        bootstrap.build_diarizer_factory(
+            Settings(diarization_enabled=True, diarization_provider="nope")
+        )
+    assert caught.value.key == "DIARIZATION_PROVIDER"
+
+
+def test_a_shared_transcriber_is_not_kept_when_speakers_are_identified(
+    tmp_path: Path, devices: list[int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = FakeTranscriber()
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    settings = _settings(
+        tmp_path,
+        stt_provider="fake",
+        generate_minutes=False,
+        diarization_enabled=True,
+        hf_token="hf",
+    )
+    shared = SharedTranscriber(lambda: fake)
+
+    session = bootstrap.build_session(settings, FakeSessionObserver(), shared=shared)
+    session._c.transcriber_factory().close()
+
+    assert session._c.diarizer_factory is not None
+    assert shared.loaded is False  # VRAM rule: Whisper never stays next to the diarizer
+    assert fake.closed
+
+
+def test_build_diarizer_ignores_the_enabled_flag_for_explicit_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeDiarizer()
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda settings: fake)
+
+    assert bootstrap.build_diarizer(Settings(diarization_provider="fake")) is fake

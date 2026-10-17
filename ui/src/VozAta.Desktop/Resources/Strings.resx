@@ -207,6 +207,9 @@
   <data name="SettingsGroup_transcription" xml:space="preserve">
     <value>Transcription</value>
   </data>
+  <data name="SettingsGroup_speakers" xml:space="preserve">
+    <value>Speakers</value>
+  </data>
   <data name="SettingsGroup_minutes" xml:space="preserve">
     <value>Minutes</value>
   </data>
@@ -530,6 +533,42 @@
   </data>
   <data name="SettingHelp_OPENAI_STT_MODEL" xml:space="preserve">
     <value>Model of the external speech API, e.g. whisper-1 (OpenAI) or whisper-large-v3 (Groq). Check the provider's price per minute.</value>
+  </data>
+  <data name="Setting_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Identify remote speakers</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>After a recording stops, tell the people in the system audio apart and label them User 1, User 2… Needs the optional diarization extra and a Hugging Face token.</value>
+  </data>
+  <data name="Setting_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Speaker identification provider</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Engine provider that identifies the speakers, e.g. pyannote.</value>
+  </data>
+  <data name="Setting_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Speaker identification device</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Where speaker identification runs: auto, cuda (NVIDIA GPU) or cpu. It runs after the speech model is released.</value>
+  </data>
+  <data name="Setting_HF_TOKEN" xml:space="preserve">
+    <value>Hugging Face token</value>
+  </data>
+  <data name="SettingHelp_HF_TOKEN" xml:space="preserve">
+    <value>Access token for the pyannote models. Create it on huggingface.co and accept the model terms there first.</value>
+  </data>
+  <data name="Setting_MIN_SPEAKERS" xml:space="preserve">
+    <value>Minimum remote speakers</value>
+  </data>
+  <data name="SettingHelp_MIN_SPEAKERS" xml:space="preserve">
+    <value>Smallest number of remote people to expect (1 to 20). Leave empty to detect it.</value>
+  </data>
+  <data name="Setting_MAX_SPEAKERS" xml:space="preserve">
+    <value>Maximum remote speakers</value>
+  </data>
+  <data name="SettingHelp_MAX_SPEAKERS" xml:space="preserve">
+    <value>Largest number of remote people to expect (1 to 20). Leave empty to detect it.</value>
   </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>

@@ -25,6 +25,7 @@ from vozata.audio.portaudio import PortAudioThread
 from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
+from vozata.diarization.subprocess_diarizer import pyannote_from_settings
 from vozata.domain import AudioChunk, Channel, ChunkMode, ConversationLanguage, MixMode
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
@@ -37,6 +38,7 @@ from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import (
     AudioMixer,
     Chunker,
+    Diarizer,
     DocumentExporter,
     LanguageModel,
     Localizer,
@@ -54,6 +56,9 @@ from vozata.transcription.shared import SharedTranscriber
 TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
     "openai_compatible": openai_compatible.from_settings,
+}
+DIARIZERS: dict[str, Callable[[Settings], Diarizer]] = {
+    "pyannote": pyannote_from_settings,  # child process: keeps torch away from ctranslate2
 }
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(
@@ -132,6 +137,19 @@ def build_minutes_generator(
     )
 
 
+def build_diarizer_factory(settings: Settings) -> Callable[[], Diarizer] | None:
+    """The configured diarizer, built only when a session needs it; None when disabled."""
+    if not settings.diarization_enabled:
+        return None
+    _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)  # fail fast
+    return functools.partial(build_diarizer, settings)
+
+
+def build_diarizer(settings: Settings) -> Diarizer:
+    """The `DIARIZATION_PROVIDER` diarizer, whether or not `DIARIZATION_ENABLED` is set."""
+    return _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)(settings)
+
+
 def build_session(
     settings: Settings,
     observer: SessionObserver,
@@ -159,6 +177,7 @@ def build_session(
         if settings.generate_minutes
         else None
     )
+    diarizer_factory = build_diarizer_factory(settings)
     try:
         audio = PortAudioThread()
     except TimeoutError:
@@ -182,7 +201,7 @@ def build_session(
         transcriber_factory=(
             (lambda: transcriber(settings))
             if shared is None
-            else functools.partial(shared.lease, keep=minutes is None)
+            else functools.partial(shared.lease, keep=minutes is None and diarizer_factory is None)
         ),
         mixer=MIXERS[settings.mix_mode](),
         minutes=minutes,
@@ -190,6 +209,7 @@ def build_session(
         labeler=build_labeler(settings, localizer),
         release=audio.close,
         chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
+        diarizer_factory=diarizer_factory,
         search_index=build_search_index(settings),
         minutes_template=template,
     )

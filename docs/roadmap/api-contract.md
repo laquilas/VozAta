@@ -77,7 +77,7 @@ One connection per UI. Server → client messages only (commands go through HTTP
 | `segment` | 06 | `Segment` | each committed transcript segment |
 | `language_detected` | 06 | `{language}` | once, when `auto` locks the language |
 | `minutes_ready` | 06 | `{session_id}` | minutes written |
-| `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable) |
+| `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable; `diarization_failed` (14) when speaker identification fails at stop) |
 | `speakers_relabeled` | 15 | `{session_id}` | post-session diarization replaced live labels; UI reloads the transcript |
 | `recovery_available` | 17 | `{session_ids: [str]}` | on connect, when interrupted sessions exist |
 | `action_items_ready` | 23 | `{session_id, count}` | extraction finished |

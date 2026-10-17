@@ -290,3 +290,27 @@ def test_stored_duration_wins_over_the_wall_clock_span(api: Api) -> None:
     item = api.client.get("/sessions").json()["items"][0]
 
     assert item["duration_seconds"] == 63.5
+
+
+def _diarized(api: Api, names: dict[str, str | None]) -> None:
+    paths = api.store.paths(SESSION)
+    segments = [
+        TranscriptSegment("system-000001", Channel.SYSTEM, "system:1", 3.0, 4.0, "Hi.", ()),
+        TranscriptSegment("system-000002", Channel.SYSTEM, "system:2", 5.0, 6.0, "Yo.", ()),
+    ]
+    paths.diarized_jsonl.write_text(
+        "".join(json.dumps(s.to_dict()) + "\n" for s in segments), encoding="utf-8"
+    )
+    speakers = {speaker_id: {"name": name} for speaker_id, name in names.items()}
+    paths.speakers_json.write_text(json.dumps(speakers), encoding="utf-8")
+
+
+def test_a_diarized_transcript_is_labeled_per_speaker_with_stored_names(api: Api) -> None:
+    _recorded(api)
+    _diarized(api, {"system:1": None, "system:2": "Ana"})
+
+    body = api.client.get(f"/sessions/{SESSION}/transcript").json()
+
+    assert body["source"] == "diarized"
+    labels = [(s["speaker_id"], s["label"]) for s in body["segments"]]
+    assert labels == [("system:1", "labels.user(n=1)"), ("system:2", "Ana")]

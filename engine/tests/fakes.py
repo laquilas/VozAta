@@ -11,6 +11,7 @@ from vozata.domain import (
     Channel,
     ConversationLanguage,
     SessionStatus,
+    SpeakerTurn,
     TranscriptionResult,
     TranscriptSegment,
 )
@@ -114,6 +115,29 @@ class FakeLanguageModel:
 
     def release(self) -> None:
         self.releases += 1
+
+
+class FakeDiarizer:
+    """Returns fixed speaker turns (or raises `error`); records calls and `close()`."""
+
+    def __init__(
+        self, turns: list[SpeakerTurn] | None = None, error: Exception | None = None
+    ) -> None:
+        self.turns = list(turns or [])
+        self.error = error
+        self.calls: list[tuple[Path, int | None, int | None]] = []
+        self.closed = False
+
+    def diarize(
+        self, wav: Path, min_speakers: int | None, max_speakers: int | None
+    ) -> list[SpeakerTurn]:
+        self.calls.append((wav, min_speakers, max_speakers))
+        if self.error is not None:
+            raise self.error
+        return list(self.turns)
+
+    def close(self) -> None:
+        self.closed = True
 
 
 class FakeSpeechDetector:
