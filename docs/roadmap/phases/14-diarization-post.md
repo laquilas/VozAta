@@ -68,7 +68,7 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - **Branch:** `feature/14-diarization-post`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add the pyannote adapter (child process) and the optional extra `diarization`.
+- **Next step:** add the CLI command `diarize <session_dir> [--minutes]` in `__main__.py` + `cli/diarize.py`.
 
 ### Steps
 
@@ -77,10 +77,22 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 - [x] Config keys (`DIARIZATION_*`, `HF_TOKEN`, `MIN_SPEAKERS`, `MAX_SPEAKERS`), `.env.example`, UI settings strings
 - [x] `speakers.json` in the store, labels from speaker names, `diarize_session`
 - [x] Session stop step 5 + `DIARIZERS` registry
-- [ ] pyannote adapter (subprocess) + optional extra `diarization`
+- [x] pyannote adapter (subprocess) + optional extra `diarization`
 - [ ] CLI `diarize <session_dir>`
 - [ ] Docs, acceptance criteria, PR
 
 ### Decisions and notes
 
 - Unit tests use `FakeDiarizer`; torch / pyannote are not installed in the shared `.venv`.
+- **pyannote runs in a child process** (`SubprocessDiarizer` → `python -m vozata.diarization.child`).
+  Coexistence of `torch` and `ctranslate2` CUDA/cuDNN DLLs in one process could not be verified
+  without installing torch (forbidden in the shared `.venv`), so the safe option was taken up front:
+  the child never shares a process with faster-whisper, and its exit frees all VRAM before the
+  minutes. The `Diarizer` port is unchanged. The request (token included) goes over stdin, never
+  argv; turns come back through a temp JSON file (libraries may print to stdout).
+- Model: `pyannote/speaker-diarization-community-1` (pyannote.audio ≥ 4), audio passed as a
+  preloaded waveform (no ffmpeg / torchcodec decoding); the exclusive (overlap-free) annotation is
+  used when available.
+- Missing `HF_TOKEN` with diarization enabled → localized `errors.config.missing_hf_token` inside the
+  `diarization_failed` error; the session continues to minutes.
+- The PyInstaller installer (phase 13) does not bundle the extra; diarization needs a source install.
