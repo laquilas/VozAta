@@ -66,13 +66,13 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Branch:** `feature/34-ui-design-system`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** theme preference: `UiPreferencesData.Theme`, `IThemeService` + `AppearanceViewModel`,
-  picker in Settings → Desktop app, strings in en / pt-BR / es.
+- **Next step:** replace hex colors, raw `FontSize` and glyph buttons in `Views/*.axaml` with tokens,
+  styles and icons; add `ThemeTokensTests` (XAML grep).
 
 ### Steps
 
 - [x] Tokens, icons (with license) and control styles merged in `App.axaml` — this commit
-- [ ] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app
+- [x] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app — this commit
 - [ ] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests`
 - [ ] Contrast test for the token pairs (≥ 4.5:1 in light and dark)
 - [ ] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots
@@ -87,3 +87,6 @@ Layout changes (35–38), custom fonts beyond Inter.
   Status colors are split into fills (`Brush.Danger`), text on surfaces (`Brush.DangerText`) and
   banner backgrounds (`Brush.DangerSurface`) so each pair passes 4.5:1 in both themes.
 - `FluentTheme` palettes use the same accent so Fluent controls (selection, toggles) match.
+- Theme picker lives in `AppearanceViewModel` (`MainViewModel.Appearance`, next to `Tray`) instead of
+  `SettingsViewModel`: it is a desktop-app preference like Minimize to tray, not an engine setting.
+  Tests in `AppearanceViewModelTests.cs`. `IThemeService` / `AvaloniaThemeService` is wired in `App.axaml.cs`.

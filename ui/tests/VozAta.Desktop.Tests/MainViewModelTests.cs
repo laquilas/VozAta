@@ -27,7 +27,7 @@ public sealed class MainViewModelTests
     }
 
     private MainViewModel Create() =>
-        new(_client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs, _preferences, _clock, _timer, _shell, new FakeFileSaver());
+        new(_client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs, _preferences, _clock, _timer, _shell, new FakeFileSaver(), new FakeThemeService());
 
     private async Task<MainViewModel> ReadyAsync()
     {

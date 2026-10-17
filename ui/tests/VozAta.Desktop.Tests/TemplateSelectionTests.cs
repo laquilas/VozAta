@@ -28,7 +28,7 @@ public sealed class TemplateSelectionTests
 
     private MainViewModel Create() =>
         new(_client, _events, new FakeEngineProcess(), new ImmediateDispatcher(), _localization, new FakeDialogs(),
-            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver());
+            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(), new FakeThemeService());
 
     private async Task<MainViewModel> ReadyAsync()
     {
