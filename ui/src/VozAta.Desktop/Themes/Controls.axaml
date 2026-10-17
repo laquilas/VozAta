@@ -1,0 +1,329 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Shared control styles (phase 34). They use only the tokens of Tokens.axaml and the icons of
+    Icons.axaml. ":is(TextBlock)" also matches SelectableTextBlock.
+  -->
+
+  <!-- Every window paints the token surface and text colors (Fluent controls keep their own). -->
+  <Style Selector=":is(Window)">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+  </Style>
+
+  <!-- Buttons ===================================================================== -->
+
+  <!-- Primary action (Start, Save, Recover): pink accent, dark purple text -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentPressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+  </Style>
+
+  <!-- Destructive / stop: red in every state (Fluent would grey it on hover and press) -->
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource Brush.Danger}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.DangerHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+  </Style>
+  <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.DangerPressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+  </Style>
+
+  <!-- The big Start / Stop / Pause buttons of the recording screen -->
+  <Style Selector="Button.large">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Title}" />
+    <Setter Property="Padding" Value="28,14" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+  </Style>
+
+  <!-- Round start / stop (timer bar, phase 35): an icon in a circle -->
+  <Style Selector="Button.round-start, Button.round-stop">
+    <Setter Property="Width" Value="48" />
+    <Setter Property="Height" Value="48" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Pill}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.round-start">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+  </Style>
+  <Style Selector="Button.round-start:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+  </Style>
+  <Style Selector="Button.round-start:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentPressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+  </Style>
+  <Style Selector="Button.round-stop">
+    <Setter Property="Background" Value="{DynamicResource Brush.Danger}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+  </Style>
+  <Style Selector="Button.round-stop:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.DangerHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+  </Style>
+  <Style Selector="Button.round-stop:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.DangerPressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+  </Style>
+  <Style Selector="Button.round-start PathIcon, Button.round-stop PathIcon">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+  </Style>
+
+  <!-- Quiet button: no fill until hovered -->
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- Icon-only button (refresh, remove); the icon follows the text color -->
+  <Style Selector="Button.icon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Small}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.icon PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+  <Style Selector="Button.icon.small">
+    <Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="Button.icon.small PathIcon">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+  </Style>
+
+  <!-- Link-like button (sources, exported work items) -->
+  <Style Selector="Button.link">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}" />
+  </Style>
+  <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}" />
+  </Style>
+
+  <!-- Inline icon next to a button label -->
+  <Style Selector="PathIcon.inline">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Containers ================================================================== -->
+
+  <Style Selector="Border.card">
+    <Setter Property="Padding" Value="{StaticResource Inset.Card}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+  </Style>
+
+  <!-- Outlined area without padding (live transcript) -->
+  <Style Selector="Border.outline">
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+  </Style>
+
+  <!-- One line of a list, separated from the next -->
+  <Style Selector="Border.divider">
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+  </Style>
+
+  <Style Selector="Border.statusbar">
+    <Setter Property="Padding" Value="{StaticResource Inset.StatusBar}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+  </Style>
+
+  <!-- Pill tags (template, language, "minutes", glossary terms) -->
+  <Style Selector="Border.tag">
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Pill}" />
+    <Setter Property="Padding" Value="8,1" />
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+  </Style>
+  <Style Selector="Border.tag TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Tiny}" />
+  </Style>
+  <Style Selector="Border.tag.live">
+    <Setter Property="Background" Value="{DynamicResource Brush.Danger}" />
+  </Style>
+  <Style Selector="Border.tag.live TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
+  </Style>
+  <!-- A tag that holds a removable term: larger text, room for the remove button -->
+  <Style Selector="Border.tag.term">
+    <Setter Property="Padding" Value="10,2,2,2" />
+  </Style>
+  <Style Selector="Border.tag.term TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+  </Style>
+
+  <!-- Banners: info / warning / error -->
+  <Style Selector="Border.banner">
+    <Setter Property="Padding" Value="{StaticResource Inset.Banner}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Small}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.banner TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+  </Style>
+  <Style Selector="Border.banner.info">
+    <Setter Property="Background" Value="{DynamicResource Brush.InfoSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Info}" />
+  </Style>
+  <Style Selector="Border.banner.warning">
+    <Setter Property="Background" Value="{DynamicResource Brush.WarningSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Warning}" />
+  </Style>
+  <Style Selector="Border.banner.error">
+    <Setter Property="Background" Value="{DynamicResource Brush.DangerSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Danger}" />
+  </Style>
+
+  <!-- Text ======================================================================== -->
+
+  <Style Selector=":is(TextBlock).caption">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Caption}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+  </Style>
+  <Style Selector=":is(TextBlock).secondary">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+  </Style>
+  <!-- Busy or empty-state note -->
+  <Style Selector=":is(TextBlock).hint">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+  <Style Selector=":is(TextBlock).subtitle">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Subtitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector=":is(TextBlock).title">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Title}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <!-- Elapsed time: Inter with tabular figures so the digits do not jump -->
+  <Style Selector=":is(TextBlock).timer">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Timer}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector=":is(TextBlock).tabular">
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector=":is(TextBlock).error">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.DangerText}" />
+  </Style>
+  <Style Selector=":is(TextBlock).success">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SuccessText}" />
+  </Style>
+  <Style Selector=":is(TextBlock).warning">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.WarningText}" />
+  </Style>
+  <Style Selector=":is(TextBlock).tiny">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Tiny}" />
+  </Style>
+  <Style Selector=":is(TextBlock).small">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Small}" />
+  </Style>
+  <Style Selector=":is(TextBlock).reading">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Reading}" />
+  </Style>
+  <!-- Transcript lines colored by channel; "translation" sits under its line -->
+  <Style Selector=":is(TextBlock).channel">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.ChannelOther}" />
+  </Style>
+  <Style Selector=":is(TextBlock).channel.mic">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.ChannelMic}" />
+  </Style>
+  <Style Selector=":is(TextBlock).channel.system">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.ChannelSystem}" />
+  </Style>
+  <Style Selector=":is(TextBlock).translation">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Small}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+  </Style>
+  <Style Selector=":is(TextBlock).partial">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Reading}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+  <Style Selector=":is(TextBlock).focused">
+    <Setter Property="Background" Value="{DynamicResource Brush.Highlight}" />
+  </Style>
+
+  <!-- Minutes rendered from Markdown -->
+  <Style Selector=":is(TextBlock).h1">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Heading}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,8,0,4" />
+  </Style>
+  <Style Selector=":is(TextBlock).h2">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Title}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,10,0,4" />
+  </Style>
+  <Style Selector=":is(TextBlock).h3">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Reading}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,8,0,2" />
+  </Style>
+  <Style Selector=":is(TextBlock).item">
+    <Setter Property="Margin" Value="16,2,0,2" />
+  </Style>
+
+  <!-- Recording state and level meters ========================================== -->
+
+  <Style Selector="Ellipse.state-dot">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.recording">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Danger}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.paused">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
+  </Style>
+
+  <Style Selector="ProgressBar.meter-mic">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.MeterMic}" />
+  </Style>
+  <Style Selector="ProgressBar.meter-mic-peak">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.MeterMicPeak}" />
+  </Style>
+  <Style Selector="ProgressBar.meter-system">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.MeterSystem}" />
+  </Style>
+  <Style Selector="ProgressBar.meter-system-peak">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.MeterSystemPeak}" />
+  </Style>
+  <Style Selector="ProgressBar.meter-mic, ProgressBar.meter-system">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+</Styles>

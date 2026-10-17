@@ -66,12 +66,12 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Branch:** `feature/34-ui-design-system`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add `Themes/Tokens.axaml`, `Themes/Icons.axaml`, `Themes/Controls.axaml` (+ Fluent
-  UI icons license) and merge them in `App.axaml`.
+- **Next step:** theme preference: `UiPreferencesData.Theme`, `IThemeService` + `AppearanceViewModel`,
+  picker in Settings → Desktop app, strings in en / pt-BR / es.
 
 ### Steps
 
-- [ ] Tokens, icons (with license) and control styles merged in `App.axaml`
+- [x] Tokens, icons (with license) and control styles merged in `App.axaml` — this commit
 - [ ] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app
 - [ ] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests`
 - [ ] Contrast test for the token pairs (≥ 4.5:1 in light and dark)
@@ -81,3 +81,9 @@ Layout changes (35–38), custom fonts beyond Inter.
 ### Decisions and notes
 
 - Runs in parallel with phase 30 (engine only): no shared files expected.
+- Icons: Fluent UI System Icons, 20 px variants, path data copied into `Themes/Icons.axaml` (`F1`
+  prefix keeps the SVG nonzero fill); MIT license in `Assets/licenses/`.
+- Text on the pink accent is the dark purple `Brush.OnAccent` (white on `#E57CD8` is only 2.6:1).
+  Status colors are split into fills (`Brush.Danger`), text on surfaces (`Brush.DangerText`) and
+  banner backgrounds (`Brush.DangerSurface`) so each pair passes 4.5:1 in both themes.
+- `FluentTheme` palettes use the same accent so Fluent controls (selection, toggles) match.
