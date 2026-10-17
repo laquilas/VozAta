@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from tests.api.conftest import RecordingBroadcaster
-from tests.fakes import FakeLanguageModel, FakeLocalizer
+from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.api.minutes_job import MinutesJob
 from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
@@ -29,7 +29,7 @@ def _job(tmp_path: Path, llm: FakeLanguageModel, *, transcript: bool = True):  #
     localizer = FakeLocalizer()
     job = MinutesJob(
         store,
-        lambda: MinutesGenerator(llm, localizer, 12000),
+        lambda: MinutesGenerator(llm, localizer, 12000, minutes_template()),
         SpeakerLabeler(localizer),
         broadcaster,
         localizer,

@@ -14,6 +14,7 @@ from vozata.domain import (
     TranscriptionResult,
     TranscriptSegment,
 )
+from vozata.minutes.template_repository import LocalizedTemplate, TemplateRepository
 
 
 class FakeAudioSource:
@@ -188,3 +189,8 @@ class FakeSessionObserver:
 
     def of(self, name: str) -> list[tuple]:
         return [event[1:] for event in self.events if event[0] == name]
+
+
+def minutes_template(language: str = "en", template_id: str = "general") -> LocalizedTemplate:
+    """A bundled minutes template in one language (phase 20)."""
+    return TemplateRepository().get(template_id).localized(language)

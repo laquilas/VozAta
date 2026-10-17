@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fakes import FakeLanguageModel, FakeLocalizer
+from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
@@ -29,7 +29,7 @@ def _session(store: SessionStore, meta: dict, *, transcript: bool = True) -> str
 
 
 def _generator(llm: FakeLanguageModel) -> MinutesGenerator:
-    return MinutesGenerator(llm, FakeLocalizer(), 12000)
+    return MinutesGenerator(llm, FakeLocalizer(), 12000, minutes_template())
 
 
 def test_writes_minutes_in_the_stored_language(tmp_path: Path) -> None:

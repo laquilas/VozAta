@@ -4,7 +4,7 @@ import io
 import json
 from pathlib import Path
 
-from tests.fakes import FakeLanguageModel, FakeLocalizer
+from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.minutes import run_minutes
 from vozata.config import Settings
@@ -37,7 +37,7 @@ def _run(folder: Path, llm: FakeLanguageModel) -> tuple[int, str]:
     console = ConsoleObserver(localizer, labeler, out)
 
     def build(settings: Settings, loc: Localizer) -> MinutesGenerator:
-        return MinutesGenerator(llm, loc, settings.llm_max_chars)
+        return MinutesGenerator(llm, loc, settings.llm_max_chars, minutes_template())
 
     code = run_minutes(folder, Settings(), console, localizer, labeler, build)
     return code, out.getvalue()
