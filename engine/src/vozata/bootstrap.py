@@ -231,6 +231,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             language=options.language,
             mic_device=options.mic_device,
             system_device=options.system_device,
+            template=options.template,
             shared=shared,
         )
 

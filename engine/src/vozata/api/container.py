@@ -12,6 +12,7 @@ from vozata.api.ws import EventBroadcaster
 from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
+from vozata.minutes.template_repository import TemplateRepository, bundled_templates
 from vozata.ports import DocumentExporter, Localizer
 from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
@@ -39,6 +40,7 @@ class ApiContainer:
     devices: DeviceCatalog
     gpu_info: Callable[[], GpuInfo]
     llm_reachable: Callable[[], bool]
-    regenerate_minutes: Callable[[str], None]  # runs in the background, then `minutes_ready`
+    regenerate_minutes: Callable[[str, str | None], None]  # (id, template); then `minutes_ready`
     release_models: Callable[[], None] = lambda: None  # at shutdown (kept Whisper, phase 26)
     exporters: Mapping[str, DocumentExporter] = field(default_factory=dict)  # by format (11)
+    templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)

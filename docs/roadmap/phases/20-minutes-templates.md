@@ -62,11 +62,10 @@ User-defined templates edited in the UI (backlog).
 
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** in progress
-- **Updated:** 2026-10-17 12:20
-- **Next step:** API — `GET /templates` (new `routes/templates.py`, `templates` in
-  `ApiContainer`), `template` in `POST /sessions` (`StartOptions.template`) and in
-  `POST /sessions/{id}/minutes` (`MinutesJob(session_id, template)`); unknown → 422
-  `unknown_template` (locale key in en, pt-BR, es).
+- **Updated:** 2026-10-17 12:50
+- **Next step:** UI client — `TemplateInfo` DTO, `GetTemplatesAsync`, `Template` in
+  `StartSessionRequest`, `RegenerateMinutesAsync(id, template)`; tests in `EngineClientTests`
+  and `FakeEngineClient`.
 
 ### Steps
 
@@ -77,9 +76,9 @@ User-defined templates edited in the UI (backlog).
 - [x] `MINUTES_TEMPLATE` config key (`config.py`, `settings_fields.py`, `.env.example`, settings
       page label/help and template names) — `2fb54c8`
 - [x] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
-      — this commit
-- [ ] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
-      (unknown → 422 `unknown_template`)
+      — `2f77bce`
+- [x] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
+      (unknown → 422 `unknown_template`); api-contract + architecture §8/§12 — this commit
 - [ ] UI client: `GetTemplatesAsync`, template in start and regenerate requests
 - [ ] UI: template ComboBox on the Start screen and in the regenerate action
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe

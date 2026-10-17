@@ -29,7 +29,9 @@ def _job(tmp_path: Path, llm: FakeLanguageModel, *, transcript: bool = True):  #
     localizer = FakeLocalizer()
     job = MinutesJob(
         store,
-        lambda template: MinutesGenerator(llm, localizer, 12000, minutes_template()),
+        lambda template: MinutesGenerator(
+            llm, localizer, 12000, minutes_template(template_id=template or "general")
+        ),
         SpeakerLabeler(localizer),
         broadcaster,
         localizer,
@@ -79,3 +81,14 @@ def test_wait_without_a_job_returns_at_once(tmp_path: Path) -> None:
     job, _, _ = _job(tmp_path, FakeLanguageModel())
 
     assert job.wait(0.01)
+
+
+def test_the_requested_template_is_used_and_stored(tmp_path: Path) -> None:
+    llm = FakeLanguageModel(["# Client"])
+    job, _, paths = _job(tmp_path, llm)
+
+    job(paths.id, "client")
+    assert job.wait(5)
+
+    assert "## Client needs" in llm.prompts[0][1]
+    assert json.loads(paths.meta.read_text(encoding="utf-8"))["template"] == "client"

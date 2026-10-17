@@ -19,7 +19,7 @@ _log = logging.getLogger(__name__)
 
 
 class MinutesJob:
-    """Callable `(session_id)`: starts a background regeneration and returns at once.
+    """Callable `(session_id, template)`: starts a background regeneration and returns at once.
 
     Success publishes `minutes_ready`; failures publish a localized `error` event.
     """
@@ -39,8 +39,11 @@ class MinutesJob:
         self._t = localizer.t
         self._thread: threading.Thread | None = None
 
-    def __call__(self, session_id: str) -> None:
-        self._thread = threading.Thread(target=self._run, args=(session_id,), name="minutes")
+    def __call__(self, session_id: str, template: str | None = None) -> None:
+        """`template` None: the one stored in `session.json`, else `MINUTES_TEMPLATE`."""
+        self._thread = threading.Thread(
+            target=self._run, args=(session_id, template), name="minutes"
+        )
         self._thread.start()
 
     def wait(self, timeout: float | None = None) -> bool:
@@ -50,10 +53,12 @@ class MinutesJob:
             return not self._thread.is_alive()
         return True
 
-    def _run(self, session_id: str) -> None:
+    def _run(self, session_id: str, template: str | None) -> None:
         publish = self._broadcaster.publish
         try:
-            write_session_minutes(self._store, session_id, self._build_generator, self._labeler)
+            write_session_minutes(
+                self._store, session_id, self._build_generator, self._labeler, template
+            )
         except EmptyTranscriptError:
             message = self._t("errors.api.empty_transcript", id=session_id)
             publish("error", session_id, {"code": "empty_transcript", "message": message})
