@@ -361,6 +361,15 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 
 ## 8. Data model and session folder
 
+> **Planned (M6, phases 30–33):** sessions, transcripts, speakers, translations, minutes, action
+> items, the search index and the audio (≈1 s PCM chunks) move into one SQLite database,
+> `vozata.db` (`DATABASE_PATH`, default `OUTPUT_DIR/vozata.db`), behind a `SessionRepository` /
+> `AudioStore` port; existing folders are imported automatically and kept. The folder layout below
+> stays as the `STORAGE_BACKEND=files` backend. Schema and guarantees are defined in
+> [phase 31](phases/31-sqlite-database.md) and [phase 32](phases/32-audio-in-sqlite.md) and land
+> here when implemented. The desktop UI moves to a Toggl Track–style shell (sidebar, timer bar,
+> pages) with theme tokens in phases 34–38.
+
 `OUTPUT_DIR/YYYYMMDD_HHMMSS/` (the folder name is the session id):
 
 | File | Written by | Notes |
