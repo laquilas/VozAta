@@ -56,13 +56,13 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - **Branch:** `feature/21-editable-transcript`
 - **Status:** in progress
 - **Updated:** 2026-10-17 18:00
-- **Next step:** engine — add `edited` to `TranscriptSegment`, the pure edit applier and
-  `SessionStore.write_edited` / `delete_edited`, with tests.
+- **Next step:** engine — add `LOW_CONFIDENCE_THRESHOLD` (`config.py`, `settings_fields.py`,
+  `.env.example`, test in `tests/test_config.py`).
 
 ### Steps
 
-- [ ] Engine: `TranscriptSegment.edited`, edit applier, store write/delete (atomic)
-- [ ] Engine: `PUT /sessions/{id}/transcript`, `DELETE /sessions/{id}/transcript/edits`, reindex
+- [x] Engine: `TranscriptSegment.edited`, edit applier, store write/delete (atomic) — `ec83130`
+- [x] Engine: `PUT /sessions/{id}/transcript`, `DELETE /sessions/{id}/transcript/edits`, reindex
 - [ ] Engine: `LOW_CONFIDENCE_THRESHOLD` in `config.py`, `settings_fields.py`, `.env.example`
 - [ ] Docs: `edited` in api-contract and architecture §8
 - [ ] UI: client methods + DTOs, `TranscriptEditorViewModel` (highlight, dirty, save, revert, guard)
@@ -70,6 +70,13 @@ Merging/splitting segments, audio-synced playback per segment (backlog).
 - [ ] Acceptance criteria, README `done`, PR
 
 ### Decisions and notes
+
+- `PUT` takes `{segments: [{segment_id, text, ...}]}`: only `segment_id` and `text` are read (a full
+  `Segment` is accepted), so the UI sends only the segments it changed. The engine applies them to
+  the current best transcript and writes the full copy. Codes: `422 unknown_segment`,
+  `422 empty_segment_text`, `409 transcript_still_recording` (also for `DELETE`).
+- `edited` is written to JSONL only when true, so raw/diarized lines keep their schema.
+- A failing search reindex is logged and never fails a saved edit.
 
 - The manual check (fix a misheard word, regenerate minutes) needs no microphone; its recipe is
   written here once the UI lands.
