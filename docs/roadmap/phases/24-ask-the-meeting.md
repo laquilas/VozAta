@@ -65,7 +65,7 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - **Branch:** `feature/24-ask-the-meeting`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** UI client: `IEngineClient.AskAsync`, `AnswerChunkEvent` / `AnswerDoneEvent` parsing (+ tests)
+- **Next step:** UI: `AskViewModel` (+ `AskViewModelTests.cs`), `AskView` in `HistoryView`, routing of answer events in `MainViewModel`
 
 ### Steps
 
@@ -73,8 +73,8 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - [x] Engine: `qa/retriever.py` (single-session budget + neighbours, all-sessions ranking) — `c8aec7c`
 - [x] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context) — `19a4faa`
 - [x] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py` — `be4a3d2`
-- [x] Docs: api-contract and architecture
-- [ ] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent`
+- [x] Docs: api-contract and architecture — `95e75a7`
+- [x] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent` (`VozAta.Client/Ask.cs`)
 - [ ] UI: `AskViewModel` + panel (History, scoped to the selected session or all sessions)
 - [ ] Acceptance criteria, manual check recipe, PR
 

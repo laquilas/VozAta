@@ -226,6 +226,29 @@ internal sealed class FakeEngineClient : IEngineClient
         return SearchError is null ? new SearchResults([.. SearchHits.Take(limit)]) : throw SearchError;
     }
 
+    /// <summary>Every <c>POST /ask</c> (phase 24): question and scope.</summary>
+    public List<(string Question, string? SessionId)> Questions { get; } = [];
+
+    /// <summary>The id answered by the next <see cref="AskAsync"/>.</summary>
+    public string NextAnswerId { get; set; } = "answer-1";
+
+    public Exception? AskError { get; set; }
+
+    /// <summary>When set, <see cref="AskAsync"/> waits for it (events may arrive before its answer).</summary>
+    public TaskCompletionSource? AskGate { get; set; }
+
+    public async Task<AskAccepted> AskAsync(
+        string question, string? sessionId = null, CancellationToken cancellationToken = default)
+    {
+        Questions.Add((question, sessionId));
+        if (AskGate is not null)
+        {
+            await AskGate.Task.WaitAsync(cancellationToken);
+        }
+
+        return AskError is null ? new AskAccepted(NextAnswerId) : throw AskError;
+    }
+
     public static EngineApiException ApiError(string code, string message) =>
         new(HttpStatusCode.Conflict, code, message);
 

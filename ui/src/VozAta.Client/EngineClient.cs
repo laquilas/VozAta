@@ -41,6 +41,9 @@ public interface IEngineClient
     /// <summary><c>GET /search</c> (phase 22): best matches first across every transcript.</summary>
     Task<SearchResults> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
 
+    /// <summary><c>POST /ask</c> (phase 24): the answer streams as <see cref="AnswerChunkEvent"/>s, then <see cref="AnswerDoneEvent"/>.</summary>
+    Task<AskAccepted> AskAsync(string question, string? sessionId = null, CancellationToken cancellationToken = default);
+
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
     /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
@@ -116,6 +119,10 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         string query, int limit = 50, CancellationToken cancellationToken = default) =>
         SendAsync<SearchResults>(
             HttpMethod.Get, $"search?q={Uri.EscapeDataString(query)}&limit={limit}", null, cancellationToken);
+
+    public Task<AskAccepted> AskAsync(
+        string question, string? sessionId = null, CancellationToken cancellationToken = default) =>
+        SendAsync<AskAccepted>(HttpMethod.Post, "ask", new AskRequest(question, sessionId), cancellationToken);
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);
