@@ -364,8 +364,8 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
 | `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
-| `ECHO_SIMILARITY` | `0.85` | 18 | text similarity to treat a mic segment as echo |
-| `ECHO_HOLD_SECONDS` | `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment |
+| `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
+| `ECHO_HOLD_SECONDS` | *(empty)* = `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment (1–60 s); mic lines are delayed by it |
 | `VOCABULARY_FILE` | *(empty)* | 19 | one term per line |
 | `MINUTES_TEMPLATE` | `general` | 20 | default template |
 | `LOW_CONFIDENCE_THRESHOLD` | `0.5` | 21 | word probability below this is highlighted |

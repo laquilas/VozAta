@@ -57,16 +57,16 @@ Acoustic echo cancellation on the audio signal (backlog).
 
 - **Branch:** `feature/18-echo-dedupe`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:30
-- **Next step:** add `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` to
-  `config.py`, `settings_fields.py`, `engine/.env.example`, the three UI `Strings*.resx` and
-  architecture §9 (tests in `tests/test_config.py`).
+- **Updated:** 2026-10-17 11:00
+- **Next step:** add a `tick` hook to `TranscriptionWorker`, wrap the sinks in `EchoFilter` in
+  `CapturePipeline` when `ECHO_DEDUPE_ENABLED`, and write `echo_dropped` to `session.json` after
+  the drain (tests in `test_worker.py`, `test_session_pipeline.py`, `test_session.py`).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
 - [x] `EchoFilter` in `transcription/echo.py` with fake-clock tests
-- [ ] Config keys `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` (config, fields,
+- [x] Config keys `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` (config, fields,
       `.env.example`, UI labels, architecture §9)
 - [ ] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
       `session.json.echo_dropped` (architecture §6 / §8)
@@ -84,3 +84,9 @@ Acoustic echo cancellation on the audio signal (backlog).
   otherwise "match" scattered letters of a longer system text. Asymmetric, so an echo split across
   two system segments or cut out of a longer one still scores 1, while talking over the remote
   speaker adds unmatched mic words and keeps the segment.
+- `ECHO_HOLD_SECONDS` is optional (`Settings.echo_hold_seconds: float | None`); empty means
+  `CHUNK_SECONDS + 3`, resolved by `Settings.effective_echo_hold_seconds`, so saving the settings
+  page does not freeze the derived value. The keys live in the `transcription` settings group.
+- "Engine only" exception: the UI test `Every_engine_setting_has_a_label_and_help_text` requires a
+  `Setting_*` / `SettingHelp_*` string for every `.env.example` key, so the three `Strings*.resx`
+  files got labels for the new keys (no UI code changes).

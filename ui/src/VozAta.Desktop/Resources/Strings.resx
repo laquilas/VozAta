@@ -396,6 +396,24 @@
   <data name="SettingHelp_PARTIAL_INTERVAL_SECONDS" xml:space="preserve">
     <value>Minimum time between two updates of the provisional text of a channel.</value>
   </data>
+  <data name="Setting_ECHO_DEDUPE_ENABLED" xml:space="preserve">
+    <value>Remove speaker echo</value>
+  </data>
+  <data name="SettingHelp_ECHO_DEDUPE_ENABLED" xml:space="preserve">
+    <value>Drop microphone lines that repeat what the speakers played, for meetings without headphones.</value>
+  </data>
+  <data name="Setting_ECHO_SIMILARITY" xml:space="preserve">
+    <value>Echo similarity</value>
+  </data>
+  <data name="SettingHelp_ECHO_SIMILARITY" xml:space="preserve">
+    <value>Share of a microphone line's words (0.5 to 1) heard at the same time in the system audio for the line to count as echo.</value>
+  </data>
+  <data name="Setting_ECHO_HOLD_SECONDS" xml:space="preserve">
+    <value>Echo wait (s)</value>
+  </data>
+  <data name="SettingHelp_ECHO_HOLD_SECONDS" xml:space="preserve">
+    <value>How long microphone lines wait for the matching system line; they appear this much later. Empty: segment length + 3 s.</value>
+  </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Minutes model provider</value>
   </data>
