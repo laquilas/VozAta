@@ -57,14 +57,15 @@ Acoustic echo cancellation on the audio signal (backlog).
 
 - **Branch:** `feature/18-echo-dedupe`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:00
-- **Next step:** write `tests/transcription/test_echo.py` and make it pass with
-  `transcription/echo.py` (`EchoFilter`).
+- **Updated:** 2026-10-17 10:30
+- **Next step:** add `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` to
+  `config.py`, `settings_fields.py`, `engine/.env.example`, the three UI `Strings*.resx` and
+  architecture §9 (tests in `tests/test_config.py`).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress section)
-- [ ] `EchoFilter` in `transcription/echo.py` with fake-clock tests
+- [x] `EchoFilter` in `transcription/echo.py` with fake-clock tests
 - [ ] Config keys `ECHO_DEDUPE_ENABLED`, `ECHO_SIMILARITY`, `ECHO_HOLD_SECONDS` (config, fields,
       `.env.example`, UI labels, architecture §9)
 - [ ] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
@@ -73,4 +74,13 @@ Acoustic echo cancellation on the audio signal (backlog).
 
 ### Decisions and notes
 
-- (none yet)
+- `EchoFilter` is a `TranscriptSink` decorator (it wraps the composite sink) and takes the hold
+  clock (`time.monotonic` by default) plus an `on_dropped` callback. The hold runs from the
+  moment the mic segment reaches the filter, not from its session time.
+- Similarity is `echo_score`: the share of the mic words found, in order, in the system words
+  (`difflib.SequenceMatcher` on word lists of lowercased, punctuation-free text). It is compared
+  with the system **words** spoken within the mic segment's span ± tolerance (whole segments when a
+  segment has no word timings). Word level rather than character level: a short mic phrase would
+  otherwise "match" scattered letters of a longer system text. Asymmetric, so an echo split across
+  two system segments or cut out of a longer one still scores 1, while talking over the remote
+  speaker adds unmatched mic words and keeps the segment.
