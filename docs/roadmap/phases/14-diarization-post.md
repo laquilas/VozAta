@@ -62,3 +62,25 @@ Live labels (15), renaming (16), diarizing the microphone channel.
 
 > Execute phase 14 of the roadmap (`docs/roadmap/phases/14-diarization-post.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/14-diarization-post`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** add `SpeakerTurn`, the `Diarizer` port and `FakeDiarizer` (tests first).
+
+### Steps
+
+- [ ] `SpeakerTurn`, `Diarizer` port, `FakeDiarizer`
+- [ ] `assign_speakers` (pure) with tests
+- [ ] Config keys (`DIARIZATION_*`, `HF_TOKEN`, `MIN_SPEAKERS`, `MAX_SPEAKERS`), `.env.example`, UI settings strings
+- [ ] `speakers.json` in the store, labels from speaker names, `diarize_session`
+- [ ] Session stop step 5 + `DIARIZERS` registry
+- [ ] pyannote adapter (subprocess) + optional extra `diarization`
+- [ ] CLI `diarize <session_dir>`
+- [ ] Docs, acceptance criteria, PR
+
+### Decisions and notes
+
+- Unit tests use `FakeDiarizer`; torch / pyannote are not installed in the shared `.venv`.
