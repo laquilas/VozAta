@@ -38,14 +38,15 @@ screen an expander "Terms for this meeting" (comma or newline separated).
 
 ## Acceptance criteria
 
-- [ ] Tests: store parsing (comments, blanks, duplicates), hint building and truncation order,
+- [x] Tests: store parsing (comments, blanks, duplicates), hint building and truncation order,
       hints reach `FakeTranscriber`, glossary appears in the minutes prompt, API round trip;
       context prompt per channel (truncation, reset on language lock, skipped after a
       repeated segment).
-- [ ] UI tests: editor add/remove/import, session terms sent on start.
+- [x] UI tests: editor add/remove/import, session terms sent on start.
 - [ ] Manual: a meeting mentioning an unusual name is transcribed correctly with the term and
-      incorrectly without it (note in the PR).
-- [ ] Resource parity test passes.
+      incorrectly without it (note in the PR). *Pending manual: recipe in Progress (audio/GPU
+      checks run one phase at a time).*
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -63,9 +64,10 @@ Automatic term extraction from previous meetings.
 ## Progress
 
 - **Branch:** `feature/19-custom-vocabulary`
-- **Status:** in progress
-- **Updated:** 2026-10-17 14:10
-- **Next step:** docs: architecture §2/§5/§8/§9 and api-contract for vocabulary + context prompt; then merge origin/main, run full engine pytest + UI tests, tick acceptance criteria, open the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 18:00
+- **Next step:** run the manual check recipe below on the reference machine and paste the
+  WITHOUT / WITH lines in the PR; then merge.
 
 ### Steps
 
@@ -79,7 +81,7 @@ Automatic term extraction from previous meetings.
 - [x] Minutes prompt glossary (live stop and regeneration)
 - [x] API: `GET|PUT /vocabulary`, `vocabulary` in `POST /sessions`
 - [x] UI: client + DTOs, settings tab "Vocabulary", Start screen "Terms for this meeting"
-- [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
+- [x] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 
 ### Decisions and notes
 - `VOCABULARY_FILE` is a `path` setting; empty (`None`) resolves in `bootstrap.py` to `vocabulary.txt` next to the `.env` file the engine reads.
