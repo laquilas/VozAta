@@ -141,6 +141,15 @@
   <data name="HistoryEmpty" xml:space="preserve">
     <value>Aún no hay sesiones. Tus grabaciones aparecerán aquí.</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Buscar en todas las transcripciones</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Buscando...</value>
+  </data>
+  <data name="SearchNoResults" xml:space="preserve">
+    <value>No hay coincidencias en ninguna transcripción.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecciona una sesión para leer su transcripción y su acta.</value>
   </data>

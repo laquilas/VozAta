@@ -6,7 +6,7 @@ needs them.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -17,6 +17,7 @@ from vozata.domain import (
     Channel,
     ConversationLanguage,
     ExportDocument,
+    SearchHit,
     SessionStatus,
     TranscriptionResult,
     TranscriptSegment,
@@ -146,4 +147,17 @@ class SessionObserver(Protocol):
 
     def on_error(self, code: str, message: str) -> None:
         """A non-fatal error; `message` is localized."""
+        ...
+
+
+@runtime_checkable
+class TranscriptSearch(Protocol):
+    """Full-text search over every session's transcript (phase 22; reused by 21 and 24)."""
+
+    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
+        """Replace everything indexed for `session_id` with `segments`."""
+        ...
+
+    def search(self, query: str, limit: int = 50) -> list[SearchHit]:
+        """Best matches first for free user text; FTS syntax in `query` is never interpreted."""
         ...

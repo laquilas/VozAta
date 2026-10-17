@@ -1,4 +1,4 @@
-"""Command line: `python -m vozata record ...` and `python -m vozata minutes <session_dir>`."""
+"""Command line: `python -m vozata record | serve | minutes <session_dir> | reindex`."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from vozata.audio.devices import (
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.minutes import run_minutes
 from vozata.cli.record import print_devices, run_record
+from vozata.cli.reindex import run_reindex
 from vozata.cli.serve import run_serve
 from vozata.config import ConfigError, Settings, load_settings
 from vozata.domain import ConversationLanguage
@@ -52,6 +53,7 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     commands.add_parser("serve", help=t("cli.help.serve"))
     minutes = commands.add_parser("minutes", help=t("cli.help.minutes"))
     minutes.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
+    commands.add_parser("reindex", help=t("cli.help.reindex"))
     return parser
 
 
@@ -84,6 +86,13 @@ def main(
                 localizer,
                 labeler,
                 bootstrap.build_minutes_generator,
+            )
+        if args.command == "reindex":
+            return run_reindex(
+                bootstrap.build_store(settings),
+                bootstrap.build_search_index(settings),
+                console,
+                localizer,
             )
         if args.list_devices:
             return print_devices(

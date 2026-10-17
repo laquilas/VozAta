@@ -19,6 +19,7 @@ device_failed = "Não foi possível abrir o dispositivo de áudio \"{device}\": 
 mix_failed = "Não foi possível criar o mixed.wav ({reason}). As faixas do microfone e do sistema foram mantidas."
 minutes_failed = "Não foi possível gerar a ata ({reason}). A gravação e a transcrição foram mantidas; tente novamente com: {command}"
 model_failed = "Não foi possível carregar o modelo de fala ({reason}). A gravação continua: o áudio é salvo, mas não é transcrito."
+index_failed = "Não foi possível adicionar a sessão ao índice de busca ({reason}). Reconstrua o índice com: python -m vozata reindex"
 
 [errors.api]
 unsupported_format = "Formato de exportação não suportado: \"{format}\". Use um destes: {allowed}."
@@ -81,6 +82,8 @@ minutes_failed = "Não foi possível gerar a ata ({reason}). Verifique se o Olla
 session_not_found = "Nenhuma sessão encontrada em {folder}."
 empty_transcript = "A sessão em {folder} não tem transcrição, então não há o que resumir."
 device_not_found = "Dispositivo de áudio não encontrado: {reason}. Execute \"python -m vozata record --list-devices\" para ver os ids."
+reindexed = "Índice de busca reconstruído. Sessões indexadas: {count}."
+reindex_failed = "Não foi possível reconstruir o índice de busca ({reason})."
 
 [cli.devices]
 microphones = "Microfones:"
@@ -97,6 +100,7 @@ system = "id do dispositivo de loopback (padrão: o loopback da saída padrão)"
 list_devices = "lista os dispositivos de áudio e sai"
 minutes = "gera novamente a ata de uma sessão gravada"
 session_dir = "pasta da sessão, por exemplo recordings/20261015_202358"
+reindex = "reconstrói o índice de busca a partir de todas as sessões gravadas"
 
 [export]
 title = "Reunião de {date}"

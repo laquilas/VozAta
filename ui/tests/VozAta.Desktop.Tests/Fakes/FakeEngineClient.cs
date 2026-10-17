@@ -203,6 +203,29 @@ internal sealed class FakeEngineClient : IEngineClient
         return Task.FromResult(new SettingsUpdateResult(saved, [.. RestartKeys.Where(values.ContainsKey)]));
     }
 
+    /// <summary>Hits answered by <see cref="SearchAsync"/> (phase 22), whatever the query.</summary>
+    public List<SearchHit> SearchHits { get; } = [];
+
+    public List<string> Searches { get; } = [];
+
+    public Exception? SearchError { get; set; }
+
+    /// <summary>When set, searches wait for it (tests cancel a search in flight).</summary>
+    public TaskCompletionSource? SearchGate { get; set; }
+
+    public async Task<SearchResults> SearchAsync(
+        string query, int limit = 50, CancellationToken cancellationToken = default)
+    {
+        Searches.Add(query);
+        if (SearchGate is not null)
+        {
+            await SearchGate.Task.WaitAsync(cancellationToken);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return SearchError is null ? new SearchResults([.. SearchHits.Take(limit)]) : throw SearchError;
+    }
+
     public static EngineApiException ApiError(string code, string message) =>
         new(HttpStatusCode.Conflict, code, message);
 

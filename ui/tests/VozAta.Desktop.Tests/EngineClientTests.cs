@@ -81,6 +81,24 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Search_escapes_the_query_and_reads_the_hits()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"hits": [{"session_id": "20261015_202358", "segment_id": "mic-000001", "start": 83.12,
+                       "speaker_id": "mic", "label": "Me", "snippet": "a \u0002decisão\u0003 final"}]}
+            """);
+
+        var results = await new EngineClient(handler.Client()).SearchAsync("decisão & \"OR\"", limit: 20);
+
+        Assert.Equal(
+            (HttpMethod.Get, "/search?q=decis%C3%A3o%20%26%20%22OR%22&limit=20", (string?)null),
+            handler.Requests.Single());
+        Assert.Equal(
+            new SearchHit("20261015_202358", "mic-000001", 83.12, "mic", "Me", "a \u0002decisão\u0003 final"),
+            results.Hits.Single());
+    }
+
+    [Fact]
     public async Task Lifecycle_commands_post_to_the_current_session()
     {
         var handler = FakeHttpHandler.Json(Summary);

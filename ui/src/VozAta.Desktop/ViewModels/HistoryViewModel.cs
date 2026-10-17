@@ -21,15 +21,23 @@ public sealed record SessionRow(SessionSummary Summary, string Date, string Dura
 }
 
 /// <summary>Past sessions, newest first, a page at a time; the selected one opens in <see cref="Detail"/>.</summary>
+/// <param name="searchDelay">Waits out the search debounce (tests pass a controllable one).</param>
 public sealed partial class HistoryViewModel(
     IEngineClient client,
     IShellService shell,
     ILocalizationService localization,
     IFileSaver saver,
-    MinutesTemplatesViewModel? templates = null)
+    MinutesTemplatesViewModel? templates = null,
+    Func<TimeSpan, CancellationToken, Task>? searchDelay = null)
     : ObservableObject
 {
     public const int PageSize = 20;
+
+    private SearchViewModel? _search;
+
+    /// <summary>Search across every transcript (phase 22); its results replace the list while active.</summary>
+    public SearchViewModel Search =>
+        _search ??= new SearchViewModel(client, localization, searchDelay) { OpenHit = OpenHitAsync };
 
     private static readonly Dictionary<string, string> LanguageKeys = new()
     {
@@ -103,6 +111,25 @@ public sealed partial class HistoryViewModel(
     }
 
     public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
+
+    /// <summary>Open a search hit: select its session (loading older pages if needed) at the segment.</summary>
+    public async Task OpenHitAsync(SearchHit hit)
+    {
+        var row = Rows.FirstOrDefault(item => item.Id == hit.SessionId);
+        while (row is null && CanLoadMore && Error is null)
+        {
+            await LoadMoreAsync();
+            row = Rows.FirstOrDefault(item => item.Id == hit.SessionId);
+        }
+
+        if (row is null)
+        {
+            return; // deleted since it was indexed, or the list failed to load (Error shows why)
+        }
+
+        Selected = row;
+        Detail?.FocusSegment(hit.SegmentId);
+    }
 
     /// <summary>Rebuild the row texts after a UI language switch.</summary>
     public void RefreshTexts()

@@ -38,6 +38,9 @@ public interface IEngineClient
     /// <summary><c>GET /sessions/{id}/export?format=</c>: <c>md</c>, <c>docx</c> or <c>pdf</c>.</summary>
     Task<ExportedFile> ExportSessionAsync(string id, string format, CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /search</c> (phase 22): best matches first across every transcript.</summary>
+    Task<SearchResults> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
+
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
     /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
@@ -108,6 +111,11 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyList<MinutesTemplate>>(HttpMethod.Get, "templates", null, cancellationToken);
+
+    public Task<SearchResults> SearchAsync(
+        string query, int limit = 50, CancellationToken cancellationToken = default) =>
+        SendAsync<SearchResults>(
+            HttpMethod.Get, $"search?q={Uri.EscapeDataString(query)}&limit={limit}", null, cancellationToken);
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);
