@@ -66,8 +66,11 @@ Recovering audio still in memory buffers at crash time.
 - **Branch:** `feature/17-crash-recovery`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 14:00
-- **Next step:** run the manual check below on the reference machine before merging, then
-  record its result here.
+- **Next step:** none (phase done). Check A.1 run 2026-10-17 with minutes on (Ollama `qwen2.5:7b`):
+  `recover` repaired the simulated crash (mic, system and mixed WAVs all 91,179 frames at 16 kHz,
+  half line moved to `transcript.jsonl.damaged`, status `done`, duration 5.699 s, minutes written
+  with the beta date and Ana's task); a second run reports "not interrupted". Still pending manual:
+  the UI card (A.2) and the real crash with the microphone (B), blocked by the WASAPI hang.
 
 ### Steps
 
@@ -115,7 +118,7 @@ Recovering audio still in memory buffers at crash time.
 
 ### Manual check recipe
 
-Status: **pending manual check**. Run on the reference machine, one phase at a time (audio is
+Status: **A.1 done 2026-10-17; A.2 and B pending manual check**. Run on the reference machine, one phase at a time (audio is
 shared). Commands from the repo root; the engine `.env` is the usual one (Ollama running with
 `OLLAMA_MODEL` pulled).
 
