@@ -620,3 +620,16 @@ def test_invalid_context_prompt_chars_raise(value: str) -> None:
         load_settings(env={"CONTEXT_PROMPT_CHARS": value})
 
     assert caught.value.key == "CONTEXT_PROMPT_CHARS"
+
+
+def test_autosave_seconds_defaults_to_ten_and_reads_the_environment() -> None:
+    assert load_settings(env={}).autosave_seconds == 10.0
+    assert load_settings(env={"AUTOSAVE_SECONDS": "2.5"}).autosave_seconds == 2.5
+
+
+@pytest.mark.parametrize("value", ["0", "0.5", "301", "often"])
+def test_invalid_autosave_seconds_raise(value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"AUTOSAVE_SECONDS": value})
+
+    assert caught.value.key == "AUTOSAVE_SECONDS"

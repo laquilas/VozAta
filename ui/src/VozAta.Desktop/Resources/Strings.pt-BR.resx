@@ -306,6 +306,12 @@
   <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
     <value>Gera a ata com o modelo de linguagem local após cada gravação.</value>
   </data>
+  <data name="Setting_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Intervalo de salvamento automático (segundos)</value>
+  </data>
+  <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Com que frequência o arquivo da sessão é salvo durante a gravação (1 a 300 s). Após uma falha, a sessão interrompida é encontrada e pode ser recuperada na próxima inicialização.</value>
+  </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Taxa de amostragem (Hz)</value>
   </data>

@@ -118,6 +118,8 @@ class Settings:
     ollama_keep_alive: str = "0"
     # Session (phase 05)
     generate_minutes: bool = True
+    # Crash recovery (phase 17)
+    autosave_seconds: float = 10.0  # `session.json` heartbeat interval
     # API (phase 06)
     api_host: str = "127.0.0.1"
     api_port: int = 8765
@@ -196,6 +198,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         minutes_template=_template(raw),
         ollama_keep_alive=_duration(raw, "OLLAMA_KEEP_ALIVE", "0"),
         generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
+        autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
     )

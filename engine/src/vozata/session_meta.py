@@ -92,6 +92,13 @@ class SessionMeta:
         """Mic segments the echo filter dropped (phase 18), written once the transcript is final."""
         self._update(echo_dropped=count)
 
+    def heartbeat(self, at: datetime, duration_seconds: float) -> None:
+        """Autosave every `AUTOSAVE_SECONDS` (phase 17): proof of life and the length so far."""
+        self._update(
+            last_heartbeat_at=at.isoformat(timespec="seconds"),
+            duration_seconds=round(duration_seconds, 3),
+        )
+
     def ended(self, at: datetime) -> None:
         self._update(ended_at=at.isoformat(timespec="seconds"))
 

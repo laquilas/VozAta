@@ -65,12 +65,11 @@ Recovering audio still in memory buffers at crash time.
 - **Branch:** `feature/17-crash-recovery`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add `AUTOSAVE_SECONDS` (config, settings fields, `.env.example`, UI labels) and
-  the `session.json` heartbeat in `session.py`.
+- **Next step:** `JsonlSink`: `os.fsync` after each segment's flush (`output/sinks.py`).
 
 ### Steps
 
-- [ ] `AUTOSAVE_SECONDS` key + heartbeat (`last_heartbeat_at`, `duration_seconds`) every
+- [x] `AUTOSAVE_SECONDS` key + heartbeat (`last_heartbeat_at`, `duration_seconds`) every
       `AUTOSAVE_SECONDS` while the session is active
 - [ ] `JsonlSink` flushes + `os.fsync` per segment
 - [ ] Refactor `stop()`: steps 3 (mix) to 7 become one `_finish()` sequence shared with

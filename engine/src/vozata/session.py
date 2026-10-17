@@ -11,6 +11,7 @@ from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
 from vozata.config import ConfigError, Settings
 from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
+from vozata.heartbeat import Heartbeat
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import DEFAULT_TEMPLATE
@@ -89,6 +90,7 @@ class RecordingSession:
         self.status: SessionStatus | None = None
         self._paths: SessionPaths | None = None
         self._captured: float | None = None  # recorded length, fixed once capture stops
+        self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
 
     @property
     def paths(self) -> SessionPaths:
@@ -137,6 +139,7 @@ class RecordingSession:
         self._pipeline.accept()
         self._open_sources()
         self._set_status(SessionStatus.RECORDING)
+        self._start_heartbeat()
         self._pipeline.start_transcription()
 
     def pause(self) -> None:
@@ -167,6 +170,20 @@ class RecordingSession:
         self._index_transcript()  # 6: search (phase 22)
         self._meta.ended(self._store.now())  # 7
         self._set_status(SessionStatus.DONE)
+        self._stop_heartbeat()
+
+    def _start_heartbeat(self) -> None:
+        """Save `last_heartbeat_at` and the length so far every `AUTOSAVE_SECONDS` until done, so
+        a crash leaves a recent `session.json` (phase 17)."""
+        self._heartbeat = Heartbeat(self._settings.autosave_seconds, self._autosave, "autosave")
+        self._heartbeat.start()
+
+    def _stop_heartbeat(self) -> None:
+        if self._heartbeat is not None:
+            self._heartbeat.stop()
+
+    def _autosave(self) -> None:
+        self._meta.heartbeat(self._store.now(), self.duration_seconds)
 
     def _open_sources(self) -> None:
         opened: list[AudioSource] = []

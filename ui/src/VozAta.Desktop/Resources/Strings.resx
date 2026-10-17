@@ -306,6 +306,12 @@
   <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
     <value>Generate the minutes with the local language model after each recording.</value>
   </data>
+  <data name="Setting_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Autosave interval (seconds)</value>
+  </data>
+  <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>How often the session file is saved while recording (1 to 300 s). After a crash the interrupted session is found and can be recovered on the next start.</value>
+  </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Sample rate (Hz)</value>
   </data>

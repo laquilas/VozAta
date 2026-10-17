@@ -306,6 +306,12 @@
   <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
     <value>Genera el acta con el modelo de lenguaje local después de cada grabación.</value>
   </data>
+  <data name="Setting_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Intervalo de guardado automático (segundos)</value>
+  </data>
+  <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Cada cuánto se guarda el archivo de la sesión durante la grabación (1 a 300 s). Tras un fallo, la sesión interrumpida se detecta y puede recuperarse en el siguiente inicio.</value>
+  </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Frecuencia de muestreo (Hz)</value>
   </data>
