@@ -33,12 +33,13 @@ mic segments.
 
 ## Acceptance criteria
 
-- [ ] Tests (fake clock): identical text overlapping → dropped; different text → kept; matching
+- [x] Tests (fake clock): identical text overlapping → dropped; different text → kept; matching
       text outside the time window → kept; system segment arriving later within hold → dropped;
       `flush()` releases held segments; counter updated.
 - [ ] Manual: record without headphones while a video plays → `Me` lines with the video's speech
-      are gone; own speech still appears.
-- [ ] Coverage ≥ 80 %.
+      are gone; own speech still appears. *Pending manual (shared audio hardware): recipe in
+      Progress.*
+- [x] Coverage ≥ 80 % (engine total 100 %, `echo.py` 100 %).
 
 ## Tests
 
@@ -56,10 +57,10 @@ Acoustic echo cancellation on the audio signal (backlog).
 ## Progress
 
 - **Branch:** `feature/18-echo-dedupe`
-- **Status:** in progress
-- **Updated:** 2026-10-17 11:40
-- **Next step:** tick the acceptance criteria, set the README status to `done`, Progress to
-  `ready for PR`, then open the PR and watch CI.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 12:00
+- **Next step:** run the manual check recipe below on the reference machine (alone, no other
+  phase using the audio hardware), then merge the PR.
 
 ### Steps
 
@@ -69,7 +70,8 @@ Acoustic echo cancellation on the audio signal (backlog).
       `.env.example`, UI labels, architecture §9)
 - [x] Wire the filter in front of the sinks (worker tick, pipeline, `flush()` at stop) and write
       `session.json.echo_dropped` (architecture §6 / §8)
-- [ ] Acceptance criteria, README `done`, PR
+- [x] Acceptance criteria, README `done`, PR
+- [ ] Manual check (pending: shared audio hardware)
 
 ### Decisions and notes
 

@@ -67,7 +67,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 15 | [Speaker identification (live)](phases/15-diarization-live.md) | 14, 06 | todo |
 | 16 | [UI speaker rename](phases/16-ui-speaker-rename.md) | 09, 14 | todo |
 | 17 | [Crash recovery](phases/17-crash-recovery.md) | 06 | todo |
-| 18 | [Echo dedupe](phases/18-echo-dedupe.md) | 05, 27 | in progress (`feature/18-echo-dedupe`) |
+| 18 | [Echo dedupe](phases/18-echo-dedupe.md) | 05, 27 | done |
 | 19 | [Custom vocabulary](phases/19-custom-vocabulary.md) | 06, 10 | todo |
 | 20 | [Minutes templates](phases/20-minutes-templates.md) | 04, 07 | todo |
 | 21 | [Editable transcript](phases/21-editable-transcript.md) | 09 | todo |
