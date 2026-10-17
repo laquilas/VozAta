@@ -44,6 +44,9 @@ transcript_still_recording = "A sessão \"{id}\" ainda está gravando; edite a t
 device_not_found = "Dispositivo de áudio não encontrado: {reason}"
 invalid_request = "Requisição inválida: {details}"
 internal_error = "Erro inesperado no motor. Consulte o log do motor para mais detalhes."
+answer_failed = "Não foi possível responder à pergunta ({reason}). Verifique se o Ollama está em execução e se o modelo foi baixado."
+answer_in_progress = "Outra pergunta ainda está sendo respondida. Aguarde até que termine e pergunte novamente."
+ask_unavailable = "Fazer perguntas sobre as reuniões não está disponível neste motor."
 
 [languages]
 en = "inglês"
@@ -67,6 +70,17 @@ Use apenas fatos desta parte."""
 reduce_instructions = "Estas são notas de partes consecutivas de uma mesma reunião conduzida em {conversation_language}. Combine-as na ata da reunião."
 transcript_label = "Transcrição:"
 notes_label = "Notas:"
+
+[qa]
+system = "Você responde perguntas sobre reuniões gravadas usando apenas os trechos de reunião fornecidos. Nunca invente nomes, datas, números ou decisões. Se os trechos não contiverem a resposta, diga que ela não foi encontrada nas reuniões."
+instructions = """Responda à pergunta em {output_language}, de forma concisa, usando apenas os trechos abaixo.
+Após cada afirmação, cite a linha do trecho de onde ela vem como [session_id@hh:mm:ss], copiando o id da sessão e o horário exatamente como aparecem, por exemplo [{example}].
+Se os trechos não responderem à pergunta, responda apenas: {not_found}"""
+context_label = "Trechos das reuniões:"
+session_header = "Sessão {id} ({date}):"
+question_label = "Pergunta:"
+not_found = "Não encontrei isso nas reuniões."
+stopwords = "a ao aos aquela aquele aquilo as até com como da das de dela dele deles depois diga disse do dos e é ela ele eles em entre era essa esse esta está este eu fez fizemos foi foram há isso já lhe mais mas me mesmo meu minha muito na nas não nem no nos nós o os ou para pela pelo por porque qual quais quando que quem se sem ser seu sua são só sobre também te tem têm teve tinha um uma umas uns você vocês vos"
 
 [cli]
 serving = "API do motor escutando em {url} (Ctrl+C para parar)."

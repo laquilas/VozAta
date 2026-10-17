@@ -56,7 +56,7 @@ engine/
     diarization/            pyannote.py, assign.py, embedder.py, live.py
     storage/                session_store.py, recovery.py, search_index.py
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github}.py
-    qa/                     retriever.py, answerer.py
+    qa/                     retriever.py, citations.py, answerer.py
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
@@ -500,3 +500,30 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
 - The prompt states both the conversation language and `APP_LANGUAGE` (minutes language).
 - If the LLM is unreachable: keep everything else, log a clear warning; `minutes <dir>` or
   `POST /sessions/{id}/minutes` regenerates later.
+
+## 13. Ask the meeting
+
+- `POST /ask {question, session_id?}` (24) starts `AskJob` (`api/ask_job.py`) on a background
+  thread and returns `answer_id`; one question at a time (`409 answer_in_progress`). The answer
+  streams as `answer_chunk` events and always ends with `answer_done` (citations, or a localized
+  `error` when the LLM fails). Event envelopes carry the scope as `session_id` (null = all).
+- **Retrieval** (`qa/retriever.py`): context lines are `[hh:mm:ss] Label: text` from each
+  session's best transcript (§8 precedence, speaker names applied) under a header
+  `Session <id> (<date>):`, and the context never exceeds `LLM_MAX_CHARS`.
+  - One session: the whole transcript when it fits; else the search hits of that session with
+    2 neighbouring segments on each side (the hit alone when its neighbours do not fit), in time
+    order. No hits → empty context.
+  - All sessions: search hits grouped per session (sessions ordered by their best hit), trimmed to
+    the budget.
+  - Search terms: the question's words minus the `APP_LANGUAGE` stopwords (`qa.stopwords`).
+    `TranscriptSearch.search` ANDs words, so each term is searched on its own (prefix match) and
+    segments matching more terms rank first, then by best FTS rank.
+- **Answer** (`qa/answerer.py`, `MeetingAnswerer`): localized prompt (`qa.*`) in `APP_LANGUAGE`
+  that allows only the given excerpts and requires citations `[session_id@hh:mm:ss]`; streamed
+  through `LanguageModel.stream`; the model is released afterwards (VRAM rule). An empty context
+  answers `qa.not_found` without calling the model. Before the LLM loads, a kept Whisper
+  (`WHISPER_KEEP_LOADED`) is released unless a recording is using it.
+- **Citations** (`qa/citations.py`): each `[...]` may hold several items; an item without a
+  session id takes the previous one in the bracket (or the only session of the context); a time
+  maps to the last context segment whose displayed time is at or before it. Malformed times,
+  sessions not in the context and duplicates are dropped → `{session_id, segment_id, start}`.

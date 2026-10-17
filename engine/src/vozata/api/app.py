@@ -11,6 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from vozata import __version__
 from vozata.api.container import ApiContainer
 from vozata.api.errors import install_error_handlers
+from vozata.api.routes import ask as ask_routes
 from vozata.api.routes import (
     branding,
     devices,
@@ -53,6 +54,7 @@ def create_app(container: ApiContainer) -> FastAPI:
         templates,
     ):
         app.include_router(module.router, responses=ERROR_RESPONSES)
+    app.include_router(ask_routes.router, responses=ERROR_RESPONSES)  # phase 24
     app.include_router(branding.router)
 
     @app.websocket("/ws")

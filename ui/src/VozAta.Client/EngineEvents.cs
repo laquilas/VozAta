@@ -69,6 +69,13 @@ public static class EngineEventParser
                     data.GetProperty("start").GetDouble(),
                     data.GetProperty("text").GetString() ?? ""),
                 "model_loading" => new ModelLoadingEvent(sessionId, data.GetProperty("loading").GetBoolean()),
+                "answer_chunk" => new AnswerChunkEvent(
+                    sessionId, data.GetProperty("answer_id").GetString() ?? "", data.GetProperty("text").GetString() ?? ""),
+                "answer_done" => new AnswerDoneEvent(
+                    sessionId,
+                    data.GetProperty("answer_id").GetString() ?? "",
+                    data.GetProperty("citations").Deserialize<List<Citation>>(EngineJson.Options) ?? throw new JsonException(),
+                    data.TryGetProperty("error", out var answerError) ? answerError.GetString() : null),
                 "error" => new ErrorEvent(
                     sessionId, data.GetProperty("code").GetString() ?? "", data.GetProperty("message").GetString() ?? ""),
                 _ => new UnknownEvent(sessionId, type),

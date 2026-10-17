@@ -44,6 +44,9 @@ transcript_still_recording = "Session \"{id}\" is still recording; edit the tran
 device_not_found = "Audio device not found: {reason}"
 invalid_request = "Invalid request: {details}"
 internal_error = "Unexpected engine error. Check the engine log for details."
+answer_failed = "The question could not be answered ({reason}). Check that Ollama is running and the model is pulled."
+answer_in_progress = "Another question is still being answered. Wait until it finishes, then ask again."
+ask_unavailable = "Asking questions about meetings is not available in this engine."
 
 [languages]
 en = "English"
@@ -67,6 +70,17 @@ Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
 transcript_label = "Transcript:"
 notes_label = "Notes:"
+
+[qa]
+system = "You answer questions about recorded meetings using only the meeting excerpts you are given. Never invent names, dates, numbers or decisions. If the excerpts do not contain the answer, say that it was not found in the meetings."
+instructions = """Answer the question in {output_language}, concisely, using only the excerpts below.
+After each statement, cite the excerpt line it comes from as [session_id@hh:mm:ss], copying the session id and the time exactly as they appear, for example [{example}].
+If the excerpts do not answer the question, reply only: {not_found}"""
+context_label = "Meeting excerpts:"
+session_header = "Session {id} ({date}):"
+question_label = "Question:"
+not_found = "I could not find this in the meetings."
+stopwords = "a about above after again all also am an and any are as at be been before being below between both but by can could did do does doing done down during each few for from further had has have having he her here hers him his how i if in into is it its just me more most my no nor not now of off on once only or other our out over own please said same she should so some such tell than that the their them then there these they this those through to too under until up us very was we were what when where which while who whom why will with would you your"
 
 [cli]
 serving = "Engine API listening on {url} (Ctrl+C to stop)."

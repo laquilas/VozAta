@@ -150,6 +150,27 @@
   <data name="SearchNoResults" xml:space="preserve">
     <value>No matches in any transcript.</value>
   </data>
+  <data name="AskHeader" xml:space="preserve">
+    <value>Ask the meetings</value>
+  </data>
+  <data name="AskPlaceholder" xml:space="preserve">
+    <value>Ask a question, e.g. what did we decide about the beta?</value>
+  </data>
+  <data name="AskButton" xml:space="preserve">
+    <value>Ask</value>
+  </data>
+  <data name="AskSelectedOnly" xml:space="preserve">
+    <value>Only the selected meeting</value>
+  </data>
+  <data name="AskThinking" xml:space="preserve">
+    <value>Looking through the meetings…</value>
+  </data>
+  <data name="AskSources" xml:space="preserve">
+    <value>Sources (click to open):</value>
+  </data>
+  <data name="AskConnectionLost" xml:space="preserve">
+    <value>The connection to the engine was lost before the answer finished. Ask again.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Select a session to read its transcript and minutes.</value>
   </data>

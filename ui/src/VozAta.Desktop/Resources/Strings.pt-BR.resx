@@ -150,6 +150,27 @@
   <data name="SearchNoResults" xml:space="preserve">
     <value>Nenhum resultado em nenhuma transcrição.</value>
   </data>
+  <data name="AskHeader" xml:space="preserve">
+    <value>Pergunte às reuniões</value>
+  </data>
+  <data name="AskPlaceholder" xml:space="preserve">
+    <value>Faça uma pergunta, por exemplo: o que decidimos sobre o beta?</value>
+  </data>
+  <data name="AskButton" xml:space="preserve">
+    <value>Perguntar</value>
+  </data>
+  <data name="AskSelectedOnly" xml:space="preserve">
+    <value>Somente a reunião selecionada</value>
+  </data>
+  <data name="AskThinking" xml:space="preserve">
+    <value>Procurando nas reuniões…</value>
+  </data>
+  <data name="AskSources" xml:space="preserve">
+    <value>Fontes (clique para abrir):</value>
+  </data>
+  <data name="AskConnectionLost" xml:space="preserve">
+    <value>A conexão com o motor caiu antes de a resposta terminar. Pergunte novamente.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecione uma sessão para ler a transcrição e a ata.</value>
   </data>
