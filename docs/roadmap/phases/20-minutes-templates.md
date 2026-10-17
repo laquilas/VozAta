@@ -57,3 +57,28 @@ User-defined templates edited in the UI (backlog).
 
 > Execute phase 20 of the roadmap (`docs/roadmap/phases/20-minutes-templates.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/20-minutes-templates`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** write `tests/minutes/test_template_repository.py`, then the five template TOML
+  files and `minutes/template_repository.py` (package data in `pyproject.toml`).
+
+### Steps
+
+- [ ] Template files (en, pt-BR, es) + `TemplateRepository` with validation, package data,
+      PyInstaller spec check
+- [ ] Prompts and `MinutesGenerator` built from the selected template (general = phase-04 sections)
+- [ ] `MINUTES_TEMPLATE` config key (`config.py`, `settings_fields.py`, `.env.example`)
+- [ ] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
+- [ ] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
+      (unknown → 422 `unknown_template`)
+- [ ] UI client: `GetTemplatesAsync`, template in start and regenerate requests
+- [ ] UI: template ComboBox on the Start screen and in the regenerate action
+- [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
+
+### Decisions and notes
+
+- (none yet)
