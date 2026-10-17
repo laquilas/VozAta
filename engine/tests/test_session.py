@@ -709,3 +709,14 @@ def test_the_vocabulary_is_stored_and_reaches_every_transcription_as_hints(
     assert rig.store.read_meta(rig.session.id)["vocabulary"] == ["Jéssica", "Avalonia"]
     assert rig.transcriber.calls
     assert {hints for _, _, hints in rig.transcriber.calls} == {"Jéssica, Avalonia"}
+
+
+def test_the_minutes_at_stop_get_the_session_vocabulary_as_a_glossary(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")], vocabulary=("Jéssica",))
+    rig.session.start()
+
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    assert "minutes.glossary(terms=Jéssica)" in rig.llm.prompts[0][1]

@@ -103,3 +103,36 @@ def test_reduce_prompt_combines_notes_with_the_minutes_instructions() -> None:
     assert "reunión realizada en portugués" in user
     assert "## Elementos de acción" in user
     assert user.endswith("Notas:\nnota uno\n\n---\n\nnota dos")
+
+
+@pytest.mark.parametrize("language", list(AppLanguage))
+def test_the_glossary_appears_in_every_prompt_in_every_language(language: AppLanguage) -> None:
+    template = TEMPLATES.get("general").localized(language)
+    localizer = loc(language)
+    glossary = ["Jéssica", "N5 Sensors"]
+
+    _, single = minutes_prompt(localizer, template, "t", ConversationLanguage.EN, glossary)
+    _, mapped = map_prompt(localizer, template, "t", 1, 2, ConversationLanguage.EN, glossary)
+    _, reduced = reduce_prompt(localizer, template, ["n"], ConversationLanguage.EN, glossary)
+
+    block = localizer.t("minutes.glossary", terms="Jéssica, N5 Sensors")
+    for user in (single, mapped, reduced):
+        assert block in user
+        assert "{" not in user
+    assert single.index(block) < single.index(localizer.t("minutes.transcript_label"))
+    assert reduced.index(block) < reduced.index(localizer.t("minutes.notes_label"))
+
+
+def test_without_a_glossary_the_prompt_has_no_glossary_block() -> None:
+    localizer = loc(AppLanguage.EN)
+    _, user = minutes_prompt(localizer, minutes_template(), "t", ConversationLanguage.EN)
+
+    assert "Glossary" not in user
+
+
+def test_the_english_glossary_asks_for_these_spellings() -> None:
+    _, user = minutes_prompt(
+        loc(AppLanguage.EN), minutes_template(), "t", ConversationLanguage.EN, ["Jéssica"]
+    )
+
+    assert "Use exactly these spellings: Jéssica" in user

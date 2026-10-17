@@ -61,6 +61,7 @@ Escreva notas concisas em {output_language} com o que esta parte diz para estes 
 {guidance}
 Use apenas fatos desta parte."""
 reduce_instructions = "Estas são notas de partes consecutivas de uma mesma reunião conduzida em {conversation_language}. Combine-as na ata da reunião."
+glossary = "Glossário: estes nomes e termos podem aparecer na transcrição, talvez reconhecidos de forma errada. Use exatamente esta grafia: {terms}"
 transcript_label = "Transcrição:"
 notes_label = "Notas:"
 

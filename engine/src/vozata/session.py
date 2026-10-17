@@ -264,7 +264,9 @@ class RecordingSession:
             return
         try:
             labeler = self._c.labeler.with_names(self._store.speaker_names(self.id))
-            minutes = self._c.minutes.generate(segments, labeler, self._lock.language)
+            minutes = self._c.minutes.generate(
+                segments, labeler, self._lock.language, self._c.vocabulary
+            )
         except Exception as error:
             _log.exception("Generating minutes for %s failed", self.id)
             command = f'python -m vozata minutes "{self.paths.root}"'

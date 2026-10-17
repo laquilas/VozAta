@@ -133,3 +133,27 @@ def test_diarized_speakers_appear_with_their_stored_names(tmp_path: Path) -> Non
     write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
 
     assert "Ana: Hi." in llm.prompts[0][1]
+
+
+def test_the_stored_vocabulary_is_the_glossary_of_a_regeneration(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    session_id = _session(store, {"vocabulary": ["Jéssica", 3, " ", "N5 Sensors"]})
+    llm = FakeLanguageModel(["# M"])
+
+    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+
+    assert "minutes.glossary(terms=Jéssica, N5 Sensors)" in llm.prompts[0][1]
+
+
+@pytest.mark.parametrize("stored", [None, "Jéssica", []])
+def test_a_missing_or_malformed_vocabulary_gives_no_glossary(
+    tmp_path: Path, stored: object
+) -> None:
+    store = SessionStore(tmp_path)
+    meta = {} if stored is None else {"vocabulary": stored}
+    session_id = _session(store, meta)
+    llm = FakeLanguageModel(["# M"])
+
+    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+
+    assert "minutes.glossary" not in llm.prompts[0][1]

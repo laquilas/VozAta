@@ -187,3 +187,23 @@ def test_the_template_sets_the_sections_of_every_prompt() -> None:
     users = [user for _, user, _ in llm.prompts]
     assert all("- Blockers:" in user for user in users)
     assert "## Updates by person" in users[-1]
+
+
+def test_the_vocabulary_reaches_every_prompt_as_a_glossary() -> None:
+    short, long = FakeLanguageModel(["# M"]), FakeLanguageModel(["n1", "n2", "# M"])
+    segments = [seg(0, "first line here"), seg(9, "second line here")]
+
+    generator(short).generate(segments, LABELER, ConversationLanguage.EN, ["Jéssica"])
+    generator(long, max_chars=20).generate(segments, LABELER, ConversationLanguage.EN, ["Jéssica"])
+
+    for _, user, _ in [*short.prompts, *long.prompts]:
+        assert "Use exactly these spellings: Jéssica" in user
+    assert len(long.prompts) == 3  # map, map, reduce
+
+
+def test_without_vocabulary_there_is_no_glossary() -> None:
+    llm = FakeLanguageModel(["# M"])
+
+    generator(llm).generate([seg(0, "hi")], LABELER, ConversationLanguage.EN)
+
+    assert "Glossary" not in llm.prompts[0][1]

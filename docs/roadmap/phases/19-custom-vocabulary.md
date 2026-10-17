@@ -64,8 +64,8 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 13:58
-- **Next step:** minutes glossary: `vocabulary` argument on `MinutesGenerator.generate`, a `minutes.glossary` locale block (en/pt-BR/es) in every prompt (single, map, reduce), passed at stop and read from `session.json` on regeneration.
+- **Updated:** 2026-10-17 14:00
+- **Next step:** API: `GET|PUT /vocabulary` (`api/routes/vocabulary.py`, `ApiContainer.vocabulary_file`), tests in `tests/api/test_vocabulary.py`.
 
 ### Steps
 
@@ -76,7 +76,7 @@ Automatic term extraction from previous meetings.
       `hallucination_silence_threshold`; OpenAI-compatible `prompt`
 - [x] Session: merge global + session terms → `session.json.vocabulary`, hints to every
       `transcribe` call
-- [ ] Minutes prompt glossary (live stop and regeneration)
+- [x] Minutes prompt glossary (live stop and regeneration)
 - [ ] API: `GET|PUT /vocabulary`, `vocabulary` in `POST /sessions`
 - [ ] UI: client + DTOs, settings tab "Vocabulary", Start screen "Terms for this meeting"
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
@@ -86,3 +86,4 @@ Automatic term extraction from previous meetings.
 - `RollingContext` (transcription/context.py) is done; a long silence is 30 s and a very low `avg_logprob` is < -1.0 (constants in the module).
 - Port: `Transcriber.transcribe(samples, language, hints=None, prompt=None)`; `prompt` is the rolling context only. faster-whisper sends the vocabulary as `hotwords` and the context as `initial_prompt` (both land in the same decoder prompt), OpenAI-compatible joins them into one `prompt` field. `TranscriptionResult.avg_logprob` (mean of segments, None when unknown).
 - `session.json.vocabulary` is always written at start (an empty list when there are no terms). An unreadable glossary file is logged and the session continues with its own terms.
+- The glossary is a separate `minutes.glossary` locale block added after the template instructions in the single, map and reduce prompts; templates (phase 20) are untouched.
