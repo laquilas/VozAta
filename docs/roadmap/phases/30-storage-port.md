@@ -61,3 +61,27 @@ Any new storage backend (31, 32), migration (33), API shape changes.
 
 > Execute phase 30 of the roadmap (`docs/roadmap/phases/30-storage-port.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/30-storage-port`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** add the storage ports to `ports.py` (`SessionRepository`, `AudioStore`,
+  `AudioReader`, `RecoverableStore`) with `tests/test_ports.py` checks
+
+### Steps
+
+- [x] Start the phase (status, Progress)
+- [ ] Storage ports in `ports.py`, `storage/files/` (`FileSessionRepository`, `FileAudioStore`)
+      and the shared contract suite (`tests/storage/repository_contract.py`)
+- [ ] Recording path on the ports: `session.py`, `session_pipeline.py`, live translation, mixer
+      (`AudioReader`), diarization (`materialize_wav`); `REPOSITORIES` / `AUDIO_STORES` in
+      `bootstrap.py`
+- [ ] Minutes, action items, task export, API routes and payloads on the repository
+- [ ] Recovery on `RecoverableStore`; CLI commands
+- [ ] Docs (architecture §5/§8), grep check, full suites, PR
+
+### Decisions and notes
+
+- (none yet)
