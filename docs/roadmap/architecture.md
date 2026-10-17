@@ -158,6 +158,7 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_segment(self, segment: TranscriptSegment) -> None: ...
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
     def on_minutes_ready(self, session_id: str) -> None: ...
+    def on_action_items_ready(self, session_id: str, count: int) -> None: ...  # (23)
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
@@ -238,7 +239,10 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    `diarization_failed` (with the `python -m vozata diarize` retry command), keeps the
    `system` labels and continues to step 6.
 6. If enabled: `MinutesGenerator` → `minutes.md`, then `llm.release()` (Ollama unloads per
-   `OLLAMA_KEEP_ALIVE`, also after a failed job); index the session for search.
+   `OLLAMA_KEEP_ALIVE`, also after a failed job); if `EXTRACT_ACTION_ITEMS` too:
+   `ActionItemExtractor` → `action_items.json` (items already exported are kept), then
+   `llm.release()`, `on_action_items_ready` (23; a failure reports `action_items_failed`); index
+   the session for search.
 7. `status = done`, `ended_at` set in `session.json`.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same

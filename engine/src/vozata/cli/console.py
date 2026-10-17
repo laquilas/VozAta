@@ -90,6 +90,10 @@ class ConsoleObserver:
         with self._lock:
             self._print(self._t("cli.minutes_ready"))
 
+    def on_action_items_ready(self, session_id: str, count: int) -> None:
+        with self._lock:
+            self._print(self._t("cli.action_items_ready", count=count))
+
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         pass  # interim text is a desktop feature (phase 28 scope)
 

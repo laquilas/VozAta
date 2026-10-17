@@ -208,6 +208,9 @@ class FakeSessionObserver:
     def on_minutes_ready(self, session_id: str) -> None:
         self.events.append(("minutes_ready", session_id))
 
+    def on_action_items_ready(self, session_id: str, count: int) -> None:
+        self.events.append(("action_items_ready", session_id, count))
+
     def on_model_loading(self, loading: bool) -> None:
         self.events.append(("model_loading", loading))
 

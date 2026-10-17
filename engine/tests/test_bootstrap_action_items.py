@@ -2,10 +2,29 @@
 
 from __future__ import annotations
 
-from vozata.bootstrap import TASK_EXPORTERS, build_task_exporter, task_targets
+from pathlib import Path
+
+import pytest
+
+from tests.fakes import FakeSessionObserver
+from tests.test_bootstrap import devices  # noqa: F401  (fixture)
+from vozata.bootstrap import TASK_EXPORTERS, build_session, build_task_exporter, task_targets
 from vozata.config import Settings
 from vozata.export.tasks.azure_devops import AzureDevOpsExporter
 from vozata.export.tasks.github import GitHubIssuesExporter
+from vozata.minutes.action_items import ActionItemExtractor
+
+
+@pytest.mark.usefixtures("devices")
+def test_sessions_extract_action_items_only_with_minutes_and_the_flag(tmp_path: Path) -> None:
+    def extractor(**overrides: object) -> object:
+        settings = Settings(output_dir=tmp_path, **overrides)  # type: ignore[arg-type]
+        return build_session(settings, FakeSessionObserver())._c.action_items
+
+    assert isinstance(extractor(), ActionItemExtractor)
+    assert extractor(extract_action_items=False) is None
+    assert extractor(generate_minutes=False) is None
+
 
 AZDO = {"azdo_org_url": "https://dev.azure.com/acme", "azdo_project": "P", "azdo_pat": "pat"}
 GITHUB = {"github_repo": "acme/vozata", "github_token": "ghp"}

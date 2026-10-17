@@ -62,8 +62,8 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** stop step in `session.py` (extraction after minutes, `on_action_items_ready`
-  observer event → `action_items_ready`)
+- **Next step:** API routes `POST/GET/PUT /sessions/{id}/action-items` and `POST .../export`
+  (background `ActionItemsJob`, export service), container fields wired in `bootstrap.py`
 
 ### Steps
 
@@ -71,7 +71,7 @@ Calendar invites, Jira (another `TaskExporter` later).
 - [x] `minutes/action_items.py`: `ActionItemExtractor` (localized prompt, JSON schema, one retry)
 - [x] Config keys `EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*` (secrets masked) + `.env.example`
 - [x] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
-- [ ] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
+- [x] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
 - [ ] API: `POST/GET/PUT /sessions/{id}/action-items`, `POST .../export`
 - [ ] UI: client methods + DTOs, `ActionItemsViewModel`, "Action items" tab, resources
 - [ ] Docs (architecture, api-contract), acceptance criteria, full suites, PR
@@ -85,3 +85,7 @@ Calendar invites, Jira (another `TaskExporter` later).
 - Azure DevOps: the due date goes to `Microsoft.VSTS.Scheduling.DueDate` only when it is an ISO
   date; if the process' Task type rejects it (HTTP 400) the task is created again without it (the
   due date is also in the description).
+- Stop step: one line in `RecordingSession.stop()` after `_write_minutes()` plus
+  `_extract_action_items()`; it runs only when minutes are on (`GENERATE_MINUTES`) and
+  `EXTRACT_ACTION_ITEMS` is true, so the `WHISPER_KEEP_LOADED` keep rule is unchanged. New
+  observer method `on_action_items_ready(session_id, count)` (console, WebSocket, fakes).

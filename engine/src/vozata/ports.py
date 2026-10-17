@@ -190,6 +190,10 @@ class SessionObserver(Protocol):
 
     def on_minutes_ready(self, session_id: str) -> None: ...
 
+    def on_action_items_ready(self, session_id: str, count: int) -> None:
+        """Action items were extracted and saved (phase 23)."""
+        ...
+
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         """Interim text of a channel (phase 28); empty `text` clears it. Never written to files."""
         ...

@@ -13,6 +13,8 @@ from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.session_action_items import Extractor, write_session_action_items
+from vozata.minutes.session_minutes import EmptyTranscriptError
 from vozata.minutes.template_repository import DEFAULT_TEMPLATE
 from vozata.ports import (
     AudioMixer,
@@ -58,6 +60,7 @@ class SessionComponents:
     search_index: TranscriptSearch | None = None  # None: the session is not indexed (22)
     minutes_template: str = DEFAULT_TEMPLATE  # stored in session.json (phase 20)
     vocabulary: tuple[str, ...] = ()  # session + glossary terms (phase 19), session terms first
+    action_items: Extractor | None = None  # None: no action items at stop (phase 23)
 
 
 class SessionStartError(RuntimeError):
@@ -164,6 +167,7 @@ class RecordingSession:
         self._release_transcriber()  # 4
         self._identify_speakers()  # 5
         self._write_minutes()  # 6
+        self._extract_action_items()  # 6: action items (phase 23)
         self._index_transcript()  # 6: search (phase 22)
         self._meta.ended(self._store.now())  # 7
         self._set_status(SessionStatus.DONE)
@@ -274,6 +278,22 @@ class RecordingSession:
             return
         self.paths.minutes_md.write_text(minutes + "\n", encoding="utf-8", newline="\n")
         self._observer.on_minutes_ready(self.id)
+
+    def _extract_action_items(self) -> None:
+        """After the minutes, with the same model (phase 23); a failure keeps everything else."""
+        if self._c.action_items is None:
+            return
+        try:
+            items = write_session_action_items(
+                self._store, self.id, self._c.action_items, self._c.labeler
+            )
+        except EmptyTranscriptError:
+            return
+        except Exception as error:
+            _log.exception("Extracting action items for %s failed", self.id)
+            self._error("action_items_failed", reason=str(error))
+            return
+        self._observer.on_action_items_ready(self.id, len(items))
 
     def _index_transcript(self) -> None:
         if self._c.search_index is None:

@@ -45,6 +45,7 @@ from vozata.export.tasks.github import GitHubIssuesExporter
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
+from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import (
@@ -198,6 +199,14 @@ def build_minutes_generator(
     )
 
 
+def build_action_item_extractor(
+    settings: Settings, localizer: Localizer | None = None
+) -> ActionItemExtractor:
+    """Action items in `APP_LANGUAGE` from the `LLM_PROVIDER` model (phase 23)."""
+    llm = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
+    return ActionItemExtractor(llm, localizer or build_localizer(settings), settings.llm_max_chars)
+
+
 def build_answerer(
     settings: Settings, store: SessionStore, search_index: TranscriptSearch | None
 ) -> MeetingAnswerer:
@@ -301,6 +310,9 @@ def build_session(
         search_index=build_search_index(settings),
         minutes_template=template,
         vocabulary=tuple(session_vocabulary(settings, vocabulary, env_file)),
+        action_items=build_action_item_extractor(settings, localizer)
+        if minutes is not None and settings.extract_action_items
+        else None,
     )
     return RecordingSession(
         settings,
