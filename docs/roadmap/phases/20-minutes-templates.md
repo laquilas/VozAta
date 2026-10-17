@@ -62,14 +62,14 @@ User-defined templates edited in the UI (backlog).
 
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:00
-- **Next step:** write `tests/minutes/test_template_repository.py`, then the five template TOML
-  files and `minutes/template_repository.py` (package data in `pyproject.toml`).
+- **Updated:** 2026-10-17 10:40
+- **Next step:** build the minutes prompts from a `LocalizedTemplate` (`prompts.py`, locale keys
+  `minutes.instructions` / `map_instructions`) and give `MinutesGenerator` a template.
 
 ### Steps
 
-- [ ] Template files (en, pt-BR, es) + `TemplateRepository` with validation, package data,
-      PyInstaller spec check
+- [x] Template files (en, pt-BR, es) + `TemplateRepository` with validation, package data,
+      PyInstaller spec check — this commit
 - [ ] Prompts and `MinutesGenerator` built from the selected template (general = phase-04 sections)
 - [ ] `MINUTES_TEMPLATE` config key (`config.py`, `settings_fields.py`, `.env.example`)
 - [ ] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
@@ -81,4 +81,7 @@ User-defined templates edited in the UI (backlog).
 
 ### Decisions and notes
 
-- (none yet)
+- Template files carry a top-level `order` (position in `GET /templates`); ids are the file
+  names. `collect_data_files("vozata")` in `packaging/engine.spec` already bundles every data file
+  of the package, so the spec only needed its comment updated (a packaging test checks both the
+  `package-data` glob and the spec).

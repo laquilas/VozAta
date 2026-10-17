@@ -1,0 +1,86 @@
+# General meeting: the phase-04 sections.
+order = 1
+
+[en]
+name = "General meeting"
+instructions = "Write general-purpose minutes that let someone who missed the meeting catch up quickly."
+
+[[en.sections]]
+heading = "Context"
+guidance = "why the meeting took place and who took part, when this was said"
+
+[[en.sections]]
+heading = "Summary"
+guidance = "a short paragraph with the outcome of the meeting"
+
+[[en.sections]]
+heading = "Topics"
+guidance = "the subjects discussed, one bullet each with the main points"
+
+[[en.sections]]
+heading = "Decisions"
+guidance = "every decision that was made"
+
+[[en.sections]]
+heading = "Action items"
+guidance = "each task with its owner and due date when they were mentioned"
+
+[[en.sections]]
+heading = "Open issues"
+guidance = "questions and problems left unresolved"
+
+["pt-BR"]
+name = "Reunião geral"
+instructions = "Escreva uma ata de uso geral que permita a quem faltou à reunião se atualizar rapidamente."
+
+[["pt-BR".sections]]
+heading = "Contexto"
+guidance = "por que a reunião aconteceu e quem participou, quando isso foi dito"
+
+[["pt-BR".sections]]
+heading = "Resumo"
+guidance = "um parágrafo curto com o resultado da reunião"
+
+[["pt-BR".sections]]
+heading = "Tópicos"
+guidance = "os assuntos discutidos, um item cada com os pontos principais"
+
+[["pt-BR".sections]]
+heading = "Decisões"
+guidance = "todas as decisões tomadas"
+
+[["pt-BR".sections]]
+heading = "Itens de ação"
+guidance = "cada tarefa com responsável e prazo quando tiverem sido mencionados"
+
+[["pt-BR".sections]]
+heading = "Questões em aberto"
+guidance = "perguntas e problemas que ficaram sem solução"
+
+[es]
+name = "Reunión general"
+instructions = "Redacta un acta de uso general que permita a quien no asistió ponerse al día rápidamente."
+
+[[es.sections]]
+heading = "Contexto"
+guidance = "por qué se realizó la reunión y quiénes participaron, cuando se haya dicho"
+
+[[es.sections]]
+heading = "Resumen"
+guidance = "un párrafo breve con el resultado de la reunión"
+
+[[es.sections]]
+heading = "Temas"
+guidance = "los asuntos tratados, un punto cada uno con las ideas principales"
+
+[[es.sections]]
+heading = "Decisiones"
+guidance = "todas las decisiones tomadas"
+
+[[es.sections]]
+heading = "Elementos de acción"
+guidance = "cada tarea con su responsable y fecha límite cuando se hayan mencionado"
+
+[[es.sections]]
+heading = "Asuntos pendientes"
+guidance = "preguntas y problemas que quedaron sin resolver"
