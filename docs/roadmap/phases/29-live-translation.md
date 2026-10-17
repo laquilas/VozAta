@@ -89,3 +89,8 @@ Text-to-speech of the translation; translating the minutes (they are already wri
   off; `TRANSLATION_MODEL_DIR` empty = Hugging Face cache download on first use.
 - Quick real check on the reference machine (offline, no audio): en → pt and en → es, warm median
   ~80 ms per sentence (max ~140 ms), first call ~0.7–0.8 s including the model load.
+- Marian translates only the first sentence of a multi-sentence input (found with a real pt
+  transcript: "Eu te dou um ping, né? Tipo assim, …" lost everything after the "?"). The provider
+  now splits each segment after `.`, `!`, `?`, `…` and translates the sentences in one batch.
+  Real transcript `20261016_095109` (32 pt segments) → en: warm median 91 ms, max 221 ms per
+  segment; first call 3.8 s with the model load.

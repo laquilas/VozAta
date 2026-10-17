@@ -41,9 +41,40 @@ def test_route_rejects_unsupported_languages() -> None:
 class FakeModel:
     def __init__(self, name: str) -> None:
         self.name = name
+        self.batches: list[list[str]] = []
 
-    def translate(self, text: str, prefix: str | None) -> str:
-        return f"{self.name}{prefix or ''}({text})"
+    def translate(self, texts: list[str], prefix: str | None) -> list[str]:
+        self.batches.append(texts)
+        return [f"{self.name}{prefix or ''}({text})" for text in texts]
+
+
+@pytest.mark.parametrize(
+    ("text", "parts"),
+    [
+        ("One. Two? Three! Four… five", ["One.", "Two?", "Three!", "Four…", "five"]),
+        ("  no end  ", ["no end"]),
+        ("3.5 million", ["3.5 million"]),
+        ("   ", []),
+    ],
+)
+def test_sentences_split_after_sentence_ends(text: str, parts: list[str]) -> None:
+    assert opus_mt.sentences(text) == parts
+
+
+def test_every_sentence_is_translated_in_one_batch() -> None:
+    models: list[FakeModel] = []
+
+    def load(folder: Path) -> FakeModel:
+        models.append(FakeModel(folder.name))
+        return models[-1]
+
+    translator = OpusMtTranslator(lambda name: Path(name), load)
+
+    assert translator.translate("Hi. How are you?", "en", "pt") == (
+        "en-ROMANCE>>pt_br<<(Hi.) en-ROMANCE>>pt_br<<(How are you?)"
+    )
+    assert models[0].batches == [["Hi.", "How are you?"]]
+    assert translator.translate("  ", "en", "pt") == "  "
 
 
 def test_translator_chains_models_and_loads_each_once() -> None:
@@ -120,9 +151,9 @@ def test_ctranslate2_marian_adds_the_target_token_and_eos() -> None:
     ct2 = FakeCt2()
     model = CTranslate2Marian(ct2, FakePieces(), FakePieces())
 
-    assert model.translate("good morning", ">>pt_br<<") == "bom dia"
+    assert model.translate(["good morning"], ">>pt_br<<") == ["bom dia"]
     assert ct2.batches == [[[">>pt_br<<", "▁good", "▁morning", "</s>"]]]
-    model.translate("hi", None)
+    model.translate(["hi"], None)
     assert ct2.batches[1] == [["▁hi", "</s>"]]
 
 
@@ -130,7 +161,7 @@ def test_ctranslate2_marian_wraps_model_errors() -> None:
     model = CTranslate2Marian(FakeCt2(RuntimeError("bad input")), FakePieces(), FakePieces())
 
     with pytest.raises(TranslationError, match="bad input"):
-        model.translate("hi", None)
+        model.translate(["hi"], None)
 
 
 def test_from_settings_fails_fast_without_the_extra(monkeypatch: pytest.MonkeyPatch) -> None:

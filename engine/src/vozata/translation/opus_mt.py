@@ -11,6 +11,7 @@ engine works without them. Models run on CPU with int8 weights (VRAM rule: Whisp
 from __future__ import annotations
 
 import importlib.util
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,7 @@ TARGET_TOKENS = {"pt": ">>pt_br<<", "es": ">>es<<"}  # en-ROMANCE target-languag
 LANGUAGES = ("en", "pt", "es")
 CPU_THREADS = 2  # leave the other cores to capture, VAD and the API
 BEAM_SIZE = 2
+_SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")  # Marian stops after one sentence: split first
 MISSING_EXTRA = (
     "the optional extra 'translation' is not installed "
     '(run: python -m pip install -e ".[translation]" in engine/)'
@@ -52,8 +54,15 @@ def route(source: str, target: str) -> list[Step]:
     return steps
 
 
+def sentences(text: str) -> list[str]:
+    """`text` split after `.`, `!`, `?` and `…`; blank parts are dropped."""
+    return [part for part in _SENTENCE_END.split(text.strip()) if part]
+
+
 class MarianModel(Protocol):
-    def translate(self, text: str, prefix: str | None) -> str: ...
+    def translate(self, texts: list[str], prefix: str | None) -> list[str]:
+        """Each text translated, in one batch; `prefix` is the target-language token."""
+        ...
 
 
 ModelLocator = Callable[[str], Path]  # model name -> folder with model.bin and the .spm files
@@ -69,9 +78,13 @@ class OpusMtTranslator:
         self._models: dict[str, MarianModel] = {}
 
     def translate(self, text: str, source: str, target: str) -> str:
-        for step in route(source, target):
-            text = self._model(step.model).translate(text, step.prefix)
-        return text
+        steps = route(source, target)
+        parts = sentences(text)
+        if not steps or not parts:
+            return text
+        for step in steps:
+            parts = self._model(step.model).translate(parts, step.prefix)
+        return " ".join(part for part in parts if part)
 
     def close(self) -> None:
         self._models.clear()  # CTranslate2 frees the weights with the last reference
@@ -121,14 +134,14 @@ class CTranslate2Marian:
         self._source = source
         self._target = target
 
-    def translate(self, text: str, prefix: str | None) -> str:
-        pieces = self._source.encode(text, out_type=str)
-        tokens = ([prefix] if prefix else []) + pieces + ["</s>"]
+    def translate(self, texts: list[str], prefix: str | None) -> list[str]:
+        head = [prefix] if prefix else []
+        batch = [head + self._source.encode(text, out_type=str) + ["</s>"] for text in texts]
         try:
-            results = self._translator.translate_batch([tokens], beam_size=BEAM_SIZE)
+            results = self._translator.translate_batch(batch, beam_size=BEAM_SIZE)
         except Exception as error:
             raise TranslationError(f"translation failed: {error}") from error
-        return self._target.decode(results[0].hypotheses[0]).strip()
+        return [self._target.decode(result.hypotheses[0]).strip() for result in results]
 
 
 def require_extra() -> None:
