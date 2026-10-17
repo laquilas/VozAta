@@ -416,6 +416,9 @@ def build_recovery_session(
         search_index=build_search_index(settings) if in_output_dir else None,
         minutes_template=template,
         vocabulary=tuple(stored_vocabulary(meta)),
+        action_items=build_action_item_extractor(settings, localizer)
+        if minutes is not None and settings.extract_action_items
+        else None,
     )
     return RecordingSession(settings, store, components, observer, settings.transcription_language)
 
