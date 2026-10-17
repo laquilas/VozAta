@@ -54,7 +54,7 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - **Branch:** `feature/22-search`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** UI: `SearchViewModel` (debounce, grouping), search box in `HistoryView`, open the session detail scrolled to the segment
+- **Next step:** tick the acceptance criteria, set README status `done`, write the manual check recipe, open the PR
 
 ### Steps
 
@@ -62,7 +62,7 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - [x] Engine: `SearchIndex` (FTS5, accent-insensitive, safe query, snippet markers) behind the `TranscriptSearch` port
 - [x] Engine: index at stop step 6; `python -m vozata reindex`
 - [x] Engine: `GET /search`; first-run rebuild when `index.db` is missing; contract docs
-- [ ] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
+- [x] UI: `IEngineClient.SearchAsync`, `SearchViewModel` (debounce, grouping), search box in History, open the session scrolled to the segment
 - [ ] Acceptance criteria, README status `done`, PR
 
 ### Decisions and notes
@@ -84,3 +84,12 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
   extra call. `ApiContainer.search_index` defaults to `None` (no hits) so other test containers
   need no change. `serve` starts a daemon thread running `SearchIndex.ensure(store)`: sessions
   recorded before this phase become searchable without running `reindex`.
+- UI: `SearchViewModel` (owned by `HistoryViewModel.Search`) searches 300 ms after typing stops
+  (injectable delay), needs 2+ characters, cancels a search in flight on a new edit, and groups
+  hits by session (ordered by each session's best hit; rows in transcript order). While a query is
+  active the results replace the session list. Opening a hit selects the session (loading older
+  pages when needed), switches the detail to the Transcript tab (`SelectedTab`) and focuses the
+  line (`FocusSegment` → `FocusedLine`, highlighted; `Views/ScrollToItem` brings it into view).
+  `TranscriptLine` gained init-only `SegmentId` and `IsFocused`. Highlighting uses the
+  `Views/SnippetText` attached property (bold runs). The detail changes are limited to the tab
+  binding and the transcript list (phase 20 only touches the regenerate action).

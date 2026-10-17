@@ -42,7 +42,8 @@ public sealed class SessionDetailViewModelTests
         await detail.LoadAsync();
 
         Assert.Equal(
-            [new TranscriptLine("00:00:02", "Me", "Good morning.", "mic"), new TranscriptLine("00:01:05", "Others", "Hi.", "system")],
+            [new TranscriptLine("00:00:02", "Me", "Good morning.", "mic") { SegmentId = "mic-000001" },
+             new TranscriptLine("00:01:05", "Others", "Hi.", "system") { SegmentId = "system-000001" }],
             detail.Lines);
         Assert.True(detail.HasMinutes);
         Assert.Equal(

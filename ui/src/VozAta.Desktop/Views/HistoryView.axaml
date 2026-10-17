@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VozAta.Desktop.ViewModels"
+             xmlns:views="using:VozAta.Desktop.Views"
              x:Class="VozAta.Desktop.Views.HistoryView"
              x:DataType="vm:HistoryViewModel">
 
@@ -23,6 +24,9 @@
     <Style Selector="SelectableTextBlock.item">
       <Setter Property="Margin" Value="16,2,0,2" />
     </Style>
+    <Style Selector="SelectableTextBlock.focused">
+      <Setter Property="Background" Value="#33FFD54F" />
+    </Style>
     <Style Selector="Border.badge">
       <Setter Property="CornerRadius" Value="3" />
       <Setter Property="Padding" Value="6,1" />
@@ -36,12 +40,58 @@
       <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,0,0,6"
               Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}"
               Command="{Binding RefreshCommand}" />
+      <TextBox DockPanel.Dock="Top" Margin="0,0,0,6" Classes="clearButton"
+               Text="{Binding Search.Query}"
+               PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchPlaceholder]}"
+               AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchPlaceholder]}" />
       <Button DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,6,0,0"
               Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryLoadMore]}"
               Command="{Binding LoadMoreCommand}" IsVisible="{Binding CanLoadMore}" />
       <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
                  IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <!-- Search results (phase 22) replace the session list while there is a query -->
       <Panel>
+      <DockPanel IsVisible="{Binding Search.IsActive}">
+        <TextBlock DockPanel.Dock="Top" Margin="8" Opacity="0.6" FontStyle="Italic"
+                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Searching]}"
+                   IsVisible="{Binding Search.IsSearching}" />
+        <TextBlock DockPanel.Dock="Top" Margin="8" Foreground="#C62828" TextWrapping="Wrap"
+                   Text="{Binding Search.Error}"
+                   IsVisible="{Binding Search.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock DockPanel.Dock="Top" Margin="8" Opacity="0.6" TextWrapping="Wrap"
+                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchNoResults]}"
+                   IsVisible="{Binding Search.NoResults}" />
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Search.Groups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SearchGroup">
+                <StackPanel Margin="0,0,0,10">
+                  <TextBlock Text="{Binding Date}" FontWeight="SemiBold" Margin="4,0,0,2" />
+                  <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SearchResultRow">
+                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                Background="Transparent" Margin="0,1" Padding="6,4"
+                                Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).Search.OpenCommand}"
+                                CommandParameter="{Binding}">
+                          <StackPanel Spacing="2">
+                            <StackPanel Orientation="Horizontal" Spacing="8" Opacity="0.75">
+                              <TextBlock Text="{Binding Time}" FontFamily="Consolas, monospace" />
+                              <TextBlock Text="{Binding Label}" />
+                            </StackPanel>
+                            <TextBlock TextWrapping="Wrap" views:SnippetText.Parts="{Binding Parts}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+      <Panel IsVisible="{Binding !Search.IsActive}">
         <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryEmpty]}"
                    Opacity="0.6" TextWrapping="Wrap" Margin="8" IsVisible="{Binding IsEmpty}" />
         <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}">
@@ -67,6 +117,7 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
+      </Panel>
       </Panel>
     </DockPanel>
 
@@ -109,7 +160,7 @@
                 <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
                            IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
               </StackPanel>
-              <TabControl>
+              <TabControl SelectedIndex="{Binding SelectedTab}">
                 <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabMinutes]}">
                   <Panel>
                     <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoMinutes]}"
@@ -133,11 +184,13 @@
                     <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoTranscript]}"
                                Opacity="0.6" Margin="8" IsVisible="{Binding !Lines.Count}" />
                     <ScrollViewer>
-                      <ItemsControl ItemsSource="{Binding Lines}" Margin="8">
+                      <ItemsControl ItemsSource="{Binding Lines}" Margin="8"
+                                    views:ScrollToItem.Item="{Binding FocusedLine}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:TranscriptLine">
                             <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
-                                                 TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                                                 TextWrapping="Wrap" Margin="0,3" FontSize="15"
+                                                 Classes.focused="{Binding IsFocused}" />
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>

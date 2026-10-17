@@ -138,6 +138,15 @@
   <data name="HistoryEmpty" xml:space="preserve">
     <value>Nenhuma sessão ainda. Suas gravações aparecerão aqui.</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Buscar em todas as transcrições</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Buscando...</value>
+  </data>
+  <data name="SearchNoResults" xml:space="preserve">
+    <value>Nenhum resultado em nenhuma transcrição.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecione uma sessão para ler a transcrição e a ata.</value>
   </data>
