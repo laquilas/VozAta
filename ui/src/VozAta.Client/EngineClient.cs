@@ -39,6 +39,9 @@ public interface IEngineClient
     /// <summary><c>POST /sessions/{id}/minutes</c>; a null template keeps the session's own.</summary>
     Task RegenerateMinutesAsync(string id, string? templateId = null, CancellationToken cancellationToken = default);
 
+    /// <summary><c>POST /sessions/{id}/recover</c> (phase 17): finish an interrupted session; progress via <c>status</c> events.</summary>
+    Task RecoverSessionAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /templates</c>: the minutes templates in display order (phase 20).</summary>
     Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default);
 
@@ -156,6 +159,12 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     {
         using var response = await SendRawAsync(
             HttpMethod.Post, $"sessions/{Escape(id)}/minutes", new { template = templateId }, cancellationToken);
+    }
+
+    public async Task RecoverSessionAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Post, $"sessions/{Escape(id)}/recover", null, cancellationToken);
     }
 
     public Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default) =>

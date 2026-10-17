@@ -173,3 +173,12 @@ def test_model_loading_is_announced_while_recording() -> None:
     console.on_model_loading(False)
 
     assert stream.getvalue().splitlines() == ["cli.loading_model", "cli.model_ready"]
+
+
+def test_translations_are_printed_indented_under_their_line() -> None:
+    stream = io.StringIO()
+    console = _console(stream)
+
+    console.on_translation("mic-000001", "pt", "Bom dia")
+
+    assert stream.getvalue() == "    (pt) Bom dia\n"

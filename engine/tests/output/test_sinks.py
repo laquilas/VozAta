@@ -74,6 +74,22 @@ def test_jsonl_sink_appends_one_flushed_line_per_segment(tmp_path: Path) -> None
     assert TranscriptSegment.from_dict(json.loads(lines[0])) == segment("mic-000001")
 
 
+def test_jsonl_sink_fsyncs_every_segment_and_markdown_does_not(
+    tmp_path: Path, labeler: SpeakerLabeler, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    synced: list[int] = []
+    monkeypatch.setattr("vozata.output.sinks.os.fsync", synced.append)
+    jsonl = JsonlSink(tmp_path / "transcript.jsonl")
+    markdown = MarkdownSink(tmp_path / "transcript.md", labeler)
+
+    for sink in (jsonl, markdown):
+        sink.emit(segment("mic-000001"))
+        sink.emit(segment("mic-000002"))
+        sink.close()
+
+    assert len(synced) == 2  # phase 17: a machine crash keeps every committed line
+
+
 def test_markdown_sink_appends_rendered_lines(tmp_path: Path, labeler: SpeakerLabeler) -> None:
     path = tmp_path / "transcript.md"
     sink = MarkdownSink(path, labeler)

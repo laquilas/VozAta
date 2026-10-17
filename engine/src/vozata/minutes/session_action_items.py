@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from vozata.domain import ActionItem, ConversationLanguage, TranscriptSegment
 from vozata.labels import SpeakerLabeler
-from vozata.minutes.session_minutes import EmptyTranscriptError, _stored_vocabulary
+from vozata.minutes.session_minutes import EmptyTranscriptError, stored_vocabulary
 from vozata.storage.action_items import (
     action_items_lock,
     read_action_items,
@@ -46,7 +46,7 @@ def write_session_action_items(
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
     named = labeler.with_names(store.speaker_names(session_id))
     fresh = extractor.extract(
-        segments, named, language, _stored_vocabulary(meta), _meeting_date(meta)
+        segments, named, language, stored_vocabulary(meta), _meeting_date(meta)
     )
     paths = store.paths(session_id)
     with action_items_lock:

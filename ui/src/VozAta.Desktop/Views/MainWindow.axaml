@@ -58,6 +58,31 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
+    <!-- Crash recovery dialog (phase 17): interrupted sessions with Recover / Later -->
+    <Border DockPanel.Dock="Top" Margin="16,4" Padding="16,12" CornerRadius="4" BorderThickness="1"
+            BorderBrush="#1E88E5" Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+            IsVisible="{Binding Recovery.IsOpen}">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding L[RecoveryTitle]}" FontWeight="SemiBold" FontSize="16" />
+        <TextBlock Text="{Binding L[RecoveryMessage]}" TextWrapping="Wrap" />
+        <ItemsControl ItemsSource="{Binding Recovery.Sessions}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RecoverySession">
+              <Grid ColumnDefinitions="Auto,Auto" Margin="0,2">
+                <TextBlock Text="{Binding Started}" FontWeight="SemiBold" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="1" Text="{Binding Duration}" Foreground="Gray" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+          <Button Content="{Binding L[RecoveryLater]}" Command="{Binding Recovery.LaterCommand}" />
+          <Button Classes="accent" Content="{Binding L[RecoveryRecover]}"
+                  Command="{Binding Recovery.RecoverCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <TabControl Margin="0,4,0,0">
       <TabItem Header="{Binding L[TabRecording]}">
         <DockPanel>
@@ -107,6 +132,19 @@
               </ComboBox>
               <TextBlock Text="{Binding DetectedLanguage}" FontStyle="Italic"
                          IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <!-- Live translation (phase 29) -->
+              <TextBlock Text="{Binding L[TranslateTo]}" Margin="0,6,0,0" />
+              <ComboBox HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding TranslationLanguages}"
+                        SelectedItem="{Binding SelectedTranslation}"
+                        IsEnabled="{Binding !IsRecording}"
+                        AutomationProperties.Name="{Binding L[TranslateTo]}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ChoiceOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
               <TextBlock Text="{Binding L[MinutesTemplate]}" Margin="0,6,0,0" />
               <ComboBox HorizontalAlignment="Stretch"
                         ItemsSource="{Binding Templates.Items}"
@@ -185,8 +223,14 @@
                   <ItemsControl ItemsSource="{Binding Segments}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:TranscriptLine">
-                        <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
-                                             TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                        <StackPanel Margin="0,3">
+                          <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
+                                               TextWrapping="Wrap" FontSize="15" />
+                          <!-- Live translation (phase 29): smaller and muted, under its line -->
+                          <SelectableTextBlock Text="{Binding Translation}" Foreground="Gray" FontSize="13"
+                                               TextWrapping="Wrap" Margin="16,1,0,0"
+                                               IsVisible="{Binding HasTranslation}" />
+                        </StackPanel>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

@@ -35,11 +35,26 @@ public sealed class EngineEventsTests
             new ModelLoadingEvent("s1", true),
             EngineEventParser.Parse("""{"type":"model_loading","session_id":"s1","data":{"loading":true}}"""));
         Assert.Equal(
+            new TranslationEvent("s1", "mic-000001", "pt", "Bom dia"),
+            EngineEventParser.Parse("""{"type":"translation","session_id":"s1","data":{"segment_id":"mic-000001","language":"pt","text":"Bom dia"}}"""));
+        Assert.Equal(
             new SpeakersRelabeledEvent("s1"),
             EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{"session_id":"s1"}}"""));
         Assert.Equal(
             new UnknownEvent("s1", "future_event"),
             EngineEventParser.Parse("""{"type":"future_event","session_id":"s1","data":{}}"""));
+    }
+
+    [Fact]
+    public void Parser_reads_the_recovery_offer()
+    {
+        var parsed = EngineEventParser.Parse(
+            """{"type":"recovery_available","session_id":null,"data":{"session_ids":["20261015_202358","20261014_090000"]}}""");
+
+        var offer = Assert.IsType<RecoveryAvailableEvent>(parsed);
+        Assert.Null(offer.SessionId);
+        Assert.Equal(["20261015_202358", "20261014_090000"], offer.SessionIds);
+        Assert.Null(EngineEventParser.Parse("""{"type":"recovery_available","session_id":null,"data":{"session_ids":null}}"""));
     }
 
     [Fact]

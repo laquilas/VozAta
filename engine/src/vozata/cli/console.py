@@ -104,6 +104,10 @@ class ConsoleObserver:
         with self._lock:
             self._print(self._t("cli.loading_model" if loading else "cli.model_ready"))
 
+    def on_translation(self, segment_id: str, language: str, text: str) -> None:
+        with self._lock:
+            self._print(f"    ({language}) {text}")  # under its line (phase 29)
+
     def on_error(self, code: str, message: str) -> None:
         with self._lock:
             self._print(message)

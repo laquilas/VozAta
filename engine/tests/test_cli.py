@@ -126,6 +126,33 @@ def test_reindex_command_rebuilds_the_index_in_the_output_dir(
     assert received == [(tmp_path, tmp_path / "index.db")]
 
 
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [(["recover", "--all"], None), (["recover", "rec/20261015_202358"], "rec/20261015_202358")],
+)
+def test_recover_command_targets_a_folder_or_every_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, argv: list[str], expected: str | None
+) -> None:
+    received: list[Any] = []
+
+    def fake_run(session_dir: Path | None, build: Any, *args: Any) -> int:
+        recovery = build(None)
+        received.append((session_dir, recovery.store._root, recovery._stale_after))
+        return 0
+
+    monkeypatch.setattr(cli, "run_recover", fake_run)
+
+    code, _ = _main(argv, env={"OUTPUT_DIR": str(tmp_path), "AUTOSAVE_SECONDS": "5"})
+
+    assert code == 0
+    assert received == [(Path(expected) if expected else None, tmp_path, 15.0)]
+
+
+def test_recover_needs_a_folder_or_all() -> None:
+    with pytest.raises(SystemExit):
+        _main(["recover"])
+
+
 def test_invalid_settings_exit_2_with_the_message() -> None:
     code, out = _main(["record"], env={"CHUNK_SECONDS": "abc"})
 

@@ -66,7 +66,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 14 | [Speaker identification (post-session)](phases/14-diarization-post.md) | 05 | done |
 | 15 | [Speaker identification (live)](phases/15-diarization-live.md) | 14, 06 | done |
 | 16 | [UI speaker rename](phases/16-ui-speaker-rename.md) | 09, 14 | done |
-| 17 | [Crash recovery](phases/17-crash-recovery.md) | 06 | todo |
+| 17 | [Crash recovery](phases/17-crash-recovery.md) | 06 | done |
 | 18 | [Echo dedupe](phases/18-echo-dedupe.md) | 05, 27 | done |
 | 19 | [Custom vocabulary](phases/19-custom-vocabulary.md) | 06, 10 | done |
 | 20 | [Minutes templates](phases/20-minutes-templates.md) | 04, 07 | done |
@@ -78,7 +78,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 26 | [Capture first, load later](phases/26-capture-first.md) | 06, 07 | done |
 | 27 | [Pause-based segmentation (VAD)](phases/27-vad-segmentation.md) | 05 | done |
 | 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | done |
-| 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | todo |
+| 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29.

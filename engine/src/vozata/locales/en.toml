@@ -24,6 +24,7 @@ minutes_failed = "The minutes could not be generated ({reason}). The recording a
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
 index_failed = "The session could not be added to the search index ({reason}). Rebuild the index with: python -m vozata reindex"
 action_items_failed = "The action items could not be extracted ({reason}). The minutes were kept; extract them again from the Action items tab of the session."
+translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
 unsupported_format = "Unsupported export format \"{format}\". Use one of: {allowed}."
@@ -56,6 +57,8 @@ unknown_action_item = "Action item \"{id}\" is not in this session. Reload the a
 empty_action_item = "Action item \"{id}\" needs a description."
 unknown_task_target = "Export target \"{target}\" is not configured. Configured targets: {allowed}."
 action_items_unavailable = "Extracting action items is not available in this engine."
+session_not_interrupted = "Session \"{id}\" was not interrupted, so there is nothing to recover."
+recovery_failed = "Session \"{id}\" could not be recovered ({reason}). Its files were kept; the reason is saved in session.json."
 
 [languages]
 en = "English"
@@ -143,6 +146,11 @@ diarize_failed = "The remote speakers could not be identified ({reason})."
 no_system_speech = "The session in {folder} has no system-audio speech, so there is nobody to identify."
 reindexed = "Search index rebuilt. Sessions indexed: {count}."
 reindex_failed = "The search index could not be rebuilt ({reason})."
+recovering = "Recovering the interrupted session {id}..."
+recovered = "Recovered: {folder}"
+recover_failed = "The session {id} could not be recovered ({reason}). Its files were kept."
+recover_none = "No interrupted sessions found."
+recover_not_interrupted = "The session in {folder} was not interrupted, so there is nothing to recover."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -162,6 +170,8 @@ session_dir = "session folder, e.g. recordings/20261015_202358"
 diarize = "identify the remote speakers of a recorded session (User 1, User 2, ...)"
 diarize_minutes = "generate the minutes again afterwards"
 reindex = "rebuild the search index from every recorded session"
+recover = "repair and finish a session interrupted by a crash (audio, speakers, minutes)"
+recover_all = "recover every interrupted session in OUTPUT_DIR"
 
 [export]
 title = "Meeting of {date}"

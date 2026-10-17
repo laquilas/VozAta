@@ -19,6 +19,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    TranslationTarget,
     WhisperDevice,
     default_conversation_language,
 )
@@ -110,6 +111,10 @@ class Settings:
     context_prompt_chars: int = 200  # rolling context prompt length, 0 = off
     # Editable transcript (phase 21)
     low_confidence_threshold: float = 0.5
+    # Live translation (phase 29)
+    translate_to: TranslationTarget = TranslationTarget.OFF
+    translation_provider: str = "opus_mt"
+    translation_model_dir: Path | None = None  # None: download into the Hugging Face cache
     # Minutes (phase 04)
     llm_provider: str = "ollama"
     ollama_url: str = "http://localhost:11434"
@@ -128,6 +133,8 @@ class Settings:
     github_token: str | None = None
     # Session (phase 05)
     generate_minutes: bool = True
+    # Crash recovery (phase 17)
+    autosave_seconds: float = 10.0  # `session.json` heartbeat interval
     # API (phase 06)
     api_host: str = "127.0.0.1"
     api_port: int = 8765
@@ -203,6 +210,11 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         low_confidence_threshold=_number(
             raw, "LOW_CONFIDENCE_THRESHOLD", 0.5, minimum=0, maximum=1
         ),
+        translate_to=_choice(raw, "TRANSLATE_TO", TranslationTarget, TranslationTarget.OFF),
+        translation_provider=raw.get("TRANSLATION_PROVIDER", "opus_mt"),
+        translation_model_dir=(
+            Path(raw["TRANSLATION_MODEL_DIR"]) if "TRANSLATION_MODEL_DIR" in raw else None
+        ),
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
@@ -216,6 +228,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         github_repo=raw.get("GITHUB_REPO"),
         github_token=raw.get("GITHUB_TOKEN"),
         generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
+        autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
     )

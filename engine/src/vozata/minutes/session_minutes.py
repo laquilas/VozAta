@@ -39,8 +39,8 @@ def write_session_minutes(
         raise EmptyTranscriptError(session_id)
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
     named = labeler.with_names(store.speaker_names(session_id))
-    generator = build_generator(template or _stored_template(meta))
-    minutes = generator.generate(segments, named, language, _stored_vocabulary(meta))
+    generator = build_generator(template or stored_template(meta))
+    minutes = generator.generate(segments, named, language, stored_vocabulary(meta))
     path = store.paths(session_id).minutes_md
     path.write_text(minutes + "\n", encoding="utf-8", newline="\n")
     if meta.get("template") != generator.template_id:
@@ -49,13 +49,15 @@ def write_session_minutes(
     return path
 
 
-def _stored_vocabulary(meta: dict[str, Any]) -> list[str]:
+def stored_vocabulary(meta: dict[str, Any]) -> list[str]:
+    """The glossary terms saved in `session.json` (phase 19); empty when absent or invalid."""
     stored = meta.get("vocabulary")
     if not isinstance(stored, list):
         return []
     return [term for term in stored if isinstance(term, str) and term.strip()]
 
 
-def _stored_template(meta: dict[str, Any]) -> str | None:
+def stored_template(meta: dict[str, Any]) -> str | None:
+    """The template saved in `session.json` (phase 20) when still bundled, else None."""
     stored = meta.get("template")
     return stored if isinstance(stored, str) and stored in bundled_templates() else None

@@ -306,6 +306,12 @@
   <data name="SettingHelp_GENERATE_MINUTES" xml:space="preserve">
     <value>Genera el acta con el modelo de lenguaje local después de cada grabación.</value>
   </data>
+  <data name="Setting_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Intervalo de guardado automático (segundos)</value>
+  </data>
+  <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
+    <value>Cada cuánto se guarda el archivo de la sesión durante la grabación (1 a 300 s). Tras un fallo, la sesión interrumpida se detecta y puede recuperarse en el siguiente inicio.</value>
+  </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Frecuencia de muestreo (Hz)</value>
   </data>
@@ -494,6 +500,30 @@
   </data>
   <data name="SessionTermsHint" xml:space="preserve">
     <value>Nombres y términos, separados por comas o saltos de línea</value>
+  </data>
+  <data name="TranslateTo" xml:space="preserve">
+    <value>Traducir a</value>
+  </data>
+  <data name="TranslateOff" xml:space="preserve">
+    <value>Desactivado</value>
+  </data>
+  <data name="Setting_TRANSLATE_TO" xml:space="preserve">
+    <value>Traducción en vivo</value>
+  </data>
+  <data name="SettingHelp_TRANSLATE_TO" xml:space="preserve">
+    <value>Traduce cada línea de la transcripción a este idioma durante la grabación (se muestra debajo de la línea y se guarda en transcript.translated.jsonl). La pantalla Iniciar puede elegir otro idioma por reunión. Se ejecuta en la CPU.</value>
+  </data>
+  <data name="Setting_TRANSLATION_PROVIDER" xml:space="preserve">
+    <value>Proveedor de traducción</value>
+  </data>
+  <data name="SettingHelp_TRANSLATION_PROVIDER" xml:space="preserve">
+    <value>opus_mt: modelos Opus-MT en CTranslate2. Requiere el extra opcional "translation" del motor.</value>
+  </data>
+  <data name="Setting_TRANSLATION_MODEL_DIR" xml:space="preserve">
+    <value>Carpeta de modelos de traducción</value>
+  </data>
+  <data name="SettingHelp_TRANSLATION_MODEL_DIR" xml:space="preserve">
+    <value>Carpeta con opus-mt-ROMANCE-en y opus-mt-en-ROMANCE. Vacío: se descargan una vez (unos 155 MB cada uno) en la caché de Hugging Face.</value>
   </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Proveedor del modelo del acta</value>
@@ -851,5 +881,20 @@
   </data>
   <data name="SettingHelp_GITHUB_TOKEN" xml:space="preserve">
     <value>Token con permiso para crear issues en el repositorio. Se guarda solo en .env.</value>
+  </data>
+  <data name="RecoveryTitle" xml:space="preserve">
+    <value>Recuperar grabaciones interrumpidas</value>
+  </data>
+  <data name="RecoveryMessage" xml:space="preserve">
+    <value>VozAta se cerró mientras estas sesiones grababan. Recupéralas para reparar el audio y completar la transcripción, los hablantes y el acta con lo que se guardó. Pueden faltar los últimos segundos antes del fallo.</value>
+  </data>
+  <data name="RecoveryRecover" xml:space="preserve">
+    <value>Recuperar</value>
+  </data>
+  <data name="RecoveryLater" xml:space="preserve">
+    <value>Más tarde</value>
+  </data>
+  <data name="SessionRecovered" xml:space="preserve">
+    <value>La sesión de {0} se recuperó.</value>
   </data>
 </root>

@@ -32,6 +32,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private TaskCompletionSource _idle = NewIdleSignal(completed: true);
     private string? _detectedLanguage;
     private string? _defaultTemplate;
+    private string _defaultTranslation = "off";
+    private readonly Dictionary<string, int> _lineOfSegment = [];
     private string? _liveSessionId; // the session whose lines Segments shows
 
     public MainViewModel(
@@ -62,6 +64,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Settings = new SettingsViewModel(client, process, localization);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(this, localization, preferences);
+        Recovery = new RecoveryViewModel(client, localization, Notify);
         Settings.Saved += OnSettingsSaved;
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
@@ -74,7 +77,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             new("en", "LanguageEn"), new("pt", "LanguagePt"), new("es", "LanguageEs"), new("auto", "LanguageAuto"),
         ];
         AppLanguages = [new("en", "AppLanguageEn"), new("pt-BR", "AppLanguagePtBr"), new("es", "AppLanguageEs")];
+        TranslationLanguages =
+        [
+            new("off", "TranslateOff"), new("en", "LanguageEn"), new("pt", "LanguagePt"), new("es", "LanguageEs"),
+        ];
         SelectedLanguage = ConversationLanguages[0];
+        SelectedTranslation = TranslationLanguages[0];
         SelectedAppLanguage = AppLanguages[0];
         localization.PropertyChanged += OnLanguageChanged;
         Segments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsTranscriptEmpty));
@@ -91,6 +99,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<ChoiceOption> ConversationLanguages { get; }
 
+    /// <summary>"Translate to" choices (phase 29): off, en, pt, es.</summary>
+    public IReadOnlyList<ChoiceOption> TranslationLanguages { get; }
+
+    /// <summary>Live translation of the next recording; preselected from <c>TRANSLATE_TO</c>.</summary>
+    [ObservableProperty]
+    public partial ChoiceOption SelectedTranslation { get; set; }
+
     public DevicesViewModel Devices { get; }
 
     /// <summary>Minutes templates for the Start screen and "Regenerate minutes" (phase 20).</summary>
@@ -104,6 +119,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public Task TemplatesRefresh { get; private set; } = Task.CompletedTask;
 
     public HistoryViewModel History { get; }
+
+    /// <summary>Crash recovery dialog (phase 17), opened by <c>recovery_available</c>.</summary>
+    public RecoveryViewModel Recovery { get; }
+
+    /// <summary>The last recovery step started by an event (tests await it).</summary>
+    public Task RecoveryRefresh { get; private set; } = Task.CompletedTask;
 
     /// <summary>The last history reload started by an event (tests await it).</summary>
     public Task HistoryRefresh { get; private set; } = Task.CompletedTask;
@@ -227,6 +248,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _micLabel = NonEmpty(settings.GetString("MIC_LABEL"));
             _systemLabel = NonEmpty(settings.GetString("SYSTEM_LABEL"));
             _defaultTemplate = NonEmpty(settings.GetString("MINUTES_TEMPLATE"));
+            ApplyDefaultTranslation(settings.GetString("TRANSLATE_TO"));
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
@@ -326,6 +348,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Segments.Clear();
         _liveSessionId = null;
         Partials.Clear();
+        _lineOfSegment.Clear();
         DetectedLanguage = _detectedLanguage = null;
         Elapsed = TranscriptLine.FormatTime(0);
         SetState(RecordingState.Starting);
@@ -334,7 +357,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var terms = VocabularyViewModel.ParseTerms(SessionTerms);
             var request = new StartSessionRequest(
                 Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value, SelectedTemplate?.Id,
-                terms.Count > 0 ? terms : null);
+                terms.Count > 0 ? terms : null,
+                SelectedTranslation.Value == _defaultTranslation ? null : SelectedTranslation.Value);
             await _client.StartSessionAsync(request, _stop.Token);
             SetState(RecordingState.Recording);
         }
@@ -417,6 +441,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             SelectedLanguage = option;
         }
 
+        if (values.TryGetValue("TRANSLATE_TO", out var translation) && !IsRecording)
+        {
+            ApplyDefaultTranslation(translation);
+        }
+
         if (values.TryGetValue("MIC_LABEL", out var mic))
         {
             _micLabel = NonEmpty(mic);
@@ -475,6 +504,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (!connection.Connected)
                 {
                     History.Ask.OnConnectionLost();
+                    Recovery.OnConnectionLost();
                 }
 
                 break;
@@ -486,12 +516,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 break;
             case StatusEvent status:
                 OnStatus(status);
+                RecoveryRefresh = Recovery.OnStatusAsync(status);
+                break;
+            case RecoveryAvailableEvent offer:
+                RecoveryRefresh = Recovery.OfferAsync(offer.SessionIds);
                 break;
             case SegmentEvent { Segment: var segment } segmentEvent:
                 _liveSessionId = segmentEvent.SessionId ?? _liveSessionId;
                 RemovePartial(segment.Channel);
-                Segments.Add(new TranscriptLine(
-                    TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel));
+                AddLine(segment);
+                break;
+            case TranslationEvent translation:
+                OnTranslation(translation);
                 break;
             case PartialEvent partial:
                 OnPartial(partial);
@@ -522,10 +558,39 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case ErrorEvent error:
                 Notify(error.Message);
                 History.OnError(error.SessionId, error.Message);
+                RecoveryRefresh = Recovery.OnErrorAsync(error);
                 break;
         }
 
         HandledEvents++;
+    }
+
+    /// <summary>Append a transcript line and remember where its segment is (live translation, phase 29).</summary>
+    private void AddLine(Segment segment)
+    {
+        _lineOfSegment[segment.SegmentId] = Segments.Count;
+        Segments.Add(new TranscriptLine(
+            TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel)
+        {
+            Translation = segment.Translation?.Text,
+        });
+    }
+
+    /// <summary>Show a live translation under the line of its segment (phase 29).</summary>
+    private void OnTranslation(TranslationEvent translation)
+    {
+        if (_lineOfSegment.TryGetValue(translation.SegmentId, out var index) && index < Segments.Count)
+        {
+            Segments[index] = Segments[index] with { Translation = translation.Text };
+        }
+    }
+
+    /// <summary><c>TRANSLATE_TO</c> becomes the picker's default (empty or unknown = off).</summary>
+    private void ApplyDefaultTranslation(string? value)
+    {
+        var option = TranslationLanguages.FirstOrDefault(choice => choice.Value == value) ?? TranslationLanguages[0];
+        _defaultTranslation = option.Value;
+        SelectedTranslation = option;
     }
 
     /// <summary>A <c>speakers_relabeled</c> event: show the final speakers in the live lines and the open detail.</summary>
@@ -539,10 +604,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (sessionId == _liveSessionId)
                 {
                     Segments.Clear();
+                    _lineOfSegment.Clear();
                     foreach (var segment in transcript.Segments)
                     {
-                        Segments.Add(new TranscriptLine(
-                            TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel));
+                        AddLine(segment); // keeps the live translations (phase 29)
                     }
                 }
             }
@@ -694,7 +759,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshTexts()
     {
-        foreach (var option in ConversationLanguages.Concat(AppLanguages))
+        foreach (var option in ConversationLanguages.Concat(AppLanguages).Concat(TranslationLanguages))
         {
             option.Refresh(_localization);
         }

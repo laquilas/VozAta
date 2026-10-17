@@ -54,9 +54,10 @@ engine/
     llm/                    ollama.py
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py
-    storage/                session_store.py, recovery.py, search_index.py, action_items.py
+    storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github,http,session_export}.py
     qa/                     retriever.py, citations.py, answerer.py
+    translation/            worker.py, opus_mt.py, translations_file.py, live.py (29)
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
@@ -163,7 +164,11 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_speakers_relabeled(self, session_id: str) -> None: ...  # post-session speakers written (15)
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
+    def on_translation(self, segment_id: str, language: str, text: str) -> None: ...  # live translation (29)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
+class Translator(Protocol):           # OpusMtTranslator (29), CPU; built on the translation thread
+    def translate(self, text: str, source: str, target: str) -> str: ...  # raises TranslationError
+    def close(self) -> None: ...
 class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
     def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
     def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
@@ -183,7 +188,20 @@ WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
                                                          └─> Transcriber
                                                     └─> [EchoFilter] → [LiveSpeakerSink → LiveSpeakerTagger]
                                                     └─> CompositeSink → Console | Jsonl | Markdown | WebSocket
+                                                                        | [TranslationWorker] (29)
 ```
+
+**Live translation** (phase 29, `TRANSLATE_TO` or the Start screen choice): the
+`TranslationWorker` (`translation/worker.py`) is one more sink of the composite (passed to
+`CapturePipeline` as `extra_sinks`, so it sees segments after echo dedupe and live speakers). `emit` only enqueues;
+its own thread builds the translator (`TRANSLATORS[TRANSLATION_PROVIDER]`, model load off the
+transcription thread), then translates the queue in order on **CPU** and writes each result to
+`transcript.translated.jsonl` and the `translation` event (`SessionObserver.on_translation`). The
+source language is the session's `LanguageLock`: in `auto`, segments wait until it locks (and once
+more at stop). Segments already in the target language and blank texts are skipped. The first
+failure (missing extra, download, model error) reports `error` `translation_failed` once and
+disables translation for the session; transcription is never affected. Closing the composite at
+stop step 2 translates what is still queued, then frees the translator. Provider choice: §14.
 
 **Chunkers**: `CHUNKERS[CHUNK_MODE]` in `bootstrap.py` builds one per channel through
 `SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
@@ -262,6 +280,35 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    the session for search.
 7. `status = done`, `ended_at` set in `session.json`.
 
+Steps 3 (mix) to 7 are one sequence, `RecordingSession._finish()`, which crash recovery reuses
+(below): a new stop step goes there, so recovered sessions get it too.
+
+**Crash recovery** (phase 17): while a session is active (from `recording` until `done`) a
+heartbeat rewrites `session.json` every `AUTOSAVE_SECONDS` with `last_heartbeat_at` and
+`duration_seconds`, and `JsonlSink` fsyncs every segment. On the next start, a session still
+`recording` / `paused` / `finalizing` that is not live is marked `interrupted`
+(`storage/recovery.find_interrupted`; `serve`: not live in this process, sent to each WebSocket
+client as `recovery_available`; CLI: also no heartbeat for `2 * AUTOSAVE_SECONDS + 5` s, so a
+session another process records is left alone). Recovering (`POST /sessions/{id}/recover`,
+`python -m vozata recover [<dir> | --all]`):
+
+```mermaid
+graph LR
+  I[interrupted] --> R[repair_wav both tracks: RIFF/data sizes from the file size]
+  R --> P[pad_wav to the longest track]
+  P --> T[unreadable transcript.jsonl lines moved to transcript.jsonl.damaged]
+  T --> F["RecordingSession.recover(): status finalizing, then _finish() = stop steps 3-7"]
+  F --> D[done]
+  R -- header unreadable --> E[stays interrupted + recovery_error]
+```
+
+The recovered session uses the template, glossary and `MIX_MODE` stored in its `session.json`
+and the current settings for the rest (diarization, minutes on/off). Nothing is deleted: a
+missing or empty WAV becomes a valid empty one; the transcript lines already flushed are kept and
+only the last unfinished window (≤ `CHUNK_SECONDS` + carry) is lost. In `serve` a recovery
+holds the single-session slot (VRAM rule): `POST /sessions` meanwhile answers
+`409 session_already_active`. Recovering is idempotent: a `done` session is never touched again.
+
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
 time; steps 4 → 5 → 6 enforce that. The live speaker embedder (15, ~30 MB model plus the
 child's CUDA context) is the one exception next to Whisper while recording; it ends at step 2. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
@@ -318,15 +365,17 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 
 | File | Written by | Notes |
 |------|-----------|-------|
-| `session.json` | 05 | metadata, updated on every status change |
+| `session.json` | 05 / 17 | metadata, updated on every status change and every `AUTOSAVE_SECONDS` while active (17) |
 | `mic.wav`, `system.wav` | 02 / 05 | mono 16-bit, `SAMPLE_RATE`, equal length |
 | `mixed.wav` | 02 / 05 | `MIX_MODE=mono` (sum with headroom, clipped) or `stereo` (L = mic, R = system) |
-| `transcript.jsonl` | 03 / 05 | raw, append-only, one segment per line |
+| `transcript.jsonl` | 03 / 05 | raw, append-only, one segment per line, fsynced per segment (17) |
+| `transcript.jsonl.damaged` | 17 | lines of `transcript.jsonl` a crash left unreadable (e.g. half-written), moved here by recovery |
 | `transcript.md` | 03 / 05 | human-readable, `[hh:mm:ss] Label: text` |
 | `minutes.md` | 04 / 05 | generated minutes |
 | `transcript.diarized.jsonl` | 14 | full transcript; system segments tagged `system:<n>`, a segment split at a speaker change becomes `<id>-1`, `<id>-2`, … |
 | `speakers.json` | 14 / 16 | `{"system:1": {"name": null}, "mic": {"name": "Ana"}}` (display label comes from the localizer unless `name` is set; 16 may add `mic` / `system`) |
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
+| `transcript.translated.jsonl` | 29 | live translations, append-only: `{"segment_id", "language", "text"}` per line (created with the first one; the last line of a segment wins); merged into `GET /sessions/{id}/transcript` as `translation` by `segment_id` |
 | `action_items.json` | 23 | extracted items + export results |
 
 `OUTPUT_DIR/index.db` — SQLite FTS5 search index (22): table `segments(session_id, segment_id,
@@ -347,6 +396,7 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "started_at": "2026-10-15T20:23:58-03:00",
   "ended_at": "2026-10-15T21:10:02-03:00",
   "duration_seconds": 2764.2,
+  "last_heartbeat_at": "2026-10-15T21:10:02-03:00",
   "language": "pt", "language_source": "selected",
   "app_language": "en",
   "template": "general",
@@ -379,8 +429,14 @@ transcript through `SessionStore.load_transcript(session_id)`, which returns the
 of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jsonl`. Raw capture data
 (`transcript.jsonl`, WAVs) is never rewritten after the session ends.
 
+`status` is `recording`, `paused`, `finalizing`, `done`, or `interrupted` (17: a crash cut the
+session short; recovery takes it to `finalizing` and `done`, or leaves it `interrupted` with
+`recovery_error`, the reason its files could not be repaired, removed by the next successful
+recovery). `last_heartbeat_at` (17) is the last autosave, every `AUTOSAVE_SECONDS` while the session
+is active; with it, `duration_seconds` is the length so far.
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
-written at stop; `ended_at` is later, after finalization. `language` / `language_source` are written only when known: at start for a fixed language
+written at stop (after a crash: the length of the repaired WAVs); `ended_at` is later, after
+finalization. `language` / `language_source` are written only when known: at start for a fixed language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
 has neither key. `template` (20) is the minutes template id, written at start (even with
 `GENERATE_MINUTES=false`) and replaced by the template of the last regeneration; sessions recorded
@@ -445,7 +501,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
 | `LIVE_DIARIZATION_ENABLED` | `false` | 15 | live `User N` labels while recording (needs the `diarization` extra and `HF_TOKEN`; uses `DIARIZATION_PROVIDER` / `DIARIZATION_DEVICE`) |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
-| `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat |
+| `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat interval while a session is active (1–300 s) |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
 | `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
 | `ECHO_HOLD_SECONDS` | *(empty)* = `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment (1–60 s); mic lines are delayed by it |
@@ -464,7 +520,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `VAD_SPEECH_PAD_MS` | `200` | 27 | audio kept around detected speech |
 | `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
 | `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
-| `TRANSLATE_TO` / `TRANSLATION_PROVIDER` | *(empty)* / *(chosen in 29)* | 29 | live translation target (empty = off) and provider |
+| `TRANSLATE_TO` | `off` | 29 | live translation target: `off` \| `en` \| `pt` \| `es` (empty = off); `POST /sessions` `translate_to` overrides it per session |
+| `TRANSLATION_PROVIDER` | `opus_mt` | 29 | `TRANSLATORS` registry key (§14) |
+| `TRANSLATION_MODEL_DIR` | *(empty)* | 29 | folder holding `opus-mt-ROMANCE-en/` and `opus-mt-en-ROMANCE/`; empty = download into the Hugging Face cache on first use |
 | `CONTEXT_PROMPT_CHARS` | `200` | 19 | rolling context prompt length, 0–1000 (0 = off) |
 
 Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /settings`
@@ -575,3 +633,28 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
   session id takes the previous one in the bracket (or the only session of the context); a time
   maps to the last context segment whose displayed time is at or before it. Malformed times,
   sessions not in the context and duplicates are dropped → `{session_id, segment_id, start}`.
+
+## 14. Live translation provider (phase 29)
+
+Decision: **Opus-MT (MarianMT) models converted to CTranslate2**, registered as `opus_mt` in
+`TRANSLATORS` (`translation/opus_mt.py`).
+
+| Option | Why not / why |
+|--------|---------------|
+| NLLB-200 distilled 600M | weights are CC-BY-NC 4.0 (non-commercial) and need `torch` + `transformers` (~2 GB) |
+| Ollama (`qwen2.5`) | no new dependency, but competes with Whisper for the 6 GB of VRAM during recording (§6 VRAM rule) and is slow on CPU |
+| **Opus-MT on CTranslate2** | permissive licenses (Apache-2.0 / CC-BY 4.0); `ctranslate2` already ships with faster-whisper; int8 on CPU is ~80 ms per sentence; ~155 MB per model |
+
+- Two models cover every pair of `en` / `pt` / `es`: `michaelfeil/ct2fast-opus-mt-ROMANCE-en`
+  (pt, es → en) and `michaelfeil/ct2fast-opus-mt-en-ROMANCE` (en → pt with `>>pt_br<<`, en → es
+  with `>>es<<`). `pt` ↔ `es` pivots through English (two passes). A model is loaded on first use
+  and kept until the session ends.
+- Runs on CPU, `compute_type=int8`, 2 intra-op threads, beam 2: never touches the GPU, so the VRAM
+  rule is unchanged.
+- Marian stops after the first sentence, so each segment is split after `.` `!` `?` `…` and the
+  sentences are translated in one batch, then joined with spaces.
+- Optional extra `translation` (`sentencepiece`, `huggingface_hub`); both are imported lazily and
+  `require_extra()` fails fast, so the engine works without the extra and the session reports
+  `translation_failed` instead.
+- Models come from `TRANSLATION_MODEL_DIR` (`<dir>/opus-mt-<name>/` with `model.bin`,
+  `source.spm`, `target.spm`) or are downloaded once with `huggingface_hub.snapshot_download`.
