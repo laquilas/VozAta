@@ -82,6 +82,24 @@ public sealed record Minutes(string Markdown);
 /// <summary>A downloaded export: the engine's file name and the bytes.</summary>
 public sealed record ExportedFile(string FileName, byte[] Content);
 
+/// <summary>One <c>GET /search</c> match (phase 22); <see cref="Snippet"/> wraps matches in markers.</summary>
+public sealed record SearchHit(
+    string SessionId,
+    string SegmentId,
+    double Start,
+    string SpeakerId,
+    string Label,
+    string Snippet)
+{
+    /// <summary>Starts a matched term in <see cref="Snippet"/>.</summary>
+    public const char MatchStart = '\u0002';
+
+    /// <summary>Ends a matched term in <see cref="Snippet"/>.</summary>
+    public const char MatchEnd = '\u0003';
+}
+
+public sealed record SearchResults(IReadOnlyList<SearchHit> Hits);
+
 public sealed record SettingSchema(
     string Key,
     string Type,

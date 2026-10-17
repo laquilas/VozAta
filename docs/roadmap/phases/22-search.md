@@ -54,7 +54,7 @@ Semantic (embedding) search — backlog, could reuse phase 24 retrieval.
 - **Branch:** `feature/22-search`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** UI: add `SearchHit`/`SearchResults` DTOs and `IEngineClient.SearchAsync` (+ `FakeEngineClient`, client test), then `SearchViewModel`
+- **Next step:** UI: `SearchViewModel` (debounce, grouping), search box in `HistoryView`, open the session detail scrolled to the segment
 
 ### Steps
 
