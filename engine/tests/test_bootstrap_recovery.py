@@ -12,6 +12,7 @@ from vozata import bootstrap
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.config import Settings
 from vozata.domain import MixMode
+from vozata.minutes.action_items import ActionItemExtractor
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_store import SessionStore
 
@@ -41,6 +42,7 @@ def test_the_recovery_session_takes_template_glossary_and_mix_mode_from_session_
     assert components.vocabulary == ("Avalonia", "N5")
     assert isinstance(components.mixer, StereoMixer)
     assert isinstance(components.search_index, SearchIndex)
+    assert isinstance(components.action_items, ActionItemExtractor)
     assert components.diarizer_factory is None
     assert components.sources == {}
     assert components.clock.now() == 0.0
@@ -63,11 +65,23 @@ def test_defaults_apply_when_session_json_lacks_them(tmp_path: Path) -> None:
 
     components = session._c
     assert components.minutes is None
+    assert components.action_items is None
     assert components.minutes_template == "general"
     assert components.vocabulary == ()
     assert isinstance(components.mixer, StereoMixer)
     assert components.search_index is None
     assert components.diarizer_factory is not None
+
+
+def test_action_items_follow_extract_action_items(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, extract_action_items=False)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store)
+
+    session = bootstrap.build_recovery_session(settings, store, FakeSessionObserver(), session_id)
+
+    assert session._c.minutes is not None
+    assert session._c.action_items is None
 
 
 def test_build_recovery_finishes_a_session_with_the_current_settings(tmp_path: Path) -> None:
