@@ -12,7 +12,7 @@ from vozata.api.ws import EventBroadcaster
 from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
-from vozata.ports import DocumentExporter, Localizer
+from vozata.ports import DocumentExporter, Localizer, TranscriptSearch
 from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
 
@@ -42,3 +42,4 @@ class ApiContainer:
     regenerate_minutes: Callable[[str], None]  # runs in the background, then `minutes_ready`
     release_models: Callable[[], None] = lambda: None  # at shutdown (kept Whisper, phase 26)
     exporters: Mapping[str, DocumentExporter] = field(default_factory=dict)  # by format (11)
+    search_index: TranscriptSearch | None = None  # `GET /search` (22); None: no hits

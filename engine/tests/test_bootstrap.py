@@ -17,6 +17,7 @@ from vozata.domain import AppLanguage, Channel, ChunkMode, ConversationLanguage,
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
 from vozata.session import SessionStartError
+from vozata.storage.search_index import SearchIndex
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
 
@@ -100,6 +101,8 @@ def test_build_session_uses_the_default_devices_and_settings(
     assert components.chunker_factory is not None
     assert isinstance(components.chunker_factory(Channel.MIC, lambda chunk: None), VadChunker)
     assert session._language is ConversationLanguage.ES
+    assert isinstance(components.search_index, SearchIndex)
+    assert components.search_index._path == tmp_path / "recordings" / "index.db"
     assert devices == []
     assert not (tmp_path / "recordings").exists()  # nothing is created before start()
 
@@ -257,6 +260,8 @@ def test_build_api_container_wires_real_providers(
     assert isinstance(container.regenerate_minutes, MinutesJob)
     assert container.llm_reachable() is False
     assert container.store.list_sessions() == []
+    assert isinstance(container.search_index, SearchIndex)
+    assert container.search_index._path == tmp_path / "recordings" / "index.db"
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3))
     assert built == [{"language": None, "mic_device": 3, "system_device": None, "shared": None}]
     generator = container.regenerate_minutes._build_generator()

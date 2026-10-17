@@ -6,6 +6,7 @@ New providers are added to a registry here; orchestrators never change.
 from __future__ import annotations
 
 import functools
+import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
@@ -43,6 +44,7 @@ from vozata.ports import (
 )
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
+from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_store import SessionStore
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
@@ -109,6 +111,10 @@ def build_store(settings: Settings) -> SessionStore:
     return SessionStore(settings.output_dir)
 
 
+def build_search_index(settings: Settings) -> SearchIndex:
+    return SearchIndex(settings.output_dir / "index.db")
+
+
 def build_minutes_generator(
     settings: Settings, localizer: Localizer | None = None
 ) -> MinutesGenerator:
@@ -168,6 +174,7 @@ def build_session(
         labeler=build_labeler(settings, localizer),
         release=audio.close,
         chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
+        search_index=build_search_index(settings),
     )
     return RecordingSession(
         settings,
@@ -233,6 +240,10 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
                 close()
 
     _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
+    search_index = build_search_index(settings)
+    threading.Thread(
+        target=search_index.ensure, args=(store,), name="search-index", daemon=True
+    ).start()  # sessions recorded before phase 22 become searchable
     return ApiContainer(
         settings=settings,
         settings_file=settings_file,
@@ -247,4 +258,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
         release_models=shared.release if shared is not None else lambda: None,
         exporters={name: build() for name, build in EXPORTERS.items()},
+        search_index=search_index,
     )

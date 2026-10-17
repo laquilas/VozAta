@@ -65,6 +65,28 @@ public sealed partial class SessionDetailViewModel(
     [NotifyCanExecuteChangedFor(nameof(OpenFolderCommand), nameof(OpenAudioCommand))]
     public partial string? Folder { get; private set; }
 
+    /// <summary>The open tab: <see cref="MinutesTab"/> or <see cref="TranscriptTab"/>.</summary>
+    [ObservableProperty]
+    public partial int SelectedTab { get; set; }
+
+    /// <summary>The transcript line a search result opened; the view scrolls to it.</summary>
+    [ObservableProperty]
+    public partial TranscriptLine? FocusedLine { get; private set; }
+
+    public const int MinutesTab = 0;
+
+    public const int TranscriptTab = 1;
+
+    private string? _focusSegmentId;
+
+    /// <summary>Show the transcript at <paramref name="segmentId"/> (now, or once it has loaded).</summary>
+    public void FocusSegment(string segmentId)
+    {
+        _focusSegmentId = segmentId;
+        SelectedTab = TranscriptTab;
+        ApplyFocus();
+    }
+
     public static string? FormatStart(DateTimeOffset? startedAt) =>
         startedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
@@ -81,8 +103,13 @@ public sealed partial class SessionDetailViewModel(
             Lines.Clear();
             foreach (var segment in transcript.Segments)
             {
-                Lines.Add(new TranscriptLine(TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel));
+                Lines.Add(new TranscriptLine(TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel)
+                {
+                    SegmentId = segment.SegmentId,
+                });
             }
+
+            ApplyFocus();
 
             RegenerateMinutesCommand.NotifyCanExecuteChanged();
             await LoadMinutesAsync(cancellationToken);
@@ -202,6 +229,24 @@ public sealed partial class SessionDetailViewModel(
         {
             HasMinutes = false;
         }
+    }
+
+    private void ApplyFocus()
+    {
+        var index = _focusSegmentId is null ? -1 : Lines.ToList().FindIndex(line => line.SegmentId == _focusSegmentId);
+        if (index < 0)
+        {
+            return; // not loaded yet (or not in this transcript)
+        }
+
+        _focusSegmentId = null;
+        if (FocusedLine is not null && Lines.IndexOf(FocusedLine) is var previous and >= 0)
+        {
+            Lines[previous] = FocusedLine with { IsFocused = false };
+        }
+
+        FocusedLine = Lines[index] with { IsFocused = true };
+        Lines[index] = FocusedLine;
     }
 
     private string ErrorText(Exception error) =>

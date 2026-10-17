@@ -172,3 +172,29 @@ class ExportDocument:
     transcript_title: str
     columns: tuple[str, str, str]
     rows: list[Row] = field(default_factory=list)
+
+
+# Cross-session search (phase 22).
+
+SNIPPET_START = "\x02"  # marks where a matched term starts in `SearchHit.snippet`
+SNIPPET_END = "\x03"  # ... and where it ends
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    """One transcript segment matching a search; `snippet` wraps matches in the markers above."""
+
+    session_id: str
+    segment_id: str
+    start: float
+    speaker_id: str
+    snippet: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "segment_id": self.segment_id,
+            "start": self.start,
+            "speaker_id": self.speaker_id,
+            "snippet": self.snippet,
+        }

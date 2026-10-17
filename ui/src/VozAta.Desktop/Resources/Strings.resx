@@ -138,6 +138,15 @@
   <data name="HistoryEmpty" xml:space="preserve">
     <value>No sessions yet. Your recordings will appear here.</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Search all transcripts</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Searching...</value>
+  </data>
+  <data name="SearchNoResults" xml:space="preserve">
+    <value>No matches in any transcript.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Select a session to read its transcript and minutes.</value>
   </data>

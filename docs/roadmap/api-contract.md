@@ -40,7 +40,7 @@ own rows. Changing a row requires updating both sides.
 | GET | `/templates` | 20 | — | `[{id, name}]` localized names |
 | GET | `/vocabulary` | 19 | — | `{terms: [str]}` from `VOCABULARY_FILE` |
 | PUT | `/vocabulary` | 19 | `{terms: [str]}` | `{terms}` |
-| GET | `/search` | 22 | `?q=&limit=` | `{hits: [{session_id, segment_id, start, speaker_id, snippet}]}` |
+| GET | `/search` | 22 | `?q=&limit=` (limit 1–200, default 50) | `{hits: [{session_id, segment_id, start, speaker_id, label, snippet}]}` best match first; `snippet` wraps each match in `\u0002` … `\u0003`; a query without words returns no hits |
 | POST | `/sessions/{id}/action-items` | 23 | — | `202`; result via `action_items_ready` |
 | GET | `/sessions/{id}/action-items` | 23 | — | `{items: [ActionItem]}` |
 | POST | `/sessions/{id}/action-items/export` | 23 | `{target: "azure_devops"\|"github", item_ids: [str]}` | `{created: [{item_id, url}], failed: [{item_id, error}]}` |
