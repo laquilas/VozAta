@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.fakes import FakeLanguageModel
+from tests.fakes import FakeLanguageModel, minutes_template
 from vozata.domain import AppLanguage, Channel, ConversationLanguage, TranscriptSegment
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
@@ -19,7 +19,7 @@ def seg(start: float, text: str, speaker: str = "mic") -> TranscriptSegment:
 
 
 def generator(llm: FakeLanguageModel, max_chars: int = 12000) -> MinutesGenerator:
-    return MinutesGenerator(llm, EN, max_chars)
+    return MinutesGenerator(llm, EN, max_chars, minutes_template())
 
 
 def test_short_transcript_takes_a_single_pass() -> None:
@@ -88,7 +88,7 @@ def test_headings_follow_the_app_language() -> None:
     llm = FakeLanguageModel(["ata"])
     pt = TomlLocalizer(AppLanguage.PT_BR, strict=True)
 
-    MinutesGenerator(llm, pt, 12000).generate(
+    MinutesGenerator(llm, pt, 12000, minutes_template("pt-BR")).generate(
         [seg(0, "oi")], SpeakerLabeler(pt), ConversationLanguage.PT
     )
 
@@ -175,3 +175,15 @@ def test_empty_transcript_does_not_touch_the_model() -> None:
         generator(llm).generate([], LABELER, ConversationLanguage.EN)
 
     assert llm.calls == []
+
+
+def test_the_template_sets_the_sections_of_every_prompt() -> None:
+    llm = FakeLanguageModel(["n1", "n2", "minutes"])
+    daily = MinutesGenerator(llm, EN, 20, minutes_template(template_id="daily"))
+
+    daily.generate([seg(0, "first line"), seg(9, "second line")], LABELER, ConversationLanguage.EN)
+
+    assert daily.template_id == "daily"
+    users = [user for _, user, _ in llm.prompts]
+    assert all("- Blockers:" in user for user in users)
+    assert "## Updates by person" in users[-1]

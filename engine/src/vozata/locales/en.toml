@@ -11,11 +11,13 @@ invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
 unknown_key = "Unknown setting {key}."
 no_word_timestamps = "The speech API at {host} returned no word timestamps for model \"{value}\". Choose a model that supports timestamp_granularities=word."
+missing_hf_token = "{key} is not set. Speaker identification needs a Hugging Face access token: create one at huggingface.co, accept the terms of the pyannote model, then set {key} in the settings."
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
 device_timeout = "The audio device \"{device}\" did not open within {seconds} s. Check that it is connected and not in use by another app; if it keeps failing, restart Windows Audio or the PC."
 device_failed = "The audio device \"{device}\" could not be opened: {reason}"
+diarization_failed = "The remote speakers could not be identified ({reason}). The transcript keeps the system label; retry with: {command}"
 mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
@@ -26,6 +28,7 @@ unsupported_format = "Unsupported export format \"{format}\". Use one of: {allow
 settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
+unknown_template = "Unknown minutes template \"{id}\". Use one of: {allowed}."
 not_found = "This endpoint does not exist."
 method_not_allowed = "This method is not allowed on this endpoint."
 http_error = "The request failed with HTTP status {status}."
@@ -47,21 +50,19 @@ auto = "the language spoken in the transcript"
 [minutes]
 output_language = "English"
 system = "You write accurate, concise meeting minutes. Use only facts stated in the transcript or notes; never invent names, dates, numbers or decisions."
-instructions = """The meeting was held in {conversation_language}. Write the minutes in {output_language}, in Markdown, with exactly these level-2 headings, in this order:
+instructions = """The meeting was held in {conversation_language}. {template_instructions}
+Write the minutes in {output_language}, in Markdown, with exactly these level-2 headings, in this order:
 {sections}
-List action items with their owner and due date when they were mentioned. Under a section with nothing to report, write "—"."""
-map_instructions = "This is part {part} of {total} of a meeting held in {conversation_language}. Write concise notes in {output_language} with the topics, decisions, action items (owner, due date) and open issues of this part. Use only facts from this part."
+What goes under each heading:
+{guidance}
+Under a heading with nothing to report, write "—"."""
+map_instructions = """This is part {part} of {total} of a meeting held in {conversation_language}. {template_instructions}
+Write concise notes in {output_language} with what this part says for these headings:
+{guidance}
+Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
 transcript_label = "Transcript:"
 notes_label = "Notes:"
-
-[minutes.section]
-context = "Context"
-summary = "Summary"
-topics = "Topics"
-decisions = "Decisions"
-action_items = "Action items"
-open_issues = "Open issues"
 
 [cli]
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
@@ -83,6 +84,9 @@ minutes_failed = "The minutes could not be generated ({reason}). Check that Olla
 session_not_found = "No session found in {folder}."
 empty_transcript = "The session in {folder} has no transcript, so there is nothing to summarize."
 device_not_found = "Audio device not found: {reason}. Run \"python -m vozata record --list-devices\" to see the ids."
+diarized = "Found {count} remote speaker(s); speaker-labelled transcript written to {path}"
+diarize_failed = "The remote speakers could not be identified ({reason})."
+no_system_speech = "The session in {folder} has no system-audio speech, so there is nobody to identify."
 reindexed = "Search index rebuilt. Sessions indexed: {count}."
 reindex_failed = "The search index could not be rebuilt ({reason})."
 
@@ -101,6 +105,8 @@ system = "loopback device id (default: the default output's loopback)"
 list_devices = "list the audio devices and exit"
 minutes = "generate the minutes of a recorded session again"
 session_dir = "session folder, e.g. recordings/20261015_202358"
+diarize = "identify the remote speakers of a recorded session (User 1, User 2, ...)"
+diarize_minutes = "generate the minutes again afterwards"
 reindex = "rebuild the search index from every recorded session"
 
 [export]

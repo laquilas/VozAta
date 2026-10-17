@@ -133,6 +133,12 @@
               <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
                 <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" />
                 <WrapPanel>
+                  <ComboBox Margin="0,0,4,4" MinWidth="170"
+                            ItemsSource="{Binding Templates}" SelectedItem="{Binding RegenerateTemplate}"
+                            IsVisible="{Binding !IsLive}"
+                            PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
+                            AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
+                            DisplayMemberBinding="{Binding Name, x:DataType=vm:TemplateOption}" />
                   <Button Margin="0,0,8,4" Command="{Binding RegenerateMinutesCommand}"
                           Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}"
                           IsVisible="{Binding !IsLive}" />

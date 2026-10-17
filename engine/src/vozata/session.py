@@ -8,13 +8,16 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
-from vozata.config import Settings
+from vozata.config import ConfigError, Settings
+from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.template_repository import DEFAULT_TEMPLATE
 from vozata.ports import (
     AudioMixer,
     AudioSource,
+    Diarizer,
     Localizer,
     SessionObserver,
     Transcriber,
@@ -50,7 +53,9 @@ class SessionComponents:
     labeler: SpeakerLabeler
     release: Callable[[], None] = lambda: None  # frees the audio backend once capture ended
     chunker_factory: ChunkerFactory | None = None  # None: fixed CHUNK_SECONDS windows
+    diarizer_factory: Callable[[], Diarizer] | None = None  # None: no speaker identification
     search_index: TranscriptSearch | None = None  # None: the session is not indexed (22)
+    minutes_template: str = DEFAULT_TEMPLATE  # stored in session.json (phase 20)
 
 
 class SessionStartError(RuntimeError):
@@ -154,7 +159,7 @@ class RecordingSession:
         self._pipeline.drain()  # 2
         self._finalize_audio()  # 3
         self._release_transcriber()  # 4
-        # 5: speaker identification (phase 14)
+        self._identify_speakers()  # 5
         self._write_minutes()  # 6
         self._index_transcript()  # 6: search (phase 22)
         self._meta.ended(self._store.now())  # 7
@@ -221,6 +226,26 @@ class RecordingSession:
         except Exception:
             _log.exception("Releasing the transcriber failed")
 
+    def _identify_speakers(self) -> None:
+        """Diarize `system.wav` (Whisper is already released); a failure keeps `system` labels."""
+        if self._c.diarizer_factory is None:
+            return
+        try:
+            diarize_session(
+                self._store,
+                self.id,
+                self._c.diarizer_factory,
+                self._settings.min_speakers,
+                self._settings.max_speakers,
+            )
+        except Exception as error:
+            _log.warning("Speaker identification for %s failed: %s", self.id, error)
+            reason = (
+                error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)
+            )
+            command = f'python -m vozata diarize "{self.paths.root}"'
+            self._error("diarization_failed", reason=reason, command=command)
+
     def _write_minutes(self) -> None:
         if self._c.minutes is None:
             return
@@ -229,7 +254,8 @@ class RecordingSession:
             _log.info("No speech in %s; minutes skipped", self.id)
             return
         try:
-            minutes = self._c.minutes.generate(segments, self._c.labeler, self._lock.language)
+            labeler = self._c.labeler.with_names(self._store.speaker_names(self.id))
+            minutes = self._c.minutes.generate(segments, labeler, self._lock.language)
         except Exception as error:
             _log.exception("Generating minutes for %s failed", self.id)
             command = f'python -m vozata minutes "{self.paths.root}"'

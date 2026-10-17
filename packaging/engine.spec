@@ -32,7 +32,7 @@ a = Analysis(  # noqa: F821
     pathex=[str(ROOT / "engine" / "src")],
     binaries=collect_dynamic_libs("ctranslate2") + collect_dynamic_libs("onnxruntime") + cuda_dlls(),
     datas=(
-        collect_data_files("vozata")  # locales, export fonts
+        collect_data_files("vozata")  # locales, export fonts, minutes templates
         + collect_data_files("faster_whisper")  # Silero VAD model
         + collect_data_files("docx")  # default Word template
         + collect_data_files("fpdf")

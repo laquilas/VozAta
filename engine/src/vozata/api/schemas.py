@@ -130,6 +130,11 @@ class RegenerateMinutes(BaseModel):
     template: str | None = None  # phase 20
 
 
+class TemplateInfo(BaseModel):
+    id: str
+    name: str
+
+
 class SettingSchema(BaseModel):
     key: str
     type: str

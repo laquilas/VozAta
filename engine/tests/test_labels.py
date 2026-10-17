@@ -55,6 +55,18 @@ def test_blank_names_are_ignored() -> None:
     assert labeler.label("system:1") == "User 1"
 
 
+def test_with_names_keeps_the_overrides_and_adds_session_names() -> None:
+    labeler = _labeler(AppLanguage.ES, system_override="Guests")
+
+    session = labeler.with_names({"system:2": "Ana"})
+
+    assert labeler.with_names({}) is labeler
+    assert session.label("system:2") == "Ana"
+    assert session.label("system:1") == "Usuario 1"
+    assert session.label("system") == "Guests"
+    assert labeler.label("system:2") == "Usuario 2"
+
+
 @pytest.mark.parametrize("speaker_id", ["speaker", "system:", "system:x", "system:0", "mic:1"])
 def test_unknown_speaker_ids_are_rejected(speaker_id: str) -> None:
     with pytest.raises(ValueError):

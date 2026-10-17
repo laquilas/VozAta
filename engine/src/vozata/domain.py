@@ -136,6 +136,23 @@ class TranscriptSegment:
         )
 
 
+@dataclass(frozen=True)
+class SpeakerTurn:
+    """A span of `system.wav` where one remote speaker talks (diarization, phase 14).
+
+    `speaker_index` is the diarizer's own numbering; `assign_speakers` renumbers by first
+    appearance in the transcript.
+    """
+
+    start: float
+    end: float
+    speaker_index: int
+
+    def overlap(self, start: float, end: float) -> float:
+        """Seconds this turn shares with the span `start`-`end` (0 when they do not meet)."""
+        return max(0.0, min(self.end, end) - max(self.start, start))
+
+
 def default_conversation_language(app_language: AppLanguage) -> ConversationLanguage:
     """The spoken language assumed when none is configured (`pt-BR` -> `pt`)."""
     return ConversationLanguage(app_language.value.split("-")[0])

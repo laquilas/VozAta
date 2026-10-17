@@ -107,6 +107,13 @@
               </ComboBox>
               <TextBlock Text="{Binding DetectedLanguage}" FontStyle="Italic"
                          IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding L[MinutesTemplate]}" Margin="0,6,0,0" />
+              <ComboBox HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding Templates.Items}"
+                        SelectedItem="{Binding SelectedTemplate}"
+                        IsEnabled="{Binding !IsRecording}"
+                        AutomationProperties.Name="{Binding L[MinutesTemplate]}"
+                        DisplayMemberBinding="{Binding Name, x:DataType=vm:TemplateOption}" />
               <TextBlock Text="{Binding L[InterfaceLanguage]}" Margin="0,6,0,0" />
               <ComboBox HorizontalAlignment="Stretch"
                         ItemsSource="{Binding AppLanguages}"

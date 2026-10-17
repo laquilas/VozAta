@@ -35,7 +35,8 @@ def export_session(
     minutes_path = c.store.paths(session_id).minutes_md
     minutes = minutes_path.read_text(encoding="utf-8") if minutes_path.is_file() else None
     _, segments = c.store.load_transcript_with_source(session_id)
-    document = build_document(summary, minutes, segments, c.labeler, c.localizer)
+    labeler = c.labeler.with_names(c.store.speaker_names(session_id))
+    document = build_document(summary, minutes, segments, labeler, c.localizer)
     filename = f"{session_id}-minutes.{exporter.extension}"
     return Response(
         content=exporter.export(document),

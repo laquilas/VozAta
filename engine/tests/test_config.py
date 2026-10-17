@@ -489,3 +489,64 @@ def test_an_invalid_external_stt_url_is_rejected() -> None:
         load_settings(env={"OPENAI_STT_URL": "api.openai.com"})
 
     assert (caught.value.key, caught.value.message_key) == ("OPENAI_STT_URL", "invalid_url")
+
+
+def test_diarization_defaults_values_and_secret_mask() -> None:
+    from vozata.settings_view import settings_values
+
+    defaults = load_settings(env={})
+    assert defaults.diarization_enabled is False
+    assert defaults.diarization_provider == "pyannote"
+    assert defaults.diarization_device is WhisperDevice.AUTO
+    assert (defaults.hf_token, defaults.min_speakers, defaults.max_speakers) == (None, None, None)
+    assert settings_values(defaults)["HF_TOKEN"] is None
+
+    settings = load_settings(
+        env={
+            "DIARIZATION_ENABLED": "true",
+            "DIARIZATION_DEVICE": "cpu",
+            "HF_TOKEN": "hf_secret",
+            "MIN_SPEAKERS": "2",
+            "MAX_SPEAKERS": "3",
+        }
+    )
+    assert settings.diarization_enabled is True
+    assert settings.diarization_device is WhisperDevice.CPU
+    assert (settings.hf_token, settings.min_speakers, settings.max_speakers) == ("hf_secret", 2, 3)
+    assert settings_values(settings)["HF_TOKEN"] == "********"
+
+
+@pytest.mark.parametrize(
+    ("env", "key"),
+    [
+        ({"MIN_SPEAKERS": "0"}, "MIN_SPEAKERS"),
+        ({"MAX_SPEAKERS": "21"}, "MAX_SPEAKERS"),
+        ({"MAX_SPEAKERS": "2.5"}, "MAX_SPEAKERS"),
+        ({"MIN_SPEAKERS": "4", "MAX_SPEAKERS": "3"}, "MIN_SPEAKERS"),
+        ({"DIARIZATION_DEVICE": "tpu"}, "DIARIZATION_DEVICE"),
+    ],
+)
+def test_invalid_diarization_values_are_rejected(env: dict[str, str], key: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env=env)
+
+    assert caught.value.key == key
+
+
+def test_one_speaker_bound_alone_is_accepted() -> None:
+    settings = load_settings(env={"MAX_SPEAKERS": "4"})
+
+    assert (settings.min_speakers, settings.max_speakers) == (None, 4)
+
+
+def test_minutes_template_defaults_to_general_and_accepts_bundled_ids() -> None:
+    assert load_settings(env={}).minutes_template == "general"
+    assert load_settings(env={"MINUTES_TEMPLATE": "daily"}).minutes_template == "daily"
+
+
+def test_unknown_minutes_template_names_the_bundled_ids() -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"MINUTES_TEMPLATE": "weekly"})
+
+    assert (caught.value.key, caught.value.message_key) == ("MINUTES_TEMPLATE", "invalid_choice")
+    assert caught.value.params == {"allowed": "general, daily, one_on_one, client, retrospective"}

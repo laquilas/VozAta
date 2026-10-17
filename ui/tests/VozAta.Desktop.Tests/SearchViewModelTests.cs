@@ -246,7 +246,7 @@ public sealed class SearchNavigationTests
     private static SessionSummary Session(int day) =>
         new($"session_{day:000}", "done", new DateTimeOffset(2026, 9, 30, 9, 0, 0, TimeSpan.Zero).AddDays(day), null, 60, "pt", true);
 
-    private HistoryViewModel Create() => new(_client, new FakeShell(), new LocalizationService(), new FakeFileSaver(), _delay.Wait);
+    private HistoryViewModel Create() => new(_client, new FakeShell(), new LocalizationService(), new FakeFileSaver(), searchDelay: _delay.Wait);
 
     private void AddSessions(int count)
     {

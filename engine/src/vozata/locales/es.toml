@@ -11,11 +11,13 @@ invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http
 invalid_duration = "Valor no válido \"{value}\" para {key}: se esperaban segundos (0, -1, 300) o una duración como 5m o 1h30m."
 unknown_key = "Configuración desconocida: {key}."
 no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por palabra para el modelo \"{value}\". Elige un modelo que admita timestamp_granularities=word."
+missing_hf_token = "{key} no está definido. La identificación de participantes necesita un token de acceso de Hugging Face: crea uno en huggingface.co, acepta los términos del modelo pyannote y define {key} en la configuración."
 
 [errors.session]
 audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."
 device_timeout = "El dispositivo de audio \"{device}\" no se abrió en {seconds} s. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando; si sigue fallando, reinicia Audio de Windows o el PC."
 device_failed = "No se pudo abrir el dispositivo de audio \"{device}\": {reason}"
+diarization_failed = "No se pudo identificar a los participantes remotos ({reason}). La transcripción mantiene la etiqueta del sistema; reintenta con: {command}"
 mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas del micrófono y del sistema."
 minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
 model_failed = "No se pudo cargar el modelo de voz ({reason}). La grabación continúa: el audio se guarda, pero no se transcribe."
@@ -26,6 +28,7 @@ unsupported_format = "Formato de exportación no admitido: \"{format}\". Usa uno
 settings_write_failed = "No se pudo guardar el archivo de configuración ({reason}). Cierra los programas que puedan estar usándolo, como una herramienta de sincronización, e inténtalo de nuevo."
 minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 empty_transcript = "La sesión \"{id}\" no tiene transcripción, así que no hay nada que resumir."
+unknown_template = "Plantilla de acta desconocida \"{id}\". Usa una de estas: {allowed}."
 not_found = "Este endpoint no existe."
 method_not_allowed = "Este método no está permitido en este endpoint."
 http_error = "La solicitud falló con el estado HTTP {status}."
@@ -47,21 +50,19 @@ auto = "el idioma hablado en la transcripción"
 [minutes]
 output_language = "español"
 system = "Redactas actas de reunión precisas y concisas. Usa solo hechos presentes en la transcripción o en las notas; nunca inventes nombres, fechas, números ni decisiones."
-instructions = """La reunión se realizó en {conversation_language}. Redacta el acta en {output_language}, en Markdown, con exactamente estos encabezados de nivel 2, en este orden:
+instructions = """La reunión se realizó en {conversation_language}. {template_instructions}
+Redacta el acta en {output_language}, en Markdown, con exactamente estos encabezados de nivel 2, en este orden:
 {sections}
-Enumera los elementos de acción con su responsable y fecha límite cuando se hayan mencionado. En una sección sin contenido, escribe "—"."""
-map_instructions = "Esta es la parte {part} de {total} de una reunión realizada en {conversation_language}. Escribe notas concisas en {output_language} con los temas, decisiones, elementos de acción (responsable, fecha límite) y asuntos pendientes de esta parte. Usa solo hechos de esta parte."
+Qué va en cada encabezado:
+{guidance}
+En un encabezado sin contenido, escribe "—"."""
+map_instructions = """Esta es la parte {part} de {total} de una reunión realizada en {conversation_language}. {template_instructions}
+Escribe notas concisas en {output_language} con lo que esta parte dice para estos encabezados:
+{guidance}
+Usa solo hechos de esta parte."""
 reduce_instructions = "Estas son notas de partes consecutivas de una misma reunión realizada en {conversation_language}. Combínalas en el acta de la reunión."
 transcript_label = "Transcripción:"
 notes_label = "Notas:"
-
-[minutes.section]
-context = "Contexto"
-summary = "Resumen"
-topics = "Temas"
-decisions = "Decisiones"
-action_items = "Elementos de acción"
-open_issues = "Asuntos pendientes"
 
 [cli]
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
@@ -83,6 +84,9 @@ minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama es
 session_not_found = "No se encontró ninguna sesión en {folder}."
 empty_transcript = "La sesión en {folder} no tiene transcripción, así que no hay nada que resumir."
 device_not_found = "No se encontró el dispositivo de audio: {reason}. Ejecuta \"python -m vozata record --list-devices\" para ver los ids."
+diarized = "Se encontraron {count} participante(s) remoto(s); transcripción con participantes guardada en {path}"
+diarize_failed = "No se pudo identificar a los participantes remotos ({reason})."
+no_system_speech = "La sesión en {folder} no tiene voz en el audio del sistema, así que no hay nadie a quien identificar."
 reindexed = "Índice de búsqueda reconstruido. Sesiones indexadas: {count}."
 reindex_failed = "No se pudo reconstruir el índice de búsqueda ({reason})."
 
@@ -101,6 +105,8 @@ system = "id del dispositivo de loopback (predeterminado: el loopback de la sali
 list_devices = "muestra los dispositivos de audio y sale"
 minutes = "vuelve a generar el acta de una sesión grabada"
 session_dir = "carpeta de la sesión, por ejemplo recordings/20261015_202358"
+diarize = "identifica a los participantes remotos de una sesión grabada (Usuario 1, Usuario 2, ...)"
+diarize_minutes = "vuelve a generar el acta después"
 reindex = "reconstruye el índice de búsqueda a partir de todas las sesiones grabadas"
 
 [export]

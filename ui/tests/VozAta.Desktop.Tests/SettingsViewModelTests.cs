@@ -22,7 +22,7 @@ public sealed class SettingsViewModelTests
         Add("VAD_MIN_SILENCE_MS", "integer", 600, "segmentation");
         Add("WHISPER_MODEL", "string", "large-v3-turbo", "transcription", applies: "restart");
         Add("OLLAMA_URL", "url", "http://localhost:11434", "minutes");
-        Add("HF_TOKEN", "string", "", "minutes", secret: true);
+        Add("HF_TOKEN", "string", "", "speakers", secret: true);
         _client.SettingValues["MIC_LABEL"] = null;
         _client.SettingValues["HF_TOKEN"] = "********";
         _client.RestartKeys.Add("WHISPER_MODEL");
@@ -45,17 +45,29 @@ public sealed class SettingsViewModelTests
         settings.Groups.SelectMany(group => group.Editors).Single(editor => editor.Key == key);
 
     [Fact]
+    public async Task Minutes_template_choices_show_the_template_names()
+    {
+        Add("MINUTES_TEMPLATE", "choice", "general", "minutes", choices: ["general", "daily", "one_on_one", "client", "retrospective"]);
+
+        var settings = await LoadedAsync();
+
+        Assert.Equal(
+            ["General meeting", "Daily stand-up", "One-on-one", "Client meeting", "Retrospective"],
+            Editor(settings, "MINUTES_TEMPLATE").Choices.Select(choice => choice.Label));
+    }
+
+    [Fact]
     public async Task Editors_are_grouped_in_page_order_with_a_kind_per_type()
     {
         var settings = await LoadedAsync();
 
-        Assert.Equal(["general", "audio", "segmentation", "transcription", "minutes"], settings.Groups.Select(group => group.Id));
+        Assert.Equal(["general", "audio", "segmentation", "transcription", "speakers", "minutes"], settings.Groups.Select(group => group.Id));
         Assert.Equal(_localization["SettingsGroup_general"], settings.Groups[0].Title);
         Assert.Equal(
             [
                 ("APP_LANGUAGE", SettingKind.Choice), ("MIC_LABEL", SettingKind.Text), ("GENERATE_MINUTES", SettingKind.Toggle),
                 ("MIX_MODE", SettingKind.Choice), ("CHUNK_SECONDS", SettingKind.Number), ("VAD_MIN_SILENCE_MS", SettingKind.WholeNumber),
-                ("WHISPER_MODEL", SettingKind.Text), ("OLLAMA_URL", SettingKind.Text), ("HF_TOKEN", SettingKind.Secret),
+                ("WHISPER_MODEL", SettingKind.Text), ("HF_TOKEN", SettingKind.Secret), ("OLLAMA_URL", SettingKind.Text),
             ],
             settings.Groups.SelectMany(group => group.Editors).Select(editor => (editor.Key, editor.Kind)));
         var chunk = Editor(settings, "CHUNK_SECONDS");

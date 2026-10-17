@@ -190,7 +190,7 @@ class Api:
         self.devices = FakeDevices()
         self.gpu = GpuInfo(True, "RTX 3050", 6144)
         self.reachable = True
-        self.regenerated: list[str] = []
+        self.regenerated: list[tuple[str, str | None]] = []
         from vozata.bootstrap import EXPORTERS
         from vozata.i18n import TomlLocalizer
         from vozata.settings_file import SettingsFile
@@ -210,7 +210,9 @@ class Api:
             devices=self.devices,
             gpu_info=lambda: self.gpu,
             llm_reachable=lambda: self.reachable,
-            regenerate_minutes=self.regenerated.append,
+            regenerate_minutes=lambda session_id, template: self.regenerated.append(
+                (session_id, template)
+            ),
         )
         self.app = create_app(container)
         self.client = TestClient(self.app, raise_server_exceptions=False)
