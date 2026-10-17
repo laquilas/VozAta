@@ -259,6 +259,11 @@
                          IsVisible="{Binding !IsLive}">
                   <views:SpeakersPanel DataContext="{Binding Speakers}" />
                 </TabItem>
+                <!-- Action items export (phase 23) -->
+                <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabActionItems]}"
+                         IsVisible="{Binding !IsLive}">
+                  <views:ActionItemsPanel DataContext="{Binding ActionItems}" />
+                </TabItem>
               </TabControl>
             </DockPanel>
           </DataTemplate>

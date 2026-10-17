@@ -62,6 +62,12 @@ public sealed partial class SessionDetailViewModel(
         () => HasMinutes,
         () => RegenerateMinutesCommand.CanExecute(null) ? RegenerateMinutesCommand.ExecuteAsync(null) : Task.CompletedTask);
 
+    private ActionItemsViewModel? _actionItems;
+
+    /// <summary>The "Action items" tab (phase 23).</summary>
+    public ActionItemsViewModel ActionItems =>
+        _actionItems ??= new ActionItemsViewModel(client, localization, shell, Id) { IsLive = IsLive };
+
     public ObservableCollection<MarkdownBlock> Blocks { get; } = [];
 
     [ObservableProperty]
@@ -127,6 +133,10 @@ public sealed partial class SessionDetailViewModel(
             await Editor.LoadThresholdAsync(cancellationToken);
             await ShowTranscriptAsync(cancellationToken);
             await LoadMinutesAsync(cancellationToken);
+            if (!IsLive)
+            {
+                await ActionItems.LoadAsync(cancellationToken);
+            }
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
@@ -163,6 +173,7 @@ public sealed partial class SessionDetailViewModel(
     /// <summary>An <c>error</c> event: ends our regeneration with the engine's message.</summary>
     public void OnError(string? sessionId, string message)
     {
+        _actionItems?.OnError(sessionId, message);
         if (sessionId == Id && IsBusy)
         {
             IsBusy = false;

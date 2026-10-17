@@ -753,4 +753,91 @@
   <data name="SpeakersEmpty" xml:space="preserve">
     <value>Todavía no hay participantes: esta sesión no tiene transcripción.</value>
   </data>
+  <data name="TabActionItems" xml:space="preserve">
+    <value>Tareas</value>
+  </data>
+  <data name="ActionItemsEmpty" xml:space="preserve">
+    <value>No hay tareas en esta reunión. Usa "Extraer de nuevo" para buscarlas en la transcripción.</value>
+  </data>
+  <data name="ActionItemsExtract" xml:space="preserve">
+    <value>Extraer de nuevo</value>
+  </data>
+  <data name="ActionItemsExtracting" xml:space="preserve">
+    <value>Extrayendo tareas de la transcripción…</value>
+  </data>
+  <data name="ActionItemsTarget" xml:space="preserve">
+    <value>Exportar a</value>
+  </data>
+  <data name="ActionItemsNoTargets" xml:space="preserve">
+    <value>Para exportar, configura Azure DevOps o GitHub en Configuración → Exportación de tareas.</value>
+  </data>
+  <data name="ActionItemsExport" xml:space="preserve">
+    <value>Exportar seleccionadas</value>
+  </data>
+  <data name="ActionItemsExported" xml:space="preserve">
+    <value>Exportadas: {0}.</value>
+  </data>
+  <data name="ActionItemsExportFailed" xml:space="preserve">
+    <value>No exportadas: {0}. El motivo aparece debajo de cada tarea.</value>
+  </data>
+  <data name="ActionItemsDescription" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="ActionItemsOwner" xml:space="preserve">
+    <value>Responsable</value>
+  </data>
+  <data name="ActionItemsDue" xml:space="preserve">
+    <value>Fecha límite</value>
+  </data>
+  <data name="ActionItemsSelect" xml:space="preserve">
+    <value>Seleccionar para exportar</value>
+  </data>
+  <data name="ActionItemsExportedLink" xml:space="preserve">
+    <value>Exportada:</value>
+  </data>
+  <data name="TaskTarget_azure_devops" xml:space="preserve">
+    <value>Azure DevOps</value>
+  </data>
+  <data name="TaskTarget_github" xml:space="preserve">
+    <value>GitHub Issues</value>
+  </data>
+  <data name="SettingsGroup_tasks" xml:space="preserve">
+    <value>Exportación de tareas</value>
+  </data>
+  <data name="Setting_EXTRACT_ACTION_ITEMS" xml:space="preserve">
+    <value>Extraer tareas</value>
+  </data>
+  <data name="SettingHelp_EXTRACT_ACTION_ITEMS" xml:space="preserve">
+    <value>Después del acta, enumerar las tareas acordadas en la reunión (descripción, responsable, fecha límite).</value>
+  </data>
+  <data name="Setting_AZDO_ORG_URL" xml:space="preserve">
+    <value>URL de la organización de Azure DevOps</value>
+  </data>
+  <data name="SettingHelp_AZDO_ORG_URL" xml:space="preserve">
+    <value>Por ejemplo https://dev.azure.com/mi-org. Déjalo vacío para no ofrecer Azure DevOps.</value>
+  </data>
+  <data name="Setting_AZDO_PROJECT" xml:space="preserve">
+    <value>Proyecto de Azure DevOps</value>
+  </data>
+  <data name="SettingHelp_AZDO_PROJECT" xml:space="preserve">
+    <value>Proyecto donde se crean los elementos de trabajo de tipo Task.</value>
+  </data>
+  <data name="Setting_AZDO_PAT" xml:space="preserve">
+    <value>Token de acceso de Azure DevOps</value>
+  </data>
+  <data name="SettingHelp_AZDO_PAT" xml:space="preserve">
+    <value>Token de acceso personal con el ámbito Work Items (Read &amp; write). Se guarda solo en .env.</value>
+  </data>
+  <data name="Setting_GITHUB_REPO" xml:space="preserve">
+    <value>Repositorio de GitHub</value>
+  </data>
+  <data name="SettingHelp_GITHUB_REPO" xml:space="preserve">
+    <value>propietario/nombre del repositorio que recibe las issues. Déjalo vacío para no ofrecer GitHub.</value>
+  </data>
+  <data name="Setting_GITHUB_TOKEN" xml:space="preserve">
+    <value>Token de GitHub</value>
+  </data>
+  <data name="SettingHelp_GITHUB_TOKEN" xml:space="preserve">
+    <value>Token con permiso para crear issues en el repositorio. Se guarda solo en .env.</value>
+  </data>
 </root>

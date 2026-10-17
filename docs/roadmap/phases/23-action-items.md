@@ -62,8 +62,8 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** UI `ActionItemsViewModel` + "Action items" tab (`ActionItemsPanel`), resources
-  in en / pt-BR / es, settings group `tasks`
+- **Next step:** tick acceptance criteria, write the manual-check recipe, set README `done`,
+  merge `origin/main`, run the full suites, open the PR
 
 ### Steps
 
@@ -73,7 +73,7 @@ Calendar invites, Jira (another `TaskExporter` later).
 - [x] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
 - [x] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
 - [x] API: `POST/GET/PUT /sessions/{id}/action-items`, `POST .../export`
-- [ ] UI: client methods + DTOs, `ActionItemsViewModel`, "Action items" tab, resources
+- [x] UI: client methods + DTOs, `ActionItemsViewModel`, "Action items" tab, resources
 - [ ] Docs (architecture, api-contract), acceptance criteria, full suites, PR
 
 ### Decisions and notes
@@ -92,3 +92,7 @@ Calendar invites, Jira (another `TaskExporter` later).
 - API additions beyond the contract rows: `PUT /sessions/{id}/action-items` saves the UI edits
   (exported items stay as exported) and `GET` also returns `targets` (configured targets only),
   so the UI can offer the selector. `api-contract.md` updated.
+- UI: self-contained `ActionItemsViewModel` (lazy `SessionDetailViewModel.ActionItems`, loaded
+  with the detail when the session is not live) and `Views/ActionItemsPanel.axaml` in a new tab.
+  Export first `PUT`s the edits of every editable row, then exports the selected ones. The task
+  settings live in a new settings group `tasks` (`SettingsGroup_tasks`).

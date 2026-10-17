@@ -222,6 +222,31 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Action_items_events_reach_the_open_session()
+    {
+        const string id = "20261015_100000";
+        _client.Sessions.Add(new SessionSummary(id, "done", null, null, 60, "pt", true));
+        _client.Details[id] = new SessionDetail(id, "done", null, null, 60, "pt", true, [], @"C:\r");
+        _client.Transcripts[id] = new Transcript("raw", [Line("mic", "Me", 1, "Hi.")]);
+        var viewModel = await ReadyAsync();
+        viewModel.History.Selected = viewModel.History.Rows[0];
+        await viewModel.History.DetailLoading;
+        var actionItems = viewModel.History.Detail!.ActionItems;
+        Assert.Contains($"action-items {id}", _client.Calls);
+        await actionItems.ExtractCommand.ExecuteAsync(null);
+
+        await SendAsync(viewModel, new ErrorEvent(id, "action_items_failed", "Ollama offline"));
+        Assert.Equal("Ollama offline", actionItems.Error);
+        await actionItems.ExtractCommand.ExecuteAsync(null);
+        _client.ActionItems[id] = [new ActionItem("a1", "Call Bob", null, null, [], null)];
+        await SendAsync(viewModel, new ActionItemsReadyEvent(id, 1));
+        await viewModel.HistoryRefresh;
+
+        Assert.False(actionItems.IsExtracting);
+        Assert.Equal("Call Bob", Assert.Single(actionItems.Items).Description);
+    }
+
+    [Fact]
     public async Task The_history_texts_follow_the_ui_language()
     {
         _client.Sessions.Add(new SessionSummary("20261015_100000", "done", null, null, 60, "pt", true));
