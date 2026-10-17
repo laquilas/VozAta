@@ -20,6 +20,7 @@ from vozata.domain import (
     SearchHit,
     SessionStatus,
     SpeakerTurn,
+    TaskDraft,
     TranscriptionResult,
     TranscriptSegment,
 )
@@ -140,6 +141,30 @@ class DocumentExporter(Protocol):
     extension: str
 
     def export(self, document: ExportDocument) -> bytes: ...
+
+
+class TaskExportError(RuntimeError):
+    """A task could not be created; `code` is an `errors.tasks.<code>` key, `params` its values.
+
+    Codes: `unauthorized`, `not_found`, `http_error` (status, detail), `unreachable` (reason),
+    `invalid_reply`. Messages never contain credentials.
+    """
+
+    def __init__(self, code: str, **params: object) -> None:
+        super().__init__(code, params)
+        self.code = code
+        self.params = params
+
+
+@runtime_checkable
+class TaskExporter(Protocol):
+    """Creates one work item / issue per action item in an external tracker (phase 23)."""
+
+    name: str  # display name, e.g. "Azure DevOps"
+
+    def create(self, task: TaskDraft) -> str:
+        """The URL of the created item; raises `TaskExportError`."""
+        ...
 
 
 @runtime_checkable

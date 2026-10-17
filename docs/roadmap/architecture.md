@@ -99,7 +99,9 @@ class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 @dataclass(frozen=True) class SpeakerTurn:     start, end, speaker_index: int
 @dataclass(frozen=True) class ExportDocument:  title, details, minutes_title, minutes_markdown, minutes_blocks: list[Block],
                                                no_minutes, transcript_title, columns, rows: list[Row]  # localized (11)
-@dataclass(frozen=True) class ActionItem:      description, owner: str | None, due: str | None, source_segment_ids
+@dataclass(frozen=True) class ActionItem:      id, description, owner: str | None, due: str | None,
+                                               source_segment_ids: tuple[str, ...], exported_url: str | None  # (23)
+@dataclass(frozen=True) class TaskDraft:       title, body, due: str | None  # one item to export, body localized (23)
 ```
 
 All times are **seconds since session start** (float).
@@ -145,8 +147,9 @@ class SpeakerEmbedder(Protocol):
 class DocumentExporter(Protocol):     # Markdown, DOCX, PDF (11)
     media_type: str; extension: str
     def export(self, document: ExportDocument) -> bytes: ...  # built once by export.document.build_document
-class TaskExporter(Protocol):
-    def export(self, items: Sequence[ActionItem], session_title: str) -> list[str]: ...  # created URLs
+class TaskExporter(Protocol):        # TASK_EXPORTERS registry (23): azure_devops, github
+    name: str                        # display name, e.g. "Azure DevOps"
+    def create(self, task: TaskDraft) -> str: ...  # created item URL; raises TaskExportError(code, **params)
 class Localizer(Protocol):
     def t(self, key: str, /, **params: object) -> str: ...  # key is positional-only
 class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06); called from worker threads

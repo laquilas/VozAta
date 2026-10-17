@@ -277,6 +277,15 @@ class ActionItem:
         )
 
 
+@dataclass(frozen=True)
+class TaskDraft:
+    """One work item or issue to create from an action item; `body` is localized plain text."""
+
+    title: str
+    body: str
+    due: str | None = None
+
+
 def optional_text(value: object) -> str | None:
     """A stripped string, or None for a missing, blank or non-string value."""
     if not isinstance(value, str):

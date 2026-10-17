@@ -62,15 +62,15 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** add the `TaskExporter` port and `export/tasks/{azure_devops,github}.py` with
-  `httpx.MockTransport` tests, then the `TASK_EXPORTERS` registry in `bootstrap.py`
+- **Next step:** stop step in `session.py` (extraction after minutes, `on_action_items_ready`
+  observer event → `action_items_ready`)
 
 ### Steps
 
 - [x] Domain `ActionItem` + `storage/action_items.py` (`action_items.json`)
 - [x] `minutes/action_items.py`: `ActionItemExtractor` (localized prompt, JSON schema, one retry)
 - [x] Config keys `EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*` (secrets masked) + `.env.example`
-- [ ] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
+- [x] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
 - [ ] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
 - [ ] API: `POST/GET/PUT /sessions/{id}/action-items`, `POST .../export`
 - [ ] UI: client methods + DTOs, `ActionItemsViewModel`, "Action items" tab, resources
@@ -78,4 +78,10 @@ Calendar invites, Jira (another `TaskExporter` later).
 
 ### Decisions and notes
 
-- (none yet)
+- `TaskExporter.create(TaskDraft) -> str` (one item per call) replaces the planned
+  `export(items, session_title) -> list[str]`: per-item results are needed for
+  `{created, failed}`, and the localized body is built by the caller so exporters need no
+  localizer. Architecture §4/§5 updated.
+- Azure DevOps: the due date goes to `Microsoft.VSTS.Scheduling.DueDate` only when it is an ISO
+  date; if the process' Task type rejects it (HTTP 400) the task is created again without it (the
+  due date is also in the description).

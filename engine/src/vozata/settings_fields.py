@@ -28,7 +28,16 @@ class Field:
     applies: str = "next_session"  # or "restart": read once when the engine starts
 
 
-GROUPS = ("general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "api")
+GROUPS = (
+    "general",
+    "audio",
+    "segmentation",
+    "transcription",
+    "speakers",
+    "minutes",
+    "tasks",
+    "api",
+)
 
 FIELDS: tuple[Field, ...] = (
     Field("CHUNK_SECONDS", "chunk_seconds", "number", group="segmentation"),
