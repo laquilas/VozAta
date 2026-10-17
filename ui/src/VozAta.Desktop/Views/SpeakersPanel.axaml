@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             x:Class="VozAta.Desktop.Views.SpeakersPanel"
+             x:DataType="vm:SpeakersViewModel">
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersIntro]}"
+                 Opacity="0.75" TextWrapping="Wrap" IsVisible="{Binding HasRows}" />
+      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersEmpty]}"
+                 Opacity="0.6" TextWrapping="Wrap"
+                 IsVisible="{Binding !HasRows}" />
+      <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                 IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding HasRows}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Command="{Binding SaveCommand}"
+                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersSave]}" />
+        <TextBlock VerticalAlignment="Center" FontStyle="Italic" Opacity="0.7"
+                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersSaving]}"
+                   IsVisible="{Binding IsSaving}" />
+        <TextBlock VerticalAlignment="Center" Foreground="#2E7D32" Text="{Binding Message}"
+                   IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </StackPanel>
+      <Border Background="#FFF3E0" CornerRadius="4" Padding="10,8" IsVisible="{Binding OfferRegenerate}">
+        <WrapPanel>
+          <TextBlock VerticalAlignment="Center" Foreground="#E65100" TextWrapping="Wrap" Margin="0,0,12,4"
+                     Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersRegeneratePrompt]}" />
+          <Button Margin="0,0,8,4" Command="{Binding RegenerateCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersRegenerate]}" />
+          <Button Margin="0,0,8,4" Command="{Binding DismissRegenerateCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Dismiss]}" />
+        </WrapPanel>
+      </Border>
+    </StackPanel>
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SpeakerRow">
+            <Grid ColumnDefinitions="140,240,*" Margin="0,4">
+              <TextBlock Grid.Column="0" VerticalAlignment="Center" FontWeight="SemiBold"
+                         Text="{Binding DefaultLabel}" />
+              <TextBox Grid.Column="1" Text="{Binding Name}" MaxLength="200"
+                       PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersName]}"
+                       AutomationProperties.Name="{Binding DefaultLabel}" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.6"
+                         FontStyle="Italic" TextTrimming="CharacterEllipsis" Text="{Binding Hint}"
+                         ToolTip.Tip="{Binding Hint}" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

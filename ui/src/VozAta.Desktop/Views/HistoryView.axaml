@@ -252,6 +252,11 @@
                     </Panel>
                   </DockPanel>
                 </TabItem>
+                <!-- Speaker rename (phase 16) -->
+                <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabSpeakers]}"
+                         IsVisible="{Binding !IsLive}">
+                  <views:SpeakersPanel DataContext="{Binding Speakers}" />
+                </TabItem>
               </TabControl>
             </DockPanel>
           </DataTemplate>

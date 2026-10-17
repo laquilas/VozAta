@@ -660,4 +660,31 @@
   <data name="ConfirmRevertNo" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="TabSpeakers" xml:space="preserve">
+    <value>Speakers</value>
+  </data>
+  <data name="SpeakersIntro" xml:space="preserve">
+    <value>Give the people in this recording their real names. Leave a name empty to keep the default label.</value>
+  </data>
+  <data name="SpeakersName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="SpeakersSave" xml:space="preserve">
+    <value>Save names</value>
+  </data>
+  <data name="SpeakersSaving" xml:space="preserve">
+    <value>Saving…</value>
+  </data>
+  <data name="SpeakersSaved" xml:space="preserve">
+    <value>Names saved.</value>
+  </data>
+  <data name="SpeakersRegeneratePrompt" xml:space="preserve">
+    <value>Names saved. The minutes still use the old names.</value>
+  </data>
+  <data name="SpeakersRegenerate" xml:space="preserve">
+    <value>Regenerate minutes with the new names</value>
+  </data>
+  <data name="SpeakersEmpty" xml:space="preserve">
+    <value>No speakers yet: this session has no transcript.</value>
+  </data>
 </root>

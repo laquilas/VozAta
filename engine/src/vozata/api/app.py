@@ -19,6 +19,7 @@ from vozata.api.routes import (
     search,
     sessions,
     settings,
+    speakers,
     templates,
     transcript_edit,
 )
@@ -44,6 +45,7 @@ def create_app(container: ApiContainer) -> FastAPI:
         health,
         devices,
         sessions,
+        speakers,
         transcript_edit,
         export,
         settings,

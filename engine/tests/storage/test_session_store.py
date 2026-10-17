@@ -283,6 +283,40 @@ def test_speakers_are_written_without_names_and_names_are_read_back(tmp_path: Pa
     assert store.speaker_names(paths.id) == {"system:1": "Ana"}
 
 
+def test_renaming_speakers_merges_trimmed_names_into_speakers_json(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    store.write_speakers(paths.id, ["system:1", "system:2"])
+
+    store.rename_speakers(paths.id, {"system:2": "  Bruno ", "mic": "Ana"})
+    store.rename_speakers(paths.id, {"mic": "   "})  # empty name: back to the default
+
+    assert json.loads(paths.speakers_json.read_text(encoding="utf-8")) == {
+        "system:1": {"name": None},
+        "system:2": {"name": "Bruno"},
+        "mic": {"name": None},
+    }
+    assert store.speaker_names(paths.id) == {"system:2": "Bruno"}
+    assert b"\r\n" not in paths.speakers_json.read_bytes()
+
+
+@pytest.mark.parametrize("content", [None, "{not json", "[1, 2]"])
+def test_renaming_starts_a_new_speakers_json_when_none_is_readable(
+    tmp_path: Path, content: str | None
+) -> None:
+    store = SessionStore(tmp_path)
+    paths = store.create()
+    if content is not None:
+        paths.speakers_json.write_text(content, encoding="utf-8")
+
+    store.rename_speakers(paths.id, {"system": "Room", "mic": None})
+
+    assert json.loads(paths.speakers_json.read_text(encoding="utf-8")) == {
+        "system": {"name": "Room"},
+        "mic": {"name": None},
+    }
+
+
 @pytest.mark.parametrize("content", ["{not json", "[1, 2]"])
 def test_unreadable_speakers_files_give_no_names(tmp_path: Path, content: str) -> None:
     store = SessionStore(tmp_path)

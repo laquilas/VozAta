@@ -8,7 +8,7 @@ import os
 import re
 import shutil
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -167,19 +167,23 @@ class SessionStore:
 
     def speaker_names(self, session_id: str) -> dict[str, str]:
         """Names given to speakers in `speakers.json` (empty when absent or unreadable)."""
+        speakers = _read_speakers(self.paths(session_id).speakers_json)
+        return {
+            speaker_id: entry["name"]
+            for speaker_id, entry in speakers.items()
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+        }
+
+    def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:
+        """Merge trimmed names into `speakers.json` (phase 16); an empty name clears it."""
         path = self.paths(session_id).speakers_json
-        if not path.is_file():
-            return {}
-        try:
-            speakers = json.loads(path.read_text(encoding="utf-8"))
-            return {
-                str(speaker_id): entry["name"]
-                for speaker_id, entry in speakers.items()
-                if isinstance(entry, dict) and isinstance(entry.get("name"), str)
-            }
-        except (ValueError, AttributeError):
-            _log.warning("Ignoring unreadable %s", path)
-            return {}
+        speakers = _read_speakers(path)
+        for speaker_id, name in names.items():
+            entry = speakers.get(speaker_id)
+            entry = dict(entry) if isinstance(entry, dict) else {}
+            entry["name"] = (name or "").strip() or None
+            speakers[speaker_id] = entry
+        _write_atomic(path, json.dumps(speakers, ensure_ascii=False, indent=2) + "\n")
 
     def discard(self, session_id: str) -> None:
         """Delete a session folder (used when a recording fails to start)."""
@@ -200,6 +204,20 @@ def _write_atomic(target: Path, text: str) -> None:
 
 def _jsonl(segments: list[TranscriptSegment]) -> str:
     return "".join(json.dumps(segment.to_dict(), ensure_ascii=False) + "\n" for segment in segments)
+
+
+def _read_speakers(path: Path) -> dict[str, Any]:
+    """`speakers.json` as a dict (empty when absent or unreadable)."""
+    if not path.is_file():
+        return {}
+    try:
+        speakers = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        speakers = None
+    if not isinstance(speakers, dict):
+        _log.warning("Ignoring unreadable %s", path)
+        return {}
+    return {str(speaker_id): entry for speaker_id, entry in speakers.items()}
 
 
 def _read_segments(path: Path) -> list[TranscriptSegment]:

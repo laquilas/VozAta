@@ -26,6 +26,9 @@ minutes. Python engine (`engine/`) + Avalonia desktop UI (`ui/`) over a local HT
    `main` yet.
 5. Implement with TDD; one logical change per commit. Every commit also updates **Progress** (tick
    the step, set *Next step*) and is pushed, so a session cut short can be resumed.
+   Pull-request CI only lints, format-checks and compiles (`ci.yml`); run the full engine and UI
+   test suites locally before opening the PR. The full suites run on `v*` tags and on demand
+   (`full-ci.yml`).
 6. Tick the phase acceptance criteria and set its status to `done` in the README table.
 7. Shared contract changes (config keys, endpoints, events, data model) go into
    `docs/roadmap/architecture.md` / `docs/roadmap/api-contract.md` in the same branch.
