@@ -16,6 +16,7 @@ from vozata.config import ConfigError, Settings
 from vozata.domain import AppLanguage, Channel, ChunkMode, ConversationLanguage, MixMode
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.template_repository import UnknownTemplateError
 from vozata.session import SessionStartError
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
@@ -191,6 +192,18 @@ def test_build_minutes_generator_uses_the_registered_language_model(
     assert generator._llm is llm
     assert generator._max_chars == 5000
     assert generator._localizer.t("labels.mic") == "Eu"
+    assert generator.template_id == "general"
+    assert generator._template.name == "Reunião geral"
+
+
+def test_build_minutes_generator_picks_the_template(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    settings = Settings(llm_provider="fake", minutes_template="daily")
+
+    assert bootstrap.build_minutes_generator(settings).template_id == "daily"
+    assert bootstrap.build_minutes_generator(settings, template="client").template_id == "client"
+    with pytest.raises(UnknownTemplateError):
+        bootstrap.build_minutes_generator(settings, template="weekly")
 
 
 def test_build_labeler_applies_the_configured_overrides() -> None:

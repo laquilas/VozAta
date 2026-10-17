@@ -62,17 +62,19 @@ User-defined templates edited in the UI (backlog).
 
 - **Branch:** `feature/20-minutes-templates`
 - **Status:** in progress
-- **Updated:** 2026-10-17 11:10
-- **Next step:** add `MINUTES_TEMPLATE` to `config.py` (validated against the bundled ids),
-  `settings_fields.py` and `.env.example`; use it as the default in `build_minutes_generator`.
+- **Updated:** 2026-10-17 11:40
+- **Next step:** store the session's template in `session.json` at start (`SessionComponents`
+  + `SessionMeta`), use it for the stop-time minutes, and make `write_session_minutes` / CLI
+  `minutes` regenerate with the stored template.
 
 ### Steps
 
 - [x] Template files (en, pt-BR, es) + `TemplateRepository` with validation, package data,
       PyInstaller spec check — `36ef036`
 - [x] Prompts and `MinutesGenerator` built from the selected template (general = phase-04
-      sections) — this commit
-- [ ] `MINUTES_TEMPLATE` config key (`config.py`, `settings_fields.py`, `.env.example`)
+      sections) — `216e2f9`
+- [x] `MINUTES_TEMPLATE` config key (`config.py`, `settings_fields.py`, `.env.example`, settings
+      page label/help and template names) — this commit
 - [ ] Template stored in `session.json` at start; session minutes use it; CLI `minutes` uses it
 - [ ] API: `GET /templates`, `template` in `POST /sessions` and `POST /sessions/{id}/minutes`
       (unknown → 422 `unknown_template`)
@@ -90,3 +92,6 @@ User-defined templates edited in the UI (backlog).
   "—" for empty headings) and take `{template_instructions}`, `{sections}` and `{guidance}` from the
   template; the old `minutes.section.*` keys moved into `templates/general.toml`. The generator is
   built with one `LocalizedTemplate` (one generator per job) and exposes `template_id`.
+- `MINUTES_TEMPLATE` is a `choice` setting whose choices are the bundled ids (a `StrEnum` built
+  from `bundled_templates()` in `settings_fields.py`); `config.py` rejects unknown ids with
+  `invalid_choice`. The settings page shows the names from `TemplateName_<id>` resx keys.

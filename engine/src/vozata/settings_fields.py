@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from vozata.domain import AppLanguage, ChunkMode, ConversationLanguage, MixMode, WhisperDevice
+from vozata.minutes.template_repository import bundled_templates
+
+# The bundled minutes template ids as choices, so the settings page offers a list (phase 20).
+MinutesTemplateId = StrEnum("MinutesTemplateId", [(i, i) for i in bundled_templates().ids()])
 
 
 @dataclass(frozen=True)
@@ -92,6 +96,8 @@ FIELDS: tuple[Field, ...] = (
     Field("OLLAMA_URL", "ollama_url", "url", group="minutes"),
     Field("OLLAMA_MODEL", "ollama_model", "string", group="minutes"),
     Field("LLM_MAX_CHARS", "llm_max_chars", "integer", group="minutes"),
+    # Minutes templates (phase 20)
+    Field("MINUTES_TEMPLATE", "minutes_template", "choice", MinutesTemplateId, group="minutes"),
     # LLM VRAM release (phase 25)
     Field("OLLAMA_KEEP_ALIVE", "ollama_keep_alive", "string", group="minutes"),
     # Session (phase 05)

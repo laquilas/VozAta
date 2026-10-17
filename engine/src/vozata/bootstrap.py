@@ -32,7 +32,7 @@ from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
-from vozata.minutes.template_repository import DEFAULT_TEMPLATE, TemplateRepository
+from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import (
     AudioMixer,
     Chunker,
@@ -90,7 +90,7 @@ MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
     MixMode.STEREO: StereoMixer,
 }
-MINUTES_TEMPLATES = TemplateRepository()  # bundled templates, validated at import (phase 20)
+MINUTES_TEMPLATES = bundled_templates()  # validated at import (phase 20)
 
 
 def _provider[T](registry: Mapping[str, T], key: str, value: str) -> T:
@@ -114,12 +114,13 @@ def build_store(settings: Settings) -> SessionStore:
 def build_minutes_generator(
     settings: Settings, localizer: Localizer | None = None, template: str | None = None
 ) -> MinutesGenerator:
-    """Minutes with `template` (default: the general template) in `APP_LANGUAGE`.
+    """Minutes with `template` (default: `MINUTES_TEMPLATE`) in `APP_LANGUAGE`.
 
     Raises `UnknownTemplateError` for an id that is not bundled.
     """
     factory = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)
-    localized = MINUTES_TEMPLATES.get(template or DEFAULT_TEMPLATE).localized(settings.app_language)
+    template_id = template or settings.minutes_template
+    localized = MINUTES_TEMPLATES.get(template_id).localized(settings.app_language)
     return MinutesGenerator(
         factory(settings), localizer or build_localizer(settings), settings.llm_max_chars, localized
     )

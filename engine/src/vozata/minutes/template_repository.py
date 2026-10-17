@@ -13,6 +13,7 @@ guidance = "..."               # what goes under the heading
 
 from __future__ import annotations
 
+import functools
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -82,6 +83,12 @@ class TemplateRepository:
             return self._templates[template_id]
         except KeyError:
             raise UnknownTemplateError(template_id) from None
+
+
+@functools.cache
+def bundled_templates() -> TemplateRepository:
+    """The templates shipped with the package (package data), loaded once."""
+    return TemplateRepository()
 
 
 def _load(path: Path) -> MinutesTemplate:

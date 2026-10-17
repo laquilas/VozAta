@@ -420,6 +420,27 @@
   <data name="SettingHelp_LLM_MAX_CHARS" xml:space="preserve">
     <value>Transcrições mais longas são resumidas em partes e depois combinadas.</value>
   </data>
+  <data name="Setting_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Modelo de ata padrão</value>
+  </data>
+  <data name="SettingHelp_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Modelo pré-selecionado na tela inicial; cada sessão e cada nova geração podem escolher outro.</value>
+  </data>
+  <data name="TemplateName_general" xml:space="preserve">
+    <value>Reunião geral</value>
+  </data>
+  <data name="TemplateName_daily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="TemplateName_one_on_one" xml:space="preserve">
+    <value>One-on-one</value>
+  </data>
+  <data name="TemplateName_client" xml:space="preserve">
+    <value>Reunião com cliente</value>
+  </data>
+  <data name="TemplateName_retrospective" xml:space="preserve">
+    <value>Retrospectiva</value>
+  </data>
   <data name="Setting_OLLAMA_KEEP_ALIVE" xml:space="preserve">
     <value>Manter o modelo da ata carregado</value>
   </data>
