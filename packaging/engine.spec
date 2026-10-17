@@ -53,6 +53,7 @@ exe = EXE(  # noqa: F821
     exclude_binaries=True,
     name="vozata-engine",
     console=True,  # the desktop app starts it without a window (CreateNoWindow)
+    icon=str(ROOT / "assets" / "desktop" / "windows" / "vozata.ico"),
     upx=False,
 )
 coll = COLLECT(  # noqa: F821
