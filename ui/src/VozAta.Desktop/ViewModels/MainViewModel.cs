@@ -59,6 +59,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         History = new HistoryViewModel(client, shell, localization, saver, Templates);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);
+        Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(this, localization, preferences);
         Settings.Saved += OnSettingsSaved;
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
@@ -185,6 +186,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public SettingsViewModel Settings { get; }
 
+    /// <summary>The glossary editor on the settings page (phase 19).</summary>
+    public VocabularyViewModel Vocabulary { get; }
+
+    /// <summary>"Terms for this meeting" on the Start screen: comma or newline separated (phase 19).</summary>
+    [ObservableProperty]
+    public partial string SessionTerms { get; set; } = "";
+
     /// <summary>The system-tray menu (built into a tray icon by the composition root).</summary>
     public TrayViewModel Tray { get; }
 
@@ -237,6 +245,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         await History.LoadAsync(_stop.Token);
         await Settings.LoadAsync(_stop.Token);
+        await Vocabulary.LoadAsync(_stop.Token);
 
         RefreshTexts();
         _ready = true;
@@ -315,8 +324,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SetState(RecordingState.Starting);
         try
         {
+            var terms = VocabularyViewModel.ParseTerms(SessionTerms);
             var request = new StartSessionRequest(
-                Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value, SelectedTemplate?.Id);
+                Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value, SelectedTemplate?.Id,
+                terms.Count > 0 ? terms : null);
             await _client.StartSessionAsync(request, _stop.Token);
             SetState(RecordingState.Recording);
         }

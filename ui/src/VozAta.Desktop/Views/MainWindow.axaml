@@ -124,6 +124,14 @@
             </StackPanel>
           </Grid>
 
+          <!-- Terms for this meeting (phase 19): sent with Start, merged with the glossary -->
+          <Expander DockPanel.Dock="Top" Margin="16,0,16,8" HorizontalAlignment="Stretch"
+                    Header="{Binding L[SessionTerms]}" IsEnabled="{Binding !IsRecording}">
+            <TextBox Text="{Binding SessionTerms}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="50"
+                     PlaceholderText="{Binding L[SessionTermsHint]}"
+                     AutomationProperties.Name="{Binding L[SessionTerms]}" />
+          </Expander>
+
           <!-- Devices (locked while recording) and level meters -->
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,24,*" Margin="16,0,16,8">
             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" x:DataType="vm:DevicesViewModel"

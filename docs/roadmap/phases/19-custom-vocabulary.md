@@ -64,8 +64,8 @@ Automatic term extraction from previous meetings.
 
 - **Branch:** `feature/19-custom-vocabulary`
 - **Status:** in progress
-- **Updated:** 2026-10-17 14:02
-- **Next step:** UI client: `GetVocabularyAsync` / `PutVocabularyAsync` on `IEngineClient`, `Vocabulary` DTO, `StartSessionRequest.Vocabulary`, fake client; tests in `EngineClientTests.cs`.
+- **Updated:** 2026-10-17 14:10
+- **Next step:** docs: architecture §2/§5/§8/§9 and api-contract for vocabulary + context prompt; then merge origin/main, run full engine pytest + UI tests, tick acceptance criteria, open the PR.
 
 ### Steps
 
@@ -78,7 +78,7 @@ Automatic term extraction from previous meetings.
       `transcribe` call
 - [x] Minutes prompt glossary (live stop and regeneration)
 - [x] API: `GET|PUT /vocabulary`, `vocabulary` in `POST /sessions`
-- [ ] UI: client + DTOs, settings tab "Vocabulary", Start screen "Terms for this meeting"
+- [x] UI: client + DTOs, settings tab "Vocabulary", Start screen "Terms for this meeting"
 - [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 
 ### Decisions and notes
@@ -88,3 +88,4 @@ Automatic term extraction from previous meetings.
 - `session.json.vocabulary` is always written at start (an empty list when there are no terms). An unreadable glossary file is logged and the session continues with its own terms.
 - The glossary is a separate `minutes.glossary` locale block added after the template instructions in the single, map and reduce prompts; templates (phase 20) are untouched.
 - `GET|PUT /vocabulary` answer `503 vocabulary_failed` when the file cannot be read or saved; PUT returns the cleaned terms. The route resolves the path on every call, so a `VOCABULARY_FILE` saved in settings applies at once.
+- UI: the "Vocabulary" editor is a card on the Settings page (add / remove chips / import pasted text, each change saved with PUT); the Start screen has an expander "Terms for this meeting" (comma, semicolon or newline separated), sent as `vocabulary` only when non-empty.

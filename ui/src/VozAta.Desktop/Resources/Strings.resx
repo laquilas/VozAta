@@ -429,6 +429,51 @@
   <data name="SettingHelp_ECHO_HOLD_SECONDS" xml:space="preserve">
     <value>How long microphone lines wait for the matching system line; they appear this much later. Empty: segment length + 3 s.</value>
   </data>
+  <data name="Setting_VOCABULARY_FILE" xml:space="preserve">
+    <value>Vocabulary file</value>
+  </data>
+  <data name="SettingHelp_VOCABULARY_FILE" xml:space="preserve">
+    <value>Text file with one term per line (# starts a comment), edited in the Vocabulary card above. Empty: vocabulary.txt next to the engine .env.</value>
+  </data>
+  <data name="Setting_CONTEXT_PROMPT_CHARS" xml:space="preserve">
+    <value>Context for the speech model (characters)</value>
+  </data>
+  <data name="SettingHelp_CONTEXT_PROMPT_CHARS" xml:space="preserve">
+    <value>How much of each channel's recent text is given to the speech model to keep names and spelling consistent (0 to 1000, 0 = off).</value>
+  </data>
+  <data name="VocabularyTitle" xml:space="preserve">
+    <value>Vocabulary</value>
+  </data>
+  <data name="VocabularyHelp" xml:space="preserve">
+    <value>Names, acronyms and product terms the speech model should recognize and the minutes should spell this way. Used in every recording.</value>
+  </data>
+  <data name="VocabularyNewTerm" xml:space="preserve">
+    <value>New term</value>
+  </data>
+  <data name="VocabularyAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="VocabularyRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="VocabularyEmpty" xml:space="preserve">
+    <value>No terms yet.</value>
+  </data>
+  <data name="VocabularyImportHint" xml:space="preserve">
+    <value>Paste terms separated by commas or new lines</value>
+  </data>
+  <data name="VocabularyImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="VocabularySaved" xml:space="preserve">
+    <value>Vocabulary saved.</value>
+  </data>
+  <data name="SessionTerms" xml:space="preserve">
+    <value>Terms for this meeting</value>
+  </data>
+  <data name="SessionTermsHint" xml:space="preserve">
+    <value>Names and terms, separated by commas or new lines</value>
+  </data>
   <data name="Setting_LLM_PROVIDER" xml:space="preserve">
     <value>Minutes model provider</value>
   </data>

@@ -73,6 +73,61 @@
           </StackPanel>
         </Border>
 
+        <!-- Vocabulary (phase 19): the glossary file, saved on every change -->
+        <Border Padding="12" CornerRadius="4" BorderThickness="1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Vocabulary}"
+                x:DataType="vm:VocabularyViewModel">
+          <StackPanel Spacing="8">
+            <TextBlock FontSize="16" FontWeight="SemiBold"
+                       Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyTitle]}" />
+            <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                       Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyHelp]}" />
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding AddCommand}"
+                      Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyAdd]}" />
+              <TextBox Text="{Binding NewTerm}"
+                       PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyNewTerm]}"
+                       AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyNewTerm]}" />
+            </DockPanel>
+            <TextBlock Opacity="0.6" IsVisible="{Binding IsEmpty}"
+                       Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyEmpty]}" />
+            <ItemsControl ItemsSource="{Binding Terms}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Border Margin="0,0,6,6" Padding="10,2,2,2" CornerRadius="12"
+                          Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                      <Button Content="✕" Padding="6,0" Background="Transparent"
+                              Command="{Binding $parent[ItemsControl].((vm:VocabularyViewModel)DataContext).RemoveCommand}"
+                              CommandParameter="{Binding}"
+                              ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyRemove]}"
+                              AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyRemove]}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding ImportCommand}"
+                      Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyImport]}" />
+              <TextBox Text="{Binding ImportText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                       PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyImportHint]}"
+                       AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyImport]}" />
+            </DockPanel>
+            <TextBlock Text="{Binding Message}" Foreground="#2E7D32" TextWrapping="Wrap"
+                       IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                       IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          </StackPanel>
+        </Border>
+
         <!-- One card per group, one editor per key -->
         <ItemsControl ItemsSource="{Binding Groups}">
           <ItemsControl.ItemTemplate>
