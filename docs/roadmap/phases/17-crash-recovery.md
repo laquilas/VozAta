@@ -65,9 +65,8 @@ Recovering audio still in memory buffers at crash time.
 - **Branch:** `feature/17-crash-recovery`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** `storage/wav_repair.py` (`repair_wav`, `pad_wav`) and `storage/recovery.py`
-  (`find_interrupted`, transcript repair, `SessionRecovery.recover`) with
-  `tests/storage/test_recovery.py`.
+- **Next step:** `bootstrap.build_recovery` (a `RecordingSession` for recovery built from
+  `session.json`: template, vocabulary, mix mode) and the CLI `recover [<session_dir> | --all]`.
 
 ### Steps
 
@@ -76,8 +75,8 @@ Recovering audio still in memory buffers at crash time.
 - [x] `JsonlSink` flushes + `os.fsync` per segment
 - [x] Refactor `stop()`: steps 3 (mix) to 7 become one `_finish()` sequence shared with
       `RecordingSession.recover()`
-- [ ] `storage/recovery.py`: `find_interrupted`, `repair_wav`, `pad_wav`, transcript repair,
-      `SessionRecovery.recover` (idempotent, error kept in `session.json`)
+- [x] `storage/recovery.py`: `find_interrupted`, transcript repair, `SessionRecovery.recover`
+      (idempotent, error kept in `session.json`); `storage/wav_repair.py`: `repair_wav`, `pad_wav`
 - [ ] `bootstrap.build_recovery` + CLI `recover [<session_dir> | --all]`
 - [ ] API: `POST /sessions/{id}/recover`, `recovery_available` on WebSocket connect
 - [ ] UI: `IEngineClient.RecoverSessionAsync`, `recovery_available` event, recovery dialog
@@ -90,3 +89,12 @@ Recovering audio still in memory buffers at crash time.
   release transcriber, diarize, minutes, search index, `done`), and `RecordingSession.recover()`
   runs the same `_finish()` on a repaired folder, so any step added there (e.g. phase 23 action
   items after minutes) also runs on recovery.
+- WAV header code lives in `storage/wav_repair.py` (keeps `recovery.py` under ~200 lines). A
+  missing or 0-byte WAV (crash before any audio) becomes a valid empty WAV; an unreadable header
+  raises `WavRepairError` and the session stays `interrupted` with `recovery_error`.
+- A half-written last `transcript.jsonl` line is moved to `transcript.jsonl.damaged` (never
+  deleted), so every reader can load the transcript.
+- `find_interrupted(store, live_ids, stale_after=0)`: `serve` uses only the process criterion
+  (sessions not live in this process), so a session killed seconds ago is offered at once. The CLI
+  passes `stale_after = 2 * AUTOSAVE_SECONDS + 5` so it never touches a session another process
+  (e.g. a running `serve`) is still recording; without a heartbeat it falls back to `started_at`.
