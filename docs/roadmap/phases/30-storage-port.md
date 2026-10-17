@@ -83,7 +83,7 @@ Any new storage backend (31, 32), migration (33), API shape changes.
 - [x] Minutes, action items, task export, API routes and payloads on the repository
 - [x] Recovery on `RecoverableStore`; CLI commands
 - [x] Docs (architecture §2/§5/§8, api-contract), grep check, full suites, manual check recipe
-- [ ] PR
+- [x] PR #45 opened; CI (lint, format, compile) green
 
 ### Decisions and notes
 
