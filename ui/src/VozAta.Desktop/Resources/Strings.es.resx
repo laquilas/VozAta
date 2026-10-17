@@ -195,6 +195,9 @@
   <data name="SettingsGroup_transcription" xml:space="preserve">
     <value>Transcripción</value>
   </data>
+  <data name="SettingsGroup_speakers" xml:space="preserve">
+    <value>Participantes</value>
+  </data>
   <data name="SettingsGroup_minutes" xml:space="preserve">
     <value>Acta</value>
   </data>
@@ -497,6 +500,42 @@
   </data>
   <data name="SettingHelp_OPENAI_STT_MODEL" xml:space="preserve">
     <value>Modelo de la API de voz externa, por ejemplo whisper-1 (OpenAI) o whisper-large-v3 (Groq). Consulta el precio por minuto del proveedor.</value>
+  </data>
+  <data name="Setting_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Identificar participantes remotos</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Al detener una grabación, distingue a las personas del audio del sistema y las etiqueta Usuario 1, Usuario 2… Requiere el extra opcional diarization y un token de Hugging Face.</value>
+  </data>
+  <data name="Setting_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Proveedor de identificación de participantes</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Proveedor del motor que identifica a los participantes, por ejemplo pyannote.</value>
+  </data>
+  <data name="Setting_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Dispositivo de identificación de participantes</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Dónde se ejecuta la identificación: auto, cuda (GPU NVIDIA) o cpu. Se ejecuta después de liberar el modelo de voz.</value>
+  </data>
+  <data name="Setting_HF_TOKEN" xml:space="preserve">
+    <value>Token de Hugging Face</value>
+  </data>
+  <data name="SettingHelp_HF_TOKEN" xml:space="preserve">
+    <value>Token de acceso a los modelos pyannote. Créalo en huggingface.co y acepta antes allí los términos de los modelos.</value>
+  </data>
+  <data name="Setting_MIN_SPEAKERS" xml:space="preserve">
+    <value>Mínimo de participantes remotos</value>
+  </data>
+  <data name="SettingHelp_MIN_SPEAKERS" xml:space="preserve">
+    <value>Menor número de personas remotas esperado (1 a 20). Déjalo vacío para detectarlo.</value>
+  </data>
+  <data name="Setting_MAX_SPEAKERS" xml:space="preserve">
+    <value>Máximo de participantes remotos</value>
+  </data>
+  <data name="SettingHelp_MAX_SPEAKERS" xml:space="preserve">
+    <value>Mayor número de personas remotas esperado (1 a 20). Déjalo vacío para detectarlo.</value>
   </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Cerrar</value>

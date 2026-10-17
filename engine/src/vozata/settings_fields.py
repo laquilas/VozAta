@@ -24,7 +24,7 @@ class Field:
     applies: str = "next_session"  # or "restart": read once when the engine starts
 
 
-GROUPS = ("general", "audio", "segmentation", "transcription", "minutes", "api")
+GROUPS = ("general", "audio", "segmentation", "transcription", "speakers", "minutes", "api")
 
 FIELDS: tuple[Field, ...] = (
     Field("CHUNK_SECONDS", "chunk_seconds", "number", group="segmentation"),
@@ -77,6 +77,13 @@ FIELDS: tuple[Field, ...] = (
     Field("OPENAI_STT_URL", "openai_stt_url", "url", group="transcription"),
     Field("OPENAI_STT_KEY", "openai_stt_key", "string", secret=True, group="transcription"),
     Field("OPENAI_STT_MODEL", "openai_stt_model", "string", group="transcription"),
+    # Speaker identification (phase 14)
+    Field("DIARIZATION_ENABLED", "diarization_enabled", "bool", group="speakers"),
+    Field("DIARIZATION_PROVIDER", "diarization_provider", "string", group="speakers"),
+    Field("DIARIZATION_DEVICE", "diarization_device", "choice", WhisperDevice, group="speakers"),
+    Field("HF_TOKEN", "hf_token", "string", secret=True, group="speakers"),
+    Field("MIN_SPEAKERS", "min_speakers", "integer", group="speakers"),
+    Field("MAX_SPEAKERS", "max_speakers", "integer", group="speakers"),
     # Pause-based segmentation (phase 27)
     Field("CHUNK_MODE", "chunk_mode", "choice", ChunkMode, group="segmentation"),
     Field("VAD_THRESHOLD", "vad_threshold", "number", group="segmentation"),
