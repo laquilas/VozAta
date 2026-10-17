@@ -11,11 +11,13 @@ invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http
 invalid_duration = "Valor no válido \"{value}\" para {key}: se esperaban segundos (0, -1, 300) o una duración como 5m o 1h30m."
 unknown_key = "Configuración desconocida: {key}."
 no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por palabra para el modelo \"{value}\". Elige un modelo que admita timestamp_granularities=word."
+missing_hf_token = "{key} no está definido. La identificación de participantes necesita un token de acceso de Hugging Face: crea uno en huggingface.co, acepta los términos del modelo pyannote y define {key} en la configuración."
 
 [errors.session]
 audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."
 device_timeout = "El dispositivo de audio \"{device}\" no se abrió en {seconds} s. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando; si sigue fallando, reinicia Audio de Windows o el PC."
 device_failed = "No se pudo abrir el dispositivo de audio \"{device}\": {reason}"
+diarization_failed = "No se pudo identificar a los participantes remotos ({reason}). La transcripción mantiene la etiqueta del sistema; reintenta con: {command}"
 mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas del micrófono y del sistema."
 minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
 model_failed = "No se pudo cargar el modelo de voz ({reason}). La grabación continúa: el audio se guarda, pero no se transcribe."

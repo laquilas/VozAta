@@ -272,3 +272,21 @@ def test_unreadable_speakers_files_give_no_names(tmp_path: Path, content: str) -
     paths.speakers_json.write_text(content, encoding="utf-8")
 
     assert store.speaker_names(paths.id) == {}
+
+
+def test_a_failed_replace_removes_the_temp_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    store = SessionStore(tmp_path)
+    paths = store.create()
+
+    def fail(source: str, target: object) -> None:
+        raise PermissionError("locked by a sync tool")
+
+    monkeypatch.setattr(os, "replace", fail)
+    with pytest.raises(PermissionError):
+        store.write_speakers(paths.id, ["system:1"])
+
+    assert list(paths.root.iterdir()) == []
