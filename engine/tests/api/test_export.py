@@ -72,3 +72,15 @@ def test_the_docx_export_opens(api: Api) -> None:
 
     word = docx.Document(io.BytesIO(content))
     assert word.paragraphs[0].text == "Meeting of 2026-10-15 20:23"
+
+
+def test_the_export_uses_the_names_of_diarized_speakers(api: Api) -> None:
+    from tests.api.test_sessions import _diarized
+
+    _recorded(api, minutes=True)
+    _diarized(api, {"system:1": "Bruno", "system:2": None})
+
+    text = api.client.get(f"/sessions/{SESSION}/export", params={"format": "md"}).text
+
+    assert "Bruno" in text
+    assert "labels.user(n=2)" in text

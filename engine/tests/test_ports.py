@@ -9,6 +9,7 @@ from tests.fakes import (
     FakeAudioMixer,
     FakeAudioSink,
     FakeAudioSource,
+    FakeDiarizer,
     FakeLanguageModel,
     FakeLocalizer,
     FakeSessionObserver,
@@ -16,7 +17,7 @@ from tests.fakes import (
     FakeTranscriptSink,
 )
 from vozata import ports
-from vozata.domain import Channel, TranscriptionResult, TranscriptSegment, Word
+from vozata.domain import Channel, SpeakerTurn, TranscriptionResult, TranscriptSegment, Word
 
 
 @pytest.mark.parametrize(
@@ -30,6 +31,7 @@ from vozata.domain import Channel, TranscriptionResult, TranscriptSegment, Word
         (FakeLanguageModel(), ports.LanguageModel),
         (FakeLocalizer(), ports.Localizer),
         (FakeSessionObserver(), ports.SessionObserver),
+        (FakeDiarizer(), ports.Diarizer),
     ],
 )
 def test_fake_satisfies_its_port(fake: object, port: type) -> None:
@@ -131,3 +133,21 @@ def test_fake_session_observer_groups_events_by_name() -> None:
 
     assert observer.of("minutes_ready") == [("20261015_202358",)]
     assert observer.of("error") == [("minutes_failed", "offline")]
+
+
+def test_fake_diarizer_returns_its_turns_records_calls_and_closes(tmp_path: Path) -> None:
+    turns = [SpeakerTurn(0.0, 1.5, 0)]
+    diarizer = FakeDiarizer(turns)
+
+    assert diarizer.diarize(tmp_path / "system.wav", 2, 3) == turns
+    diarizer.close()
+
+    assert diarizer.calls == [(tmp_path / "system.wav", 2, 3)]
+    assert diarizer.closed
+
+
+def test_fake_diarizer_can_fail() -> None:
+    diarizer = FakeDiarizer(error=ports.DiarizationError("no token"))
+
+    with pytest.raises(ports.DiarizationError, match="no token"):
+        diarizer.diarize(Path("system.wav"), None, None)

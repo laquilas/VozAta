@@ -1,4 +1,4 @@
-"""Command line: `python -m vozata record ...` and `python -m vozata minutes <session_dir>`."""
+"""Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex`."""
 
 from __future__ import annotations
 
@@ -19,8 +19,10 @@ from vozata.audio.devices import (
     list_loopback_devices,
 )
 from vozata.cli.console import ConsoleObserver
+from vozata.cli.diarize import run_diarize
 from vozata.cli.minutes import run_minutes
 from vozata.cli.record import print_devices, run_record
+from vozata.cli.reindex import run_reindex
 from vozata.cli.serve import run_serve
 from vozata.config import ConfigError, Settings, load_settings
 from vozata.domain import ConversationLanguage
@@ -52,6 +54,10 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     commands.add_parser("serve", help=t("cli.help.serve"))
     minutes = commands.add_parser("minutes", help=t("cli.help.minutes"))
     minutes.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
+    diarize = commands.add_parser("diarize", help=t("cli.help.diarize"))
+    diarize.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
+    diarize.add_argument("--minutes", action="store_true", help=t("cli.help.diarize_minutes"))
+    commands.add_parser("reindex", help=t("cli.help.reindex"))
     return parser
 
 
@@ -76,14 +82,34 @@ def main(
     try:
         if args.command == "serve":
             return run_serve(settings, console, localizer, _build_app, _uvicorn_run)
-        if args.command == "minutes":
-            return run_minutes(
+        if args.command in ("minutes", "diarize"):
+
+            def minutes() -> int:
+                return run_minutes(
+                    args.session_dir,
+                    settings,
+                    console,
+                    localizer,
+                    labeler,
+                    bootstrap.build_minutes_generator,
+                )
+
+            if args.command == "minutes":
+                return minutes()
+            return run_diarize(
                 args.session_dir,
                 settings,
                 console,
                 localizer,
-                labeler,
-                bootstrap.build_minutes_generator,
+                bootstrap.build_diarizer,
+                minutes if args.minutes else None,
+            )
+        if args.command == "reindex":
+            return run_reindex(
+                bootstrap.build_store(settings),
+                bootstrap.build_search_index(settings),
+                console,
+                localizer,
             )
         if args.list_devices:
             return print_devices(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -15,6 +16,7 @@ from typing import Any
 
 from vozata.domain import Channel, TranscriptSegment
 
+_log = logging.getLogger(__name__)
 _SESSION_ID = re.compile(r"^\d{8}_\d{6}(_[1-9]\d*)?$")
 
 
@@ -61,6 +63,10 @@ class SessionPaths:
     def edited_jsonl(self) -> Path:
         return self.root / "transcript.edited.jsonl"
 
+    @property
+    def speakers_json(self) -> Path:
+        return self.root / "speakers.json"
+
 
 def _local_now() -> datetime:
     return datetime.now().astimezone()
@@ -95,15 +101,7 @@ class SessionStore:
     def write_meta(self, session_id: str, meta: dict[str, Any]) -> None:
         """Replace `session.json` atomically (temp file in the same folder + `os.replace`)."""
         target = self.paths(session_id).meta
-        handle, temp = tempfile.mkstemp(dir=target.parent, prefix=".session-", suffix=".tmp")
-        try:
-            with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as file:
-                json.dump(meta, file, ensure_ascii=False, indent=2)
-                file.write("\n")
-            os.replace(temp, target)
-        except BaseException:
-            Path(temp).unlink(missing_ok=True)
-            raise
+        _write_atomic(target, json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
 
     def read_meta(self, session_id: str) -> dict[str, Any]:
         path = self.paths(session_id).meta
@@ -140,9 +138,55 @@ class SessionStore:
                 return source, _read_segments(path)
         return "raw", []
 
+    def load_raw_transcript(self, session_id: str) -> list[TranscriptSegment]:
+        """`transcript.jsonl` as captured (empty when it does not exist)."""
+        path = self.paths(session_id).transcript_jsonl
+        return _read_segments(path) if path.is_file() else []
+
+    def write_diarized(self, session_id: str, segments: list[TranscriptSegment]) -> None:
+        """Replace `transcript.diarized.jsonl` atomically (phase 14)."""
+        lines = "".join(
+            json.dumps(segment.to_dict(), ensure_ascii=False) + "\n" for segment in segments
+        )
+        _write_atomic(self.paths(session_id).diarized_jsonl, lines)
+
+    def write_speakers(self, session_id: str, speaker_ids: list[str]) -> None:
+        """Replace `speakers.json` with these ids and no names (`{"system:1": {"name": null}}`)."""
+        speakers = {speaker_id: {"name": None} for speaker_id in speaker_ids}
+        text = json.dumps(speakers, ensure_ascii=False, indent=2) + "\n"
+        _write_atomic(self.paths(session_id).speakers_json, text)
+
+    def speaker_names(self, session_id: str) -> dict[str, str]:
+        """Names given to speakers in `speakers.json` (empty when absent or unreadable)."""
+        path = self.paths(session_id).speakers_json
+        if not path.is_file():
+            return {}
+        try:
+            speakers = json.loads(path.read_text(encoding="utf-8"))
+            return {
+                str(speaker_id): entry["name"]
+                for speaker_id, entry in speakers.items()
+                if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+            }
+        except (ValueError, AttributeError):
+            _log.warning("Ignoring unreadable %s", path)
+            return {}
+
     def discard(self, session_id: str) -> None:
         """Delete a session folder (used when a recording fails to start)."""
         shutil.rmtree(self.paths(session_id).root)
+
+
+def _write_atomic(target: Path, text: str) -> None:
+    """Write `text` to a temp file in the same folder, then `os.replace` it onto `target`."""
+    handle, temp = tempfile.mkstemp(dir=target.parent, prefix=f".{target.stem}-", suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as file:
+            file.write(text)
+        os.replace(temp, target)
+    except BaseException:
+        Path(temp).unlink(missing_ok=True)
+        raise
 
 
 def _read_segments(path: Path) -> list[TranscriptSegment]:

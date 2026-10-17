@@ -11,6 +11,7 @@ from vozata.domain import (
     Channel,
     ConversationLanguage,
     SessionStatus,
+    SpeakerTurn,
     TranscriptionResult,
     TranscriptSegment,
     Word,
@@ -92,3 +93,11 @@ def test_audio_chunk_compares_by_identity_not_by_samples() -> None:
 
     assert chunk == chunk
     assert chunk != AudioChunk(channel=Channel.SYSTEM, start=1.5, samples=samples)
+
+
+def test_speaker_turn_holds_a_time_span_and_a_speaker_index() -> None:
+    turn = SpeakerTurn(start=1.0, end=2.5, speaker_index=1)
+
+    assert (turn.start, turn.end, turn.speaker_index) == (1.0, 2.5, 1)
+    assert turn.overlap(2.0, 4.0) == 0.5
+    assert turn.overlap(3.0, 4.0) == 0.0

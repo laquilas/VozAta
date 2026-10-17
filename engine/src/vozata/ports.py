@@ -6,7 +6,7 @@ needs them.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -17,7 +17,9 @@ from vozata.domain import (
     Channel,
     ConversationLanguage,
     ExportDocument,
+    SearchHit,
     SessionStatus,
+    SpeakerTurn,
     TranscriptionResult,
     TranscriptSegment,
 )
@@ -103,6 +105,25 @@ class LanguageModel(Protocol):
         ...
 
 
+class DiarizationError(RuntimeError):
+    """Speaker identification failed (missing extra or token, model error, bad output)."""
+
+
+@runtime_checkable
+class Diarizer(Protocol):
+    """Finds who speaks when in a recording (phase 14); only `system.wav` is diarized."""
+
+    def diarize(
+        self, wav: Path, min_speakers: int | None, max_speakers: int | None
+    ) -> list[SpeakerTurn]:
+        """Speaker turns in time order; raises `DiarizationError` on failure."""
+        ...
+
+    def close(self) -> None:
+        """Release model memory (GPU)."""
+        ...
+
+
 @runtime_checkable
 class DocumentExporter(Protocol):
     """Renders an `ExportDocument` (minutes + transcript) as one file format (phase 11)."""
@@ -146,4 +167,17 @@ class SessionObserver(Protocol):
 
     def on_error(self, code: str, message: str) -> None:
         """A non-fatal error; `message` is localized."""
+        ...
+
+
+@runtime_checkable
+class TranscriptSearch(Protocol):
+    """Full-text search over every session's transcript (phase 22; reused by 21 and 24)."""
+
+    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
+        """Replace everything indexed for `session_id` with `segments`."""
+        ...
+
+    def search(self, query: str, limit: int = 50) -> list[SearchHit]:
+        """Best matches first for free user text; FTS syntax in `query` is never interpreted."""
         ...

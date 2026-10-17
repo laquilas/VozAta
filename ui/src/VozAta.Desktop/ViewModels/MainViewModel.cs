@@ -31,6 +31,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool _ready;
     private TaskCompletionSource _idle = NewIdleSignal(completed: true);
     private string? _detectedLanguage;
+    private string? _defaultTemplate;
 
     public MainViewModel(
         IEngineClient client,
@@ -54,7 +55,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _preferences = preferences;
         _timer = timer;
         Devices = new DevicesViewModel(client, preferences);
-        History = new HistoryViewModel(client, shell, localization, saver);
+        Templates = new MinutesTemplatesViewModel(client);
+        History = new HistoryViewModel(client, shell, localization, saver, Templates);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);
         Tray = new TrayViewModel(this, localization, preferences);
@@ -88,6 +90,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public IReadOnlyList<ChoiceOption> ConversationLanguages { get; }
 
     public DevicesViewModel Devices { get; }
+
+    /// <summary>Minutes templates for the Start screen and "Regenerate minutes" (phase 20).</summary>
+    public MinutesTemplatesViewModel Templates { get; }
+
+    /// <summary>Template of the next recording; preselected from <c>MINUTES_TEMPLATE</c>.</summary>
+    [ObservableProperty]
+    public partial TemplateOption? SelectedTemplate { get; set; }
+
+    /// <summary>The last template reload after a language change (tests await it).</summary>
+    public Task TemplatesRefresh { get; private set; } = Task.CompletedTask;
 
     public HistoryViewModel History { get; }
 
@@ -205,11 +217,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 option => option.Value == settings.GetString("TRANSCRIPTION_LANGUAGE")) ?? ConversationLanguages[0];
             _micLabel = NonEmpty(settings.GetString("MIC_LABEL"));
             _systemLabel = NonEmpty(settings.GetString("SYSTEM_LABEL"));
+            _defaultTemplate = NonEmpty(settings.GetString("MINUTES_TEMPLATE"));
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
             Notify(ErrorText(error));
         }
+
+        await LoadTemplatesAsync();
 
         try
         {
@@ -300,7 +315,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SetState(RecordingState.Starting);
         try
         {
-            var request = new StartSessionRequest(Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value);
+            var request = new StartSessionRequest(
+                Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value, SelectedTemplate?.Id);
             await _client.StartSessionAsync(request, _stop.Token);
             SetState(RecordingState.Recording);
         }
@@ -349,6 +365,28 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
             Notify(ErrorText(error));
+            return;
+        }
+
+        await LoadTemplatesAsync(); // template names follow APP_LANGUAGE
+    }
+
+    /// <summary>Load (or rename) the templates and keep a valid selection.</summary>
+    private async Task LoadTemplatesAsync()
+    {
+        try
+        {
+            await Templates.LoadAsync(_stop.Token);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            Notify(ErrorText(error)); // recording still works with the engine's default template
+            return;
+        }
+
+        if (SelectedTemplate is null || !Templates.Items.Contains(SelectedTemplate))
+        {
+            SelectedTemplate = Templates.Find(_defaultTemplate) ?? Templates.Items.FirstOrDefault();
         }
     }
 
@@ -369,6 +407,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (values.TryGetValue("SYSTEM_LABEL", out var system))
         {
             _systemLabel = NonEmpty(system);
+        }
+
+        if (values.TryGetValue("MINUTES_TEMPLATE", out var template))
+        {
+            _defaultTemplate = NonEmpty(template);
+            if (!IsRecording && Templates.Find(_defaultTemplate) is { } chosen)
+            {
+                SelectedTemplate = chosen;
+            }
+        }
+
+        if (values.ContainsKey("APP_LANGUAGE"))
+        {
+            TemplatesRefresh = LoadTemplatesAsync();
         }
 
         if (values.TryGetValue("APP_LANGUAGE", out var language) && language is not null && language != _localization.Language)

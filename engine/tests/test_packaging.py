@@ -46,3 +46,19 @@ def test_the_engine_reads_recordings_into_the_users_documents(
     settings = load_settings(env_file=env)
 
     assert settings.output_dir == Path(f"{tmp_path / 'Ana'}/Documents/VozAta")
+
+
+def test_package_data_and_the_pyinstaller_spec_ship_every_minutes_template() -> None:
+    import fnmatch
+    import tomllib
+
+    from vozata.minutes.template_repository import TEMPLATES_DIR
+
+    pyproject = tomllib.loads((EXAMPLE.parent / "pyproject.toml").read_text(encoding="utf-8"))
+    patterns = pyproject["tool"]["setuptools"]["package-data"]["vozata"]
+    package = TEMPLATES_DIR.parents[1]
+    templates = [path.relative_to(package).as_posix() for path in TEMPLATES_DIR.glob("*.toml")]
+    assert templates
+    assert all(any(fnmatch.fnmatch(t, p) for p in patterns) for t in templates)
+    # The spec collects every data file of the package, so templates are bundled with locales.
+    assert 'collect_data_files("vozata")' in (PACKAGING / "engine.spec").read_text(encoding="utf-8")

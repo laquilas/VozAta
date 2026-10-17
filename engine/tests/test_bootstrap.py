@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
+from tests.fakes import FakeDiarizer, FakeLanguageModel, FakeSessionObserver, FakeTranscriber
 from vozata import bootstrap
 from vozata.audio.capture import WasapiSource
 from vozata.audio.chunker import FixedWindowChunker
@@ -16,7 +16,9 @@ from vozata.config import ConfigError, Settings
 from vozata.domain import AppLanguage, Channel, ChunkMode, ConversationLanguage, MixMode
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
+from vozata.minutes.template_repository import UnknownTemplateError
 from vozata.session import SessionStartError
+from vozata.storage.search_index import SearchIndex
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
 
@@ -99,7 +101,10 @@ def test_build_session_uses_the_default_devices_and_settings(
     assert isinstance(components.minutes, MinutesGenerator)
     assert components.chunker_factory is not None
     assert isinstance(components.chunker_factory(Channel.MIC, lambda chunk: None), VadChunker)
+    assert components.diarizer_factory is None  # DIARIZATION_ENABLED defaults to false
     assert session._language is ConversationLanguage.ES
+    assert isinstance(components.search_index, SearchIndex)
+    assert components.search_index._path == tmp_path / "recordings" / "index.db"
     assert devices == []
     assert not (tmp_path / "recordings").exists()  # nothing is created before start()
 
@@ -144,6 +149,22 @@ def test_build_session_honours_explicit_devices_language_and_mix_mode(
     assert isinstance(session._c.mixer, StereoMixer)
     assert session._c.minutes is None
     assert session._language is ConversationLanguage.AUTO
+    assert session._c.minutes_template == "general"  # stored even without minutes
+
+
+def test_build_session_uses_the_chosen_template(tmp_path: Path, devices: list[int]) -> None:
+    settings = _settings(tmp_path, minutes_template="daily")
+
+    default = bootstrap.build_session(settings, FakeSessionObserver())
+    chosen = bootstrap.build_session(settings, FakeSessionObserver(), template="client")
+
+    assert default._c.minutes_template == "daily"
+    assert default._c.minutes is not None and default._c.minutes.template_id == "daily"
+    assert chosen._c.minutes_template == "client"
+    assert chosen._c.minutes is not None and chosen._c.minutes.template_id == "client"
+    with pytest.raises(UnknownTemplateError):
+        bootstrap.build_session(settings, FakeSessionObserver(), template="weekly")
+    assert devices == []  # an unknown template fails before any device is opened
 
 
 def test_transcriber_factory_builds_the_registered_provider_lazily(
@@ -191,6 +212,18 @@ def test_build_minutes_generator_uses_the_registered_language_model(
     assert generator._llm is llm
     assert generator._max_chars == 5000
     assert generator._localizer.t("labels.mic") == "Eu"
+    assert generator.template_id == "general"
+    assert generator._template.name == "Reunião geral"
+
+
+def test_build_minutes_generator_picks_the_template(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    settings = Settings(llm_provider="fake", minutes_template="daily")
+
+    assert bootstrap.build_minutes_generator(settings).template_id == "daily"
+    assert bootstrap.build_minutes_generator(settings, template="client").template_id == "client"
+    with pytest.raises(UnknownTemplateError):
+        bootstrap.build_minutes_generator(settings, template="weekly")
 
 
 def test_build_labeler_applies_the_configured_overrides() -> None:
@@ -257,8 +290,18 @@ def test_build_api_container_wires_real_providers(
     assert isinstance(container.regenerate_minutes, MinutesJob)
     assert container.llm_reachable() is False
     assert container.store.list_sessions() == []
-    container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3))
-    assert built == [{"language": None, "mic_device": 3, "system_device": None, "shared": None}]
+    assert isinstance(container.search_index, SearchIndex)
+    assert container.search_index._path == tmp_path / "recordings" / "index.db"
+    container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
+    assert built == [
+        {
+            "language": None,
+            "mic_device": 3,
+            "system_device": None,
+            "template": "daily",
+            "shared": None,
+        }
+    ]
     generator = container.regenerate_minutes._build_generator()
     assert generator._llm is llm
 
@@ -374,3 +417,67 @@ def test_saved_settings_reach_the_next_session_and_the_llm_check(
     assert models[-1].ollama_model == "qwen2.5:3b"
     assert ClosingModel.closed == 1
     assert "CHUNK_SECONDS=8" in (tmp_path / ".env").read_text(encoding="utf-8")
+    container.settings_file.update({"APP_LANGUAGE": "es"})
+    regenerated = container.regenerate_minutes._build_generator("client")
+    assert regenerated.template_id == "client"
+    assert regenerated._template.name == "Reunión con cliente"
+    assert regenerated._localizer.t("minutes.output_language") == "español"  # same language
+
+
+def test_the_diarizer_registry_holds_pyannote_behind_a_child_process() -> None:
+    from vozata.diarization.subprocess_diarizer import SubprocessDiarizer
+
+    diarizer = bootstrap.DIARIZERS["pyannote"](Settings(hf_token="hf"))
+
+    assert isinstance(diarizer, SubprocessDiarizer)
+
+
+def test_an_enabled_diarizer_is_built_lazily_from_its_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    built: list[Settings] = []
+    fake = FakeDiarizer()
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda s: built.append(s) or fake)
+    settings = Settings(diarization_enabled=True, diarization_provider="fake")
+
+    factory = bootstrap.build_diarizer_factory(settings)
+
+    assert factory is not None and built == []
+    assert factory() is fake
+    assert built == [settings]
+    with pytest.raises(ConfigError) as caught:
+        bootstrap.build_diarizer_factory(
+            Settings(diarization_enabled=True, diarization_provider="nope")
+        )
+    assert caught.value.key == "DIARIZATION_PROVIDER"
+
+
+def test_a_shared_transcriber_is_not_kept_when_speakers_are_identified(
+    tmp_path: Path, devices: list[int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = FakeTranscriber()
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    settings = _settings(
+        tmp_path,
+        stt_provider="fake",
+        generate_minutes=False,
+        diarization_enabled=True,
+        hf_token="hf",
+    )
+    shared = SharedTranscriber(lambda: fake)
+
+    session = bootstrap.build_session(settings, FakeSessionObserver(), shared=shared)
+    session._c.transcriber_factory().close()
+
+    assert session._c.diarizer_factory is not None
+    assert shared.loaded is False  # VRAM rule: Whisper never stays next to the diarizer
+    assert fake.closed
+
+
+def test_build_diarizer_ignores_the_enabled_flag_for_explicit_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeDiarizer()
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda settings: fake)
+
+    assert bootstrap.build_diarizer(Settings(diarization_provider="fake")) is fake

@@ -1,0 +1,50 @@
+# Daily stand-up: per person, done / doing / blockers.
+order = 2
+
+[en]
+name = "Daily stand-up"
+instructions = "This is a daily stand-up. Organize the minutes by person: for each participant, what they finished, what they are working on next and what is blocking them. Keep every item short."
+
+[[en.sections]]
+heading = "Updates by person"
+guidance = "one level-3 heading per participant, followed by the bullets \"Done:\", \"Doing:\" and \"Blockers:\""
+
+[[en.sections]]
+heading = "Blockers"
+guidance = "every blocker in one list, with the person affected and who can help, when mentioned"
+
+[[en.sections]]
+heading = "Follow-ups"
+guidance = "conversations or tasks agreed to happen after the stand-up, with the people involved"
+
+["pt-BR"]
+name = "Daily"
+instructions = "Esta é uma reunião diária (daily). Organize a ata por pessoa: para cada participante, o que concluiu, no que vai trabalhar em seguida e o que o está bloqueando. Mantenha cada item curto."
+
+[["pt-BR".sections]]
+heading = "Atualizações por pessoa"
+guidance = "um título de nível 3 por participante, seguido dos itens \"Feito:\", \"Fazendo:\" e \"Bloqueios:\""
+
+[["pt-BR".sections]]
+heading = "Bloqueios"
+guidance = "todos os bloqueios em uma lista, com a pessoa afetada e quem pode ajudar, quando mencionado"
+
+[["pt-BR".sections]]
+heading = "Acompanhamentos"
+guidance = "conversas ou tarefas combinadas para depois da daily, com as pessoas envolvidas"
+
+[es]
+name = "Daily"
+instructions = "Esta es una reunión diaria (daily). Organiza el acta por persona: para cada participante, qué terminó, en qué trabajará a continuación y qué lo está bloqueando. Mantén cada punto breve."
+
+[[es.sections]]
+heading = "Novedades por persona"
+guidance = "un encabezado de nivel 3 por participante, seguido de los puntos \"Hecho:\", \"Haciendo:\" y \"Bloqueos:\""
+
+[[es.sections]]
+heading = "Bloqueos"
+guidance = "todos los bloqueos en una lista, con la persona afectada y quién puede ayudar, cuando se mencione"
+
+[[es.sections]]
+heading = "Seguimientos"
+guidance = "conversaciones o tareas acordadas para después de la daily, con las personas involucradas"

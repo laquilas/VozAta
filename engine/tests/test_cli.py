@@ -110,6 +110,22 @@ def test_minutes_command_runs_on_the_folder(monkeypatch: pytest.MonkeyPatch) -> 
     assert received == [Path("recordings/20261015_202358")]
 
 
+def test_reindex_command_rebuilds_the_index_in_the_output_dir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    received: list[tuple[Path, Path]] = []
+    monkeypatch.setattr(
+        cli,
+        "run_reindex",
+        lambda store, index, *args: received.append((store._root, index._path)) or 0,
+    )
+
+    code, _ = _main(["reindex"], env={"OUTPUT_DIR": str(tmp_path)})
+
+    assert code == 0
+    assert received == [(tmp_path, tmp_path / "index.db")]
+
+
 def test_invalid_settings_exit_2_with_the_message() -> None:
     code, out = _main(["record"], env={"CHUNK_SECONDS": "abc"})
 
@@ -191,3 +207,24 @@ def test_build_app_wraps_the_real_container(monkeypatch: pytest.MonkeyPatch, tmp
     app = cli._build_app(container.settings)
 
     assert app.state.container is container
+
+
+@pytest.mark.parametrize(("argv", "then_minutes"), [([], False), (["--minutes"], True)])
+def test_diarize_command_runs_on_the_folder_and_can_chain_the_minutes(
+    monkeypatch: pytest.MonkeyPatch, argv: list[str], then_minutes: bool
+) -> None:
+    received: list[tuple[Path, bool]] = []
+    minutes: list[Path] = []
+
+    def diarize(folder, settings, console, localizer, build, then):  # type: ignore[no-untyped-def]
+        received.append((folder, then is not None))
+        return then() if then is not None else 0
+
+    monkeypatch.setattr(cli, "run_diarize", diarize)
+    monkeypatch.setattr(cli, "run_minutes", lambda folder, *args: minutes.append(folder) or 5)
+
+    code, _ = _main(["diarize", "recordings/20261015_202358", *argv])
+
+    folder = Path("recordings/20261015_202358")
+    assert received == [(folder, then_minutes)]
+    assert (code, minutes) == ((5, [folder]) if then_minutes else (0, []))

@@ -10,6 +10,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
 from vozata.api.payloads import segment_payload, session_summary
+from vozata.api.routes.templates import check_template
 from vozata.api.schemas import (
     Minutes,
     RegenerateMinutes,
@@ -28,10 +29,12 @@ Container = Annotated[ApiContainer, Depends(container)]
 
 @router.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=SessionSummary)
 def start_session(body: StartSession, c: Container) -> dict[str, Any]:
+    check_template(c, body.template)
     options = StartOptions(
         language=ConversationLanguage(body.language) if body.language else None,
         mic_device=body.mic_device_id,
         system_device=body.system_device_id,
+        template=body.template,
     )
     try:
         return c.manager.start(options)
@@ -81,7 +84,8 @@ def session_detail(session_id: str, c: Container) -> dict[str, Any]:
 def transcript(session_id: str, c: Container) -> dict[str, Any]:
     source, segments = c.store.load_transcript_with_source(session_id)
     ordered = sorted(segments, key=lambda segment: segment.start)
-    return {"source": source, "segments": [segment_payload(s, c.labeler) for s in ordered]}
+    labeler = c.labeler.with_names(c.store.speaker_names(session_id))
+    return {"source": source, "segments": [segment_payload(s, labeler) for s in ordered]}
 
 
 @router.get("/sessions/{session_id}/minutes", response_model=Minutes)
@@ -98,10 +102,12 @@ def regenerate_minutes(
     session_id: str, c: Container, body: RegenerateMinutes | None = None
 ) -> None:
     c.store.read_meta(session_id)
+    template = body.template if body is not None else None
+    check_template(c, template)
     current = c.manager.current
     if current is not None and current.status is not None and current.id == session_id:
         raise ApiError(409, "session_still_recording", id=session_id)
-    c.regenerate_minutes(session_id)
+    c.regenerate_minutes(session_id, template)
 
 
 def _summary(c: ApiContainer, session_id: str) -> dict[str, Any]:

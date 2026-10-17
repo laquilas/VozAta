@@ -134,9 +134,9 @@ class LanguageModel(Protocol):
     def stream(self, system: str, prompt: str) -> Iterator[str]: ...
     def is_available(self) -> bool: ...
     def release(self) -> None: ...   # after a job: unload per OLLAMA_KEEP_ALIVE (25)
-class Diarizer(Protocol):
+class Diarizer(Protocol):             # SubprocessDiarizer → PyannoteDiarizer in a child process (14)
     def diarize(self, wav: Path, min_speakers: int | None, max_speakers: int | None) -> list[SpeakerTurn]: ...
-    def close(self) -> None: ...
+    def close(self) -> None: ...      # raises DiarizationError from diarize() on failure
 class SpeakerEmbedder(Protocol):
     def embed(self, samples: np.ndarray) -> np.ndarray: ...
 class DocumentExporter(Protocol):     # Markdown, DOCX, PDF (11)
@@ -155,6 +155,9 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
+class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
+    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
+    def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
@@ -223,14 +226,19 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 2. Drain the queue; `stitcher.flush()` for each channel.
 3. Finalize WAVs to the same length (max written samples); run `AudioMixer` → `mixed.wav`.
 4. `transcriber.close()` (free VRAM).
-5. If enabled: diarize `system.wav` → relabel → `diarizer.close()`.
+5. If enabled (`DIARIZATION_ENABLED`) and the transcript has system speech: diarize `system.wav`
+   → `assign_speakers` → `transcript.diarized.jsonl` + `speakers.json` → `diarizer.close()`.
+   A failure (missing extra or `HF_TOKEN`, model error) logs a warning, reports `error`
+   `diarization_failed` (with the `python -m vozata diarize` retry command), keeps the
+   `system` labels and continues to step 6.
 6. If enabled: `MinutesGenerator` → `minutes.md`, then `llm.release()` (Ollama unloads per
    `OLLAMA_KEEP_ALIVE`, also after a failed job); index the session for search.
 7. `status = done`, `ended_at` set in `session.json`.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
 time; steps 4 → 5 → 6 enforce that. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
-`SharedTranscriber` keeps Whisper between sessions only when no minutes follow; it is unloaded
+`SharedTranscriber` keeps Whisper between sessions only when neither minutes nor speaker
+identification follow; it is unloaded
 before session minutes, before `POST /sessions/{id}/minutes` and when the API stops.
 
 **Pause/resume**: while paused, sources keep running (keeps the clock aligned) but chunkers drop
@@ -288,12 +296,18 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 | `transcript.jsonl` | 03 / 05 | raw, append-only, one segment per line |
 | `transcript.md` | 03 / 05 | human-readable, `[hh:mm:ss] Label: text` |
 | `minutes.md` | 04 / 05 | generated minutes |
-| `transcript.diarized.jsonl` | 14 | system segments re-split and tagged `system:<n>` |
+| `transcript.diarized.jsonl` | 14 | full transcript; system segments tagged `system:<n>`, a segment split at a speaker change becomes `<id>-1`, `<id>-2`, … |
 | `speakers.json` | 14 / 16 | `{"system:1": {"name": null}}` (display label comes from the localizer unless `name` is set) |
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
 | `action_items.json` | 23 | extracted items + export results |
 
-`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22).
+`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22): table `segments(session_id, segment_id,
+start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`
+(case- and accent-insensitive). It is derived data: stop step 6 replaces the session's rows with
+its best transcript (precedence below), `python -m vozata reindex` rebuilds it from every session,
+and `serve` rebuilds it in the background when it is missing but sessions exist. User text becomes
+a safe FTS query (every word quoted, prefix `*` on the last one), so FTS syntax is never
+interpreted. Snippets mark matches with `U+0002` … `U+0003`.
 
 `session.json` (schema_version 1):
 
@@ -334,7 +348,10 @@ of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jso
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
 written at stop; `ended_at` is later, after finalization. `language` / `language_source` are written only when known: at start for a fixed language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
-has neither key. `template` (20) and `vocabulary` (19) are added by their phases.
+has neither key. `template` (20) is the minutes template id, written at start (even with
+`GENERATE_MINUTES=false`) and replaced by the template of the last regeneration; sessions recorded
+before phase 20 have no key and regenerate with `MINUTES_TEMPLATE`. `vocabulary` (19) is added by
+its phase.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (step 2); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
@@ -377,7 +394,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `DIARIZATION_PROVIDER` | `pyannote` | 14 | |
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
 | `HF_TOKEN` | *(empty)* | 14 | Hugging Face token for pyannote models |
-| `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints |
+| `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
 | `LIVE_DIARIZATION_ENABLED` | `false` | 15 | |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
 | `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat |
@@ -431,6 +448,20 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
   at word boundaries using word timestamps. Speakers are numbered by first appearance
   (`system:1`, `system:2`, …) and the result is written to `transcript.diarized.jsonl`
   (`transcript.jsonl` stays untouched).
+- Assignment (`diarization/assign.py`): each word takes the turn it overlaps most; words in a gap
+  between turns stay with the previous speaker (leading ones with the first); a segment no turn
+  overlaps keeps `system`; speakers no transcribed word belongs to get no number.
+- Provider (14): `DIARIZERS["pyannote"]` runs `pyannote/speaker-diarization-community-1`
+  (pyannote.audio ≥ 4, optional extra `diarization`) in a **child process**
+  (`python -m vozata.diarization.child`, request with the token on stdin, turns in a temp JSON
+  file). `torch` and `ctranslate2` each bundle CUDA/cuDNN, so they never share a process, and
+  the child's exit frees the VRAM before the minutes. `torch`/`pyannote` are imported lazily:
+  the engine works without the extra. The installer (13) does not bundle it.
+- `python -m vozata diarize <session_dir> [--minutes]` diarizes a stored session (ignores
+  `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
+- Readers (minutes, export, `GET /sessions/{id}/transcript`) label speakers with
+  `SpeakerLabeler.with_names(store.speaker_names(id))`: a name in `speakers.json` wins over
+  `User {n}`.
 - Live (15): speaker embedding per committed system segment, cosine similarity against running
   centroids; above `SPEAKER_SIMILARITY_THRESHOLD` → existing speaker, else new one. The
   post-session pass is authoritative and emits `speakers_relabeled`.
@@ -442,8 +473,18 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
 
 - Input: merged mic + system segments sorted by `start`, rendered as `[hh:mm:ss] Label: text`
   (edited transcript preferred when present).
-- Output sections (localized headings): Context, Summary, Topics, Decisions, Action items
-  (owner, due date), Open issues. Templates (20) change sections and instructions.
+- Output sections come from the **template** (20). `general` (default) keeps Context, Summary,
+  Topics, Decisions, Action items (owner, due date), Open issues; `daily` (per person: done /
+  doing / blockers), `one_on_one`, `client` and `retrospective` have their own.
+- Templates are package data, `minutes/templates/<id>.toml`: top-level `order`, then one block
+  per app language (`[en]`, `["pt-BR"]`, `[es]`) with `name`, `instructions` and ordered
+  `[[<lang>.sections]]` (`heading`, `guidance`). `TemplateRepository` validates them at load
+  (every language present, non-empty fields and sections). The locale keys
+  `minutes.instructions` / `minutes.map_instructions` hold the frame (languages, Markdown, "—" for
+  empty headings) and receive the template's instructions, headings and guidance.
+- Template choice: `template` in `POST /sessions` (stored in `session.json`) → used at stop;
+  `POST /sessions/{id}/minutes` and `minutes <dir>` use the requested one, else the stored one,
+  else `MINUTES_TEMPLATE`.
 - If the transcript exceeds `LLM_MAX_CHARS`: map (summarize each part into notes) → reduce
   (minutes from notes).
 - The prompt states both the conversation language and `APP_LANGUAGE` (minutes language).

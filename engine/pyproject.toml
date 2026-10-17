@@ -24,6 +24,9 @@ dependencies = [
 [project.optional-dependencies]
 cuda = ["nvidia-cublas-cu12", "nvidia-cudnn-cu12>=9,<10"]
 dev = ["pytest", "pytest-cov", "ruff", "pypdf"]
+# Speaker identification (phase 14). For CUDA, install the CUDA build of torch first:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+diarization = ["pyannote.audio>=4", "torch"]
 package = ["pyinstaller"]  # packaging/engine.spec (phase 13)
 
 [tool.setuptools.dynamic]
@@ -33,7 +36,7 @@ version = { attr = "vozata.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-vozata = ["locales/*.toml", "export/fonts/*"]
+vozata = ["locales/*.toml", "export/fonts/*", "minutes/templates/*.toml"]
 
 [tool.ruff]
 line-length = 100

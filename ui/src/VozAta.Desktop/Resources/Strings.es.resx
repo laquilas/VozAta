@@ -39,6 +39,9 @@
   <data name="ConversationLanguage" xml:space="preserve">
     <value>Idioma de la reunión</value>
   </data>
+  <data name="MinutesTemplate" xml:space="preserve">
+    <value>Plantilla de acta</value>
+  </data>
   <data name="LanguageEn" xml:space="preserve">
     <value>Inglés</value>
   </data>
@@ -138,6 +141,15 @@
   <data name="HistoryEmpty" xml:space="preserve">
     <value>Aún no hay sesiones. Tus grabaciones aparecerán aquí.</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Buscar en todas las transcripciones</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Buscando...</value>
+  </data>
+  <data name="SearchNoResults" xml:space="preserve">
+    <value>No hay coincidencias en ninguna transcripción.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecciona una sesión para leer su transcripción y su acta.</value>
   </data>
@@ -194,6 +206,9 @@
   </data>
   <data name="SettingsGroup_transcription" xml:space="preserve">
     <value>Transcripción</value>
+  </data>
+  <data name="SettingsGroup_speakers" xml:space="preserve">
+    <value>Participantes</value>
   </data>
   <data name="SettingsGroup_minutes" xml:space="preserve">
     <value>Acta</value>
@@ -438,6 +453,27 @@
   <data name="SettingHelp_LLM_MAX_CHARS" xml:space="preserve">
     <value>Las transcripciones más largas se resumen por partes y luego se combinan.</value>
   </data>
+  <data name="Setting_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Plantilla de acta predeterminada</value>
+  </data>
+  <data name="SettingHelp_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Plantilla preseleccionada en la pantalla de inicio; cada sesión y cada nueva generación pueden elegir otra.</value>
+  </data>
+  <data name="TemplateName_general" xml:space="preserve">
+    <value>Reunión general</value>
+  </data>
+  <data name="TemplateName_daily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="TemplateName_one_on_one" xml:space="preserve">
+    <value>One-on-one</value>
+  </data>
+  <data name="TemplateName_client" xml:space="preserve">
+    <value>Reunión con cliente</value>
+  </data>
+  <data name="TemplateName_retrospective" xml:space="preserve">
+    <value>Retrospectiva</value>
+  </data>
   <data name="Setting_OLLAMA_KEEP_ALIVE" xml:space="preserve">
     <value>Mantener cargado el modelo del acta</value>
   </data>
@@ -515,6 +551,42 @@
   </data>
   <data name="SettingHelp_OPENAI_STT_MODEL" xml:space="preserve">
     <value>Modelo de la API de voz externa, por ejemplo whisper-1 (OpenAI) o whisper-large-v3 (Groq). Consulta el precio por minuto del proveedor.</value>
+  </data>
+  <data name="Setting_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Identificar participantes remotos</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Al detener una grabación, distingue a las personas del audio del sistema y las etiqueta Usuario 1, Usuario 2… Requiere el extra opcional diarization y un token de Hugging Face.</value>
+  </data>
+  <data name="Setting_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Proveedor de identificación de participantes</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Proveedor del motor que identifica a los participantes, por ejemplo pyannote.</value>
+  </data>
+  <data name="Setting_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Dispositivo de identificación de participantes</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Dónde se ejecuta la identificación: auto, cuda (GPU NVIDIA) o cpu. Se ejecuta después de liberar el modelo de voz.</value>
+  </data>
+  <data name="Setting_HF_TOKEN" xml:space="preserve">
+    <value>Token de Hugging Face</value>
+  </data>
+  <data name="SettingHelp_HF_TOKEN" xml:space="preserve">
+    <value>Token de acceso a los modelos pyannote. Créalo en huggingface.co y acepta antes allí los términos de los modelos.</value>
+  </data>
+  <data name="Setting_MIN_SPEAKERS" xml:space="preserve">
+    <value>Mínimo de participantes remotos</value>
+  </data>
+  <data name="SettingHelp_MIN_SPEAKERS" xml:space="preserve">
+    <value>Menor número de personas remotas esperado (1 a 20). Déjalo vacío para detectarlo.</value>
+  </data>
+  <data name="Setting_MAX_SPEAKERS" xml:space="preserve">
+    <value>Máximo de participantes remotos</value>
+  </data>
+  <data name="SettingHelp_MAX_SPEAKERS" xml:space="preserve">
+    <value>Mayor número de personas remotas esperado (1 a 20). Déjalo vacío para detectarlo.</value>
   </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Cerrar</value>

@@ -39,6 +39,9 @@
   <data name="ConversationLanguage" xml:space="preserve">
     <value>Meeting language</value>
   </data>
+  <data name="MinutesTemplate" xml:space="preserve">
+    <value>Minutes template</value>
+  </data>
   <data name="LanguageEn" xml:space="preserve">
     <value>English</value>
   </data>
@@ -138,6 +141,15 @@
   <data name="HistoryEmpty" xml:space="preserve">
     <value>No sessions yet. Your recordings will appear here.</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Search all transcripts</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Searching...</value>
+  </data>
+  <data name="SearchNoResults" xml:space="preserve">
+    <value>No matches in any transcript.</value>
+  </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Select a session to read its transcript and minutes.</value>
   </data>
@@ -194,6 +206,9 @@
   </data>
   <data name="SettingsGroup_transcription" xml:space="preserve">
     <value>Transcription</value>
+  </data>
+  <data name="SettingsGroup_speakers" xml:space="preserve">
+    <value>Speakers</value>
   </data>
   <data name="SettingsGroup_minutes" xml:space="preserve">
     <value>Minutes</value>
@@ -438,6 +453,27 @@
   <data name="SettingHelp_LLM_MAX_CHARS" xml:space="preserve">
     <value>Longer transcripts are summarized in parts first, then combined.</value>
   </data>
+  <data name="Setting_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Default minutes template</value>
+  </data>
+  <data name="SettingHelp_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Template preselected on the Start screen; each session and each regeneration can pick another one.</value>
+  </data>
+  <data name="TemplateName_general" xml:space="preserve">
+    <value>General meeting</value>
+  </data>
+  <data name="TemplateName_daily" xml:space="preserve">
+    <value>Daily stand-up</value>
+  </data>
+  <data name="TemplateName_one_on_one" xml:space="preserve">
+    <value>One-on-one</value>
+  </data>
+  <data name="TemplateName_client" xml:space="preserve">
+    <value>Client meeting</value>
+  </data>
+  <data name="TemplateName_retrospective" xml:space="preserve">
+    <value>Retrospective</value>
+  </data>
   <data name="Setting_OLLAMA_KEEP_ALIVE" xml:space="preserve">
     <value>Keep the minutes model loaded</value>
   </data>
@@ -515,6 +551,42 @@
   </data>
   <data name="SettingHelp_OPENAI_STT_MODEL" xml:space="preserve">
     <value>Model of the external speech API, e.g. whisper-1 (OpenAI) or whisper-large-v3 (Groq). Check the provider's price per minute.</value>
+  </data>
+  <data name="Setting_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>Identify remote speakers</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_ENABLED" xml:space="preserve">
+    <value>After a recording stops, tell the people in the system audio apart and label them User 1, User 2… Needs the optional diarization extra and a Hugging Face token.</value>
+  </data>
+  <data name="Setting_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Speaker identification provider</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_PROVIDER" xml:space="preserve">
+    <value>Engine provider that identifies the speakers, e.g. pyannote.</value>
+  </data>
+  <data name="Setting_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Speaker identification device</value>
+  </data>
+  <data name="SettingHelp_DIARIZATION_DEVICE" xml:space="preserve">
+    <value>Where speaker identification runs: auto, cuda (NVIDIA GPU) or cpu. It runs after the speech model is released.</value>
+  </data>
+  <data name="Setting_HF_TOKEN" xml:space="preserve">
+    <value>Hugging Face token</value>
+  </data>
+  <data name="SettingHelp_HF_TOKEN" xml:space="preserve">
+    <value>Access token for the pyannote models. Create it on huggingface.co and accept the model terms there first.</value>
+  </data>
+  <data name="Setting_MIN_SPEAKERS" xml:space="preserve">
+    <value>Minimum remote speakers</value>
+  </data>
+  <data name="SettingHelp_MIN_SPEAKERS" xml:space="preserve">
+    <value>Smallest number of remote people to expect (1 to 20). Leave empty to detect it.</value>
+  </data>
+  <data name="Setting_MAX_SPEAKERS" xml:space="preserve">
+    <value>Maximum remote speakers</value>
+  </data>
+  <data name="SettingHelp_MAX_SPEAKERS" xml:space="preserve">
+    <value>Largest number of remote people to expect (1 to 20). Leave empty to detect it.</value>
   </data>
   <data name="Dismiss" xml:space="preserve">
     <value>Dismiss</value>

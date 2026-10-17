@@ -1,0 +1,50 @@
+# Retrospective: went well, to improve, actions.
+order = 5
+
+[en]
+name = "Retrospective"
+instructions = "This is a team retrospective. Capture what the team thinks went well, what should improve and the concrete actions agreed. Group similar points together instead of repeating them."
+
+[[en.sections]]
+heading = "Went well"
+guidance = "what the team wants to keep doing"
+
+[[en.sections]]
+heading = "To improve"
+guidance = "problems and frustrations raised, grouped by theme"
+
+[[en.sections]]
+heading = "Actions"
+guidance = "each improvement action with its owner and due date when they were mentioned"
+
+["pt-BR"]
+name = "Retrospectiva"
+instructions = "Esta é uma retrospectiva de equipe. Registre o que a equipe acha que foi bem, o que deve melhorar e as ações concretas combinadas. Agrupe pontos parecidos em vez de repeti-los."
+
+[["pt-BR".sections]]
+heading = "O que foi bem"
+guidance = "o que a equipe quer continuar fazendo"
+
+[["pt-BR".sections]]
+heading = "O que melhorar"
+guidance = "problemas e frustrações levantados, agrupados por tema"
+
+[["pt-BR".sections]]
+heading = "Ações"
+guidance = "cada ação de melhoria com responsável e prazo quando tiverem sido mencionados"
+
+[es]
+name = "Retrospectiva"
+instructions = "Esta es una retrospectiva de equipo. Registra lo que el equipo cree que salió bien, lo que debe mejorar y las acciones concretas acordadas. Agrupa los puntos parecidos en lugar de repetirlos."
+
+[[es.sections]]
+heading = "Lo que salió bien"
+guidance = "lo que el equipo quiere seguir haciendo"
+
+[[es.sections]]
+heading = "Qué mejorar"
+guidance = "problemas y frustraciones planteados, agrupados por tema"
+
+[[es.sections]]
+heading = "Acciones"
+guidance = "cada acción de mejora con su responsable y fecha límite cuando se hayan mencionado"

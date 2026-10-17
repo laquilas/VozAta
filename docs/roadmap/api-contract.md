@@ -21,7 +21,7 @@ own rows. Changing a row requires updating both sides.
 |--------|------|-------|---------|----------|
 | GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}}` |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
-| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str]}` | `201 SessionSummary` |
+| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str]}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template` |
 | POST | `/sessions/current/pause` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/resume` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
@@ -29,7 +29,7 @@ own rows. Changing a row requires updating both sides.
 | GET | `/sessions/{id}` | 06 | — | `SessionDetail` |
 | GET | `/sessions/{id}/transcript` | 06 | — | `{source: "raw"\|"diarized"\|"edited", segments: [Segment]}` (precedence rule in architecture §8) |
 | GET | `/sessions/{id}/minutes` | 06 | — | `{markdown}` or `404 minutes_not_found` |
-| POST | `/sessions/{id}/minutes` | 06 | `{template?}` | `202`; result via `minutes_ready` |
+| POST | `/sessions/{id}/minutes` | 06 | `{template?}` | `202`; result via `minutes_ready`. `template` (20): omitted = the one in `session.json`, else `MINUTES_TEMPLATE`; the template used is saved to `session.json`; `422 unknown_template` |
 | GET | `/sessions/{id}/export` | 11 | `?format=md\|docx\|pdf` (default `md`) | file download, `Content-Disposition: attachment; filename="<id>-minutes.<ext>"`; `400 unsupported_format`, `404 session_not_found` |
 | GET | `/settings` | 06 | — | `{values: {KEY: value}, schema: [{key, type, default, choices?, secret, group, applies}]}` (secrets masked; `group` = settings page section, `applies` = `next_session` \| `restart`, phase 10) |
 | PUT | `/settings` | 10 | `{values: {KEY: value}}` (`null` clears a key; the secret mask `********` means unchanged) | `{values, restart_required: [KEY]}` — validated by `config.py`, persisted to `.env` key by key (comments kept); `422 invalid_setting` with `error.key` |
@@ -37,10 +37,10 @@ own rows. Changing a row requires updating both sides.
 | PUT | `/sessions/{id}/speakers` | 16 | `{speakers: {"system:1": {"name": "Alice"}}}` | `{speakers}` |
 | PUT | `/sessions/{id}/transcript` | 21 | `{segments: [Segment]}` | `{source: "edited"}` writes `transcript.edited.jsonl` |
 | DELETE | `/sessions/{id}/transcript/edits` | 21 | — | `204` reverts to the previous source |
-| GET | `/templates` | 20 | — | `[{id, name}]` localized names |
+| GET | `/templates` | 20 | — | `[{id, name}]` in display order, `name` in `APP_LANGUAGE` (ids: `general`, `daily`, `one_on_one`, `client`, `retrospective`) |
 | GET | `/vocabulary` | 19 | — | `{terms: [str]}` from `VOCABULARY_FILE` |
 | PUT | `/vocabulary` | 19 | `{terms: [str]}` | `{terms}` |
-| GET | `/search` | 22 | `?q=&limit=` | `{hits: [{session_id, segment_id, start, speaker_id, snippet}]}` |
+| GET | `/search` | 22 | `?q=&limit=` (limit 1–200, default 50) | `{hits: [{session_id, segment_id, start, speaker_id, label, snippet}]}` best match first; `snippet` wraps each match in `\u0002` … `\u0003`; a query without words returns no hits |
 | POST | `/sessions/{id}/action-items` | 23 | — | `202`; result via `action_items_ready` |
 | GET | `/sessions/{id}/action-items` | 23 | — | `{items: [ActionItem]}` |
 | POST | `/sessions/{id}/action-items/export` | 23 | `{target: "azure_devops"\|"github", item_ids: [str]}` | `{created: [{item_id, url}], failed: [{item_id, error}]}` |
@@ -77,7 +77,7 @@ One connection per UI. Server → client messages only (commands go through HTTP
 | `segment` | 06 | `Segment` | each committed transcript segment |
 | `language_detected` | 06 | `{language}` | once, when `auto` locks the language |
 | `minutes_ready` | 06 | `{session_id}` | minutes written |
-| `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable) |
+| `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable; `diarization_failed` (14) when speaker identification fails at stop) |
 | `speakers_relabeled` | 15 | `{session_id}` | post-session diarization replaced live labels; UI reloads the transcript |
 | `recovery_available` | 17 | `{session_ids: [str]}` | on connect, when interrupted sessions exist |
 | `action_items_ready` | 23 | `{session_id, count}` | extraction finished |

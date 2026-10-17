@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Callable
 
 from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
-from vozata.minutes.generator import MinutesGenerator
-from vozata.minutes.session_minutes import EmptyTranscriptError, write_session_minutes
+from vozata.minutes.session_minutes import (
+    EmptyTranscriptError,
+    GeneratorFactory,
+    write_session_minutes,
+)
 from vozata.ports import LanguageModelError, Localizer
 from vozata.storage.session_store import SessionStore
 
@@ -17,7 +19,7 @@ _log = logging.getLogger(__name__)
 
 
 class MinutesJob:
-    """Callable `(session_id)`: starts a background regeneration and returns at once.
+    """Callable `(session_id, template)`: starts a background regeneration and returns at once.
 
     Success publishes `minutes_ready`; failures publish a localized `error` event.
     """
@@ -25,7 +27,7 @@ class MinutesJob:
     def __init__(
         self,
         store: SessionStore,
-        build_generator: Callable[[], MinutesGenerator],
+        build_generator: GeneratorFactory,
         labeler: SpeakerLabeler,
         broadcaster: EventBroadcaster,
         localizer: Localizer,
@@ -37,8 +39,11 @@ class MinutesJob:
         self._t = localizer.t
         self._thread: threading.Thread | None = None
 
-    def __call__(self, session_id: str) -> None:
-        self._thread = threading.Thread(target=self._run, args=(session_id,), name="minutes")
+    def __call__(self, session_id: str, template: str | None = None) -> None:
+        """`template` None: the one stored in `session.json`, else `MINUTES_TEMPLATE`."""
+        self._thread = threading.Thread(
+            target=self._run, args=(session_id, template), name="minutes"
+        )
         self._thread.start()
 
     def wait(self, timeout: float | None = None) -> bool:
@@ -48,10 +53,12 @@ class MinutesJob:
             return not self._thread.is_alive()
         return True
 
-    def _run(self, session_id: str) -> None:
+    def _run(self, session_id: str, template: str | None) -> None:
         publish = self._broadcaster.publish
         try:
-            write_session_minutes(self._store, session_id, self._build_generator(), self._labeler)
+            write_session_minutes(
+                self._store, session_id, self._build_generator, self._labeler, template
+            )
         except EmptyTranscriptError:
             message = self._t("errors.api.empty_transcript", id=session_id)
             publish("error", session_id, {"code": "empty_transcript", "message": message})
