@@ -140,8 +140,9 @@ class LanguageModel(Protocol):
 class Diarizer(Protocol):             # SubprocessDiarizer → PyannoteDiarizer in a child process (14)
     def diarize(self, wav: Path, min_speakers: int | None, max_speakers: int | None) -> list[SpeakerTurn]: ...
     def close(self) -> None: ...      # raises DiarizationError from diarize() on failure
-class SpeakerEmbedder(Protocol):
-    def embed(self, samples: np.ndarray) -> np.ndarray: ...
+class SpeakerEmbedder(Protocol):      # SubprocessEmbedder → PyannoteEmbedder in a long-lived child (15)
+    def embed(self, samples: np.ndarray) -> np.ndarray: ...  # 1-D vector; raises on failure
+    def close(self) -> None: ...
 class DocumentExporter(Protocol):     # Markdown, DOCX, PDF (11)
     media_type: str; extension: str
     def export(self, document: ExportDocument) -> bytes: ...  # built once by export.document.build_document
@@ -155,6 +156,7 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_segment(self, segment: TranscriptSegment) -> None: ...
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
     def on_minutes_ready(self, session_id: str) -> None: ...
+    def on_speakers_relabeled(self, session_id: str) -> None: ...  # post-session speakers written (15)
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
@@ -175,7 +177,7 @@ WasapiSource(sys) ─┬─> AlignedWavWriter → system.wav
                                                └─> TranscriptionWorker (single thread, one GPU)
                                                     └─> CarryOverStitcher (one per channel)
                                                          └─> Transcriber
-                                                    └─> [EchoFilter] → [LiveSpeakerTagger]
+                                                    └─> [EchoFilter] → [LiveSpeakerSink → LiveSpeakerTagger]
                                                     └─> CompositeSink → Console | Jsonl | Markdown | WebSocket
 ```
 
@@ -205,6 +207,20 @@ lines reach the transcript files and the UI up to `ECHO_HOLD_SECONDS` later** th
 dropped mic segment also clears the mic interim text. The drop count is `session.json`
 `echo_dropped`.
 
+**Live speakers** (phase 15, `LIVE_DIARIZATION_ENABLED`): `LiveSpeakerSink`
+(`diarization/live_sink.py`) wraps the composite sink behind the echo filter and forwards every
+segment, in order, from its **own thread**; the transcription worker only enqueues, so a slow
+embedding never delays transcription. System chunks are also kept in an `AudioHistory`
+(60 s + `MAX_CARRY_SECONDS`), which cuts each system segment's clip by session time. The
+`LiveSpeakerTagger` (`diarization/live.py`) embeds the clip and compares it (cosine) with each
+speaker's running centroid: at or above `SPEAKER_SIMILARITY_THRESHOLD` → that `system:<n>`,
+otherwise a new speaker; segments under 1 s, without audio or with an unusable vector reuse the
+previous speaker. The embedder loads on a second thread (lines before it is ready keep `system`);
+a failed load reports `error` `live_diarization_failed`. An embedding slower than
+`CHUNK_SECONDS`, or an embedder error, turns the tagger off with a warning for the rest of the
+session. Live speakers are written to `transcript.jsonl` and sent in `segment` events; closing
+the sink at stop (step 2) forwards what is queued and ends the embedder process.
+
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
 chunk queue backlog exceeds 3 chunks per channel, log a warning (transcription slower than real time).
@@ -230,7 +246,8 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 3. Finalize WAVs to the same length (max written samples); run `AudioMixer` → `mixed.wav`.
 4. `transcriber.close()` (free VRAM).
 5. If enabled (`DIARIZATION_ENABLED`) and the transcript has system speech: diarize `system.wav`
-   → `assign_speakers` → `transcript.diarized.jsonl` + `speakers.json` → `diarizer.close()`.
+   → `assign_speakers` → `transcript.diarized.jsonl` + `speakers.json` → `diarizer.close()` →
+   `speakers_relabeled` (15: clients reload the transcript; these speakers replace the live ones).
    A failure (missing extra or `HF_TOKEN`, model error) logs a warning, reports `error`
    `diarization_failed` (with the `python -m vozata diarize` retry command), keeps the
    `system` labels and continues to step 6.
@@ -239,7 +256,8 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 7. `status = done`, `ended_at` set in `session.json`.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
-time; steps 4 → 5 → 6 enforce that. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
+time; steps 4 → 5 → 6 enforce that. The live speaker embedder (15, ~30 MB model plus the
+child's CUDA context) is the one exception next to Whisper while recording; it ends at step 2. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
 `SharedTranscriber` keeps Whisper between sessions only when neither minutes nor speaker
 identification follow; it is unloaded
 before session minutes, before `POST /sessions/{id}/minutes` and when the API stops.
@@ -368,6 +386,8 @@ the transcript is final (step 2); it is absent while recording and when `ECHO_DE
 off.
 
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
+With live speakers (15) `transcript.jsonl` already holds best-effort `system:<n>` ids; the
+post-session pass reassigns every system segment in `transcript.diarized.jsonl`.
 Display labels are **never** stored in raw data; they are resolved from `speaker_id` +
 `speakers.json` + localizer at render time.
 
@@ -416,7 +436,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
 | `HF_TOKEN` | *(empty)* | 14 | Hugging Face token for pyannote models |
 | `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
-| `LIVE_DIARIZATION_ENABLED` | `false` | 15 | |
+| `LIVE_DIARIZATION_ENABLED` | `false` | 15 | live `User N` labels while recording (needs the `diarization` extra and `HF_TOKEN`; uses `DIARIZATION_PROVIDER` / `DIARIZATION_DEVICE`) |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
 | `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
@@ -484,8 +504,15 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
   `SpeakerLabeler.with_names(store.speaker_names(id))`: a name in `speakers.json` wins over
   `User {n}`.
 - Live (15): speaker embedding per committed system segment, cosine similarity against running
-  centroids; above `SPEAKER_SIMILARITY_THRESHOLD` → existing speaker, else new one. The
-  post-session pass is authoritative and emits `speakers_relabeled`.
+  centroids; above `SPEAKER_SIMILARITY_THRESHOLD` → existing speaker, else new one (flow in §6).
+  The post-session pass is authoritative and emits `speakers_relabeled`; live and post-session
+  numbers are independent, so `User 2` live may become `User 1` at stop.
+- Live provider (15): `EMBEDDERS["pyannote"]` runs `pyannote/wespeaker-voxceleb-resnet34-LM`
+  in **one child process per session** (`python -m vozata.diarization.embed_child`): the request
+  with the token is the first stdin line, the child loads and warms the model and answers
+  `@vozata {"ready": true}`; each clip is a stdin line (base64 float32) answered with
+  `@vozata {"embedding": [...]}` within 30 s (other stdout lines are ignored). Stdin EOF at stop
+  ends it (killed after 5 s).
 - Renaming (16): `PUT /sessions/{id}/speakers` merges names into `speakers.json`
   (`SessionStore.rename_speakers`; an empty name stores `null`, so the default label returns);
   only ids present in the transcript are accepted, `mic` and an undiarized `system` included.
