@@ -1,0 +1,74 @@
+# Client meeting: needs, commitments, risks, next steps, deadlines.
+order = 4
+
+[en]
+name = "Client meeting"
+instructions = "This is a meeting with a client. Focus on what the client needs, what each side committed to, the risks raised and the dates agreed. Make clear which commitments belong to the client and which to our team."
+
+[[en.sections]]
+heading = "Client needs"
+guidance = "the client's goals, requirements and pain points, as they stated them"
+
+[[en.sections]]
+heading = "Commitments"
+guidance = "what each side promised to deliver, saying whether it is the client or our team"
+
+[[en.sections]]
+heading = "Risks"
+guidance = "risks, concerns and objections raised, with their possible impact"
+
+[[en.sections]]
+heading = "Next steps"
+guidance = "each next step with its owner"
+
+[[en.sections]]
+heading = "Deadlines"
+guidance = "every date or deadline mentioned and what it refers to"
+
+["pt-BR"]
+name = "Reunião com cliente"
+instructions = "Esta é uma reunião com um cliente. Foque no que o cliente precisa, no que cada lado se comprometeu, nos riscos levantados e nas datas combinadas. Deixe claro quais compromissos são do cliente e quais são da nossa equipe."
+
+[["pt-BR".sections]]
+heading = "Necessidades do cliente"
+guidance = "os objetivos, requisitos e dores do cliente, como ele os descreveu"
+
+[["pt-BR".sections]]
+heading = "Compromissos"
+guidance = "o que cada lado prometeu entregar, dizendo se é o cliente ou a nossa equipe"
+
+[["pt-BR".sections]]
+heading = "Riscos"
+guidance = "riscos, preocupações e objeções levantados, com o possível impacto"
+
+[["pt-BR".sections]]
+heading = "Próximos passos"
+guidance = "cada próximo passo com seu responsável"
+
+[["pt-BR".sections]]
+heading = "Prazos"
+guidance = "todas as datas ou prazos mencionados e a que se referem"
+
+[es]
+name = "Reunión con cliente"
+instructions = "Esta es una reunión con un cliente. Céntrate en lo que el cliente necesita, en lo que cada parte se comprometió, en los riesgos planteados y en las fechas acordadas. Deja claro qué compromisos son del cliente y cuáles de nuestro equipo."
+
+[[es.sections]]
+heading = "Necesidades del cliente"
+guidance = "los objetivos, requisitos y problemas del cliente, tal como los expresó"
+
+[[es.sections]]
+heading = "Compromisos"
+guidance = "lo que cada parte prometió entregar, indicando si es el cliente o nuestro equipo"
+
+[[es.sections]]
+heading = "Riesgos"
+guidance = "riesgos, inquietudes y objeciones planteados, con su posible impacto"
+
+[[es.sections]]
+heading = "Próximos pasos"
+guidance = "cada próximo paso con su responsable"
+
+[[es.sections]]
+heading = "Plazos"
+guidance = "todas las fechas o plazos mencionados y a qué se refieren"

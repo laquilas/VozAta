@@ -39,6 +39,9 @@
   <data name="ConversationLanguage" xml:space="preserve">
     <value>Idioma de la reunión</value>
   </data>
+  <data name="MinutesTemplate" xml:space="preserve">
+    <value>Plantilla de acta</value>
+  </data>
   <data name="LanguageEn" xml:space="preserve">
     <value>Inglés</value>
   </data>
@@ -137,6 +140,15 @@
   </data>
   <data name="HistoryEmpty" xml:space="preserve">
     <value>Aún no hay sesiones. Tus grabaciones aparecerán aquí.</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Buscar en todas las transcripciones</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Buscando...</value>
+  </data>
+  <data name="SearchNoResults" xml:space="preserve">
+    <value>No hay coincidencias en ninguna transcripción.</value>
   </data>
   <data name="HistorySelect" xml:space="preserve">
     <value>Selecciona una sesión para leer su transcripción y su acta.</value>
@@ -422,6 +434,27 @@
   </data>
   <data name="SettingHelp_LLM_MAX_CHARS" xml:space="preserve">
     <value>Las transcripciones más largas se resumen por partes y luego se combinan.</value>
+  </data>
+  <data name="Setting_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Plantilla de acta predeterminada</value>
+  </data>
+  <data name="SettingHelp_MINUTES_TEMPLATE" xml:space="preserve">
+    <value>Plantilla preseleccionada en la pantalla de inicio; cada sesión y cada nueva generación pueden elegir otra.</value>
+  </data>
+  <data name="TemplateName_general" xml:space="preserve">
+    <value>Reunión general</value>
+  </data>
+  <data name="TemplateName_daily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="TemplateName_one_on_one" xml:space="preserve">
+    <value>One-on-one</value>
+  </data>
+  <data name="TemplateName_client" xml:space="preserve">
+    <value>Reunión con cliente</value>
+  </data>
+  <data name="TemplateName_retrospective" xml:space="preserve">
+    <value>Retrospectiva</value>
   </data>
   <data name="Setting_OLLAMA_KEEP_ALIVE" xml:space="preserve">
     <value>Mantener cargado el modelo del acta</value>

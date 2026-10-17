@@ -133,10 +133,31 @@ internal sealed class FakeEngineClient : IEngineClient
             : Task.FromException<ExportedFile>(ExportError);
     }
 
-    public Task RegenerateMinutesAsync(string id, CancellationToken cancellationToken = default)
+    /// <summary>The template of each regeneration, in the same order as <see cref="Regenerated"/>.</summary>
+    public List<string?> RegeneratedTemplates { get; } = [];
+
+    public Task RegenerateMinutesAsync(string id, string? templateId = null, CancellationToken cancellationToken = default)
     {
         Regenerated.Add(id);
+        RegeneratedTemplates.Add(templateId);
         return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
+    }
+
+    public List<MinutesTemplate> Templates { get; } =
+    [
+        new("general", "General meeting"),
+        new("daily", "Daily stand-up"),
+        new("client", "Client meeting"),
+    ];
+
+    public Exception? TemplatesError { get; set; }
+
+    public Task<IReadOnlyList<MinutesTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default)
+    {
+        Calls.Add("templates");
+        return TemplatesError is null
+            ? Task.FromResult<IReadOnlyList<MinutesTemplate>>([.. Templates])
+            : Task.FromException<IReadOnlyList<MinutesTemplate>>(TemplatesError);
     }
 
     public Exception? SettingsError { get; set; }
@@ -180,6 +201,29 @@ internal sealed class FakeEngineClient : IEngineClient
 
         var saved = SettingValues.ToDictionary(pair => pair.Key, pair => JsonSerializer.SerializeToElement(pair.Value));
         return Task.FromResult(new SettingsUpdateResult(saved, [.. RestartKeys.Where(values.ContainsKey)]));
+    }
+
+    /// <summary>Hits answered by <see cref="SearchAsync"/> (phase 22), whatever the query.</summary>
+    public List<SearchHit> SearchHits { get; } = [];
+
+    public List<string> Searches { get; } = [];
+
+    public Exception? SearchError { get; set; }
+
+    /// <summary>When set, searches wait for it (tests cancel a search in flight).</summary>
+    public TaskCompletionSource? SearchGate { get; set; }
+
+    public async Task<SearchResults> SearchAsync(
+        string query, int limit = 50, CancellationToken cancellationToken = default)
+    {
+        Searches.Add(query);
+        if (SearchGate is not null)
+        {
+            await SearchGate.Task.WaitAsync(cancellationToken);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return SearchError is null ? new SearchResults([.. SearchHits.Take(limit)]) : throw SearchError;
     }
 
     public static EngineApiException ApiError(string code, string message) =>

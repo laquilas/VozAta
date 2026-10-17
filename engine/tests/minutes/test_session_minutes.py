@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
-from tests.fakes import FakeLanguageModel, FakeLocalizer
+from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
@@ -28,8 +29,56 @@ def _session(store: SessionStore, meta: dict, *, transcript: bool = True) -> str
     return paths.id
 
 
-def _generator(llm: FakeLanguageModel) -> MinutesGenerator:
-    return MinutesGenerator(llm, FakeLocalizer(), 12000)
+def _generator(llm: FakeLanguageModel) -> Callable[[str | None], MinutesGenerator]:
+    def build(template: str | None) -> MinutesGenerator:
+        built.append(template)
+        return MinutesGenerator(
+            llm, FakeLocalizer(), 12000, minutes_template(template_id=template or "general")
+        )
+
+    built: list[str | None] = []
+    build.built = built  # type: ignore[attr-defined]
+    return build
+
+
+def test_the_requested_template_wins_and_is_stored(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    session_id = _session(store, {"template": "daily", "status": "done"})
+    llm = FakeLanguageModel(["# Client"])
+
+    write_session_minutes(
+        store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()), "client"
+    )
+
+    assert "## Client needs" in llm.prompts[0][1]
+    assert store.read_meta(session_id) == {"template": "client", "status": "done"}
+
+
+def test_the_stored_template_is_used_when_none_is_requested(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    session_id = _session(store, {"template": "daily"})
+    build = _generator(FakeLanguageModel(["# Daily"]))
+
+    write_session_minutes(store, session_id, build, SpeakerLabeler(FakeLocalizer()))
+
+    assert build.built == ["daily"]  # type: ignore[attr-defined]
+    assert store.read_meta(session_id) == {"template": "daily"}
+
+
+def test_a_stored_template_that_is_no_longer_bundled_falls_back_to_the_default(
+    tmp_path: Path,
+) -> None:
+    store = SessionStore(tmp_path)
+    removed = _session(store, {"template": "weekly"})
+    missing = _session(store, {})
+    build = _generator(FakeLanguageModel(["# A", "# B"]))
+
+    write_session_minutes(store, removed, build, SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(store, missing, build, SpeakerLabeler(FakeLocalizer()))
+
+    assert build.built == [None, None]  # type: ignore[attr-defined]
+    assert store.read_meta(removed)["template"] == "general"
+    assert store.read_meta(missing)["template"] == "general"
 
 
 def test_writes_minutes_in_the_stored_language(tmp_path: Path) -> None:

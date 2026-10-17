@@ -537,3 +537,16 @@ def test_one_speaker_bound_alone_is_accepted() -> None:
     settings = load_settings(env={"MAX_SPEAKERS": "4"})
 
     assert (settings.min_speakers, settings.max_speakers) == (None, 4)
+
+
+def test_minutes_template_defaults_to_general_and_accepts_bundled_ids() -> None:
+    assert load_settings(env={}).minutes_template == "general"
+    assert load_settings(env={"MINUTES_TEMPLATE": "daily"}).minutes_template == "daily"
+
+
+def test_unknown_minutes_template_names_the_bundled_ids() -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"MINUTES_TEMPLATE": "weekly"})
+
+    assert (caught.value.key, caught.value.message_key) == ("MINUTES_TEMPLATE", "invalid_choice")
+    assert caught.value.params == {"allowed": "general, daily, one_on_one, client, retrospective"}

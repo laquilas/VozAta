@@ -95,7 +95,7 @@ public sealed class MainViewModelTests
         await viewModel.StartCommand.ExecuteAsync(null);
 
         Assert.Contains("WASAPI did not answer.", viewModel.Notifications);
-        Assert.Equal(new StartSessionRequest(null, null, "pt"), _client.StartRequests.Single());
+        Assert.Equal(new StartSessionRequest(null, null, "pt", "general"), _client.StartRequests.Single());
     }
 
     [Fact]

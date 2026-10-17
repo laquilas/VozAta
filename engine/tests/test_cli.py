@@ -110,6 +110,22 @@ def test_minutes_command_runs_on_the_folder(monkeypatch: pytest.MonkeyPatch) -> 
     assert received == [Path("recordings/20261015_202358")]
 
 
+def test_reindex_command_rebuilds_the_index_in_the_output_dir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    received: list[tuple[Path, Path]] = []
+    monkeypatch.setattr(
+        cli,
+        "run_reindex",
+        lambda store, index, *args: received.append((store._root, index._path)) or 0,
+    )
+
+    code, _ = _main(["reindex"], env={"OUTPUT_DIR": str(tmp_path)})
+
+    assert code == 0
+    assert received == [(tmp_path, tmp_path / "index.db")]
+
+
 def test_invalid_settings_exit_2_with_the_message() -> None:
     code, out = _main(["record"], env={"CHUNK_SECONDS": "abc"})
 

@@ -10,6 +10,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
 from vozata.api.payloads import segment_payload, session_summary
+from vozata.api.routes.templates import check_template
 from vozata.api.schemas import (
     Minutes,
     RegenerateMinutes,
@@ -28,10 +29,12 @@ Container = Annotated[ApiContainer, Depends(container)]
 
 @router.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=SessionSummary)
 def start_session(body: StartSession, c: Container) -> dict[str, Any]:
+    check_template(c, body.template)
     options = StartOptions(
         language=ConversationLanguage(body.language) if body.language else None,
         mic_device=body.mic_device_id,
         system_device=body.system_device_id,
+        template=body.template,
     )
     try:
         return c.manager.start(options)
@@ -99,10 +102,12 @@ def regenerate_minutes(
     session_id: str, c: Container, body: RegenerateMinutes | None = None
 ) -> None:
     c.store.read_meta(session_id)
+    template = body.template if body is not None else None
+    check_template(c, template)
     current = c.manager.current
     if current is not None and current.status is not None and current.id == session_id:
         raise ApiError(409, "session_still_recording", id=session_id)
-    c.regenerate_minutes(session_id)
+    c.regenerate_minutes(session_id, template)
 
 
 def _summary(c: ApiContainer, session_id: str) -> dict[str, Any]:

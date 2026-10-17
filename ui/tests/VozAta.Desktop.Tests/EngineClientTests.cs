@@ -40,11 +40,62 @@ public sealed class EngineClientTests
         var (method, path, body) = handler.Requests.Single();
         Assert.Equal(HttpMethod.Post, method);
         Assert.Equal("/sessions", path);
-        Assert.Equal("""{"mic_device_id":9,"system_device_id":null,"language":"pt"}""", body);
+        Assert.Equal("""{"mic_device_id":9,"system_device_id":null,"language":"pt","template":null}""", body);
         Assert.Equal("20261015_202358", summary.Id);
         Assert.Equal(new DateTimeOffset(2026, 10, 15, 20, 23, 58, TimeSpan.FromHours(-3)), summary.StartedAt);
         Assert.Null(summary.EndedAt);
         Assert.Equal(1.5, summary.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task Start_and_regenerate_send_the_chosen_template()
+    {
+        var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);
+        var client = new EngineClient(handler.Client());
+
+        await client.StartSessionAsync(new StartSessionRequest(Language: "en", Template: "daily"));
+        await client.RegenerateMinutesAsync("20261015_202358", "client");
+        await client.RegenerateMinutesAsync("20261015_202358");
+
+        Assert.Equal(
+            [
+                """{"mic_device_id":null,"system_device_id":null,"language":"en","template":"daily"}""",
+                """{"template":"client"}""",
+                """{"template":null}""",
+            ],
+            handler.Requests.Select(request => request.Body));
+    }
+
+    [Fact]
+    public async Task Templates_are_read_in_order()
+    {
+        var handler = FakeHttpHandler.Json("""
+            [{"id": "general", "name": "General meeting"}, {"id": "one_on_one", "name": "One-on-one"}]
+            """);
+
+        var templates = await new EngineClient(handler.Client()).GetTemplatesAsync();
+
+        Assert.Equal([new MinutesTemplate("general", "General meeting"), new MinutesTemplate("one_on_one", "One-on-one")], templates);
+        Assert.Equal("One-on-one", templates[1].ToString());
+        Assert.Equal((HttpMethod.Get, "/templates", (string?)null), handler.Requests.Single());
+    }
+
+    [Fact]
+    public async Task Search_escapes_the_query_and_reads_the_hits()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"hits": [{"session_id": "20261015_202358", "segment_id": "mic-000001", "start": 83.12,
+                       "speaker_id": "mic", "label": "Me", "snippet": "a \u0002decisão\u0003 final"}]}
+            """);
+
+        var results = await new EngineClient(handler.Client()).SearchAsync("decisão & \"OR\"", limit: 20);
+
+        Assert.Equal(
+            (HttpMethod.Get, "/search?q=decis%C3%A3o%20%26%20%22OR%22&limit=20", (string?)null),
+            handler.Requests.Single());
+        Assert.Equal(
+            new SearchHit("20261015_202358", "mic-000001", 83.12, "mic", "Me", "a \u0002decisão\u0003 final"),
+            results.Hits.Single());
     }
 
     [Fact]

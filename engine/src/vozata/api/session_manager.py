@@ -53,6 +53,7 @@ class StartOptions:
     language: ConversationLanguage | None = None
     mic_device: int | None = None
     system_device: int | None = None
+    template: str | None = None  # minutes template id (phase 20); None = MINUTES_TEMPLATE
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]

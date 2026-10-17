@@ -21,12 +21,14 @@ diarization_failed = "The remote speakers could not be identified ({reason}). Th
 mix_failed = "mixed.wav could not be created ({reason}). The microphone and system tracks were kept."
 minutes_failed = "The minutes could not be generated ({reason}). The recording and transcript were kept; retry with: {command}"
 model_failed = "The speech model could not be loaded ({reason}). Recording continues: the audio is saved, but it is not transcribed."
+index_failed = "The session could not be added to the search index ({reason}). Rebuild the index with: python -m vozata reindex"
 
 [errors.api]
 unsupported_format = "Unsupported export format \"{format}\". Use one of: {allowed}."
 settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."
 empty_transcript = "Session \"{id}\" has no transcript, so there is nothing to summarize."
+unknown_template = "Unknown minutes template \"{id}\". Use one of: {allowed}."
 not_found = "This endpoint does not exist."
 method_not_allowed = "This method is not allowed on this endpoint."
 http_error = "The request failed with HTTP status {status}."
@@ -48,21 +50,19 @@ auto = "the language spoken in the transcript"
 [minutes]
 output_language = "English"
 system = "You write accurate, concise meeting minutes. Use only facts stated in the transcript or notes; never invent names, dates, numbers or decisions."
-instructions = """The meeting was held in {conversation_language}. Write the minutes in {output_language}, in Markdown, with exactly these level-2 headings, in this order:
+instructions = """The meeting was held in {conversation_language}. {template_instructions}
+Write the minutes in {output_language}, in Markdown, with exactly these level-2 headings, in this order:
 {sections}
-List action items with their owner and due date when they were mentioned. Under a section with nothing to report, write "—"."""
-map_instructions = "This is part {part} of {total} of a meeting held in {conversation_language}. Write concise notes in {output_language} with the topics, decisions, action items (owner, due date) and open issues of this part. Use only facts from this part."
+What goes under each heading:
+{guidance}
+Under a heading with nothing to report, write "—"."""
+map_instructions = """This is part {part} of {total} of a meeting held in {conversation_language}. {template_instructions}
+Write concise notes in {output_language} with what this part says for these headings:
+{guidance}
+Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
 transcript_label = "Transcript:"
 notes_label = "Notes:"
-
-[minutes.section]
-context = "Context"
-summary = "Summary"
-topics = "Topics"
-decisions = "Decisions"
-action_items = "Action items"
-open_issues = "Open issues"
 
 [cli]
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
@@ -87,6 +87,8 @@ device_not_found = "Audio device not found: {reason}. Run \"python -m vozata rec
 diarized = "Found {count} remote speaker(s); speaker-labelled transcript written to {path}"
 diarize_failed = "The remote speakers could not be identified ({reason})."
 no_system_speech = "The session in {folder} has no system-audio speech, so there is nobody to identify."
+reindexed = "Search index rebuilt. Sessions indexed: {count}."
+reindex_failed = "The search index could not be rebuilt ({reason})."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -105,6 +107,7 @@ minutes = "generate the minutes of a recorded session again"
 session_dir = "session folder, e.g. recordings/20261015_202358"
 diarize = "identify the remote speakers of a recorded session (User 1, User 2, ...)"
 diarize_minutes = "generate the minutes again afterwards"
+reindex = "rebuild the search index from every recorded session"
 
 [export]
 title = "Meeting of {date}"

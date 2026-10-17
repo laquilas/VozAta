@@ -155,6 +155,9 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
     def on_error(self, code: str, message: str) -> None: ...  # message is localized
+class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
+    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
+    def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
@@ -284,7 +287,13 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
 | `action_items.json` | 23 | extracted items + export results |
 
-`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22).
+`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22): table `segments(session_id, segment_id,
+start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`
+(case- and accent-insensitive). It is derived data: stop step 6 replaces the session's rows with
+its best transcript (precedence below), `python -m vozata reindex` rebuilds it from every session,
+and `serve` rebuilds it in the background when it is missing but sessions exist. User text becomes
+a safe FTS query (every word quoted, prefix `*` on the last one), so FTS syntax is never
+interpreted. Snippets mark matches with `U+0002` … `U+0003`.
 
 `session.json` (schema_version 1):
 
@@ -324,7 +333,10 @@ of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jso
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
 written at stop; `ended_at` is later, after finalization. `language` / `language_source` are written only when known: at start for a fixed language
 (`selected`), or when `auto` locks one (`detected`); a session where `auto` never locked a language
-has neither key. `template` (20) and `vocabulary` (19) are added by their phases.
+has neither key. `template` (20) is the minutes template id, written at start (even with
+`GENERATE_MINUTES=false`) and replaced by the template of the last regeneration; sessions recorded
+before phase 20 have no key and regenerate with `MINUTES_TEMPLATE`. `vocabulary` (19) is added by
+its phase.
 
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
 Display labels are **never** stored in raw data; they are resolved from `speaker_id` +
@@ -443,8 +455,18 @@ Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /
 
 - Input: merged mic + system segments sorted by `start`, rendered as `[hh:mm:ss] Label: text`
   (edited transcript preferred when present).
-- Output sections (localized headings): Context, Summary, Topics, Decisions, Action items
-  (owner, due date), Open issues. Templates (20) change sections and instructions.
+- Output sections come from the **template** (20). `general` (default) keeps Context, Summary,
+  Topics, Decisions, Action items (owner, due date), Open issues; `daily` (per person: done /
+  doing / blockers), `one_on_one`, `client` and `retrospective` have their own.
+- Templates are package data, `minutes/templates/<id>.toml`: top-level `order`, then one block
+  per app language (`[en]`, `["pt-BR"]`, `[es]`) with `name`, `instructions` and ordered
+  `[[<lang>.sections]]` (`heading`, `guidance`). `TemplateRepository` validates them at load
+  (every language present, non-empty fields and sections). The locale keys
+  `minutes.instructions` / `minutes.map_instructions` hold the frame (languages, Markdown, "—" for
+  empty headings) and receive the template's instructions, headings and guidance.
+- Template choice: `template` in `POST /sessions` (stored in `session.json`) → used at stop;
+  `POST /sessions/{id}/minutes` and `minutes <dir>` use the requested one, else the stored one,
+  else `MINUTES_TEMPLATE`.
 - If the transcript exceeds `LLM_MAX_CHARS`: map (summarize each part into notes) → reduce
   (minutes from notes).
 - The prompt states both the conversation language and `APP_LANGUAGE` (minutes language).

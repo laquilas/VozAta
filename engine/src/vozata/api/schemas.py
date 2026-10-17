@@ -111,10 +111,28 @@ class Minutes(BaseModel):
     markdown: str
 
 
+class SearchHitModel(BaseModel):
+    session_id: str
+    segment_id: str
+    start: float
+    speaker_id: str
+    label: str
+    snippet: str  # matches wrapped in \u0002 ... \u0003
+
+
+class SearchResults(BaseModel):
+    hits: list[SearchHitModel]
+
+
 class RegenerateMinutes(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     template: str | None = None  # phase 20
+
+
+class TemplateInfo(BaseModel):
+    id: str
+    name: str
 
 
 class SettingSchema(BaseModel):

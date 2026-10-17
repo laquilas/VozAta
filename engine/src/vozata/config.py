@@ -23,6 +23,7 @@ from vozata.domain import (
     default_conversation_language,
 )
 from vozata.i18n import TomlLocalizer
+from vozata.minutes.template_repository import DEFAULT_TEMPLATE, bundled_templates
 from vozata.ports import Localizer
 from vozata.settings_fields import FIELDS
 
@@ -102,6 +103,8 @@ class Settings:
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
     llm_max_chars: int = 12000
+    # Minutes templates (phase 20)
+    minutes_template: str = DEFAULT_TEMPLATE
     # LLM VRAM release (phase 25)
     ollama_keep_alive: str = "0"
     # Session (phase 05)
@@ -166,6 +169,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
         llm_max_chars=int(_number(raw, "LLM_MAX_CHARS", 12000, minimum=1000, maximum=1_000_000)),
+        minutes_template=_template(raw),
         ollama_keep_alive=_duration(raw, "OLLAMA_KEEP_ALIVE", "0"),
         generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
         api_host=raw.get("API_HOST", "127.0.0.1"),
@@ -250,6 +254,15 @@ def _duration(raw: Mapping[str, str], key: str, default: str) -> str:
     value = raw.get(key, default)
     if not _DURATION.fullmatch(value):
         raise ConfigError(key, value, "invalid_duration")
+    return value
+
+
+def _template(raw: Mapping[str, str]) -> str:
+    value = raw.get("MINUTES_TEMPLATE", DEFAULT_TEMPLATE)
+    templates = bundled_templates()
+    if value not in templates:
+        allowed = ", ".join(templates.ids())
+        raise ConfigError("MINUTES_TEMPLATE", value, "invalid_choice", allowed=allowed)
     return value
 
 
