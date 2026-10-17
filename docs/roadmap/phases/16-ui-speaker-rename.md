@@ -55,7 +55,7 @@ Remembering names across sessions.
 - **Branch:** `feature/16-ui-speaker-rename`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 14:00
-- **Next step:** run the manual check below (no microphone needed), then merge the PR.
+- **Next step:** none (phase done). Manual check run 2026-10-17 through the engine API on a session copy with a hand-written diarized fixture: GET/PUT speakers (trimmed names, 422 `unknown_speaker`, empty name restores `User 2`), transcript and search labels show the names, and minutes regenerated with Ollama use them. The desktop click-through is still pending.
 
 ### Steps
 
