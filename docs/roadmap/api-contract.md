@@ -44,7 +44,7 @@ own rows. Changing a row requires updating both sides.
 | POST | `/sessions/{id}/action-items` | 23 | — | `202`; result via `action_items_ready` |
 | GET | `/sessions/{id}/action-items` | 23 | — | `{items: [ActionItem]}` |
 | POST | `/sessions/{id}/action-items/export` | 23 | `{target: "azure_devops"\|"github", item_ids: [str]}` | `{created: [{item_id, url}], failed: [{item_id, error}]}` |
-| POST | `/ask` | 24 | `{question, session_id?}` (no id = all sessions) | `202 {answer_id}`; answer streamed via `answer_chunk` / `answer_done` |
+| POST | `/ask` | 24 | `{question, session_id?}` (no id = all sessions; `question` 1–2000 chars, not blank) | `202 {answer_id}`; answer streamed via `answer_chunk` / `answer_done`; `404 session_not_found`, `409 answer_in_progress` (one question at a time), `422 invalid_request`, `503 ask_unavailable` |
 
 ### Shapes
 
@@ -81,11 +81,11 @@ One connection per UI. Server → client messages only (commands go through HTTP
 | `speakers_relabeled` | 15 | `{session_id}` | post-session diarization replaced live labels; UI reloads the transcript |
 | `recovery_available` | 17 | `{session_ids: [str]}` | on connect, when interrupted sessions exist |
 | `action_items_ready` | 23 | `{session_id, count}` | extraction finished |
-| `answer_chunk` | 24 | `{answer_id, text}` | streamed answer token(s) |
+| `answer_chunk` | 24 | `{answer_id, text}` | streamed answer token(s), in order; envelope `session_id` = the question's scope (null = all sessions) |
 | `model_loading` | 26 | `{loading}` | the speech model started / finished loading while the session already records |
 | `partial` | 28 | `{channel, speaker_id, label, start, text}` | interim text of a channel; replaced by the next `segment`, empty `text` clears it |
 | `translation` | 29 | `{segment_id, language, text}` | translation of a committed segment |
-| `answer_done` | 24 | `{answer_id, citations: [{session_id, segment_id, start}]}` | answer complete |
+| `answer_done` | 24 | `{answer_id, citations: [{session_id, segment_id, start}], error}` | answer complete; `error` is null, or a localized message when the LLM failed (then `citations` is empty). Citations appear in the text as `[session_id@hh:mm:ss]` |
 
 On connect the server sends one `status` message describing the current session (or
 `{"status": "idle"}`).

@@ -65,15 +65,15 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - **Branch:** `feature/24-ask-the-meeting`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** commit the api-contract / architecture §13 docs, then the UI client (`AskAsync`, answer events)
+- **Next step:** UI client: `IEngineClient.AskAsync`, `AnswerChunkEvent` / `AnswerDoneEvent` parsing (+ tests)
 
 ### Steps
 
 - [x] Engine: domain `Citation`, locale prompt texts and stopwords (en, pt-BR, es) — `c8aec7c`
 - [x] Engine: `qa/retriever.py` (single-session budget + neighbours, all-sessions ranking) — `c8aec7c`
 - [x] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context) — `19a4faa`
-- [x] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py`
-- [ ] Docs: api-contract and architecture
+- [x] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py` — `be4a3d2`
+- [x] Docs: api-contract and architecture
 - [ ] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent`
 - [ ] UI: `AskViewModel` + panel (History, scoped to the selected session or all sessions)
 - [ ] Acceptance criteria, manual check recipe, PR
@@ -87,3 +87,6 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - A long single session without hits gives an empty context, so the answer is "not found".
 - Citations: a bracket may hold several items; a bare `[hh:mm:ss]` is accepted when the context
   has one session; a time maps to the last context segment shown at or before it.
+- Contract additions: `answer_done.error` (null or a localized message; the UI needs to know the
+  answer failed), `409 answer_in_progress`, `503 ask_unavailable`. One question at a time in the
+  engine too (VRAM). Before the LLM loads, a kept Whisper is released unless a recording uses it.
