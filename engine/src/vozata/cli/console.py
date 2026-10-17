@@ -90,6 +90,10 @@ class ConsoleObserver:
         with self._lock:
             self._print(self._t("cli.minutes_ready"))
 
+    def on_action_items_ready(self, session_id: str, count: int) -> None:
+        with self._lock:
+            self._print(self._t("cli.action_items_ready", count=count))
+
     def on_speakers_relabeled(self, session_id: str) -> None:
         pass  # the console already printed the live lines; the files hold the final speakers
 

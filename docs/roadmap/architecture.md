@@ -52,10 +52,10 @@ engine/
                             stitcher.py, language_lock.py, worker.py, echo.py
     output/                 sinks.py
     llm/                    ollama.py
-    minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py
+    minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py
-    storage/                session_store.py, recovery.py, wav_repair.py, search_index.py
-    export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github}.py
+    storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py
+    export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github,http,session_export}.py
     qa/                     retriever.py, citations.py, answerer.py
     translation/            worker.py, opus_mt.py, translations_file.py, live.py (29)
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
@@ -100,7 +100,9 @@ class ChunkMode(StrEnum): VAD = "vad"; FIXED = "fixed"
 @dataclass(frozen=True) class SpeakerTurn:     start, end, speaker_index: int
 @dataclass(frozen=True) class ExportDocument:  title, details, minutes_title, minutes_markdown, minutes_blocks: list[Block],
                                                no_minutes, transcript_title, columns, rows: list[Row]  # localized (11)
-@dataclass(frozen=True) class ActionItem:      description, owner: str | None, due: str | None, source_segment_ids
+@dataclass(frozen=True) class ActionItem:      id, description, owner: str | None, due: str | None,
+                                               source_segment_ids: tuple[str, ...], exported_url: str | None  # (23)
+@dataclass(frozen=True) class TaskDraft:       title, body, due: str | None  # one item to export, body localized (23)
 ```
 
 All times are **seconds since session start** (float).
@@ -147,8 +149,9 @@ class SpeakerEmbedder(Protocol):      # SubprocessEmbedder → PyannoteEmbedder 
 class DocumentExporter(Protocol):     # Markdown, DOCX, PDF (11)
     media_type: str; extension: str
     def export(self, document: ExportDocument) -> bytes: ...  # built once by export.document.build_document
-class TaskExporter(Protocol):
-    def export(self, items: Sequence[ActionItem], session_title: str) -> list[str]: ...  # created URLs
+class TaskExporter(Protocol):        # TASK_EXPORTERS registry (23): azure_devops, github
+    name: str                        # display name, e.g. "Azure DevOps"
+    def create(self, task: TaskDraft) -> str: ...  # created item URL; raises TaskExportError(code, **params)
 class Localizer(Protocol):
     def t(self, key: str, /, **params: object) -> str: ...  # key is positional-only
 class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06); called from worker threads
@@ -157,6 +160,7 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
     def on_segment(self, segment: TranscriptSegment) -> None: ...
     def on_language_detected(self, language: ConversationLanguage) -> None: ...
     def on_minutes_ready(self, session_id: str) -> None: ...
+    def on_action_items_ready(self, session_id: str, count: int) -> None: ...  # (23)
     def on_speakers_relabeled(self, session_id: str) -> None: ...  # post-session speakers written (15)
     def on_model_loading(self, loading: bool) -> None: ...  # speech model loading while recording (26)
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None: ...  # interim (28)
@@ -270,7 +274,10 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    `diarization_failed` (with the `python -m vozata diarize` retry command), keeps the
    `system` labels and continues to step 6.
 6. If enabled: `MinutesGenerator` → `minutes.md`, then `llm.release()` (Ollama unloads per
-   `OLLAMA_KEEP_ALIVE`, also after a failed job); index the session for search.
+   `OLLAMA_KEEP_ALIVE`, also after a failed job); if `EXTRACT_ACTION_ITEMS` too:
+   `ActionItemExtractor` → `action_items.json` (items already exported are kept), then
+   `llm.release()`, `on_action_items_ready` (23; a failure reports `action_items_failed`); index
+   the session for search.
 7. `status = done`, `ended_at` set in `session.json`.
 
 Steps 3 (mix) to 7 are one sequence, `RecordingSession._finish()`, which crash recovery reuses
@@ -501,9 +508,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `VOCABULARY_FILE` | *(empty)* = `vocabulary.txt` next to `.env` | 19 | glossary: one term per line, `#` comments, case-insensitive dedupe; edited through `GET/PUT /vocabulary` |
 | `MINUTES_TEMPLATE` | `general` | 20 | default template |
 | `LOW_CONFIDENCE_THRESHOLD` | `0.5` | 21 | word probability below this is highlighted |
-| `EXTRACT_ACTION_ITEMS` | `true` | 23 | extract action items after minutes |
-| `AZDO_ORG_URL` / `AZDO_PROJECT` / `AZDO_PAT` | — | 23 | Azure DevOps export |
-| `GITHUB_REPO` / `GITHUB_TOKEN` | — | 23 | GitHub Issues export |
+| `EXTRACT_ACTION_ITEMS` | `true` | 23 | extract action items after minutes (only when `GENERATE_MINUTES` is true) |
+| `AZDO_ORG_URL` / `AZDO_PROJECT` / `AZDO_PAT` | — | 23 | Azure DevOps export (settings group `tasks`); offered only when all three are set |
+| `GITHUB_REPO` / `GITHUB_TOKEN` | — | 23 | GitHub Issues export (`owner/name`, group `tasks`); offered only when both are set |
 | `OLLAMA_KEEP_ALIVE` | `0` | 25 | how long Ollama keeps the model loaded after a minutes job |
 | `WHISPER_KEEP_LOADED` | `false` | 26 | keep the transcriber loaded between sessions in `serve` |
 | `CHUNK_MODE` | `vad` | 27 | `vad` (cut at pauses) / `fixed` (`CHUNK_SECONDS` windows) |

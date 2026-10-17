@@ -61,6 +61,20 @@ public interface IEngineClient
     /// <summary><c>POST /ask</c> (phase 24): the answer streams as <see cref="AnswerChunkEvent"/>s, then <see cref="AnswerDoneEvent"/>.</summary>
     Task<AskAccepted> AskAsync(string question, string? sessionId = null, CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /sessions/{id}/action-items</c> (phase 23): items and configured export targets.</summary>
+    Task<ActionItemList> GetActionItemsAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /sessions/{id}/action-items</c>: extract again; the result comes as <see cref="ActionItemsReadyEvent"/>.</summary>
+    Task ExtractActionItemsAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary><c>PUT /sessions/{id}/action-items</c>: save edited items (exported ones are kept as they are).</summary>
+    Task<ActionItemList> UpdateActionItemsAsync(
+        string id, IReadOnlyList<ActionItemEdit> items, CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /sessions/{id}/action-items/export</c>: one work item / issue per selected item.</summary>
+    Task<ActionItemsExportResult> ExportActionItemsAsync(
+        string id, string target, IReadOnlyList<string> itemIds, CancellationToken cancellationToken = default);
+
     Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
     /// <summary><c>GET /vocabulary</c> (phase 19): the glossary terms.</summary>
@@ -175,6 +189,27 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<AskAccepted> AskAsync(
         string question, string? sessionId = null, CancellationToken cancellationToken = default) =>
         SendAsync<AskAccepted>(HttpMethod.Post, "ask", new AskRequest(question, sessionId), cancellationToken);
+
+    public Task<ActionItemList> GetActionItemsAsync(string id, CancellationToken cancellationToken = default) =>
+        SendAsync<ActionItemList>(HttpMethod.Get, $"sessions/{Escape(id)}/action-items", null, cancellationToken);
+
+    public async Task ExtractActionItemsAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Post, $"sessions/{Escape(id)}/action-items", null, cancellationToken);
+    }
+
+    public Task<ActionItemList> UpdateActionItemsAsync(
+        string id, IReadOnlyList<ActionItemEdit> items, CancellationToken cancellationToken = default) =>
+        SendAsync<ActionItemList>(HttpMethod.Put, $"sessions/{Escape(id)}/action-items", new { items }, cancellationToken);
+
+    public Task<ActionItemsExportResult> ExportActionItemsAsync(
+        string id, string target, IReadOnlyList<string> itemIds, CancellationToken cancellationToken = default) =>
+        SendAsync<ActionItemsExportResult>(
+            HttpMethod.Post,
+            $"sessions/{Escape(id)}/action-items/export",
+            new { target, item_ids = itemIds },
+            cancellationToken);
 
     public Task<EngineSettings> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         SendAsync<EngineSettings>(HttpMethod.Get, "settings", null, cancellationToken);

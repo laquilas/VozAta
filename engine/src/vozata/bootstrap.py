@@ -9,8 +9,10 @@ import functools
 import logging
 import threading
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
+from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
 from vozata.api.minutes_job import MinutesJob
@@ -41,9 +43,12 @@ from vozata.domain import (
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
 from vozata.export.pdf import PdfExporter
+from vozata.export.tasks.azure_devops import AzureDevOpsExporter
+from vozata.export.tasks.github import GitHubIssuesExporter
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.llm.ollama import OllamaLanguageModel
+from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
 from vozata.minutes.template_repository import bundled_templates
@@ -56,6 +61,7 @@ from vozata.ports import (
     Localizer,
     SessionObserver,
     SpeakerEmbedder,
+    TaskExporter,
     Transcriber,
     TranscriptSearch,
     Translator,
@@ -124,6 +130,26 @@ EXPORTERS: dict[str, Callable[[], DocumentExporter]] = {
     "docx": DocxExporter,
     "pdf": PdfExporter,
 }
+
+
+@dataclass(frozen=True)
+class TaskTarget:
+    """A task export target (phase 23): offered only when `configured(settings)` is true."""
+
+    configured: Callable[[Settings], bool]
+    build: Callable[[Settings], TaskExporter]
+
+
+TASK_EXPORTERS: dict[str, TaskTarget] = {
+    "azure_devops": TaskTarget(
+        lambda s: bool(s.azdo_org_url and s.azdo_project and s.azdo_pat),
+        lambda s: AzureDevOpsExporter(s.azdo_org_url or "", s.azdo_project or "", s.azdo_pat or ""),
+    ),
+    "github": TaskTarget(
+        lambda s: bool(s.github_repo and s.github_token),
+        lambda s: GitHubIssuesExporter(s.github_repo or "", s.github_token or ""),
+    ),
+}
 MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
     MixMode.STEREO: StereoMixer,
@@ -188,6 +214,14 @@ def build_minutes_generator(
     )
 
 
+def build_action_item_extractor(
+    settings: Settings, localizer: Localizer | None = None
+) -> ActionItemExtractor:
+    """Action items in `APP_LANGUAGE` from the `LLM_PROVIDER` model (phase 23)."""
+    llm = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
+    return ActionItemExtractor(llm, localizer or build_localizer(settings), settings.llm_max_chars)
+
+
 def build_answerer(
     settings: Settings, store: SessionStore, search_index: TranscriptSearch | None
 ) -> MeetingAnswerer:
@@ -197,6 +231,19 @@ def build_answerer(
     labeler = build_labeler(settings, localizer)
     retriever = Retriever(store, search_index, labeler, localizer, settings.llm_max_chars)
     return MeetingAnswerer(llm, retriever, localizer)
+
+
+def task_targets(settings: Settings) -> list[str]:
+    """The configured task export targets, in registry order (phase 23)."""
+    return [name for name, target in TASK_EXPORTERS.items() if target.configured(settings)]
+
+
+def build_task_exporter(settings: Settings, target: str) -> TaskExporter | None:
+    """The exporter for `target`; None when it is unknown or not configured."""
+    entry = TASK_EXPORTERS.get(target)
+    if entry is None or not entry.configured(settings):
+        return None
+    return entry.build(settings)
 
 
 def build_diarizer_factory(settings: Settings) -> Callable[[], Diarizer] | None:
@@ -305,6 +352,9 @@ def build_session(
         search_index=build_search_index(settings),
         minutes_template=template,
         vocabulary=tuple(session_vocabulary(settings, vocabulary, env_file)),
+        action_items=build_action_item_extractor(settings, localizer)
+        if minutes is not None and settings.extract_action_items
+        else None,
         embedder_factory=build_embedder_factory(settings),
         translate_to=translation_target,
         translator_factory=translator_factory,
@@ -477,6 +527,13 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared.release()  # VRAM rule, unless a recording is using the model right now
         return build_answerer(settings_file.current, store, search_index)  # current language
 
+    def action_item_extractor() -> ActionItemExtractor:
+        current = manager.current
+        recording = current is not None and current.status in _ACTIVE
+        if shared is not None and not recording:
+            shared.release()  # VRAM rule, as for answers
+        return build_action_item_extractor(settings_file.current)  # current language
+
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
@@ -497,4 +554,9 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
         ask=AskJob(answerer, broadcaster, localizer),
+        extract_action_items=ActionItemsJob(
+            store, action_item_extractor, labeler, broadcaster, localizer
+        ),
+        task_targets=lambda: task_targets(settings_file.current),
+        task_exporter=lambda target: build_task_exporter(settings_file.current, target),
     )

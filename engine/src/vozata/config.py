@@ -124,6 +124,13 @@ class Settings:
     minutes_template: str = DEFAULT_TEMPLATE
     # LLM VRAM release (phase 25)
     ollama_keep_alive: str = "0"
+    # Action items export (phase 23)
+    extract_action_items: bool = True
+    azdo_org_url: str | None = None
+    azdo_project: str | None = None
+    azdo_pat: str | None = None
+    github_repo: str | None = None  # owner/name
+    github_token: str | None = None
     # Session (phase 05)
     generate_minutes: bool = True
     # Crash recovery (phase 17)
@@ -214,6 +221,12 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         llm_max_chars=int(_number(raw, "LLM_MAX_CHARS", 12000, minimum=1000, maximum=1_000_000)),
         minutes_template=_template(raw),
         ollama_keep_alive=_duration(raw, "OLLAMA_KEEP_ALIVE", "0"),
+        extract_action_items=_flag(raw, "EXTRACT_ACTION_ITEMS", True),
+        azdo_org_url=_url(raw, "AZDO_ORG_URL", "") if "AZDO_ORG_URL" in raw else None,
+        azdo_project=raw.get("AZDO_PROJECT"),
+        azdo_pat=raw.get("AZDO_PAT"),
+        github_repo=raw.get("GITHUB_REPO"),
+        github_token=raw.get("GITHUB_TOKEN"),
         generate_minutes=_flag(raw, "GENERATE_MINUTES", True),
         autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),

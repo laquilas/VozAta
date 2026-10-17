@@ -12,6 +12,7 @@ from vozata.domain import (
     ConversationLanguage,
     SessionStatus,
     SpeakerTurn,
+    TaskDraft,
     TranscriptionResult,
     TranscriptSegment,
 )
@@ -248,6 +249,9 @@ class FakeSessionObserver:
     def on_minutes_ready(self, session_id: str) -> None:
         self.events.append(("minutes_ready", session_id))
 
+    def on_action_items_ready(self, session_id: str, count: int) -> None:
+        self.events.append(("action_items_ready", session_id, count))
+
     def on_model_loading(self, loading: bool) -> None:
         self.events.append(("model_loading", loading))
 
@@ -265,6 +269,27 @@ class FakeSessionObserver:
 
     def of(self, name: str) -> list[tuple]:
         return [event[1:] for event in self.events if event[0] == name]
+
+
+class FakeTaskExporter:
+    """Creates `https://tasks.test/<n>` per draft, or raises the next queued `TaskExportError`."""
+
+    name = "Fake Tracker"
+
+    def __init__(self, errors: list[Exception | None] | None = None) -> None:
+        self.errors = list(errors or [])
+        self.drafts: list[TaskDraft] = []
+        self.closed = False
+
+    def create(self, task: TaskDraft) -> str:
+        self.drafts.append(task)
+        error = self.errors.pop(0) if self.errors else None
+        if error is not None:
+            raise error
+        return f"https://tasks.test/{len(self.drafts)}"
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def minutes_template(language: str = "en", template_id: str = "general") -> LocalizedTemplate:

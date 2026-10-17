@@ -71,6 +71,7 @@ public static class EngineEventParser
                 "language_detected" => new LanguageDetectedEvent(
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
+                "action_items_ready" => new ActionItemsReadyEvent(sessionId, data.GetProperty("count").GetInt32()),
                 "speakers_relabeled" => new SpeakersRelabeledEvent(sessionId),
                 "partial" => new PartialEvent(
                     sessionId,

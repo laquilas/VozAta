@@ -124,6 +124,7 @@ def test_language_minutes_and_errors_are_printed() -> None:
 
     console.on_language_detected(ConversationLanguage.PT)
     console.on_minutes_ready("20261015_202358")
+    console.on_action_items_ready("20261015_202358", 3)
     console.on_speakers_relabeled("20261015_202358")  # nothing to print
     console.on_error("minutes_failed", "Ollama is offline")
     console.say("Saved")
@@ -131,6 +132,7 @@ def test_language_minutes_and_errors_are_printed() -> None:
     assert stream.getvalue().splitlines() == [
         "cli.language_detected(language=languages.pt)",
         "cli.minutes_ready",
+        "cli.action_items_ready(count=3)",
         "Ollama is offline",
         "Saved",
     ]

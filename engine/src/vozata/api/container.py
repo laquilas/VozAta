@@ -14,7 +14,7 @@ from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.template_repository import TemplateRepository, bundled_templates
-from vozata.ports import DocumentExporter, Localizer, TranscriptSearch
+from vozata.ports import DocumentExporter, Localizer, TaskExporter, TranscriptSearch
 from vozata.settings_file import SettingsFile
 from vozata.storage.session_store import SessionStore
 
@@ -54,3 +54,8 @@ class ApiContainer:
     templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)
     vocabulary_file: Callable[[], Path] = lambda: Path("vocabulary.txt")  # glossary (19)
     ask: AskRunner | None = None  # `POST /ask` (24); None: 503 ask_unavailable
+    # Action items (23): background extraction (then `action_items_ready`; None: 503), the
+    # configured export targets, and an exporter per target (None when not configured).
+    extract_action_items: Callable[[str], None] | None = None
+    task_targets: Callable[[], list[str]] = list
+    task_exporter: Callable[[str], TaskExporter | None] = lambda target: None

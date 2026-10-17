@@ -35,7 +35,7 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
 public sealed partial class SettingsViewModel(IEngineClient client, IEngineProcess process, ILocalizationService localization)
     : ObservableObject
 {
-    private static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "api"];
+    private static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "api"];
 
     public ObservableCollection<SettingGroupViewModel> Groups { get; } = [];
 

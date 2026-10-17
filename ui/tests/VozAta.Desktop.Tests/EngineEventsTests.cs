@@ -41,8 +41,8 @@ public sealed class EngineEventsTests
             new SpeakersRelabeledEvent("s1"),
             EngineEventParser.Parse("""{"type":"speakers_relabeled","session_id":"s1","data":{"session_id":"s1"}}"""));
         Assert.Equal(
-            new UnknownEvent("s1", "action_items_ready"),
-            EngineEventParser.Parse("""{"type":"action_items_ready","session_id":"s1","data":{}}"""));
+            new UnknownEvent("s1", "future_event"),
+            EngineEventParser.Parse("""{"type":"future_event","session_id":"s1","data":{}}"""));
     }
 
     [Fact]

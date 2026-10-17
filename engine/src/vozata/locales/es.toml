@@ -23,6 +23,7 @@ mix_failed = "No se pudo crear mixed.wav ({reason}). Se conservaron las pistas d
 minutes_failed = "No se pudo generar el acta ({reason}). Se conservaron la grabación y la transcripción; vuelve a intentarlo con: {command}"
 model_failed = "No se pudo cargar el modelo de voz ({reason}). La grabación continúa: el audio se guarda, pero no se transcribe."
 index_failed = "No se pudo añadir la sesión al índice de búsqueda ({reason}). Reconstruye el índice con: python -m vozata reindex"
+action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conservó el acta; vuelve a extraerlas desde la pestaña Tareas de la sesión."
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
@@ -50,6 +51,12 @@ internal_error = "Error inesperado del motor. Consulta el registro del motor par
 answer_failed = "No se pudo responder a la pregunta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 answer_in_progress = "Todavía se está respondiendo otra pregunta. Espera a que termine y vuelve a preguntar."
 ask_unavailable = "Hacer preguntas sobre las reuniones no está disponible en este motor."
+action_items_failed = "No se pudieron extraer las tareas ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
+action_items_still_recording = "La sesión \"{id}\" sigue grabando; las tareas se extraen cuando se detenga."
+unknown_action_item = "La tarea \"{id}\" no está en esta sesión. Vuelve a cargar las tareas e inténtalo de nuevo."
+empty_action_item = "La tarea \"{id}\" necesita una descripción."
+unknown_task_target = "El destino de exportación \"{target}\" no está configurado. Destinos configurados: {allowed}."
+action_items_unavailable = "La extracción de tareas no está disponible en este motor."
 session_not_interrupted = "La sesión \"{id}\" no se interrumpió, así que no hay nada que recuperar."
 recovery_failed = "La sesión \"{id}\" no se pudo recuperar ({reason}). Sus archivos se conservaron; el motivo está en session.json."
 
@@ -88,6 +95,31 @@ question_label = "Pregunta:"
 not_found = "No encontré esto en las reuniones."
 stopwords = "a al algo algunos ante antes como con contra cual cuales cuando de del desde dijo dime donde dos e el ella ellas ellos en entre era es esa ese eso esta está este esto estos fue fueron ha han hay hicimos la las le les lo los más me mi mis mucho muy nada ni no nos nosotros o os otra otro para pero poco por porque qué que quien quién se ser si sí sin sobre son su sus también te tiene tienen todo tu tus un una unas uno unos usted ustedes y ya yo"
 
+[action_items]
+system = "Extraes tareas de transcripciones de reuniones: acciones concretas que alguien acordó o recibió para hacer. Usa solo lo que dice la transcripción; nunca inventes tareas, responsables ni fechas."
+instructions = """La reunión se realizó en {conversation_language}. Enumera sus tareas en JSON.
+Para cada tarea indica: "description", una frase corta en imperativo en {output_language}; "owner", el nombre o la etiqueta de la persona responsable tal como aparece en la transcripción, o null; "due", la fecha límite como AAAA-MM-DD cuando se pueda deducir, si no tal como se dijo, o null; "source_segment_ids", los ids entre corchetes al inicio de las líneas que mencionan la tarea.
+Devuelve {{"items": []}} cuando no haya tareas."""
+meeting_date = "La reunión tuvo lugar el {date}."
+part = "Esta es la parte {part} de {total} de la reunión."
+transcript_label = "Transcripción (cada línea empieza con su id):"
+
+[tasks]
+source = "Tarea de la reunión \"{title}\" (sesión {session_id})."
+time = "Mencionada en {time} de la grabación."
+owner = "Responsable: {owner}"
+due = "Fecha límite: {due}"
+folder = "Carpeta de la sesión: {folder}"
+
+[errors.tasks]
+already_exported = "Ya exportada: {url}"
+unknown_item = "La tarea \"{id}\" no está en esta sesión."
+unauthorized = "{target} rechazó las credenciales (HTTP {status}). Revisa el token en la configuración."
+not_found = "{target} no encontró el proyecto o el repositorio (HTTP {status}). Revisa la configuración."
+http_error = "{target} respondió con HTTP {status}: {detail}"
+unreachable = "No se pudo contactar con {target} ({reason})."
+invalid_reply = "{target} devolvió una respuesta inesperada."
+
 [cli]
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
 serve_public_host = "No se escuchará en {host}: la API del motor no tiene autenticación. Usa 127.0.0.1 o localhost en API_HOST."
@@ -103,6 +135,7 @@ finalizing = "Deteniendo: terminando la transcripción, guardando el audio y red
 saved = "Guardado en {folder}"
 language_detected = "Idioma detectado: {language}"
 minutes_ready = "Acta guardada en minutes.md."
+action_items_ready = "Tareas extraídas: {count}."
 minutes_written = "Acta guardada en {path}"
 minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."
 session_not_found = "No se encontró ninguna sesión en {folder}."

@@ -133,6 +133,10 @@ public sealed partial class HistoryViewModel(
 
     public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
 
+    /// <summary>An <c>action_items_ready</c> event (phase 23): reload the open detail's action items.</summary>
+    public Task OnActionItemsReadyAsync(string? sessionId) =>
+        Detail?.ActionItems.OnReadyAsync(sessionId) ?? Task.CompletedTask;
+
     /// <summary>Open a search hit: select its session (loading older pages if needed) at the segment.</summary>
     public Task OpenHitAsync(SearchHit hit) => OpenSegmentAsync(hit.SessionId, hit.SegmentId);
 

@@ -157,6 +157,63 @@ class RegenerateMinutes(BaseModel):
     template: str | None = None  # phase 20
 
 
+class ActionItemModel(BaseModel):
+    """An action item (phase 23); `exported_url` is set once it was exported."""
+
+    id: str
+    description: str
+    owner: str | None
+    due: str | None
+    source_segment_ids: list[str]
+    exported_url: str | None
+
+
+class ActionItems(BaseModel):
+    """`GET|PUT /sessions/{id}/action-items`; `targets` are the configured export targets."""
+
+    items: list[ActionItemModel]
+    targets: list[str]
+
+
+class ActionItemEdit(BaseModel):
+    """One edited item of `PUT /sessions/{id}/action-items`; other `ActionItem` keys are ignored."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    description: str = Field(max_length=1000)
+    owner: str | None = Field(default=None, max_length=200)
+    due: str | None = Field(default=None, max_length=100)
+
+
+class EditActionItems(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[ActionItemEdit]
+
+
+class ExportActionItems(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target: str
+    item_ids: list[str] = Field(min_length=1)
+
+
+class CreatedTask(BaseModel):
+    item_id: str
+    url: str
+
+
+class FailedTask(BaseModel):
+    item_id: str
+    error: str
+
+
+class ExportedActionItems(BaseModel):
+    created: list[CreatedTask]
+    failed: list[FailedTask]
+
+
 class Vocabulary(BaseModel):
     """`GET|PUT /vocabulary` (phase 19)."""
 

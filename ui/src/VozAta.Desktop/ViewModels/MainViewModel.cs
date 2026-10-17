@@ -549,6 +549,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Notify(_localization["MinutesReady"]);
                 HistoryRefresh = History.OnMinutesReadyAsync(minutes.SessionId);
                 break;
+            case ActionItemsReadyEvent ready:
+                HistoryRefresh = History.OnActionItemsReadyAsync(ready.SessionId);
+                break;
             case SpeakersRelabeledEvent relabeled:
                 HistoryRefresh = OnSpeakersRelabeledAsync(relabeled.SessionId);
                 break;
