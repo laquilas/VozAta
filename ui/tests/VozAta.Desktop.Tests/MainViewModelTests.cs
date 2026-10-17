@@ -553,7 +553,22 @@ public sealed class MainViewModelTests
             [new TranscriptLine("00:01:05", "Eu", "Bom dia.", "mic"), new TranscriptLine("00:01:10", "Outros", "Oi.", "system")],
             viewModel.Segments);
         Assert.Equal("[00:01:05] Eu: Bom dia.", viewModel.Segments[0].Display);
-        Assert.NotEqual(viewModel.Segments[0].Color, viewModel.Segments[1].Color);
+        Assert.True(viewModel.Segments[0].IsMic);
+        Assert.False(viewModel.Segments[0].IsSystem);
+        Assert.True(viewModel.Segments[1].IsSystem);
+        Assert.False(viewModel.Segments[1].IsMic);
+    }
+
+    [Theory]
+    [InlineData("mic", true, false)]
+    [InlineData("system", false, true)]
+    [InlineData("mixed", false, false)]
+    public void The_channel_picks_the_speaker_colour_class(string channel, bool isMic, bool isSystem)
+    {
+        var line = new TranscriptLine("00:00:01", "A", "text", channel);
+
+        Assert.Equal(isMic, line.IsMic);
+        Assert.Equal(isSystem, line.IsSystem);
     }
 
     [Fact]

@@ -66,14 +66,14 @@ Layout changes (35–38), custom fonts beyond Inter.
 - **Branch:** `feature/34-ui-design-system`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** replace hex colors, raw `FontSize` and glyph buttons in `Views/*.axaml` with tokens,
-  styles and icons; add `ThemeTokensTests` (XAML grep).
+- **Next step:** headless render test (`Avalonia.Headless` in the test project) that loads every view in
+  light and dark and can save screenshots; contrast test over `Tokens.axaml` pairs.
 
 ### Steps
 
 - [x] Tokens, icons (with license) and control styles merged in `App.axaml` — this commit
 - [x] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app — this commit
-- [ ] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests`
+- [x] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests` — this commit
 - [ ] Contrast test for the token pairs (≥ 4.5:1 in light and dark)
 - [ ] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots
 - [ ] Docs (architecture), acceptance criteria, full UI suite, PR
@@ -90,3 +90,8 @@ Layout changes (35–38), custom fonts beyond Inter.
 - Theme picker lives in `AppearanceViewModel` (`MainViewModel.Appearance`, next to `Tray`) instead of
   `SettingsViewModel`: it is a desktop-app preference like Minimize to tray, not an engine setting.
   Tests in `AppearanceViewModelTests.cs`. `IThemeService` / `AvaloniaThemeService` is wired in `App.axaml.cs`.
+- Transcript colors: `TranscriptLine.Color` (hex strings in the ViewModel) became `IsMic` / `IsSystem`;
+  views pick `Brush.Channel*` through the `channel` / `mic` / `system` classes, so dark mode gets
+  lighter speaker colors. Faded text (`Opacity=0.6`) became `Brush.TextSecondary` (`secondary` /
+  `hint` / `caption` classes) so its contrast is measurable. Small item margins stay numeric; page,
+  card and banner insets use `Inset.*` tokens (layout unchanged).

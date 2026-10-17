@@ -16,7 +16,8 @@ public sealed partial class EditableSegment : ObservableObject
     {
         SegmentId = segment.SegmentId;
         Header = $"[{TranscriptLine.FormatTime(segment.Start)}] {segment.Label}";
-        Color = TranscriptLine.ColorOf(segment.Channel);
+        IsMic = TranscriptLine.IsMicChannel(segment.Channel);
+        IsSystem = TranscriptLine.IsSystemChannel(segment.Channel);
         OriginalText = segment.Text;
         Text = segment.Text;
     }
@@ -26,7 +27,10 @@ public sealed partial class EditableSegment : ObservableObject
     /// <summary><c>[hh:mm:ss] Label</c> above the text box.</summary>
     public string Header { get; }
 
-    public string Color { get; }
+    /// <summary>Speaker color class of the header (see <see cref="TranscriptLine.IsMic"/>).</summary>
+    public bool IsMic { get; }
+
+    public bool IsSystem { get; }
 
     public string OriginalText { get; }
 

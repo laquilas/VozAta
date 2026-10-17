@@ -9,15 +9,15 @@
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Command="{Binding ExtractCommand}"
                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsExtract]}" />
-        <TextBlock VerticalAlignment="Center" FontStyle="Italic" Opacity="0.7"
+        <TextBlock VerticalAlignment="Center" Classes="hint"
                    Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsExtracting]}"
                    IsVisible="{Binding IsExtracting}" />
       </StackPanel>
       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsEmpty]}"
-                 Opacity="0.6" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}" />
-      <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                 Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}" />
+      <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
                  IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-      <TextBlock Text="{Binding Message}" Foreground="#2E7D32" TextWrapping="Wrap"
+      <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
                  IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
     <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding HasItems}">
@@ -30,13 +30,13 @@
                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsExport]}" />
       </StackPanel>
       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsNoTargets]}"
-                 Opacity="0.75" TextWrapping="Wrap" IsVisible="{Binding !HasTargets}" />
+                 Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding !HasTargets}" />
     </StackPanel>
     <ScrollViewer>
       <ItemsControl ItemsSource="{Binding Items}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:ActionItemRow">
-            <Border BorderBrush="#33808080" BorderThickness="0,0,0,1" Padding="0,6">
+            <Border Classes="divider" Padding="0,6">
               <DockPanel>
                 <CheckBox DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,4,8,0"
                           IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsEditable}"
@@ -55,13 +55,13 @@
                              AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsDue]}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsExported}">
-                    <TextBlock VerticalAlignment="Center" Opacity="0.75"
+                    <TextBlock VerticalAlignment="Center" Classes="secondary"
                                Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ActionItemsExportedLink]}" />
-                    <Button Padding="4,1" Foreground="#1565C0" Content="{Binding ExportedUrl}"
+                    <Button Padding="4,1" Classes="link" Content="{Binding ExportedUrl}"
                             Command="{Binding $parent[UserControl].((vm:ActionItemsViewModel)DataContext).OpenLinkCommand}"
                             CommandParameter="{Binding ExportedUrl}" />
                   </StackPanel>
-                  <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                  <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
                              IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
               </DockPanel>
