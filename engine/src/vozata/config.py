@@ -19,6 +19,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    TranslationTarget,
     WhisperDevice,
     default_conversation_language,
 )
@@ -107,6 +108,10 @@ class Settings:
     context_prompt_chars: int = 200  # rolling context prompt length, 0 = off
     # Editable transcript (phase 21)
     low_confidence_threshold: float = 0.5
+    # Live translation (phase 29)
+    translate_to: TranslationTarget = TranslationTarget.OFF
+    translation_provider: str = "opus_mt"
+    translation_model_dir: Path | None = None  # None: download into the Hugging Face cache
     # Minutes (phase 04)
     llm_provider: str = "ollama"
     ollama_url: str = "http://localhost:11434"
@@ -188,6 +193,11 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         context_prompt_chars=_integer(raw, "CONTEXT_PROMPT_CHARS", 200, minimum=0, maximum=1000),
         low_confidence_threshold=_number(
             raw, "LOW_CONFIDENCE_THRESHOLD", 0.5, minimum=0, maximum=1
+        ),
+        translate_to=_choice(raw, "TRANSLATE_TO", TranslationTarget, TranslationTarget.OFF),
+        translation_provider=raw.get("TRANSLATION_PROVIDER", "opus_mt"),
+        translation_model_dir=(
+            Path(raw["TRANSLATION_MODEL_DIR"]) if "TRANSLATION_MODEL_DIR" in raw else None
         ),
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),

@@ -61,13 +61,13 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - **Branch:** `feature/29-live-translation`
 - **Status:** in progress
 - **Updated:** 2026-10-17 14:30
-- **Next step:** add `translation/opus_mt.py` (CTranslate2 Opus-MT, lazy imports), the
-  `TRANSLATORS` registry in `bootstrap.py` and the config keys, with tests on fakes.
+- **Next step:** wire the worker into the session (extra sink in `session_pipeline.py`,
+  `on_translation`, `TRANSLATORS` registry in `bootstrap.py`), with tests.
 
 ### Steps
 
 - [x] `Translator` port + `TranslationWorker` (own thread, queue, skip, error once) + translations file
-- [ ] Opus-MT (CTranslate2) provider, `TRANSLATORS` registry, `TRANSLATE_TO` / `TRANSLATION_PROVIDER`
+- [x] Opus-MT (CTranslate2) provider, `TRANSLATORS` registry, `TRANSLATE_TO` / `TRANSLATION_PROVIDER`
       / `TRANSLATION_MODEL_DIR`, optional extra `translation`
 - [ ] Session wiring: extra sink in `session_pipeline.py`, `on_translation` observer, `translation`
       event, `translation_failed` error
@@ -79,3 +79,13 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 ### Decisions and notes
 
 - Provider: MarianMT / Opus-MT models converted to CTranslate2 (see architecture §14).
+  Two pre-converted models cover all six pairs of en/pt/es: `michaelfeil/ct2fast-opus-mt-ROMANCE-en`
+  (pt/es → en) and `michaelfeil/ct2fast-opus-mt-en-ROMANCE` (en → pt/es via `>>pt_br<<` / `>>es<<`);
+  pt ↔ es pivots through English. ~155 MB each, CPU int8, 2 intra-op threads.
+- `ctranslate2` already ships with faster-whisper; the extra `translation` adds `sentencepiece`
+  (+ `huggingface_hub`, also already present). Both are imported lazily; `require_extra()` fails
+  fast with a clear reason that becomes the `translation_failed` error.
+- `TRANSLATE_TO` is a choice `off | en | pt | es` (empty = off) so the settings page can switch it
+  off; `TRANSLATION_MODEL_DIR` empty = Hugging Face cache download on first use.
+- Quick real check on the reference machine (offline, no audio): en → pt and en → es, warm median
+  ~80 ms per sentence (max ~140 ms), first call ~0.7–0.8 s including the model load.

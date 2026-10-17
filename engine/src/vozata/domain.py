@@ -39,6 +39,15 @@ class ConversationLanguage(StrEnum):
     AUTO = "auto"
 
 
+class TranslationTarget(StrEnum):
+    """`TRANSLATE_TO`: the live translation language (phase 29); `off` disables it."""
+
+    OFF = "off"
+    EN = "en"
+    PT = "pt"
+    ES = "es"
+
+
 class ChunkMode(StrEnum):
     VAD = "vad"  # cut at pauses (phase 27)
     FIXED = "fixed"  # CHUNK_SECONDS windows

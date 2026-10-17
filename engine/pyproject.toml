@@ -27,6 +27,8 @@ dev = ["pytest", "pytest-cov", "ruff", "pypdf"]
 # Speaker identification (phase 14). For CUDA, install the CUDA build of torch first:
 #   pip install torch --index-url https://download.pytorch.org/whl/cu128
 diarization = ["pyannote.audio>=4", "torch"]
+# Live translation (phase 29): Opus-MT on CTranslate2 (ctranslate2 comes with faster-whisper).
+translation = ["sentencepiece", "huggingface_hub"]
 package = ["pyinstaller"]  # packaging/engine.spec (phase 13)
 
 [tool.setuptools.dynamic]
