@@ -54,3 +54,28 @@ Cross-session speaker recognition (remembering voices between meetings).
 
 > Execute phase 15 of the roadmap (`docs/roadmap/phases/15-diarization-live.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/15-diarization-live`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** add `LIVE_DIARIZATION_ENABLED` / `SPEAKER_SIMILARITY_THRESHOLD` to `config.py`,
+  `settings_fields.py`, `.env.example`, architecture §9 and the UI settings strings.
+
+### Steps
+
+- [ ] Config keys `LIVE_DIARIZATION_ENABLED`, `SPEAKER_SIMILARITY_THRESHOLD`
+- [ ] `SpeakerEmbedder` port, `FakeEmbedder`, `LiveSpeakerTagger` (`diarization/live.py`)
+- [ ] Live tagging worker (own thread) between the echo filter and the sinks, fed by a system
+      audio buffer; wired in `session_pipeline.py`
+- [ ] pyannote embedder in a long-lived child process (`diarization/embedder.py`), `EMBEDDERS`
+      registry in `bootstrap.py`
+- [ ] `speakers_relabeled` after the post-session pass (observer, session, API)
+- [ ] UI: parse `speakers_relabeled`, reload the transcript (main window + session detail)
+- [ ] Docs (architecture §6/§9/§11, api-contract), acceptance criteria, full suites, PR
+
+### Decisions and notes
+
+- Live tagging is a sink stage with its own thread (`[EchoFilter] → [LiveSpeakerTagger]` in
+  architecture §6), so the transcription thread only enqueues; `worker.py` stays unchanged.
