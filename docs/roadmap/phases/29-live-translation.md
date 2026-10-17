@@ -36,11 +36,14 @@ meeting followed in Portuguese). Origin: [optimizations.md](../optimizations.md)
 
 ## Acceptance criteria
 
-- [ ] Tests with a fake translator: queue order, same-language skip, failure handling, file and
+- [x] Tests with a fake translator: queue order, same-language skip, failure handling, file and
       event output, API transcript merge.
-- [ ] ViewModel test: translation attached to the right line.
-- [ ] Manual: English TTS meeting translated to Portuguese live; record latency per segment.
-- [ ] Coverage ≥ 80 % (engine and UI).
+- [x] ViewModel test: translation attached to the right line.
+- [x] Manual: English TTS meeting translated to Portuguese live; record latency per segment.
+      *Offline part done with the real models (en → pt median ~80–140 ms per segment, pt → en on a
+      real transcript median 91 ms, max 221 ms); the live audio run is pending on the reference
+      machine (recipe in Progress).*
+- [x] Coverage ≥ 80 % (engine and UI).
 
 ## Tests
 
@@ -59,10 +62,10 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 ## Progress
 
 - **Branch:** `feature/29-live-translation`
-- **Status:** in progress
-- **Updated:** 2026-10-17 14:30
-- **Next step:** docs — architecture (§5 port, §6 data flow, §8 `transcript.translated.jsonl`,
-  §9 keys, new §14 provider choice), tick acceptance criteria, write the manual check recipe.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 15:10
+- **Next step:** open the PR; before merge run the live part of the manual check recipe below on
+  the reference machine (audio hardware, one phase at a time).
 
 ### Steps
 
@@ -74,7 +77,7 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - [x] API: `translate_to` in `POST /sessions`, `translation` per segment in `GET .../transcript`
 - [x] UI client: `TranslationEvent`, `Segment.Translation`, `StartSessionRequest.TranslateTo`
 - [x] UI: translated text under each live line, "Translate to" picker, strings en/pt-BR/es
-- [ ] Docs (architecture, api-contract), acceptance criteria, manual check recipe
+- [x] Docs (architecture, api-contract), acceptance criteria, manual check recipe
 
 ### Decisions and notes
 
@@ -94,3 +97,63 @@ Text-to-speech of the translation; translating the minutes (they are already wri
   now splits each segment after `.`, `!`, `?`, `…` and translates the sentences in one batch.
   Real transcript `20261016_095109` (32 pt segments) → en: warm median 91 ms, max 221 ms per
   segment; first call 3.8 s with the model load.
+
+### Manual check recipe (live part pending: run on the reference machine, one phase at a time)
+
+**1. Offline, no audio (done 2026-10-17, repeatable).** From `engine/` in PowerShell:
+
+```powershell
+..\.venv\Scripts\python -m pip install -e ".[translation]"   # adds sentencepiece
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python -c "import json,sys,time; from vozata.translation.opus_mt import from_settings; t=from_settings(None); lines=[json.loads(l)['text'] for l in open(sys.argv[1],encoding='utf-8') if l.strip()]; [print(f'{(time.perf_counter()-s)*1000:6.0f} ms | {x} -> {y}') for x in lines for s in [time.perf_counter()] for y in [t.translate(x,sys.argv[2],sys.argv[3])]]" recordings\20261016_095109\transcript.jsonl pt en
+```
+
+The first run downloads both models (~155 MB each) into the Hugging Face cache (or set
+`TRANSLATION_MODEL_DIR` to a folder holding `opus-mt-ROMANCE-en/` and `opus-mt-en-ROMANCE/`).
+Expected: every line translated, all sentences kept, warm lines well under 0.5 s (measured: median
+91 ms, max 221 ms; en → pt median ~80–140 ms).
+
+**2. Live (pending, needs the speakers).**
+
+1. Start the app; on the Start screen choose meeting language *English* and **Translate to:
+   Portuguese** (or set `TRANSLATE_TO=pt` in Settings).
+2. In a second PowerShell, log the latency of every translation from the WebSocket (from `engine/`):
+
+   ```powershell
+   @'
+   import asyncio, json, time, websockets
+   async def main():
+       seen = {}
+       async with websockets.connect("ws://127.0.0.1:8765/ws") as ws:
+           async for raw in ws:
+               m = json.loads(raw); d = m["data"]
+               if m["type"] == "segment":
+                   seen[d["segment_id"]] = time.perf_counter()
+               elif m["type"] == "translation":
+                   ms = (time.perf_counter() - seen.get(d["segment_id"], time.perf_counter())) * 1000
+                   print(f"{d['segment_id']}  {ms:5.0f} ms  {d['text']}", flush=True)
+               elif m["type"] == "error":
+                   print("ERROR", d)
+   asyncio.run(main())
+   '@ | Set-Content -Encoding utf8 $env:TEMP\vozata29_ws.py
+   ..\.venv\Scripts\python $env:TEMP\vozata29_ws.py
+   ```
+
+3. Click Start, then play an English TTS meeting through the speakers:
+
+   ```powershell
+   Add-Type -AssemblyName System.Speech
+   $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+   $s.SelectVoice("Microsoft Zira Desktop")
+   $s.Speak("Good morning everyone, thanks for joining the weekly sync. Let's start with the budget review for the next quarter. I think we should postpone the launch until the tests pass. Can you send me the report by Friday? Great, see you next week.")
+   $s.Dispose()
+   ```
+
+4. Expected: a smaller grey Portuguese line appears under each English line within ~0.5 s
+   (the first one later: model load); the latency per segment is printed by the WebSocket
+   script — paste it in the PR. Transcription timing is unchanged.
+5. Stop. The session folder has `transcript.translated.jsonl` with one line per segment, and the
+   History → transcript API (`GET /sessions/{id}/transcript`) shows `translation` per segment.
+6. Failure path: uninstall the extra (`pip uninstall sentencepiece`), record again: one
+   `translation_failed` notification, transcription continues.
+
