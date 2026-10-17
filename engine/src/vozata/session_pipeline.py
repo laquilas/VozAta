@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 
@@ -124,7 +124,9 @@ class CapturePipeline:
     calls `on_load_failed` and the audio is only written to the WAVs. Chunkers come from
     `chunker_factory` (`CHUNKERS` in `bootstrap.py`); without one, fixed `CHUNK_SECONDS` windows
     are used. `hints` (the session vocabulary, phase 19) go with every transcription, and each
-    channel gets its own rolling context prompt of `CONTEXT_PROMPT_CHARS`.
+    channel gets its own rolling context prompt of `CONTEXT_PROMPT_CHARS`. `extra_sinks` get
+    every committed segment after echo dedupe, next to the transcript files (e.g. the translation
+    worker, phase 29); they must return quickly and are closed by `drain()`.
     """
 
     def __init__(
@@ -139,6 +141,7 @@ class CapturePipeline:
         chunker_factory: ChunkerFactory | None = None,
         on_load_failed: Callable[[Exception], None] = lambda error: None,
         hints: str | None = None,
+        extra_sinks: Sequence[TranscriptSink] = (),
     ) -> None:
         self._rate = settings.sample_rate
         new_chunker = chunker_factory or _fixed_windows(settings)
@@ -157,6 +160,7 @@ class CapturePipeline:
                 JsonlSink(paths.transcript_jsonl),
                 MarkdownSink(paths.transcript_md, labeler),
                 _ObserverSink(observer),
+                *extra_sinks,
             ]
         )
         self._echo = (

@@ -173,6 +173,10 @@ class SessionObserver(Protocol):
         """The speech model started (True) or finished (False) loading; capture already runs."""
         ...
 
+    def on_translation(self, segment_id: str, language: str, text: str) -> None:
+        """A committed segment translated into `language` (phase 29)."""
+        ...
+
     def on_error(self, code: str, message: str) -> None:
         """A non-fatal error; `message` is localized."""
         ...

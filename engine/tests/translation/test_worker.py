@@ -182,3 +182,20 @@ def test_a_failing_close_of_the_translator_is_logged() -> None:
 
     assert len(h.output.items) == 1
     assert h.output.closed
+
+
+def test_a_language_locked_after_the_last_segment_still_translates_it_at_close() -> None:
+    h = Harness(source=None)
+    calls = 0
+
+    def source() -> str | None:
+        nonlocal calls
+        calls += 1
+        return None if calls == 1 else "es"
+
+    h.worker._source = source
+    h.worker.start()
+    h.worker.emit(segment("a", "hola"))
+    h.worker.close()
+
+    assert h.translator.calls == [("hola", "es", "pt")]

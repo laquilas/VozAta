@@ -61,15 +61,16 @@ Text-to-speech of the translation; translating the minutes (they are already wri
 - **Branch:** `feature/29-live-translation`
 - **Status:** in progress
 - **Updated:** 2026-10-17 14:30
-- **Next step:** wire the worker into the session (extra sink in `session_pipeline.py`,
-  `on_translation`, `TRANSLATORS` registry in `bootstrap.py`), with tests.
+- **Next step:** API — `translate_to` in `POST /sessions` (schema + route → `StartOptions`) and a
+  `translation` object per segment in `GET /sessions/{id}/transcript`, tests in
+  `tests/api/test_sessions.py`.
 
 ### Steps
 
 - [x] `Translator` port + `TranslationWorker` (own thread, queue, skip, error once) + translations file
 - [x] Opus-MT (CTranslate2) provider, `TRANSLATORS` registry, `TRANSLATE_TO` / `TRANSLATION_PROVIDER`
       / `TRANSLATION_MODEL_DIR`, optional extra `translation`
-- [ ] Session wiring: extra sink in `session_pipeline.py`, `on_translation` observer, `translation`
+- [x] Session wiring: extra sink in `session_pipeline.py`, `on_translation` observer, `translation`
       event, `translation_failed` error
 - [ ] API: `translate_to` in `POST /sessions`, `translation` per segment in `GET .../transcript`
 - [ ] UI client: `TranslationEvent`, `Segment.Translation`, `StartSessionRequest.TranslateTo`

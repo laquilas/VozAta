@@ -77,6 +77,7 @@ class TranslationWorker:
             if self._translator is not None and isinstance(item, TranscriptSegment):
                 self._waiting.append(item)
                 self._translate_waiting()
+        self._translate_waiting()  # the language may have been locked after the last segment
         if self._waiting:
             _log.info(
                 "%d segments left untranslated: the language was never known", len(self._waiting)

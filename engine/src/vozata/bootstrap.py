@@ -35,6 +35,7 @@ from vozata.domain import (
     ConversationLanguage,
     MixMode,
     SessionStatus,
+    TranslationTarget,
 )
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
@@ -54,6 +55,7 @@ from vozata.ports import (
     SessionObserver,
     Transcriber,
     TranscriptSearch,
+    Translator,
 )
 from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
@@ -64,6 +66,7 @@ from vozata.storage.session_store import SessionStore
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
+from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
@@ -81,6 +84,10 @@ LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(
         settings.ollama_url, settings.ollama_model, settings.ollama_keep_alive
     ),
+}
+
+TRANSLATORS: dict[str, Callable[[Settings], Translator]] = {
+    "opus_mt": lambda settings: opus_mt.from_settings(settings.translation_model_dir),
 }
 
 
@@ -198,6 +205,21 @@ def build_diarizer(settings: Settings) -> Diarizer:
     return _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)(settings)
 
 
+def build_translator_factory(
+    settings: Settings, translate_to: TranslationTarget | None = None
+) -> tuple[str | None, Callable[[], Translator] | None]:
+    """The live translation target and translator factory (phase 29); `(None, None)` when off.
+
+    `translate_to` (the Start screen choice) overrides `TRANSLATE_TO`. The translator itself is
+    built by the translation worker on its own thread, so a slow model load never delays capture.
+    """
+    target = translate_to or settings.translate_to
+    if target is TranslationTarget.OFF:
+        return None, None
+    factory = _provider(TRANSLATORS, "TRANSLATION_PROVIDER", settings.translation_provider)
+    return target.value, functools.partial(factory, settings)
+
+
 def build_session(
     settings: Settings,
     observer: SessionObserver,
@@ -209,6 +231,7 @@ def build_session(
     template: str | None = None,
     vocabulary: Sequence[str] = (),
     env_file: Path | None = None,
+    translate_to: TranslationTarget | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -218,6 +241,7 @@ def build_session(
     minutes follow (VRAM rule). `template` (default `MINUTES_TEMPLATE`) is the minutes template,
     stored in `session.json` even when minutes are off. `vocabulary` (this meeting's terms) is
     merged with the glossary file (`vocabulary_path(settings, env_file)`), session terms first.
+    `translate_to` (default `TRANSLATE_TO`) is the live translation language (phase 29).
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -229,6 +253,7 @@ def build_session(
         else None
     )
     diarizer_factory = build_diarizer_factory(settings)
+    translation_target, translator_factory = build_translator_factory(settings, translate_to)
     try:
         audio = PortAudioThread()
     except TimeoutError:
@@ -264,6 +289,8 @@ def build_session(
         search_index=build_search_index(settings),
         minutes_template=template,
         vocabulary=tuple(session_vocabulary(settings, vocabulary, env_file)),
+        translate_to=translation_target,
+        translator_factory=translator_factory,
     )
     return RecordingSession(
         settings,
@@ -315,6 +342,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             vocabulary=options.vocabulary,
             env_file=env_file,
             shared=shared,
+            translate_to=options.translate_to,
         )
 
     def minutes_generator(template: str | None = None) -> MinutesGenerator:

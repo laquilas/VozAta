@@ -302,6 +302,7 @@ def test_build_api_container_wires_real_providers(
             "vocabulary": (),
             "env_file": Path(".env"),
             "shared": None,
+            "translate_to": None,
         }
     ]
     generator = container.regenerate_minutes._build_generator()
@@ -534,3 +535,50 @@ def test_the_api_container_finds_the_glossary_next_to_its_env_file(
     container = bootstrap.build_api_container(settings, tmp_path / ".env")
 
     assert container.vocabulary_file() == tmp_path / "vocabulary.txt"
+
+
+def test_the_translator_registry_holds_opus_mt(monkeypatch: pytest.MonkeyPatch) -> None:
+    from vozata.translation import opus_mt
+
+    monkeypatch.setattr(opus_mt, "require_extra", lambda: None)
+
+    assert isinstance(bootstrap.TRANSLATORS["opus_mt"](Settings()), opus_mt.OpusMtTranslator)
+
+
+def test_translation_is_off_by_default_and_the_start_choice_overrides_the_setting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tests.fakes import FakeTranslator
+    from vozata.domain import TranslationTarget
+
+    fake = FakeTranslator()
+    monkeypatch.setitem(bootstrap.TRANSLATORS, "fake", lambda settings: fake)
+    settings = Settings(translate_to=TranslationTarget.ES, translation_provider="fake")
+
+    assert bootstrap.build_translator_factory(Settings()) == (None, None)
+    assert bootstrap.build_translator_factory(settings, TranslationTarget.OFF) == (None, None)
+    target, factory = bootstrap.build_translator_factory(settings)
+    assert target == "es" and factory is not None and factory() is fake
+    assert bootstrap.build_translator_factory(settings, TranslationTarget.EN)[0] == "en"
+    with pytest.raises(ConfigError) as caught:
+        bootstrap.build_translator_factory(
+            Settings(translate_to=TranslationTarget.PT, translation_provider="nope")
+        )
+    assert caught.value.key == "TRANSLATION_PROVIDER"
+
+
+def test_build_session_passes_the_translation_to_the_session(
+    tmp_path: Path, devices: list[int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.fakes import FakeTranslator
+    from vozata.domain import TranslationTarget
+
+    monkeypatch.setitem(bootstrap.TRANSLATORS, "fake", lambda settings: FakeTranslator())
+    settings = _settings(tmp_path, translation_provider="fake")
+
+    session = bootstrap.build_session(
+        settings, FakeSessionObserver(), translate_to=TranslationTarget.PT
+    )
+
+    assert session._c.translate_to == "pt"
+    assert session._c.translator_factory is not None

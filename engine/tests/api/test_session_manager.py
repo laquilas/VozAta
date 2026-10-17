@@ -286,3 +286,21 @@ def test_model_loading_is_published_true_then_false(
         (session_id, {"loading": True}),
         (session_id, {"loading": False}),
     ]
+
+
+def test_translations_are_published_as_translation_events(
+    manager: SessionManager, factory: SessionFactory, broadcaster: RecordingBroadcaster
+) -> None:
+    manager.start(OPTIONS)
+    observer = factory.sessions[0].observer
+
+    observer.on_translation("system-000003", "en", "Good morning")
+    manager.stop()
+    assert manager.wait_until_finished(5)
+
+    assert broadcaster.of("translation") == [
+        (
+            "20261015_202358",
+            {"segment_id": "system-000003", "language": "en", "text": "Good morning"},
+        )
+    ]

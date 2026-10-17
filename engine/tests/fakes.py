@@ -233,6 +233,9 @@ class FakeSessionObserver:
     def on_partial(self, channel: Channel, speaker_id: str, start: float, text: str) -> None:
         self.events.append(("partial", channel, speaker_id, start, text))
 
+    def on_translation(self, segment_id: str, language: str, text: str) -> None:
+        self.events.append(("translation", segment_id, language, text))
+
     def on_error(self, code: str, message: str) -> None:
         self.events.append(("error", code, message))
 
