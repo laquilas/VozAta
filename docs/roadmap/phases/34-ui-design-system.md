@@ -60,3 +60,24 @@ Layout changes (35–38), custom fonts beyond Inter.
 
 > Execute phase 34 of the roadmap (`docs/roadmap/phases/34-ui-design-system.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/34-ui-design-system`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** add `Themes/Tokens.axaml`, `Themes/Icons.axaml`, `Themes/Controls.axaml` (+ Fluent
+  UI icons license) and merge them in `App.axaml`.
+
+### Steps
+
+- [ ] Tokens, icons (with license) and control styles merged in `App.axaml`
+- [ ] Theme preference (`ui.json` `theme`), `IThemeService`, picker in Settings → Desktop app
+- [ ] Views use tokens, styles and icons only (no hex / raw `FontSize`), `ThemeTokensTests`
+- [ ] Contrast test for the token pairs (≥ 4.5:1 in light and dark)
+- [ ] `ThemeGalleryWindow` (debug builds only) and light/dark screenshots
+- [ ] Docs (architecture), acceptance criteria, full UI suite, PR
+
+### Decisions and notes
+
+- Runs in parallel with phase 30 (engine only): no shared files expected.
