@@ -54,6 +54,7 @@ action_items_still_recording = "La sesión \"{id}\" sigue grabando; las tareas s
 unknown_action_item = "La tarea \"{id}\" no está en esta sesión. Vuelve a cargar las tareas e inténtalo de nuevo."
 empty_action_item = "La tarea \"{id}\" necesita una descripción."
 unknown_task_target = "El destino de exportación \"{target}\" no está configurado. Destinos configurados: {allowed}."
+action_items_unavailable = "La extracción de tareas no está disponible en este motor."
 
 [languages]
 en = "inglés"
@@ -100,7 +101,8 @@ part = "Esta es la parte {part} de {total} de la reunión."
 transcript_label = "Transcripción (cada línea empieza con su id):"
 
 [tasks]
-source = "Tarea de la reunión \"{title}\" (sesión {session_id}), en el minuto {time} de la grabación."
+source = "Tarea de la reunión \"{title}\" (sesión {session_id})."
+time = "Mencionada en {time} de la grabación."
 owner = "Responsable: {owner}"
 due = "Fecha límite: {due}"
 folder = "Carpeta de la sesión: {folder}"

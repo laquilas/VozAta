@@ -54,6 +54,7 @@ action_items_still_recording = "Session \"{id}\" is still recording; action item
 unknown_action_item = "Action item \"{id}\" is not in this session. Reload the action items and try again."
 empty_action_item = "Action item \"{id}\" needs a description."
 unknown_task_target = "Export target \"{target}\" is not configured. Configured targets: {allowed}."
+action_items_unavailable = "Extracting action items is not available in this engine."
 
 [languages]
 en = "English"
@@ -100,7 +101,8 @@ part = "This is part {part} of {total} of the meeting."
 transcript_label = "Transcript (each line starts with its id):"
 
 [tasks]
-source = "Action item from the meeting \"{title}\" (session {session_id}), at {time} into the recording."
+source = "Action item from the meeting \"{title}\" (session {session_id})."
+time = "Mentioned at {time} into the recording."
 owner = "Owner: {owner}"
 due = "Due: {due}"
 folder = "Session folder: {folder}"

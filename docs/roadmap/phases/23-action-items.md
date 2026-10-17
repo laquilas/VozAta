@@ -62,8 +62,8 @@ Calendar invites, Jira (another `TaskExporter` later).
 - **Branch:** `feature/23-action-items`
 - **Status:** in progress
 - **Updated:** 2026-10-17 10:00
-- **Next step:** API routes `POST/GET/PUT /sessions/{id}/action-items` and `POST .../export`
-  (background `ActionItemsJob`, export service), container fields wired in `bootstrap.py`
+- **Next step:** UI: `ActionItem`/export DTOs + `IEngineClient` methods (`EngineClient`,
+  `FakeEngineClient`), `action_items_ready` event, then `ActionItemsViewModel` + tab
 
 ### Steps
 
@@ -72,7 +72,7 @@ Calendar invites, Jira (another `TaskExporter` later).
 - [x] Config keys `EXTRACT_ACTION_ITEMS`, `AZDO_*`, `GITHUB_*` (secrets masked) + `.env.example`
 - [x] `TaskExporter` port, `AzureDevOpsExporter`, `GitHubIssuesExporter`, `TASK_EXPORTERS` registry
 - [x] Stop step: extraction after minutes in `session.py` + `action_items_ready` event
-- [ ] API: `POST/GET/PUT /sessions/{id}/action-items`, `POST .../export`
+- [x] API: `POST/GET/PUT /sessions/{id}/action-items`, `POST .../export`
 - [ ] UI: client methods + DTOs, `ActionItemsViewModel`, "Action items" tab, resources
 - [ ] Docs (architecture, api-contract), acceptance criteria, full suites, PR
 
@@ -89,3 +89,6 @@ Calendar invites, Jira (another `TaskExporter` later).
   `_extract_action_items()`; it runs only when minutes are on (`GENERATE_MINUTES`) and
   `EXTRACT_ACTION_ITEMS` is true, so the `WHISPER_KEEP_LOADED` keep rule is unchanged. New
   observer method `on_action_items_ready(session_id, count)` (console, WebSocket, fakes).
+- API additions beyond the contract rows: `PUT /sessions/{id}/action-items` saves the UI edits
+  (exported items stay as exported) and `GET` also returns `targets` (configured targets only),
+  so the UI can offer the selector. `api-contract.md` updated.

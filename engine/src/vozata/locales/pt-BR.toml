@@ -54,6 +54,7 @@ action_items_still_recording = "A sessão \"{id}\" ainda está gravando; os iten
 unknown_action_item = "O item de ação \"{id}\" não está nesta sessão. Recarregue os itens de ação e tente de novo."
 empty_action_item = "O item de ação \"{id}\" precisa de uma descrição."
 unknown_task_target = "O destino de exportação \"{target}\" não está configurado. Destinos configurados: {allowed}."
+action_items_unavailable = "A extração de itens de ação não está disponível neste motor."
 
 [languages]
 en = "inglês"
@@ -100,7 +101,8 @@ part = "Esta é a parte {part} de {total} da reunião."
 transcript_label = "Transcrição (cada linha começa com seu id):"
 
 [tasks]
-source = "Item de ação da reunião \"{title}\" (sessão {session_id}), em {time} da gravação."
+source = "Item de ação da reunião \"{title}\" (sessão {session_id})."
+time = "Mencionado em {time} da gravação."
 owner = "Responsável: {owner}"
 due = "Prazo: {due}"
 folder = "Pasta da sessão: {folder}"

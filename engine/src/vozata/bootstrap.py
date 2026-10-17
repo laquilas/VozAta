@@ -12,6 +12,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
 from vozata.api.minutes_job import MinutesJob
@@ -392,6 +393,13 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared.release()  # VRAM rule, unless a recording is using the model right now
         return build_answerer(settings_file.current, store, search_index)  # current language
 
+    def action_item_extractor() -> ActionItemExtractor:
+        current = manager.current
+        recording = current is not None and current.status in _ACTIVE
+        if shared is not None and not recording:
+            shared.release()  # VRAM rule, as for answers
+        return build_action_item_extractor(settings_file.current)  # current language
+
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
@@ -412,4 +420,9 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
         ask=AskJob(answerer, broadcaster, localizer),
+        extract_action_items=ActionItemsJob(
+            store, action_item_extractor, labeler, broadcaster, localizer
+        ),
+        task_targets=lambda: task_targets(settings_file.current),
+        task_exporter=lambda target: build_task_exporter(settings_file.current, target),
     )

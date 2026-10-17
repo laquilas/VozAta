@@ -44,9 +44,10 @@ own rows. Changing a row requires updating both sides.
 | GET | `/vocabulary` | 19 | — | `{terms: [str]}` from `VOCABULARY_FILE` (missing file = `[]`); `503 vocabulary_failed` when unreadable |
 | PUT | `/vocabulary` | 19 | `{terms: [str]}` | `{terms}` as saved: trimmed, blanks, `#` lines and case-insensitive duplicates dropped; comment lines at the top of the file are kept; `503 vocabulary_failed` when it cannot be written |
 | GET | `/search` | 22 | `?q=&limit=` (limit 1–200, default 50) | `{hits: [{session_id, segment_id, start, speaker_id, label, snippet}]}` best match first; `snippet` wraps each match in `\u0002` … `\u0003`; a query without words returns no hits |
-| POST | `/sessions/{id}/action-items` | 23 | — | `202`; result via `action_items_ready` |
-| GET | `/sessions/{id}/action-items` | 23 | — | `{items: [ActionItem]}` |
-| POST | `/sessions/{id}/action-items/export` | 23 | `{target: "azure_devops"\|"github", item_ids: [str]}` | `{created: [{item_id, url}], failed: [{item_id, error}]}` |
+| POST | `/sessions/{id}/action-items` | 23 | — | `202`; extract again in the background (items already exported are kept); result via `action_items_ready`, failure via `error` (`action_items_failed`, `empty_transcript`); `404 session_not_found`, `409 action_items_still_recording`, `503 action_items_unavailable` |
+| GET | `/sessions/{id}/action-items` | 23 | — | `{items: [ActionItem], targets: [str]}`; `targets` = the configured export targets (`azure_devops`, `github`), empty when none |
+| PUT | `/sessions/{id}/action-items` | 23 | `{items: [{id, description, owner?, due?}]}` (other keys ignored) | `{items, targets}` as saved: trimmed, blank owner/due = null; exported items are left unchanged; `422 unknown_action_item`, `422 empty_action_item` |
+| POST | `/sessions/{id}/action-items/export` | 23 | `{target: "azure_devops"\|"github", item_ids: [str]}` (at least one) | `{created: [{item_id, url}], failed: [{item_id, error}]}`; `error` is localized; already exported or unknown items fail (never exported twice); `422 unknown_task_target` when the target is not configured |
 | POST | `/ask` | 24 | `{question, session_id?}` (no id = all sessions; `question` 1–2000 chars, not blank) | `202 {answer_id}`; answer streamed via `answer_chunk` / `answer_done`; `404 session_not_found`, `409 answer_in_progress` (one question at a time), `422 invalid_request`, `503 ask_unavailable` |
 
 ### Shapes
@@ -64,6 +65,7 @@ own rows. Changing a row requires updating both sides.
  "words": [{"text": "...", "start": 83.12, "end": 83.3, "probability": 0.98}]}
 // ActionItem
 {"id": "a1", "description": "...", "owner": "Alice", "due": "2026-10-20", "source_segment_ids": ["mic-000042"], "exported_url": null}
+// owner / due may be null; due is YYYY-MM-DD when the model could tell, else free text
 ```
 
 ## WebSocket `/ws`
@@ -84,7 +86,7 @@ One connection per UI. Server → client messages only (commands go through HTTP
 | `error` | 06 | `{code, message}` | non-fatal engine errors (e.g. LLM unreachable; `diarization_failed` (14) when speaker identification fails at stop) |
 | `speakers_relabeled` | 15 | `{session_id}` | post-session diarization replaced live labels; UI reloads the transcript |
 | `recovery_available` | 17 | `{session_ids: [str]}` | on connect, when interrupted sessions exist |
-| `action_items_ready` | 23 | `{session_id, count}` | extraction finished |
+| `action_items_ready` | 23 | `{session_id, count}` | extraction finished (at stop or after `POST .../action-items`); `count` = items stored, exported ones included |
 | `answer_chunk` | 24 | `{answer_id, text}` | streamed answer token(s), in order; envelope `session_id` = the question's scope (null = all sessions) |
 | `model_loading` | 26 | `{loading}` | the speech model started / finished loading while the session already records |
 | `partial` | 28 | `{channel, speaker_id, label, start, text}` | interim text of a channel; replaced by the next `segment`, empty `text` clears it |

@@ -8,7 +8,11 @@ from typing import Any, Protocol
 from vozata.domain import ActionItem, ConversationLanguage, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.session_minutes import EmptyTranscriptError, _stored_vocabulary
-from vozata.storage.action_items import read_action_items, write_action_items
+from vozata.storage.action_items import (
+    action_items_lock,
+    read_action_items,
+    write_action_items,
+)
 from vozata.storage.session_store import SessionStore
 
 
@@ -45,9 +49,10 @@ def write_session_action_items(
         segments, named, language, _stored_vocabulary(meta), _meeting_date(meta)
     )
     paths = store.paths(session_id)
-    kept = [item for item in read_action_items(paths) if item.exported_url]
-    items = kept + _renumber(fresh, {item.id for item in kept})
-    write_action_items(paths, items)
+    with action_items_lock:
+        kept = [item for item in read_action_items(paths) if item.exported_url]
+        items = kept + _renumber(fresh, {item.id for item in kept})
+        write_action_items(paths, items)
     return items
 
 

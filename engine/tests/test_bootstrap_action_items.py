@@ -3,16 +3,62 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from tests.fakes import FakeSessionObserver
+from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
 from tests.test_bootstrap import devices  # noqa: F401  (fixture)
+from vozata import bootstrap
+from vozata.api.action_items_job import ActionItemsJob
+from vozata.api.session_manager import StartOptions
 from vozata.bootstrap import TASK_EXPORTERS, build_session, build_task_exporter, task_targets
 from vozata.config import Settings
+from vozata.domain import AppLanguage, SessionStatus
 from vozata.export.tasks.azure_devops import AzureDevOpsExporter
 from vozata.export.tasks.github import GitHubIssuesExporter
 from vozata.minutes.action_items import ActionItemExtractor
+
+
+def test_the_api_container_extracts_and_exports_with_current_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    llm = FakeLanguageModel()
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: llm)
+    shared_seen: list = []
+    monkeypatch.setattr(
+        bootstrap,
+        "build_session",
+        lambda settings, observer, **kwargs: shared_seen.append(kwargs["shared"]),
+    )
+    settings = Settings(
+        output_dir=tmp_path / "recordings",
+        stt_provider="fake",
+        llm_provider="fake",
+        whisper_keep_loaded=True,
+        app_language=AppLanguage.ES,
+        **GITHUB,  # type: ignore[arg-type]
+    )
+
+    container = bootstrap.build_api_container(settings, tmp_path / ".env")
+
+    assert isinstance(container.extract_action_items, ActionItemsJob)
+    container.manager._factory(FakeSessionObserver(), StartOptions())
+    [shared] = shared_seen
+    shared.lease(keep=True)
+    extractor = container.extract_action_items._build()  # idle: Whisper is freed first
+    assert isinstance(extractor, ActionItemExtractor)
+    assert extractor._llm is llm
+    assert extractor._t("minutes.output_language") == "español"
+    assert not shared.loaded
+    shared.lease(keep=True)
+    container.manager._session = SimpleNamespace(status=SessionStatus.RECORDING)
+    container.extract_action_items._build()  # a recording uses Whisper right now: keep it
+    assert shared.loaded
+    assert container.task_targets() == ["github"]
+    assert isinstance(container.task_exporter("github"), GitHubIssuesExporter)
+    assert container.task_exporter("azure_devops") is None
 
 
 @pytest.mark.usefixtures("devices")

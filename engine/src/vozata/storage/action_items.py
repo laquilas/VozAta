@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from collections.abc import Sequence
 
 from vozata.domain import ActionItem
@@ -11,6 +12,8 @@ from vozata.storage.session_store import SessionPaths
 from vozata.storage.session_store import _write_atomic as write_atomic
 
 SCHEMA_VERSION = 1
+# Held around every read-modify-write of `action_items.json` (extraction, edits, export).
+action_items_lock = threading.RLock()
 
 _log = logging.getLogger(__name__)
 
