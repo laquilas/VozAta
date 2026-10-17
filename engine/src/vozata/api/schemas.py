@@ -168,3 +168,16 @@ class ErrorDetail(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: ErrorDetail
+
+
+class AskQuestion(BaseModel):
+    """`POST /ask` (phase 24); no `session_id` asks about every session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=2000, pattern=r"\S")
+    session_id: str | None = None
+
+
+class AskAccepted(BaseModel):
+    answer_id: str

@@ -65,14 +65,14 @@ Embedding-based semantic retrieval, conversation memory across questions (backlo
 - **Branch:** `feature/24-ask-the-meeting`
 - **Status:** in progress
 - **Updated:** 2026-10-17 12:00
-- **Next step:** commit `qa/citations.py` + `qa/answerer.py` (tests in `tests/qa/`)
+- **Next step:** commit the api-contract / architecture §13 docs, then the UI client (`AskAsync`, answer events)
 
 ### Steps
 
 - [x] Engine: domain `Citation`, locale prompt texts and stopwords (en, pt-BR, es) — `c8aec7c`
 - [x] Engine: `qa/retriever.py` (single-session budget + neighbours, all-sessions ranking) — `c8aec7c`
-- [x] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context)
-- [ ] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py`
+- [x] Engine: `qa/citations.py` + `qa/answerer.py` (`MeetingAnswerer`, streaming, empty context) — `19a4faa`
+- [x] Engine: `POST /ask`, `AskJob` streaming `answer_chunk` / `answer_done`, wiring in `bootstrap.py`
 - [ ] Docs: api-contract and architecture
 - [ ] UI client: `AskAsync`, `AnswerChunkEvent`, `AnswerDoneEvent`
 - [ ] UI: `AskViewModel` + panel (History, scoped to the selected session or all sessions)
