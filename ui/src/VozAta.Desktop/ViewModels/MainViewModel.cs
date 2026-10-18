@@ -64,6 +64,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
         Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates);
+        Migration = new MigrationViewModel(client, localization, () => Task.WhenAll(History.LoadAsync(), Meetings.LoadAsync()));
         Shell = new ShellViewModel(
             Recorder,
             Meetings,
@@ -111,6 +112,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Crash recovery dialog (phase 17), opened by <c>recovery_available</c>.</summary>
     public RecoveryViewModel Recovery { get; }
+
+    /// <summary>The import of the old meeting folders (phase 33): banner, counts and errors.</summary>
+    public MigrationViewModel Migration { get; }
+
+    /// <summary>The last migration refresh started by an event (tests await it).</summary>
+    public Task MigrationRefresh { get; private set; } = Task.CompletedTask;
 
     /// <summary>The last recovery step started by an event (tests await it).</summary>
     public Task RecoveryRefresh { get; private set; } = Task.CompletedTask;
@@ -343,6 +350,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 {
                     History.Ask.OnConnectionLost();
                     Recovery.OnConnectionLost();
+                    Migration.OnConnectionLost();
+                }
+                else
+                {
+                    MigrationRefresh = Migration.RefreshAsync();
                 }
 
                 break;
@@ -355,6 +367,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case StatusEvent status:
                 Recorder.Handle(status);
                 RecoveryRefresh = Recovery.OnStatusAsync(status);
+                break;
+            case MigrationProgressEvent progress:
+                Migration.OnProgress(progress);
+                break;
+            case MigrationDoneEvent done:
+                MigrationRefresh = Migration.OnDoneAsync(done);
                 break;
             case RecoveryAvailableEvent offer:
                 RecoveryRefresh = Recovery.OfferAsync(offer.SessionIds);
@@ -410,6 +428,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Config.RefreshTexts();
         Tray.RefreshTexts();
         Shell.RefreshTexts();
+        Migration.RefreshTexts();
     }
 
     private void RefreshTexts()

@@ -1167,4 +1167,25 @@
   <data name="AboutLicenses" xml:space="preserve">
     <value>Licenças</value>
   </data>
+  <data name="MigrationProgress" xml:space="preserve">
+    <value>Importando reuniões antigas… {0} de {1}</value>
+  </data>
+  <data name="MigrationPaused" xml:space="preserve">
+    <value>Importação de reuniões antigas pausada durante a gravação ({0} de {1})</value>
+  </data>
+  <data name="MigrationDone" xml:space="preserve">
+    <value>Reuniões antigas importadas: {0}. Não importadas: {1}.</value>
+  </data>
+  <data name="MigrationFailed" xml:space="preserve">
+    <value>A importação das reuniões antigas falhou; ela será tentada de novo na próxima inicialização.</value>
+  </data>
+  <data name="MigrationShowErrors" xml:space="preserve">
+    <value>Mostrar erros</value>
+  </data>
+  <data name="MigrationErrorsTitle" xml:space="preserve">
+    <value>Reuniões não importadas</value>
+  </data>
+  <data name="MigrationKeepFolders" xml:space="preserve">
+    <value>As pastas originais são mantidas: guarde um backup até conferir as reuniões importadas.</value>
+  </data>
 </root>

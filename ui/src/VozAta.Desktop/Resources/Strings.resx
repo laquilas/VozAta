@@ -1167,4 +1167,25 @@
   <data name="AboutLicenses" xml:space="preserve">
     <value>Licenses</value>
   </data>
+  <data name="MigrationProgress" xml:space="preserve">
+    <value>Importing old meetings… {0} of {1}</value>
+  </data>
+  <data name="MigrationPaused" xml:space="preserve">
+    <value>Importing old meetings paused while recording ({0} of {1})</value>
+  </data>
+  <data name="MigrationDone" xml:space="preserve">
+    <value>Old meetings imported: {0}. Not imported: {1}.</value>
+  </data>
+  <data name="MigrationFailed" xml:space="preserve">
+    <value>Importing the old meetings failed; it will be tried again at the next start.</value>
+  </data>
+  <data name="MigrationShowErrors" xml:space="preserve">
+    <value>Show errors</value>
+  </data>
+  <data name="MigrationErrorsTitle" xml:space="preserve">
+    <value>Meetings not imported</value>
+  </data>
+  <data name="MigrationKeepFolders" xml:space="preserve">
+    <value>The original folders are kept: keep a backup until you have checked the imported meetings.</value>
+  </data>
 </root>
