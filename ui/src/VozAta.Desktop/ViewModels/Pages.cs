@@ -25,9 +25,3 @@ public sealed class AskPageViewModel
 
     public AskViewModel Ask { get; }
 }
-
-/// <summary>The Config page (phase 35): today the settings page, until phase 38 redesigns it.</summary>
-public sealed class ConfigPageViewModel(SettingsViewModel settings)
-{
-    public SettingsViewModel Settings { get; } = settings;
-}

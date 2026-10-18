@@ -11,6 +11,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.schemas import GpuStatus, Health, LlmStatus, StorageStatus, SttStatus
 from vozata.config import Settings
+from vozata.storage.usage import AUDIO_CACHE_DIR, database_size, path_size
 from vozata.transcription.openai_compatible import remote_host
 
 router = APIRouter(tags=["health"])
@@ -35,13 +36,19 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
 
 
 def _storage(c: ApiContainer) -> StorageStatus:
-    """The backend, the absolute database path, and the OneDrive warning (phase 31)."""
+    """The backend, the database path and size, the OneDrive warning (31), the cache size (38)."""
     info = c.storage
     database = str(info.database.resolve()) if info.database is not None else None
     warning = None
     if info.onedrive_root is not None:
         warning = c.localizer.t("storage.onedrive_warning", path=database, root=info.onedrive_root)
-    return StorageStatus(backend=info.backend, database=database, warning=warning)
+    return StorageStatus(
+        backend=info.backend,
+        database=database,
+        warning=warning,
+        size_bytes=database_size(info.database) if info.database is not None else None,
+        audio_cache_bytes=path_size(c.settings.output_dir / AUDIO_CACHE_DIR),
+    )
 
 
 def _stt(settings: Settings) -> SttStatus:

@@ -18,7 +18,13 @@ def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
         "gpu": {"available": True, "name": "RTX 3050", "vram_total_mb": 6144},
         "stt": {"provider": "faster_whisper", "model": "large-v3-turbo", "device": "auto"},
         "llm": {"provider": "ollama", "model": "qwen2.5:7b", "reachable": True},
-        "storage": {"backend": "files", "database": None, "warning": None},
+        "storage": {
+            "backend": "files",
+            "database": None,
+            "warning": None,
+            "size_bytes": None,
+            "audio_cache_bytes": 0,
+        },
     }
 
 
@@ -80,3 +86,39 @@ def test_health_without_gpu_or_llm(api: Api) -> None:
     assert body["gpu"] == {"available": False, "name": None, "vram_total_mb": None}
     assert body["llm"]["reachable"] is False
     assert body["engine"] == "ok"
+
+
+def test_health_reports_the_database_and_audio_cache_sizes(api: Api, tmp_path: Path) -> None:
+    database = tmp_path / "vozata.db"
+    database.write_bytes(b"x" * 4096)
+    (tmp_path / "vozata.db-wal").write_bytes(b"x" * 100)
+    cache = api.settings.output_dir / "cache" / "20261016_090000"
+    cache.mkdir(parents=True)
+    (cache / "mixed.wav").write_bytes(b"x" * 2048)
+    container = api.app.state.container
+    api.app.state.container = dataclasses.replace(
+        container, storage=StorageInfo("sqlite", database)
+    )
+
+    storage = api.client.get("/health").json()["storage"]
+
+    assert storage["size_bytes"] == 4196
+    assert storage["audio_cache_bytes"] == 2048
+
+
+def test_clearing_the_audio_cache_frees_its_bytes(api: Api) -> None:
+    cache = api.settings.output_dir / "cache"
+    (cache / "a").mkdir(parents=True)
+    (cache / "a" / "mic.wav").write_bytes(b"x" * 300)
+    (cache / "loose.wav").write_bytes(b"x" * 200)
+
+    response = api.client.delete("/storage/cache")
+
+    assert response.status_code == 200
+    assert response.json() == {"freed_bytes": 500}
+    assert cache.is_dir() and list(cache.iterdir()) == []
+    assert api.client.get("/health").json()["storage"]["audio_cache_bytes"] == 0
+
+
+def test_clearing_a_missing_audio_cache_frees_nothing(api: Api) -> None:
+    assert api.client.delete("/storage/cache").json() == {"freed_bytes": 0}

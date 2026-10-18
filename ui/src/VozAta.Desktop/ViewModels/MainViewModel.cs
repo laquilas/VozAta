@@ -42,7 +42,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IUiTimer timer,
         IShellService shell,
         IFileSaver saver,
-        IThemeService theme)
+        IThemeService theme,
+        IPathPicker? paths = null)
     {
         _client = client;
         _events = events;
@@ -57,7 +58,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token);
         History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs);
         Health = new HealthViewModel(client, localization);
-        Settings = new SettingsViewModel(client, process, localization);
+        Settings = new SettingsViewModel(client, process, localization, paths);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
@@ -66,7 +67,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Recorder,
             new MeetingsPageViewModel(History),
             new AskPageViewModel(History.Ask, () => Shell?.NavigateCommand.Execute(ShellViewModel.Meetings)),
-            new ConfigPageViewModel(Settings),
+            Config = new ConfigPageViewModel(
+                Settings, new StorageViewModel(client, shell, dialogs, localization), new AboutViewModel(Health, shell), localization),
             Session,
             localization,
             preferences);
@@ -153,6 +155,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public SettingsViewModel Settings { get; }
 
+    /// <summary>The Config page (phase 38): sections, search, storage and about.</summary>
+    public ConfigPageViewModel Config { get; }
+
     /// <summary>The glossary editor on the settings page (phase 19).</summary>
     public VocabularyViewModel Vocabulary { get; }
 
@@ -194,7 +199,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await Recorder.LoadTemplatesAsync();
         await Recorder.LoadDevicesAsync(); // recording still works with the engine's default devices
         await History.LoadAsync(_stop.Token);
-        await Settings.LoadAsync(_stop.Token);
+        await Config.LoadAsync(_stop.Token); // settings, option lists, storage
         await Vocabulary.LoadAsync(_stop.Token);
 
         RefreshTexts();
@@ -394,7 +399,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         L = new Strings(_localization);
         RefreshTexts();
         History.RefreshTexts();
-        Settings.RefreshTexts();
+        Config.RefreshTexts();
         Tray.RefreshTexts();
         Shell.RefreshTexts();
     }
