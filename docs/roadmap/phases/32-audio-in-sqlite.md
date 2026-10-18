@@ -76,8 +76,8 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** in progress
 - **Updated:** 2026-10-17 23:30
-- **Next step:** add `AUDIO_CACHE_MB` to `config.py` / `settings_fields.py` / `.env.example`,
-  then wire `SqliteAudioStore` in `bootstrap.AUDIO_STORES`.
+- **Next step:** wire `SqliteAudioStore` in `bootstrap.AUDIO_STORES` (cache cleaned at engine
+  start), make `SqliteSessionRepository.folder` / `files` None and stop creating the folder.
 
 ### Steps
 
@@ -88,7 +88,7 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - [x] `SqliteAudioStore`: buffered capture, writer thread (1 s batches, both channels per
       transaction), silence for gaps and pauses, equal-length finalize, repair; contract suite
 - [x] Reader: chunk-range `frames`, on-the-fly mix, `materialize_wav` with the LRU cache
-- [ ] Config `AUDIO_CACHE_MB` (`config.py`, `settings_fields.py`, `.env.example`, locales)
+- [x] Config `AUDIO_CACHE_MB` (`config.py`, `settings_fields.py`, `.env.example`, UI labels)
 - [ ] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
       `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
 - [ ] Bootstrap wiring, recovery, delete helper (chunks + background `incremental_vacuum`)
@@ -122,3 +122,5 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   it); LRU by mtime (touched on use); a file in use is skipped; `.tmp` leftovers removed.
 - `SqliteAudioStore.delete(id)` drops the chunks and cached files, then runs
   `Database.reclaim()` on a background thread. Phase 36 (`DELETE /sessions/{id}`) calls it.
+- `AUDIO_CACHE_MB` (integer, 0 to 1048576, default 2048) applies on restart; 0 keeps only the
+  file just built.

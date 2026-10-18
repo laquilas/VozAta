@@ -303,6 +303,12 @@
   <data name="SettingHelp_DATABASE_PATH" xml:space="preserve">
     <value>O arquivo do banco de dados SQLite; vazio usa vozata.db na pasta das gravações. Mantenha-o fora de pastas sincronizadas pelo OneDrive: a sincronização pode bloqueá-lo ou corrompê-lo enquanto o VozAta está em execução.</value>
   </data>
+  <data name="Setting_AUDIO_CACHE_MB" xml:space="preserve">
+    <value>Cache de áudio (MB)</value>
+  </data>
+  <data name="SettingHelp_AUDIO_CACHE_MB" xml:space="preserve">
+    <value>Somente sqlite: arquivos WAV gerados a partir do banco de dados quando uma ferramenta precisa de um arquivo (identificação de falantes) ficam na pasta cache da pasta de gravações, até este tamanho; os usados há mais tempo saem primeiro.</value>
+  </data>
   <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
     <value>Gerar ata ao parar a gravação</value>
   </data>

@@ -147,6 +147,7 @@ class Settings:
     # Storage (phase 31)
     storage_backend: StorageBackend = StorageBackend.SQLITE
     database_path: Path | None = None  # None: `OUTPUT_DIR/vozata.db`
+    audio_cache_mb: int = 2048  # WAVs built from the database, `OUTPUT_DIR/cache` (phase 32)
     # OneDrive roots of this user (`OneDrive*` environment variables, Windows): the database
     # must not live under one while the engine runs.
     onedrive_roots: tuple[Path, ...] = ()
@@ -250,6 +251,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
         storage_backend=_choice(raw, "STORAGE_BACKEND", StorageBackend, StorageBackend.SQLITE),
         database_path=Path(raw["DATABASE_PATH"]) if "DATABASE_PATH" in raw else None,
+        audio_cache_mb=_integer(raw, "AUDIO_CACHE_MB", 2048, minimum=0, maximum=1_048_576),
         onedrive_roots=(
             onedrive_roots(os.environ, onedrive_registry_roots())
             if env is None

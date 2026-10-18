@@ -71,6 +71,7 @@ FIELDS: tuple[Field, ...] = (
         applies="restart",
     ),
     Field("DATABASE_PATH", "database_path", "path", group="general", applies="restart"),
+    Field("AUDIO_CACHE_MB", "audio_cache_mb", "integer", group="general", applies="restart"),
     Field("MIX_MODE", "mix_mode", "choice", MixMode, group="audio"),
     # Transcription (phase 03)
     Field("TAIL_MARGIN_SECONDS", "tail_margin_seconds", "number", group="transcription"),

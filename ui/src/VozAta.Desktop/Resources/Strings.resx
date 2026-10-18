@@ -303,6 +303,12 @@
   <data name="SettingHelp_DATABASE_PATH" xml:space="preserve">
     <value>The SQLite database file; empty uses vozata.db in the recordings folder. Keep it out of OneDrive-synced folders: sync can lock or corrupt it while VozAta runs.</value>
   </data>
+  <data name="Setting_AUDIO_CACHE_MB" xml:space="preserve">
+    <value>Audio cache (MB)</value>
+  </data>
+  <data name="SettingHelp_AUDIO_CACHE_MB" xml:space="preserve">
+    <value>sqlite only: WAV files built from the database when a tool needs a file (speaker identification) are kept in the cache folder of the recordings folder, up to this size; the least recently used go first.</value>
+  </data>
   <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
     <value>Write minutes when recording stops</value>
   </data>
