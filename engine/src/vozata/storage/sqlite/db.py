@@ -14,11 +14,14 @@ import logging
 import re
 import sqlite3
 import threading
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
 BUSY_TIMEOUT_MS = 10_000
+OPEN_ATTEMPTS = 50  # x OPEN_RETRY_SECONDS: how long a crashed writer's locks may linger
+OPEN_RETRY_SECONDS = 0.1
 _MIGRATION = re.compile(r"^(\d{3})_[a-z0-9_]+\.sql$")
 
 _log = logging.getLogger(__name__)
@@ -130,17 +133,18 @@ class Database:
         return db
 
     def _open(self) -> sqlite3.Connection:
+        """A configured connection. Right after a crash Windows can still hold the dead
+        process's locks on `-shm` for a moment ("disk I/O error"): retry for a few seconds."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        db = sqlite3.connect(
-            self._path,
-            timeout=BUSY_TIMEOUT_MS / 1000,
-            isolation_level=None,
-            check_same_thread=False,  # only `close()` touches it from another thread
-        )
-        db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS:d}")
-        db.execute("PRAGMA journal_mode = WAL")
-        db.execute("PRAGMA synchronous = NORMAL")
-        db.execute("PRAGMA foreign_keys = ON")
+        for attempt in range(OPEN_ATTEMPTS):
+            try:
+                db = self._connect()
+                break
+            except sqlite3.OperationalError:
+                if attempt == OPEN_ATTEMPTS - 1:
+                    raise
+                _log.warning("Opening %s failed; retrying", self._path)
+                time.sleep(OPEN_RETRY_SECONDS)
         self._local.db = db
         with self._connections_lock:
             # Threads come and go (one set per recording): close what finished threads left.
@@ -149,6 +153,23 @@ class Database:
                     old.close()
                     del self._connections[thread]
             self._connections[threading.current_thread()] = db
+        return db
+
+    def _connect(self) -> sqlite3.Connection:
+        db = sqlite3.connect(
+            self._path,
+            timeout=BUSY_TIMEOUT_MS / 1000,
+            isolation_level=None,
+            check_same_thread=False,  # only `close()` touches it from another thread
+        )
+        try:
+            db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS:d}")
+            db.execute("PRAGMA journal_mode = WAL")
+            db.execute("PRAGMA synchronous = NORMAL")
+            db.execute("PRAGMA foreign_keys = ON")
+        except BaseException:
+            db.close()
+            raise
         return db
 
     @contextlib.contextmanager

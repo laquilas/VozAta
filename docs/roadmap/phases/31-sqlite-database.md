@@ -141,6 +141,9 @@ Audio in the database (32), importing old folders (33), settings in the database
   `SessionFolder` moved to `storage/session_folder.py`.
 - The repository is not a `RecoverableStore`: every emitted segment is committed
   (`synchronous=FULL`) before `emit` returns, so there is nothing to repair.
+- Opening a connection retries for up to 5 s on `sqlite3.OperationalError`: right after a hard
+  kill Windows can still hold the dead process's locks on `-shm` ("disk I/O error"). Found by
+  running the crash test 6x in parallel (11 of 36 failed before, 0 of 48 after).
 - Database connections of finished threads are closed when the next thread opens one (worker
   threads come and go with every recording and with the API thread pool).
 - Old file-backend sessions are not shown with `STORAGE_BACKEND=sqlite` until phase 33 imports

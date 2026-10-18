@@ -175,6 +175,64 @@ def test_the_connection_of_a_finished_thread_is_closed_by_the_next_new_one(
         theirs[0].execute("SELECT 1")
 
 
+def test_opening_retries_while_a_crashed_writer_still_holds_the_file(
+    database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    connect = database._connect
+    failures = [sqlite3.OperationalError("disk I/O error")] * 2
+
+    def flaky() -> sqlite3.Connection:
+        if failures:
+            raise failures.pop()
+        return connect()
+
+    monkeypatch.setattr(database, "_connect", flaky)
+    monkeypatch.setattr("vozata.storage.sqlite.db.OPEN_RETRY_SECONDS", 0)
+
+    assert database.connection().execute("SELECT 1").fetchone() == (1,)
+    assert failures == []
+
+
+def test_opening_gives_up_after_the_last_attempt(
+    database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken() -> sqlite3.Connection:
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(database, "_connect", broken)
+    monkeypatch.setattr("vozata.storage.sqlite.db.OPEN_RETRY_SECONDS", 0)
+
+    with pytest.raises(sqlite3.OperationalError):
+        database.connection()
+
+
+def test_a_connection_whose_setup_fails_is_closed(
+    database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    opened: list[sqlite3.Connection] = []
+    real = sqlite3.connect
+
+    class Failing:
+        def __init__(self, inner: sqlite3.Connection) -> None:
+            self.inner = inner
+            opened.append(inner)
+
+        def execute(self, sql: str) -> None:
+            raise sqlite3.OperationalError("disk I/O error")
+
+        def close(self) -> None:
+            self.inner.close()
+
+    monkeypatch.setattr(sqlite3, "connect", lambda *a, **k: Failing(real(*a, **k)))
+    database.path.parent.mkdir(parents=True)
+
+    with pytest.raises(sqlite3.OperationalError):
+        database._connect()
+
+    with pytest.raises(sqlite3.ProgrammingError):
+        opened[0].execute("SELECT 1")
+
+
 def test_a_failed_write_is_rolled_back(database: Database) -> None:
     with pytest.raises(RuntimeError), database.write() as db:
         db.execute("INSERT INTO sessions (id) VALUES ('20261015_202358')")
