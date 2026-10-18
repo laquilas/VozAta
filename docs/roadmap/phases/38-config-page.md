@@ -80,15 +80,15 @@ settings.
 
 - **Branch:** `feature/38-config-page`
 - **Status:** in progress
-- **Updated:** 2026-10-17 11:30
-- **Next step:** UI client: DTOs (`VozAta.Client/Config.cs`) and `IEngineClient` methods for options, connection tests and the audio cache; fake client partial `FakeEngineClient.Config.cs`.
+- **Updated:** 2026-10-17 12:00
+- **Next step:** UI: editor kinds in `SettingEditorViewModel` (options combo fed by `options_source`, path + Browse via a new `IFolderPicker`, url validation, secret Replace / Remove, Changed badge) with `SettingEditorViewModelTests.cs`.
 
 ### Steps
 
 - [x] Engine: `options_source` per field + `GET /settings/options` (registries, Whisper models + HF cache, Ollama tags, compute types, devices)
 - [x] Engine: `POST /settings/test/{target}` (ollama, stt_api, hf_token, azure_devops, github)
 - [x] Engine: `GET /health` storage sizes + `DELETE /storage/cache`
-- [ ] UI client: DTOs and `IEngineClient` methods for options, tests, storage
+- [x] UI client: DTOs and `IEngineClient` methods for options, tests, storage
 - [ ] UI: editor kinds (options combo, path + Browse, url validation, secret Replace/Remove, Changed badge)
 - [ ] UI: `ConfigPageViewModel` sections + search, test buttons, Storage and About sections
 - [ ] UI: `ConfigPage.axaml` (sections list, search, cards, sticky Save / Discard bar) + screenshots
