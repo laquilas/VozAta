@@ -16,6 +16,7 @@ from typing import Any
 from vozata.domain import TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionNotFoundError, TranscriptSink
+from vozata.storage.session_range import newest_in_range
 from vozata.storage.sqlite.annotations import SessionAnnotations
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.rows import (
@@ -107,6 +108,21 @@ class SqliteSessionRepository(SessionAnnotations):
             "SELECT id FROM sessions WHERE meta_json IS NOT NULL ORDER BY id DESC"
         )
         return [row[0] for row in rows]
+
+    def list_range(self, start: datetime, end: datetime) -> list[str]:
+        rows = self._db.connection().execute(
+            "SELECT id, started_at FROM sessions WHERE meta_json IS NOT NULL"
+        )
+        return newest_in_range(rows.fetchall(), start, end)
+
+    def delete(self, session_id: str) -> None:
+        """Delete the session permanently: its rows (cascade) and its audio folder (phase 36)."""
+        self._check(session_id)
+        with self._db.write() as db:
+            deleted = db.execute("DELETE FROM sessions WHERE id = ?", (session_id,)).rowcount
+        if not deleted:
+            raise SessionNotFoundError(session_id)
+        shutil.rmtree(self._root / session_id, ignore_errors=True)
 
     def open_transcript(self, session_id: str, labeler: SpeakerLabeler) -> TranscriptSink:
         """Segment rows committed one by one (`labeler` is not needed: no `transcript.md`)."""

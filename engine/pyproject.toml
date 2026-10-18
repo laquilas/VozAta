@@ -19,6 +19,7 @@ dependencies = [
     "uvicorn[standard]",
     "python-docx",
     "fpdf2",
+    "Send2Trash",  # deleted file-backend sessions go to the Recycle Bin (phase 36)
 ]
 
 [project.optional-dependencies]

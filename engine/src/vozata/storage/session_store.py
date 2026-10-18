@@ -127,6 +127,10 @@ class SessionStore:
             if isinstance(entry, dict) and isinstance(entry.get("name"), str)
         }
 
+    def speaker_ids(self, session_id: str) -> list[str]:
+        """Every speaker id in `speakers.json` (empty when absent or unreadable)."""
+        return list(_read_speakers(self.paths(session_id).speakers_json))
+
     def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:
         """Merge trimmed names into `speakers.json` (phase 16); an empty name clears it."""
         path = self.paths(session_id).speakers_json

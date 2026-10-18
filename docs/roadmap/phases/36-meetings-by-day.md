@@ -68,14 +68,14 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - **Branch:** `feature/36-meetings-by-day`
 - **Status:** in progress
 - **Updated:** 2026-10-17 22:40
-- **Next step:** add `list_range`, `speaker_count` and `delete` to the `SessionRepository` port
-  with contract tests in `engine/tests/storage/repository_contract.py` (both backends).
+- **Next step:** `GET /sessions?from=&to=` grouped by local day in
+  `engine/src/vozata/api/routes/sessions.py` (`tests/api/test_sessions_range.py`).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
-- [ ] Repository: `list_range`, `speaker_count` (both backends, contract suite)
-- [ ] Repository: `delete` (SQLite permanent; files to the Recycle Bin through a `Recycler` port)
+- [x] Repository: `list_range`, `speaker_count`, `delete` (both backends, contract suite; files
+      go to the Recycle Bin through a `Recycler` port)
 - [ ] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
       `speaker_count`, `has_action_items`, `template`
 - [ ] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
@@ -87,4 +87,10 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 
 ### Decisions and notes
 
-- (none yet)
+- `speaker_count` counts the speakers diarization found (`system:<n>`); a renamed `mic` does not
+  count. 0 before diarization.
+- `FileSessionRepository(store, recycler)`: the recycler is optional so the CLI and tests that
+  never delete keep working; `delete` without one raises. `bootstrap` passes
+  `Send2TrashRecycler` (new dependency `Send2Trash`). Unit tests use `FakeRecycler`, which moves
+  folders into a `tmp_path` "recycle bin" — never the real one.
+- SQLite `delete` is permanent: the rows (cascade, the FTS index follows) and the audio folder.
