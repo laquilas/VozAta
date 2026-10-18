@@ -68,9 +68,10 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - **Branch:** `feature/36-meetings-by-day`
 - **Status:** in progress
 - **Updated:** 2026-10-17 22:40
-- **Next step:** `ViewModels/MeetingsPageViewModel.cs` (own file; drop the stub from `Pages.cs`):
-  weeks, day groups, totals, week navigation, infinite scroll, live row, with
-  `MeetingsPageViewModelTests.cs`.
+- **Next step:** `Views/MeetingsPage.axaml` bound to `MeetingsPageViewModel` (header, weeks, day
+  groups, rows with hover actions, inline rename, export strip, undo toast, search matches; the
+  history detail on the right via a `SessionDetailView` extracted from `HistoryView`), an
+  infinite-scroll attached behavior, then headless screenshots in `ThemeRenderTests`.
 
 ### Steps
 
@@ -82,8 +83,8 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - [x] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
 - [x] UI client: range and delete calls, new summary fields (`ListSessionDaysAsync`,
       `DeleteSessionAsync`, `VozAta.Client/Meetings.cs`, `Fakes/FakeEngineClient.Meetings.cs`)
-- [ ] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
-- [ ] UI: inline rename, delete with confirmation and undo, search filtering, row actions
+- [x] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
+- [x] UI: inline rename, delete with confirmation and undo, search filtering, row actions
 - [ ] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots
 - [ ] Full suites, acceptance criteria, PR
 
@@ -100,5 +101,18 @@ Calendar/reports view, tags beyond template and language, bulk actions.
   probing empty weeks forever) and `storage` (the UI words the delete dialog and offers "Undo"
   only for the file backend). Both dates are required (`422 invalid_date_range`). Days without
   meetings are left out. `SessionSummary` also gains `template` (the template pill of a row).
+- Weeks start on Monday (ISO, like Toggl's default). Day labels: "Today", "Yesterday", else
+  `ddd, d MMM` in the UI language's culture; week labels "This week", "Last week", else
+  "d MMM – d MMM". Durations and totals `h:mm:ss`.
+- Undo for the file backend is a deferred delete: the row is hidden and `DELETE` is sent when the
+  8 s undo window ends (or at once on a second delete, closing the toast, or closing the app).
+  Restoring from the Recycle Bin programmatically was not attempted. SQLite deletes at once after
+  the dialog (which says it is permanent); a toast confirms it, without Undo.
+- Infinite scroll skips up to 26 empty weeks per load; `has_earlier` stops it.
+- `MeetingsPageViewModel` keeps `HistoryViewModel` for the detail on the right (until phase 37),
+  for the Ask page citations and for search (`SearchViewModel` is reused as is). Search matches
+  of meetings outside the loaded weeks are completed with `GET /sessions/{id}`.
+- Row actions: play (mixed WAV via `GET /sessions/{id}` folder + files), export (an inline strip
+  with Markdown / Word / PDF — no flyout, so UI Automation reaches it), rename, delete.
 - Local days use the engine machine's time zone (`datetime.astimezone()`, DST aware); the UI and
   engine run on the same machine.

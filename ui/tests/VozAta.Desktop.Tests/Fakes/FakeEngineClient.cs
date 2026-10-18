@@ -128,7 +128,9 @@ internal sealed partial class FakeEngineClient : IEngineClient
     }
 
     public Task<SessionDetail> GetSessionAsync(string id, CancellationToken cancellationToken = default) =>
-        DetailError is null ? Task.FromResult(Details[id]) : Task.FromException<SessionDetail>(DetailError);
+        DetailError is not null ? Task.FromException<SessionDetail>(DetailError)
+        : Details.TryGetValue(id, out var detail) ? Task.FromResult(detail)
+        : Task.FromException<SessionDetail>(new EngineApiException(HttpStatusCode.NotFound, "session_not_found", id));
 
     /// <summary>When set, <see cref="GetTranscriptAsync"/> fails with it.</summary>
     public Exception? TranscriptError { get; set; }

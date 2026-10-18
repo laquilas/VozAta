@@ -62,9 +62,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
+        Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates);
         Shell = new ShellViewModel(
             Recorder,
-            new MeetingsPageViewModel(History),
+            Meetings,
             new AskPageViewModel(History.Ask, () => Shell?.NavigateCommand.Execute(ShellViewModel.Meetings)),
             new ConfigPageViewModel(Settings),
             Session,
@@ -99,6 +100,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ShellViewModel Shell { get; }
 
     public HistoryViewModel History { get; }
+
+    /// <summary>The Meetings page (phase 36): meetings by day, with the history detail on the right.</summary>
+    public MeetingsPageViewModel Meetings { get; }
 
     /// <summary>The theme picker of Settings → Desktop app (phase 34).</summary>
     public AppearanceViewModel Appearance { get; }
@@ -194,6 +198,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await Recorder.LoadTemplatesAsync();
         await Recorder.LoadDevicesAsync(); // recording still works with the engine's default devices
         await History.LoadAsync(_stop.Token);
+        await Meetings.LoadAsync(_stop.Token);
         await Settings.LoadAsync(_stop.Token);
         await Vocabulary.LoadAsync(_stop.Token);
 
@@ -229,6 +234,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public async Task ShutdownAsync(TimeSpan maxWait)
     {
         _preferences.Save(_preferences.Load() with { WindowWidth = WindowWidth, WindowHeight = WindowHeight });
+        await Meetings.CommitPendingAsync(); // a delete still offering "Undo" goes ahead
         await Task.WhenAny(Recorder.Idle, Task.Delay(maxWait));
         await _stop.CancelAsync();
         _process.StopIfStarted();
@@ -239,6 +245,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _localization.PropertyChanged -= OnLanguageChanged;
         Session.PropertyChanged -= OnSessionChanged;
         Recorder.Dispose();
+        Meetings.Dispose();
         Shell.Dispose();
         _stop.Dispose();
     }
@@ -302,7 +309,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _shownState = Session.State;
         if (Session.IsRecording && !wasRecording || Session.IsIdle && !wasIdle)
         {
-            HistoryRefresh = History.LoadAsync();
+            HistoryRefresh = Task.WhenAll(History.LoadAsync(), Meetings.LoadAsync());
         }
     }
 
@@ -349,10 +356,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 break;
             case MinutesReadyEvent minutes:
                 Notify(_localization["MinutesReady"]);
-                HistoryRefresh = History.OnMinutesReadyAsync(minutes.SessionId);
+                HistoryRefresh = Task.WhenAll(History.OnMinutesReadyAsync(minutes.SessionId), Meetings.LoadAsync());
                 break;
             case ActionItemsReadyEvent ready:
-                HistoryRefresh = History.OnActionItemsReadyAsync(ready.SessionId);
+                HistoryRefresh = Task.WhenAll(History.OnActionItemsReadyAsync(ready.SessionId), Meetings.LoadAsync());
                 break;
             case SpeakersRelabeledEvent relabeled:
                 HistoryRefresh = OnSpeakersRelabeledAsync(relabeled.SessionId);
@@ -394,6 +401,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         L = new Strings(_localization);
         RefreshTexts();
         History.RefreshTexts();
+        Meetings.RefreshTexts();
         Settings.RefreshTexts();
         Tray.RefreshTexts();
         Shell.RefreshTexts();

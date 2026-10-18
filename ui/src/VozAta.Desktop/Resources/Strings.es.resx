@@ -936,6 +936,87 @@
   <data name="Untitled" xml:space="preserve">
     <value>Reunión sin título</value>
   </data>
+  <data name="MeetingsThisWeek" xml:space="preserve">
+    <value>Esta semana</value>
+  </data>
+  <data name="MeetingsLastWeek" xml:space="preserve">
+    <value>Semana pasada</value>
+  </data>
+  <data name="MeetingsWeekRange" xml:space="preserve">
+    <value>{0} – {1}</value>
+  </data>
+  <data name="MeetingsToday" xml:space="preserve">
+    <value>Hoy</value>
+  </data>
+  <data name="MeetingsYesterday" xml:space="preserve">
+    <value>Ayer</value>
+  </data>
+  <data name="MeetingsPreviousWeek" xml:space="preserve">
+    <value>Semana anterior</value>
+  </data>
+  <data name="MeetingsNextWeek" xml:space="preserve">
+    <value>Semana siguiente</value>
+  </data>
+  <data name="MeetingsLoadOlder" xml:space="preserve">
+    <value>Cargar reuniones anteriores</value>
+  </data>
+  <data name="MeetingsEmpty" xml:space="preserve">
+    <value>No hay reuniones esta semana. Graba una en la página Grabadora o vuelve una semana.</value>
+  </data>
+  <data name="MeetingsWeekTotal" xml:space="preserve">
+    <value>Total de la semana</value>
+  </data>
+  <data name="MeetingSpeakers" xml:space="preserve">
+    <value>{0} participantes identificados</value>
+  </data>
+  <data name="MeetingPlay" xml:space="preserve">
+    <value>Reproducir la grabación</value>
+  </data>
+  <data name="MeetingExport" xml:space="preserve">
+    <value>Exportar</value>
+  </data>
+  <data name="MeetingRename" xml:space="preserve">
+    <value>Renombrar</value>
+  </data>
+  <data name="MeetingDelete" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="MeetingTitleEditor" xml:space="preserve">
+    <value>Título de la reunión (Enter guarda, Esc cancela)</value>
+  </data>
+  <data name="MeetingSaveTitle" xml:space="preserve">
+    <value>Guardar título</value>
+  </data>
+  <data name="MeetingCancelRename" xml:space="preserve">
+    <value>Cancelar el cambio de nombre</value>
+  </data>
+  <data name="MeetingDeleteTitle" xml:space="preserve">
+    <value>¿Eliminar la reunión?</value>
+  </data>
+  <data name="MeetingDeleteRecycle" xml:space="preserve">
+    <value>“{0}” se moverá a la Papelera de reciclaje con su transcripción, acta y audio. Puedes deshacerlo durante unos segundos o restaurarla desde la Papelera más tarde.</value>
+  </data>
+  <data name="MeetingDeletePermanent" xml:space="preserve">
+    <value>“{0}” se eliminará de forma permanente con su transcripción, acta y audio. No se puede deshacer.</value>
+  </data>
+  <data name="MeetingDeleteConfirm" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="MeetingDeleteCancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="MeetingDeletedUndo" xml:space="preserve">
+    <value>“{0}” se movió a la Papelera de reciclaje.</value>
+  </data>
+  <data name="MeetingDeleted" xml:space="preserve">
+    <value>“{0}” se eliminó.</value>
+  </data>
+  <data name="MeetingUndo" xml:space="preserve">
+    <value>Deshacer</value>
+  </data>
+  <data name="MeetingNoAudio" xml:space="preserve">
+    <value>Esta reunión no tiene una grabación mezclada para reproducir.</value>
+  </data>
   <data name="SidebarCollapse" xml:space="preserve">
     <value>Contraer la barra lateral</value>
   </data>

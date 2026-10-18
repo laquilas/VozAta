@@ -936,6 +936,87 @@
   <data name="Untitled" xml:space="preserve">
     <value>Untitled meeting</value>
   </data>
+  <data name="MeetingsThisWeek" xml:space="preserve">
+    <value>This week</value>
+  </data>
+  <data name="MeetingsLastWeek" xml:space="preserve">
+    <value>Last week</value>
+  </data>
+  <data name="MeetingsWeekRange" xml:space="preserve">
+    <value>{0} – {1}</value>
+  </data>
+  <data name="MeetingsToday" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="MeetingsYesterday" xml:space="preserve">
+    <value>Yesterday</value>
+  </data>
+  <data name="MeetingsPreviousWeek" xml:space="preserve">
+    <value>Previous week</value>
+  </data>
+  <data name="MeetingsNextWeek" xml:space="preserve">
+    <value>Next week</value>
+  </data>
+  <data name="MeetingsLoadOlder" xml:space="preserve">
+    <value>Load older meetings</value>
+  </data>
+  <data name="MeetingsEmpty" xml:space="preserve">
+    <value>No meetings in this week. Record one on the Recorder page, or go back a week.</value>
+  </data>
+  <data name="MeetingsWeekTotal" xml:space="preserve">
+    <value>Week total</value>
+  </data>
+  <data name="MeetingSpeakers" xml:space="preserve">
+    <value>{0} speakers identified</value>
+  </data>
+  <data name="MeetingPlay" xml:space="preserve">
+    <value>Play the recording</value>
+  </data>
+  <data name="MeetingExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="MeetingRename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="MeetingDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="MeetingTitleEditor" xml:space="preserve">
+    <value>Meeting title (Enter saves, Esc cancels)</value>
+  </data>
+  <data name="MeetingSaveTitle" xml:space="preserve">
+    <value>Save title</value>
+  </data>
+  <data name="MeetingCancelRename" xml:space="preserve">
+    <value>Cancel rename</value>
+  </data>
+  <data name="MeetingDeleteTitle" xml:space="preserve">
+    <value>Delete meeting?</value>
+  </data>
+  <data name="MeetingDeleteRecycle" xml:space="preserve">
+    <value>“{0}” will be moved to the Recycle Bin with its transcript, minutes and audio. You can undo it for a few seconds, or restore it from the Recycle Bin later.</value>
+  </data>
+  <data name="MeetingDeletePermanent" xml:space="preserve">
+    <value>“{0}” will be deleted permanently with its transcript, minutes and audio. This cannot be undone.</value>
+  </data>
+  <data name="MeetingDeleteConfirm" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="MeetingDeleteCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="MeetingDeletedUndo" xml:space="preserve">
+    <value>“{0}” moved to the Recycle Bin.</value>
+  </data>
+  <data name="MeetingDeleted" xml:space="preserve">
+    <value>“{0}” was deleted.</value>
+  </data>
+  <data name="MeetingUndo" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="MeetingNoAudio" xml:space="preserve">
+    <value>This meeting has no mixed recording to play.</value>
+  </data>
   <data name="SidebarCollapse" xml:space="preserve">
     <value>Collapse the sidebar</value>
   </data>
