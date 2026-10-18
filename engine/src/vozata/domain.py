@@ -19,6 +19,14 @@ class Channel(StrEnum):
     SYSTEM = "system"
 
 
+class AudioTrack(StrEnum):
+    """A playable track of a session (phase 32): one channel, or both mixed."""
+
+    MIC = "mic"
+    SYSTEM = "system"
+    MIXED = "mixed"
+
+
 class SessionStatus(StrEnum):
     RECORDING = "recording"
     PAUSED = "paused"

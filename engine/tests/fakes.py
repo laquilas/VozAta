@@ -94,11 +94,16 @@ class FakeTranscriptSink:
 
 
 class FakeAudioMixer:
+    channels = 1
+
     def __init__(self) -> None:
         self.calls: list[tuple[object, str, Path]] = []
 
     def mix(self, reader: object, session_id: str, destination: Path) -> None:
         self.calls.append((reader, session_id, destination))
+
+    def combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
+        return mic
 
 
 class FakeAudioReader:

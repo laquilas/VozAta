@@ -1,7 +1,8 @@
 """Contract every `SessionAudio` (`AudioStore` + `AudioReader`) must honour (phase 30; reused by
 the SQLite audio store in phase 32).
 
-Subclass and provide `audio` (a store at `RATE` Hz) and `session_id` (an existing session):
+Subclass and provide `audio` (a store at `RATE` Hz whose mix mode is mono) and `session_id` (an
+existing session):
 
     class TestSqliteAudio(AudioStoreContract):
         @pytest.fixture
@@ -18,9 +19,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.fakes import FakeAudioMixer
-from vozata.domain import Channel
-from vozata.ports import AudioReader, AudioTrackWriter, SessionAudio
+from vozata.audio.mixer import MonoMixer
+from vozata.domain import AudioTrack, Channel
+from vozata.ports import AudioTrackWriter, PcmTrack, SessionAudio
 
 RATE = 16000
 
@@ -82,15 +83,33 @@ class AudioStoreContract:
         assert not system_frames[: RATE // 2].any()  # the gap: silence
         assert system_frames[RATE // 2 : 3 * RATE // 4].all()
 
-    def test_the_mix_reads_the_finished_tracks(self, audio: SessionAudio, session_id: str) -> None:
-        _record(audio, session_id, {Channel.MIC: [([0.1], 0.0)], Channel.SYSTEM: [([0.2], 0.0)]})
-        mixer = FakeAudioMixer()
+    def test_the_mixed_track_is_readable_after_the_mix_step(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        _record(
+            audio,
+            session_id,
+            {Channel.MIC: [([0.25, 0.5], 0.0)], Channel.SYSTEM: [([0.25, 0.75], 0.0)]},
+        )
 
-        audio.write_mix(session_id, mixer)
+        audio.write_mix(session_id, MonoMixer())
 
-        [(reader, mixed_id, _)] = mixer.calls
-        assert isinstance(reader, AudioReader)
-        assert mixed_id == session_id
+        mixed = audio.track(session_id, AudioTrack.MIXED)
+        assert isinstance(mixed, PcmTrack)
+        assert (mixed.rate, mixed.channels, mixed.frames) == (RATE, 1, 2)
+        assert np.frombuffer(mixed.read(0, 10), "<i2").tolist() == [16382, 32767]
+
+    def test_a_channel_track_reads_pcm_bytes(self, audio: SessionAudio, session_id: str) -> None:
+        _record(audio, session_id, {Channel.MIC: [([0.5, -0.5, 0.0], 0.0)]})
+
+        mic = audio.track(session_id, AudioTrack.MIC)
+
+        assert (mic.rate, mic.channels, mic.frames) == (RATE, 1, 3)
+        assert np.frombuffer(mic.read(1, 5), "<i2").tolist() == [-16383, 0]
+        assert mic.read(3, 1) == b""
+
+    def test_a_track_never_recorded_is_none(self, audio: SessionAudio, session_id: str) -> None:
+        assert audio.track(session_id, AudioTrack.SYSTEM) is None
 
     def test_a_track_can_be_materialized_as_a_wav_file(
         self, audio: SessionAudio, session_id: str
@@ -100,4 +119,16 @@ class AudioStoreContract:
         path = audio.materialize_wav(session_id, Channel.SYSTEM)
 
         assert isinstance(path, Path)
+        assert path.read_bytes()[:4] == b"RIFF"
+
+    def test_the_mix_can_be_materialized_as_a_wav_file(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        _record(
+            audio, session_id, {Channel.MIC: [([0.1] * 4, 0.0)], Channel.SYSTEM: [([0.2] * 4, 0.0)]}
+        )
+        audio.write_mix(session_id, MonoMixer())
+
+        path = audio.materialize_wav(session_id, AudioTrack.MIXED)
+
         assert path.read_bytes()[:4] == b"RIFF"
