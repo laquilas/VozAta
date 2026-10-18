@@ -47,7 +47,8 @@ engine/
     vocabulary.py           glossary store + hint building (19)
     locales/{en,pt-BR,es}.toml
     session.py              RecordingSession
-    audio/                  devices.py, capture.py, clock.py, wav_writer.py, chunker.py, mixer.py, levels.py
+    audio/                  devices.py, capture.py, clock.py, wav_writer.py, chunker.py, mixer.py, levels.py,
+                            pcm.py (playable tracks, WAV header, 32)
     transcription/          cuda.py, faster_whisper.py, openai_compatible.py, retry.py,
                             stitcher.py, language_lock.py, worker.py, echo.py
     output/                 sinks.py
@@ -55,7 +56,8 @@ engine/
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py
     storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py,
-                            files/{repository,audio,layout,repair,translations,folder}.py (file backend, 30)
+                            audio_cache.py (32), files/{repository,audio,layout,repair,translations,folder}.py
+                            (file backend, 30), sqlite/{db,repository,search,audio,audio_writer,...}.py (31, 32)
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github,http,session_export}.py
     qa/                     retriever.py, citations.py, answerer.py
     translation/            worker.py, opus_mt.py, live.py (29)
@@ -84,6 +86,7 @@ ui/
 
 ```python
 class Channel(StrEnum): MIC = "mic"; SYSTEM = "system"
+class AudioTrack(StrEnum): MIC = "mic"; SYSTEM = "system"; MIXED = "mixed"  # playable tracks (32)
 class SessionStatus(StrEnum): RECORDING, PAUSED, FINALIZING, DONE, INTERRUPTED  # lowercase values
 class AppLanguage(StrEnum): EN = "en"; PT_BR = "pt-BR"; ES = "es"
 class ConversationLanguage(StrEnum): EN = "en"; PT = "pt"; ES = "es"; AUTO = "auto"
@@ -128,7 +131,9 @@ class TranscriptSink(Protocol):
     def emit(self, segment: TranscriptSegment) -> None: ...
     def close(self) -> None: ...
 class AudioMixer(Protocol):           # MIXERS[MIX_MODE]; reads the tracks through an AudioReader (30)
+    channels: int                     # 1 (mono sum) or 2 (mic left, system right)
     def mix(self, reader: AudioReader, session_id: str, destination: Path) -> None: ...
+    def combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray: ...  # one block, for the mix on read (32)
 class Chunker(Protocol):             # FixedWindowChunker (01), VadChunker (27)
     paused: bool
     def feed(self, samples: np.ndarray, at: float) -> None: ...
@@ -174,7 +179,7 @@ class TranscriptSearch(Protocol):     # SearchIndex (22, files) / SqliteSearch (
     def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace (SqliteSearch: no-op, triggers)
     def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
 
-# Storage (30, 31): every read and write of session data. REPOSITORIES / AUDIO_STORES / SEARCHES
+# Storage (30-32): every read and write of session data. REPOSITORIES / AUDIO_STORES / SEARCHES
 # in bootstrap.py, keyed by STORAGE_BACKEND (sqlite | files). Shared contract suites:
 # tests/storage/repository_contract.py and tests/storage/audio_contract.py.
 class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessionRepository (30); raises SessionNotFoundError
@@ -193,19 +198,24 @@ class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessio
     def speaker_names(...) / write_speakers(session_id, ids) / rename_speakers(session_id, names)
     def read_minutes(self, session_id: str) -> str | None: ...; write_minutes(session_id, markdown); has_minutes(session_id)
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
-    def folder(self, session_id: str) -> Path | None: ...  # the session folder; sqlite: the audio folder until 32 (None after)
-    def files(self, session_id: str) -> list[str] | None: ...  # idem (sqlite: only the WAVs)
-class AudioTrackWriter(AudioSink, Protocol):  # AlignedWavWriter; gaps and pauses become silence
+    def folder(self, session_id: str) -> Path | None: ...  # the session folder (files); sqlite: None (32)
+    def files(self, session_id: str) -> list[str] | None: ...  # idem
+class AudioTrackWriter(AudioSink, Protocol):  # AlignedWavWriter / SqliteTrackWriter; gaps and pauses become silence
     paused: bool; samples_written: int
-class AudioStore(Protocol):           # FileAudioStore (30)
+class AudioStore(Protocol):           # FileAudioStore (30), SqliteAudioStore (32)
     def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter: ...
-    def write_mix(self, session_id: str, mixer: AudioMixer) -> None: ...  # file backend: mixed.wav
+    def write_mix(self, session_id: str, mixer: AudioMixer) -> None: ...  # files: mixed.wav; sqlite: nothing (mixed on read)
 class AudioReader(Protocol):          # int16 mono samples
     def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray: ...
     def length(self, session_id: str, channel: Channel) -> int: ...
     def sample_rate(self, session_id: str, channel: Channel) -> int: ...
-    def materialize_wav(self, session_id: str, channel: Channel) -> Path: ...  # file backend: the WAV itself
-class SessionAudio(AudioStore, AudioReader, Protocol): ...  # what RecordingSession gets
+    def materialize_wav(self, session_id: str, channel: Channel | AudioTrack) -> Path: ...  # files: the WAV itself; sqlite: cache/<id>/<track>.wav
+class PcmTrack(Protocol):             # a playable track (32): ChannelTrack, MixedTrack, WavFileTrack
+    rate: int; channels: int; frames: int
+    def read(self, start: int, count: int) -> bytes: ...  # interleaved little-endian int16 frames
+class AudioTracks(Protocol):          # GET /sessions/{id}/audio/{track} (32)
+    def track(self, session_id: str, track: AudioTrack) -> PcmTrack | None: ...  # None: no such audio
+class SessionAudio(AudioStore, AudioReader, AudioTracks, Protocol): ...  # what RecordingSession gets
 class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository] (sqlite: audio only)
     def repair(self, session_id: str) -> float | None: ...  # recorded seconds if it holds audio; StoreRepairError
 ```
@@ -301,9 +311,11 @@ stream opens and `terminate()`; the session releases it once capture has stopped
 **Stop order** (fixed, enforced by `RecordingSession.stop()`):
 1. Stop sources; flush chunkers (last partial window); `status = finalizing`.
 2. Drain the queue; `stitcher.flush()` for each channel.
-3. Finalize WAVs to the same length (max written samples); run `AudioMixer` → `mixed.wav`.
+3. Finalize the tracks to the same length (max written samples); run `AudioMixer` →
+   `mixed.wav` (file backend; with `sqlite` the mix is computed on read and nothing is written).
 4. `transcriber.close()` (free VRAM).
-5. If enabled (`DIARIZATION_ENABLED`) and the transcript has system speech: diarize `system.wav`
+5. If enabled (`DIARIZATION_ENABLED`) and the transcript has system speech: diarize the system
+   track (`materialize_wav(id, system)`: `system.wav`, or with `sqlite` a WAV built in the cache)
    → `assign_speakers` → `transcript.diarized.jsonl` + `speakers.json` → `diarizer.close()` →
    `speakers_relabeled` (15: clients reload the transcript; these speakers replace the live ones).
    A failure (missing extra or `HF_TOKEN`, model error) logs a warning, reports `error`
@@ -337,6 +349,11 @@ graph LR
   F --> D[done]
   R -- header unreadable --> E[stays interrupted + recovery_error]
 ```
+
+With the SQLite backend (phase 32) the committed audio chunks are the recording: there is no
+`repair_wav`; `SqliteAudioStore.repair` pads the shorter channel with silence chunks to the
+longer one and returns the length. Audio lost in a crash is at most the chunk being filled
+(≤ 1 s) plus the batch not committed yet (≤ 1 s, more only if the writer had fallen behind).
 
 The recovered session uses the template, glossary and `MIX_MODE` stored in its `session.json`
 and the current settings for the rest (diarization, minutes on/off). Nothing is deleted: a
@@ -399,9 +416,9 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 
 Two storage backends, chosen by `STORAGE_BACKEND` (restart): **`sqlite`** (default since phase
 31) keeps sessions, transcripts, speakers, translations, minutes, action items and the search
-index in one database, `vozata.db` (see *SQLite backend* below); **`files`** keeps the folder
-layout of the table below. With both, the audio stays in WAV files in `OUTPUT_DIR/<id>/` until
-phase 32 moves it into the database (≈1 s PCM chunks); phase 33 imports existing folders. The
+index in one database, `vozata.db`, and since phase 32 the audio too, as ≈1 s PCM chunks (see
+*SQLite backend* below); **`files`** keeps the folder layout of the table below, WAVs included.
+Phase 33 imports existing folders. The
 desktop UI moves to a Toggl Track–style shell (sidebar, timer bar, pages) with theme tokens in
 phases 34–38.
 
@@ -426,9 +443,26 @@ variables can miss a personal OneDrive next to a business one) and
   applied in order on the first connection by `PRAGMA user_version`, each in its own
   transaction; a database with a newer version than the engine knows is refused
   (`DatabaseVersionError`). `001_schema.sql`: tables; `002_search.sql`: the FTS table and its
-  triggers.
-- **Session folder**: `create` also makes `OUTPUT_DIR/<id>/` for the WAVs (skipping ids taken
-  by a row or an existing folder) and `discard` removes it; nothing but audio is written there.
+  triggers; `003_audio.sql`: `audio_chunks`. New files use `auto_vacuum=INCREMENTAL`; a file
+  created before phase 32 is converted once on open (one `VACUUM`). `Database.reclaim()` runs
+  `incremental_vacuum` (after audio is deleted, in the background).
+- **No session folder** (phase 32): `create` skips ids taken by a row or by an existing folder
+  in `OUTPUT_DIR` (file-backend sessions) but writes nothing there; `folder` / `files` are
+  None.
+- **Audio** (phase 32, `storage/sqlite/audio.py`, `audio_writer.py`): mono 16-bit PCM at
+  `SAMPLE_RATE` (16 kHz) in chunks of 1 s (the last one of a track shorter), ≈ 230 MB per hour
+  for both channels. The capture callback only appends to an in-memory buffer (it never waits
+  on SQLite); one writer thread per recording commits the whole chunks of both channels in one
+  transaction per second. Gaps and pauses are silence (as `AlignedWavWriter`); `finalize` pads
+  both channels to the same length and commits the rest. A failed commit keeps the audio
+  buffered and retries; more than 30 s buffered (`AUDIO_BACKLOG_SECONDS`, fixed) is logged,
+  never dropped. The mixed track is never stored: it is mixed on read with
+  `MIXERS[MIX_MODE]` (the current setting). Files are built only on demand
+  (`materialize_wav`, for the diarizer child) in `OUTPUT_DIR/cache/<id>/<track>.wav`, written
+  atomically and reused while their size matches; the cache is kept under `AUDIO_CACHE_MB`,
+  least recently used first out, trimmed at engine start and after each build.
+  `SqliteAudioStore.delete(id)` drops the chunks and cached files, then reclaims the space in
+  the background (used by `DELETE /sessions/{id}`, phase 36).
 
 | Table | Columns | Notes |
 |-------|---------|-------|
@@ -438,12 +472,13 @@ variables can miss a personal OneDrive next to a business one) and
 | `speakers` | PK (`session_id`, `speaker_id`), `name` | `name` NULL = localized label |
 | `minutes` | `session_id` PK, `markdown`, `template`, `generated_at` | the Markdown exactly as written, with the session's template |
 | `action_items` | `row_id` INTEGER PK, `session_id`, `item_id`, `description`, `owner`, `due`, `source_ids_json`, `exported_url` | in written order |
+| `audio_chunks` | PK (`session_id`, `channel` `mic` \| `system`, `seq`), `start_frame`, `frames`, `pcm` BLOB; index (`session_id`, `channel`, `start_frame`) | phase 32: little-endian int16, ≤ 1 s per chunk; a range read selects the chunks overlapping it |
 | `segments_fts` | FTS5 (`session_id`, `segment_id`, `start`, `speaker_id` unindexed; `text`), rowid = `segments.row_id` | tokenizer `unicode61 remove_diacritics 2`; holds only each session's best source, kept in sync by triggers on insert / update / delete of `segments` (an edit replaces the diarized rows, reverting it brings them back); `reindex` rebuilds it; no `index.db` |
 
 Every child table references `sessions(id) ON DELETE CASCADE`: `discard` removes everything of a
 session (and the FTS rows, through the triggers). A session row still `recording` / `paused` /
-`finalizing` without a live session is `interrupted` (§6, phase 17); its committed segments are
-complete, so only the WAVs are repaired.
+`finalizing` without a live session is `interrupted` (§6, phase 17); its committed segments and
+audio chunks are complete, so recovery only pads the shorter channel.
 
 ### File backend (`STORAGE_BACKEND=files`)
 
@@ -577,8 +612,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `TRANSCRIPTION_LANGUAGE` | *(empty)* | 01 | default conversation language `en`/`pt`/`es`/`auto`; empty = derived from `APP_LANGUAGE` |
 | `MIC_LABEL` / `SYSTEM_LABEL` | *(empty)* | 01 | override localized labels |
 | `OUTPUT_DIR` | `recordings` | 01 | sessions root (session folders; with `sqlite` they hold only audio) |
-| `STORAGE_BACKEND` | `sqlite` | 31 | `sqlite` (one database, `vozata.db`) / `files` (one folder of JSON and Markdown per session); restart |
+| `STORAGE_BACKEND` | `sqlite` | 31 | `sqlite` (one database, `vozata.db`, audio included since 32) / `files` (one folder of JSON, Markdown and WAVs per session); restart |
 | `DATABASE_PATH` | *(empty)* = `OUTPUT_DIR/vozata.db` | 31 | the SQLite database file; keep it out of OneDrive-synced folders (warning at start and in `GET /health`); restart |
+| `AUDIO_CACHE_MB` | `2048` | 32 | `sqlite`: size limit of `OUTPUT_DIR/cache` (WAVs built from the database for tools that need a file), least recently used first out; 0–1048576; restart |
 | `STT_PROVIDER` | `faster_whisper` | 03 | registry key |
 | `WHISPER_MODEL` | `large-v3-turbo` | 03 | GPU model |
 | `WHISPER_DEVICE` | `auto` | 03 | `auto` / `cuda` / `cpu` |

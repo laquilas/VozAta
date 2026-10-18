@@ -20,7 +20,7 @@ own rows. Changing a row requires updating both sides.
 
 | Method | Path | Phase | Request | Response |
 |--------|------|-------|---------|----------|
-| GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}, storage: {backend: "sqlite"\|"files", database, warning}}`; `storage` (31): `database` is the absolute path of `vozata.db` (null for `files`), `warning` a localized message when it is in a OneDrive-synced folder, else null |
+| GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}, storage: {backend: "sqlite"\|"files", database, warning, size_bytes, audio_cache_bytes}}`; `storage` (31): `database` is the absolute path of `vozata.db` (null for `files`), `warning` a localized message when it is in a OneDrive-synced folder, else null; (32) `size_bytes` = the database file plus its `-wal`, `audio_cache_bytes` = the WAVs in `OUTPUT_DIR/cache` (both null for `files`) |
 | GET | `/favicon.ico` | — | — | the VozAta logo (`image/x-icon`, package data copied from `assets/web/favicon.ico`); not in the OpenAPI schema |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
 | POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es", title?: str}` | `201 SessionSummary`; `title` (35): the meeting title, trimmed (whitespace runs, new lines too, become one space), at most 200 characters (`422 title_too_long`), blank = untitled, stored as `session.json.title`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none) |
@@ -29,6 +29,7 @@ own rows. Changing a row requires updating both sides.
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
 | GET | `/sessions` | 06 | `?limit=&offset=` | `{items: [SessionSummary], total}` newest first |
 | GET | `/sessions/{id}` | 06 | — | `SessionDetail` |
+| GET | `/sessions/{id}/audio/{track}` | 32 | `track` = `mic` \| `system` \| `mixed`; optional `Range: bytes=a-b` \| `bytes=a-` \| `bytes=-n` (one range) | `200 audio/wav` (16-bit PCM; `mixed` is mono or stereo by `MIX_MODE`, mixed on read with `sqlite`), `Accept-Ranges: bytes`, `Content-Length`; with `Range`: `206` + `Content-Range: bytes a-b/size`; a malformed, multiple or out-of-file range: `416` + `Content-Range: bytes */size`. Streamed from the stored audio with a generated header (both backends). `404 session_not_found`; `404 audio_not_found` for an unknown track or one without audio |
 | PATCH | `/sessions/{id}` | 35 | `{title: str \| null}` (no other keys) | `SessionSummary`; renames the meeting, also while it is recording, paused or finalizing (the live session updates its own `session.json`); `null` or blank clears the title; same trimming and `422 title_too_long` as `POST /sessions`; `404 session_not_found`, `409 session_being_recovered` |
 | GET | `/sessions/{id}/transcript` | 06 | — | `{source: "raw"\|"diarized"\|"edited", segments: [Segment]}` (precedence rule in architecture §8); each `Segment` has `translation` (29) from `transcript.translated.jsonl`, `null` when the segment was not translated |
 | GET | `/sessions/{id}/minutes` | 06 | — | `{markdown}` or `404 minutes_not_found` |
@@ -36,7 +37,7 @@ own rows. Changing a row requires updating both sides.
 | GET | `/sessions/{id}/export` | 11 | `?format=md\|docx\|pdf` (default `md`) | file download, `Content-Disposition: attachment; filename="<id>-minutes.<ext>"`; `400 unsupported_format`, `404 session_not_found` |
 | GET | `/settings` | 06 | — | `{values: {KEY: value}, schema: [{key, type, default, choices?, secret, group, applies}]}` (secrets masked; `group` = settings page section, `applies` = `next_session` \| `restart`, phase 10) |
 | PUT | `/settings` | 10 | `{values: {KEY: value}}` (`null` clears a key; the secret mask `********` means unchanged) | `{values, restart_required: [KEY]}` — validated by `config.py`, persisted to `.env` key by key (comments kept); `422 invalid_setting` with `error.key` |
-| POST | `/sessions/{id}/recover` | 17 | — | `202`; finalizes an `interrupted` session in the background: repairs both WAVs, pads them to one length, then runs the stop steps from the mix on (architecture §6). Progress: `status` events (`finalizing` → `done`) with that `session_id`; a failed repair sends `error` `recovery_failed` and the session stays `interrupted` (`recovery_error` in `session.json`). `409 session_not_interrupted`, `409 session_already_active` (a recording or another recovery is running; while a recovery runs `POST /sessions` also answers it), `404 session_not_found` |
+| POST | `/sessions/{id}/recover` | 17 | — | `202`; finalizes an `interrupted` session in the background: repairs both WAVs (file backend; `sqlite`: keeps the committed audio chunks), pads them to one length, then runs the stop steps from the mix on (architecture §6). Progress: `status` events (`finalizing` → `done`) with that `session_id`; a failed repair sends `error` `recovery_failed` and the session stays `interrupted` (`recovery_error` in `session.json`). `409 session_not_interrupted`, `409 session_already_active` (a recording or another recovery is running; while a recovery runs `POST /sessions` also answers it), `404 session_not_found` |
 | GET | `/sessions/{id}/speakers` | 16 | — | `{speakers: {"<speaker_id>": {name, default_label}}}` — every speaker of the transcript (`mic`, `system`, `system:<n>`) in order of first appearance; `name` is `null` when unset, `default_label` is the label without the name |
 | PUT | `/sessions/{id}/speakers` | 16 | `{speakers: {"system:1": {"name": "Alice"}}}` (name trimmed, max 200 chars; empty or `null` = back to the default label; ids left out are unchanged) | `{speakers}` as in `GET`; writes only `speakers.json`; `422 unknown_speaker` when an id is not in the transcript (nothing saved) |
 | PUT | `/sessions/{id}/transcript` | 21 | `{segments: [{segment_id, text}]}` (a full `Segment` is accepted; only `segment_id` and `text` are read; send only the changed segments) | `{source: "edited"}`: applies the texts to the current best transcript and writes the full copy to `transcript.edited.jsonl` (atomic); a segment whose text changed gets `edited: true` and `words: []`; the search index (22) is refreshed. `422 unknown_segment` (id not in the current best transcript), `422 empty_segment_text`, `409 transcript_still_recording`, `404 session_not_found` |
@@ -59,10 +60,13 @@ own rows. Changing a row requires updating both sides.
  "duration_seconds": 83.4, "language": "pt", "has_minutes": false,
  "title": "Weekly sync"}  // title (35): null = untitled
 // SessionDetail = SessionSummary + full session.json fields + files: ["mic.wav", ...]
-//   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
-//   files / folder: null for a backend without folders (30). With STORAGE_BACKEND=sqlite (31) they
-//   are the audio folder and its WAVs (no JSON / Markdown there) until phase 32 moves the audio
+//   + folder: absolute path of the session folder (the UI opens the folder locally — engine is local)
+//   files / folder: null for a backend without folders (30): STORAGE_BACKEND=sqlite since phase 32
+//   (the audio is in the database)
 //   + storage: "sqlite" | "files" (31)
+//   + audio: {"mic": 83.4, "system": 83.4, "mixed": 83.4} (32): every playable track and its
+//     duration in seconds (empty when nothing was recorded); play it from
+//     GET /sessions/{id}/audio/{track}
 // Segment (labels resolved for display; raw files store only speaker_id; `edited` from phase 21:
 //   true when the user changed the text, then `words` is empty)
 //   `translation` from phase 29: {language, text} in GET /sessions/{id}/transcript, null when

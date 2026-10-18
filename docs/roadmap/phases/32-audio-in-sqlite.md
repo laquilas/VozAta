@@ -46,16 +46,17 @@ phase 37 brings the in-app player); "Open folder" hidden for sqlite sessions.
 
 ## Acceptance criteria
 
-- [ ] Tests (temp db, synthetic numpy audio): chunk boundaries, silence for gaps and pauses,
+- [x] Tests (temp db, synthetic numpy audio): chunk boundaries, silence for gaps and pauses,
       equal-length finalize, on-the-fly mono/stereo mix equals the old mixer output, Range reads
       (start, middle, open-ended, invalid → 416), WAV materialize + LRU eviction.
-- [ ] Crash test (unit): writer subprocess killed mid-batch → recovery returns every committed
+- [x] Crash test (unit): writer subprocess killed mid-batch → recovery returns every committed
       second, both channels equal length.
 - [ ] Manual: record 5 minutes from the app; play mic/system/mixed through the API; diarization
       (with `HF_TOKEN`) works from the materialized WAV; hard-kill the engine during a recording
       (phase 17 recipe B) and recover — audio playable to within ~1 s of the kill. Run the crash
-      check last and ask for an Audiosrv restart afterwards.
-- [ ] Resource parity test passes.
+      check last and ask for an Audiosrv restart afterwards. *(Offline part A done 2026-10-17;
+      parts B and C — real audio — are left to the user, recipe below.)*
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -74,10 +75,10 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 ## Progress
 
 - **Branch:** `feature/32-audio-in-sqlite`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-17 23:30
-- **Next step:** docs (architecture §6/§8/§9, api-contract), then full suites and the manual
-  check recipe.
+- **Next step:** open the PR; before merge the user runs parts B and C of the manual check
+  recipe below on the reference machine (C last, then restart Windows Audio).
 
 ### Steps
 
@@ -95,7 +96,7 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
       `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
 - [x] Crash test: writer subprocess killed mid-batch (`tests/storage/sqlite/test_audio_crash.py`)
 - [x] UI: "Play" downloads from the endpoint to a temp file and opens the OS player
-- [ ] Docs (architecture, api-contract), full suites, manual check recipe
+- [x] Docs (architecture §2/§4/§5/§6/§8/§9, api-contract), full suites, manual check recipe
 
 ### Decisions and notes
 
@@ -154,3 +155,72 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   constructor parameter of `SessionDetailViewModel` (default under `%TEMP%`), so
   `HistoryViewModel` (which phase 36 rewrites) is unchanged. "Open folder" stays hidden when
   `folder` is null (phase 31). `SessionDetail.Files` / `Folder` are nullable.
+- Checks run in the phase session: full engine suite 1499 passed (3 deselected), coverage
+  99.87 % (new modules 100 % of lines), `ruff check` / `ruff format --check` clean; UI suite
+  526 passed (resource parity included), `dotnet format --verify-no-changes` clean.
+
+### Manual check recipe
+
+Status: **A done 2026-10-17 (offline, no audio hardware); B and C pending** — run on the
+reference machine, one phase at a time (audio is shared). Engine commands from `engine/` in
+PowerShell; the app with `dotnet run --project ui/src/VozAta.Desktop`.
+
+**A. Simulated crash with the SQLite audio, no microphone (done).** A script (scratch folder)
+started a child process that recorded both channels through `bootstrap.build_audio_store`
+(synthetic sine blocks, `OUTPUT_DIR=<scratch>`, a 10-minute-old start so the CLI sees it as
+stale) and killed it once 5 s were committed. Then, with `OUTPUT_DIR=<scratch>`,
+`GENERATE_MINUTES=false`, `DIARIZATION_ENABLED=false`:
+
+```powershell
+..\.venv\Scripts\python -m vozata recover <scratch>\<id>   # exit 0, "Recovered: <id>"
+..\.venv\Scripts\python -m vozata recover <scratch>\<id>   # exit 1, "... was not interrupted ..."
+```
+
+Seen: the row is `done` with `duration_seconds: 5.0`; `audio_chunks` has 5 chunks of 16000
+samples per channel; `integrity_check` ok, `auto_vacuum` 2, `user_version` 3; `OUTPUT_DIR`
+holds only `vozata.db` (+ `-wal` / `-shm`), no session folder. Through the API routes (TestClient
+over the same stores): the detail has `audio: {mic: 5.0, system: 5.0, mixed: 5.0}`,
+`folder: null`, `files: null`; each track is `200 audio/wav`, 160044 bytes, `RIFF`; `Range:
+bytes=1000-1999` gives `206` with 1000 bytes; an out-of-file range `416`; `GET /health` has
+`size_bytes` and `audio_cache_bytes: 0`; `materialize_wav(system)` wrote
+`cache\<id>\system.wav` (80000 frames, 16 kHz).
+
+**B. Real recording from the desktop app (pending, needs the microphone and speakers).**
+
+1. In `engine/.env` keep `STORAGE_BACKEND` empty or `sqlite`, `DATABASE_PATH` outside OneDrive
+   (e.g. `C:\VozAta\vozata.db`), `DIARIZATION_ENABLED=true` with `HF_TOKEN` set, and
+   `AUDIO_CACHE_MB` empty (2048). The database from phase 31 is converted to incremental
+   auto-vacuum on the first start (log line "Converting the database to
+   auto_vacuum=INCREMENTAL").
+2. Start the app. Record **5 minutes** while speaking and playing a video (both channels); pause
+   once for ~10 s in the middle. Watch the engine log: no "is waiting for the database" warning.
+   Stop and wait for *idle*.
+3. `OUTPUT_DIR` has no new `<id>` folder. `curl http://127.0.0.1:8765/sessions/<id>` shows
+   `folder: null`, `files: null`, `storage: "sqlite"` and `audio` with `mic`, `system` and
+   `mixed` all ≈ 300 s (equal).
+4. Play through the API:
+   `curl -o mic.wav http://127.0.0.1:8765/sessions/<id>/audio/mic` (same for `system` and
+   `mixed`); each opens in a player, lasts the whole recording, the pause is silence on both
+   channels, and `mixed` has both voices (stereo if `MIX_MODE=stereo`). A ranged request:
+   `curl -s -D - -o NUL -H "Range: bytes=0-99" http://127.0.0.1:8765/sessions/<id>/audio/mixed`
+   → `206`, `Content-Range: bytes 0-99/<size>`.
+5. History → the session: "Play mixed / mic / system" download to
+   `%TEMP%\VozAta\audio\<id>-<track>.wav` and open the default player; "Open folder" is hidden.
+   Play again while the player still has the file open: it opens again (no error).
+6. Diarization ran from the materialized WAV: the transcript shows `User 1` / `User 2` labels for
+   the system side, the log has no `diarization_failed`, and `OUTPUT_DIR\cache\<id>\system.wav`
+   exists. `curl http://127.0.0.1:8765/health` shows `storage.size_bytes` grown by ≈ 115 MB
+   (5 min × 2 channels) and `storage.audio_cache_bytes` ≈ the size of that WAV.
+7. Export DOCX / MD / PDF: unchanged (minutes and transcript).
+8. Optional: `STORAGE_BACKEND=files` + restart; record 30 s: the folder has `mic.wav`,
+   `system.wav`, `mixed.wav`, and the Play buttons still work (same endpoint). Set it back.
+
+**C. Crash during a real recording (pending; run last — it hard-kills a recording engine, which
+can wedge WASAPI: restart Windows Audio afterwards).**
+
+1. Start a recording from the app, speak and play audio for ~60 s; note the clock time.
+2. Kill the engine process (Task Manager → `python.exe` running `vozata serve` → End task).
+3. Restart the app: the start screen offers to recover the interrupted session; recover it.
+   The transcript lines seen before the kill are there; `GET /sessions/<id>` has `audio` with
+   `mic` and `system` equal; play `mixed`: it ends within ~1–2 s of the kill.
+4. Restart the Windows Audio service (`Restart-Service Audiosrv` in an elevated PowerShell).
