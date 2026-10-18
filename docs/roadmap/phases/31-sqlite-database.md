@@ -47,16 +47,18 @@ files until phase 32).
 
 ## Acceptance criteria
 
-- [ ] The phase 30 repository contract suite passes for `SqliteSessionRepository` (temp db).
-- [ ] Tests: migrations from an empty file and from version N-1; WAL and foreign keys on;
+- [x] The phase 30 repository contract suite passes for `SqliteSessionRepository` (temp db).
+- [x] Tests: migrations from an empty file and from version N-1; WAL and foreign keys on;
       concurrent reader during writes; FTS stays in sync on edit/revert/diarize; cascade delete;
       OneDrive path warning.
-- [ ] Crash test (unit): kill a writer subprocess mid-session → every committed segment readable,
+- [x] Crash test (unit): kill a writer subprocess mid-session → every committed segment readable,
       session detected as interrupted.
 - [ ] Manual: record from the desktop app with the default `STORAGE_BACKEND=sqlite`; history,
       transcript, speakers rename, edit, search, ask, minutes regenerate and export all work; no
-      JSON/MD files are written in the session folder.
-- [ ] Resource parity test passes.
+      JSON/MD files are written in the session folder. *(Pending: needs the microphone and
+      speakers; see the manual check recipe in Progress. The simulated crash + `recover` part
+      was run offline on 2026-10-17.)*
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -75,10 +77,10 @@ Audio in the database (32), importing old folders (33), settings in the database
 ## Progress
 
 - **Branch:** `feature/31-sqlite-database`
-- **Status:** in progress
-- **Updated:** 2026-10-17 21:30
-- **Next step:** full engine and UI suites, ruff, then the manual check recipe in Progress and
-  the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 22:10
+- **Next step:** open the PR; before merge run part B of the manual check recipe below on the
+  reference machine (audio hardware, one phase at a time), then part C last.
 
 ### Steps
 
@@ -91,7 +93,7 @@ Audio in the database (32), importing old folders (33), settings in the database
       `GET /sessions/{id}`, CLI session folders
 - [x] Crash test: a writer subprocess killed mid-session (`tests/storage/sqlite/test_crash.py`)
 - [x] UI: hide "Open folder" without a folder; setting labels for the new keys
-- [ ] Docs (architecture §8/§9, api-contract), full suites, manual check recipe
+- [x] Docs (architecture §5/§8/§9, api-contract), full suites, manual check recipe
 
 ### Decisions and notes
 
@@ -133,3 +135,70 @@ Audio in the database (32), importing old folders (33), settings in the database
   `SessionFolder` moved to `storage/session_folder.py`.
 - The repository is not a `RecoverableStore`: every emitted segment is committed
   (`synchronous=FULL`) before `emit` returns, so there is nothing to repair.
+- Database connections of finished threads are closed when the next thread opens one (worker
+  threads come and go with every recording and with the API thread pool).
+- Old file-backend sessions are not shown with `STORAGE_BACKEND=sqlite` until phase 33 imports
+  them; their folders are never touched (`create` skips their ids). `STORAGE_BACKEND=files`
+  brings back the previous behavior unchanged.
+- Checks run in the phase session: full engine suite 1343 passed (3 deselected), coverage
+  99.89 % (every new module 100 % of lines), `ruff check` / `ruff format --check` clean; UI
+  suite 455 passed (resource parity included). The crash test was repeated 8 times (stable).
+
+### Manual check recipe
+
+Status: **A done 2026-10-17 (offline); B and C pending** — run on the reference machine, one
+phase at a time (audio is shared). Engine commands from `engine/` in PowerShell.
+
+**A. Simulated crash with the SQLite backend, no microphone (done).** A script builds a session
+in a scratch `OUTPUT_DIR` as a crash leaves it: the row `recording` with an old heartbeat, two
+committed segments, `mic.wav` / `system.wav` with data but unpatched headers (the process ends
+with `os._exit`). Then, with `OUTPUT_DIR=<scratch>`, `GENERATE_MINUTES=false`,
+`DIARIZATION_ENABLED=false`:
+
+```powershell
+..\.venv\Scripts\python -m vozata recover <scratch>\<id>   # exit 0, "Recovered: <scratch>\<id>"
+..\.venv\Scripts\python -m vozata recover <scratch>\<id>   # exit 1, "... was not interrupted ..."
+```
+
+Seen: the folder holds only `mic.wav`, `system.wav`, `mixed.wav` (all 183404 bytes, padded to
+the longest); in `<scratch>\vozata.db` the session is `done` with `ended_at` and
+`duration_seconds: 5.73`, both raw segments are there, `segments_fts` finds `friday`,
+`journal_mode` is `wal` and `user_version` 2.
+
+**B. Real recording from the desktop app (pending, needs the microphone and speakers).**
+
+1. In `engine/.env` keep `STORAGE_BACKEND` empty or `sqlite`. The checkout is under
+   `E:\OneDrive`: start once with `DATABASE_PATH` empty and check the warning (step 2), then set
+   `DATABASE_PATH=C:\VozAta\vozata.db` (any folder outside OneDrive) and restart the app.
+   Sessions recorded before this phase do not show in History until phase 33 (their folders
+   are untouched).
+2. Start the app (`dotnet run --project ui/src/VozAta.Desktop`). With `DATABASE_PATH` empty the
+   engine log has "The database ...\vozata.db is in the OneDrive folder ..." and
+   `curl http://127.0.0.1:8765/health` shows `storage.warning`; with `DATABASE_PATH` set,
+   `storage: {backend: "sqlite", database: "C:\VozAta\vozata.db", warning: null}`.
+3. Record ~1 minute while speaking and playing a video (both channels), with
+   `DIARIZATION_ENABLED=true` and `EXTRACT_ACTION_ITEMS=true` if available. Stop and wait for
+   *idle*.
+4. The new `OUTPUT_DIR\<id>\` holds only `mic.wav`, `system.wav`, `mixed.wav` — no
+   `session.json`, `transcript.*`, `minutes.md`, `speakers.json` or `action_items.json`; no
+   `index.db` in `OUTPUT_DIR`. `curl http://127.0.0.1:8765/sessions/<id>` has
+   `storage: "sqlite"` and `files: ["mic.wav", "mixed.wav", "system.wav"]`.
+5. History → the session: transcript, minutes and speakers show; rename a speaker; edit a line
+   and revert it; play the three tracks; "Open folder" opens the audio folder.
+6. Search a word of the transcript (and a word only in the edited line while the edit is on):
+   hits jump to the line. Ask the meeting a question: an answer streams.
+7. Regenerate the minutes (another template), export DOCX / MD / PDF: they open with the minutes
+   and the transcript. Action items: extract again, edit one (export needs a configured tracker,
+   optional).
+8. Restart the app: everything above is still there. Optional: `STORAGE_BACKEND=files` + restart
+   shows the old folder sessions again (and not the new one); set it back.
+
+**C. Crash during a real recording (pending; run last — it hard-kills a recording engine, which
+can wedge WASAPI: restart Windows Audio afterwards).**
+
+1. Start a recording from the app and speak for ~30 s, until a few lines are in the transcript.
+2. Kill the engine process (Task Manager → `python.exe` running `vozata serve` → End task).
+3. Restart the app: the start screen offers to recover the interrupted session; recover it.
+   The lines seen before the kill are all in the transcript, the WAVs play to the crash point,
+   minutes are written, and the folder still holds only WAVs.
+4. Restart the Windows Audio service (`Restart-Service Audiosrv` in an elevated PowerShell).
