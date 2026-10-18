@@ -94,39 +94,56 @@ def migrate(db: sqlite3.Connection, migrations: list[Migration] | None = None) -
 
 
 class Database:
-    """`vozata.db`: per-thread connections, serialized writes, migrated on open."""
+    """`vozata.db`: per-thread connections, serialized writes, migrated on first use.
+
+    Nothing touches the disk until the first `connection()`: the file (and its folder) is
+    created and migrated then, so building a repository creates nothing.
+    """
 
     def __init__(self, path: Path, migrations: list[Migration] | None = None) -> None:
         self._path = path
+        self._migrations = migrations
+        self._migrated = False
         self._local = threading.local()
         self._write_lock = threading.RLock()
         self._connections: list[sqlite3.Connection] = []
         self._connections_lock = threading.Lock()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with self._write_lock:
-            migrate(self.connection(), migrations)
 
     @property
     def path(self) -> Path:
         return self._path
 
     def connection(self) -> sqlite3.Connection:
-        """This thread's connection (opened on first use, autocommit mode)."""
+        """This thread's connection (opened on first use, autocommit mode).
+
+        The first one creates and migrates the database; raises `DatabaseVersionError` for a
+        database written by a newer engine.
+        """
         db: sqlite3.Connection | None = getattr(self._local, "db", None)
         if db is None:
-            db = sqlite3.connect(
-                self._path,
-                timeout=BUSY_TIMEOUT_MS / 1000,
-                isolation_level=None,
-                check_same_thread=False,  # only `close()` touches it from another thread
-            )
-            db.execute("PRAGMA journal_mode = WAL")
-            db.execute("PRAGMA synchronous = NORMAL")
-            db.execute("PRAGMA foreign_keys = ON")
-            db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS:d}")
-            self._local.db = db
-            with self._connections_lock:
-                self._connections.append(db)
+            db = self._open()
+        if not self._migrated:
+            with self._write_lock:
+                if not self._migrated:
+                    migrate(db, self._migrations)
+                    self._migrated = True
+        return db
+
+    def _open(self) -> sqlite3.Connection:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        db = sqlite3.connect(
+            self._path,
+            timeout=BUSY_TIMEOUT_MS / 1000,
+            isolation_level=None,
+            check_same_thread=False,  # only `close()` touches it from another thread
+        )
+        db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS:d}")
+        db.execute("PRAGMA journal_mode = WAL")
+        db.execute("PRAGMA synchronous = NORMAL")
+        db.execute("PRAGMA foreign_keys = ON")
+        self._local.db = db
+        with self._connections_lock:
+            self._connections.append(db)
         return db
 
     @contextlib.contextmanager

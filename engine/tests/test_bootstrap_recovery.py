@@ -11,7 +11,7 @@ from tests.test_session_recover import make_session_folder
 from vozata import bootstrap
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.config import Settings
-from vozata.domain import MixMode
+from vozata.domain import MixMode, StorageBackend
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repository import FileSessionRepository
@@ -19,6 +19,8 @@ from vozata.storage.search_index import SearchIndex
 
 
 def _settings(tmp_path: Path, **overrides: object) -> Settings:
+    """The file backend: these tests build crashed session folders (phase 17)."""
+    overrides.setdefault("storage_backend", StorageBackend.FILES)
     return Settings(output_dir=tmp_path / "recordings", **overrides)  # type: ignore[arg-type]
 
 

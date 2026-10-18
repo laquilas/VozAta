@@ -33,6 +33,10 @@ def database(tmp_path: Path):
     database.close()
 
 
+def test_nothing_is_created_before_the_first_connection(database: Database) -> None:
+    assert not database.path.parent.exists()
+
+
 def test_a_new_file_gets_the_whole_schema(database: Database) -> None:
     db = database.connection()
 
@@ -64,7 +68,9 @@ def test_a_database_at_the_previous_version_is_migrated_and_keeps_its_data(
 ) -> None:
     path = tmp_path / "vozata.db"
     *older, latest = bundled_migrations()
-    Database(path, older).close()
+    previous = Database(path, older)
+    assert schema_version(previous.connection()) == latest.version - 1
+    previous.close()
     db = sqlite3.connect(path, isolation_level=None)
     db.execute("INSERT INTO sessions (id, meta_json) VALUES ('20261015_202358', '{}')")
     db.execute(
@@ -86,7 +92,9 @@ def test_a_database_at_the_previous_version_is_migrated_and_keeps_its_data(
 
 def test_opening_again_applies_nothing(tmp_path: Path) -> None:
     path = tmp_path / "vozata.db"
-    Database(path).close()
+    first = Database(path)
+    first.connection()
+    first.close()
 
     database = Database(path)
     try:
@@ -101,8 +109,14 @@ def test_a_database_from_a_newer_engine_is_refused(tmp_path: Path) -> None:
     db.execute("PRAGMA user_version = 999")
     db.close()
 
-    with pytest.raises(DatabaseVersionError):
-        Database(path)
+    database = Database(path)
+    try:
+        with pytest.raises(DatabaseVersionError):
+            database.connection()
+        with pytest.raises(DatabaseVersionError):  # every use, not only the first one
+            database.connection()
+    finally:
+        database.close()
 
 
 def test_a_failing_migration_is_rolled_back(tmp_path: Path) -> None:

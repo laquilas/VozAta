@@ -183,3 +183,6 @@ no_minutes = "No se generó un acta para esta sesión."
 column_time = "Hora"
 column_speaker = "Hablante"
 column_text = "Texto"
+
+[storage]
+onedrive_warning = "La base de datos {path} está en una carpeta de OneDrive ({root}). OneDrive puede bloquearla o dañarla mientras VozAta se ejecuta: define DATABASE_PATH en una carpeta fuera de OneDrive y reinicia el motor."

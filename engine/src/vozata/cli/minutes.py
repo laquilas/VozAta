@@ -12,6 +12,7 @@ from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import EmptyTranscriptError, write_session_minutes
 from vozata.ports import LanguageModelError, Localizer, SessionNotFoundError
 from vozata.storage.files.folder import open_session_folder
+from vozata.storage.session_folder import SessionFolder
 
 
 def run_minutes(
@@ -21,12 +22,13 @@ def run_minutes(
     localizer: Localizer,
     labeler: SpeakerLabeler,
     build_generator: Callable[[Settings, Localizer, str | None], MinutesGenerator],
+    open_folder: Callable[[Path], SessionFolder] | None = None,
 ) -> int:
-    """Write `minutes.md` from the best transcript, in the language and with the template stored
-    in `session.json`. A session folder belongs to the file backend, so the command works on the
-    file backend of its parent."""
+    """Write the minutes from the best transcript, in the language and with the template stored
+    in the session's metadata. `open_folder` gives the storage of the session folder (default:
+    the file backend of its parent)."""
     t = localizer.t
-    folder = open_session_folder(session_dir, settings.sample_rate)
+    folder = (open_folder or _files_folder(settings))(session_dir)
 
     def generator(template: str | None) -> MinutesGenerator:
         return build_generator(settings, localizer, template)
@@ -44,3 +46,7 @@ def run_minutes(
         return 1
     console.say(t("cli.minutes_written", path=folder.minutes_file))
     return 0
+
+
+def _files_folder(settings: Settings) -> Callable[[Path], SessionFolder]:
+    return lambda session_dir: open_session_folder(session_dir, settings.sample_rate)

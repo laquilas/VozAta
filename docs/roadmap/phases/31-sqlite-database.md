@@ -77,8 +77,8 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:30
-- **Next step:** the `sqlite` entries of `REPOSITORIES` / search in `bootstrap.py` (one shared
-  `Database` per path, chosen by `STORAGE_BACKEND`), OneDrive warning, CLI session folders.
+- **Next step:** the crash test (`tests/storage/sqlite/test_crash.py`): a writer subprocess
+  killed mid-session, then every committed segment readable and the session interrupted.
 
 ### Steps
 
@@ -87,7 +87,7 @@ Audio in the database (32), importing old folders (33), settings in the database
 - [x] `SqliteSessionRepository` passing the phase 30 contract suite; cascade delete
 - [x] FTS: `segments_fts` kept in sync by triggers on the best source; `SqliteSearch`
 - [x] Config (`STORAGE_BACKEND`, `DATABASE_PATH`, OneDrive roots from the environment)
-- [ ] Bootstrap wiring, OneDrive warning in `GET /health`, `storage` field in
+- [x] Bootstrap wiring, OneDrive warning in `GET /health`, `storage` field in
       `GET /sessions/{id}`, CLI session folders
 - [ ] Crash test: a writer subprocess killed mid-session
 - [ ] UI: hide "Open folder" without a folder; setting labels for the new keys
@@ -118,5 +118,18 @@ Audio in the database (32), importing old folders (33), settings in the database
   the table from the segment rows. `storage/search_index.py` (`index.db`) stays for the `files`
   backend and shares `fts_query` / `search_table` with it, so with `sqlite` no `index.db` is
   created. The FTS rowid is `segments.row_id`, so a trigger removes or re-adds rows by rowid.
+- Bootstrap: `REPOSITORIES` / `AUDIO_STORES` / `SEARCHES` keyed by `StorageBackend`;
+  `open_database(settings)` keeps one `Database` per file for the process (repository and
+  search share it; `close_databases()` for tests, called by an autouse fixture in
+  `tests/conftest.py`). `Database` touches the disk only on its first connection, so building
+  a session still creates nothing before `start()`.
+- OneDrive: `config.py` reads the roots from `OneDrive` / `OneDriveConsumer` /
+  `OneDriveCommercial` (`Settings.onedrive_roots`); `open_database` logs a warning once per
+  file, `GET /health` has `storage: {backend, database, warning}` with the localized
+  `storage.onedrive_warning`. The warning does not block the engine.
+- CLI `minutes <dir>` / `diarize <dir>` open the folder through `bootstrap.open_session_folder`:
+  the configured backend of the folder's parent (`sqlite`: `DATABASE_PATH`, else
+  `<parent>/vozata.db`); they report the database as the written file.
+  `SessionFolder` moved to `storage/session_folder.py`.
 - The repository is not a `RecoverableStore`: every emitted segment is committed
   (`synchronous=FULL`) before `emit` returns, so there is nothing to repair.
