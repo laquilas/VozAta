@@ -10,10 +10,11 @@ using VozAta.Desktop.Services;
 namespace VozAta.Desktop.ViewModels;
 
 /// <summary>
-/// One past (or live) session: transcript, minutes, minutes regeneration and its audio. A track
-/// is played by downloading it from the engine (phase 32) into <paramref name="audioFolder"/>
-/// (default: <c>%TEMP%\VozAta\audio</c>) and opening it in the default player, until the in-app
-/// player of phase 37.
+/// The page of one past (or live) session (phase 37): header (back, editable title, date,
+/// duration; regenerate, export, delete), the Minutes, Transcript, Speakers, Action items and Ask
+/// tabs, and the in-app player (<see cref="Player"/>, none while live). Clicking a transcript line
+/// plays from it; the line being played is highlighted. "Open in external player" downloads a
+/// track into <paramref name="audioFolder"/> (default: <c>%TEMP%\VozAta\audio</c>) and opens it.
 /// </summary>
 public sealed partial class SessionPageViewModel(
     IEngineClient client,
@@ -23,7 +24,7 @@ public sealed partial class SessionPageViewModel(
     SessionSummary summary,
     MinutesTemplatesViewModel? templates = null,
     IDialogService? dialogs = null,
-    string? audioFolder = null) : ObservableObject
+    string? audioFolder = null) : ObservableObject, IDisposable
 {
     /// <summary>Export formats and the file-type name shown in the save dialog.</summary>
     private static readonly Dictionary<string, string> ExportTypes = new()
@@ -37,15 +38,66 @@ public sealed partial class SessionPageViewModel(
 
     private readonly string _audioFolder = audioFolder ?? AudioPlayback.DefaultFolder;
 
+    private string? _title = summary.Title;
+
+    private double? _cue; // a moment to show once the player exists
+
+    private AskViewModel? _ask;
+
     public string Id => summary.Id;
 
+    /// <summary>The summary the page was opened with, with the current title.</summary>
+    public SessionSummary Summary => summary with { Title = _title };
+
     /// <summary>The heading: the meeting title (phase 35), else the start date.</summary>
-    public string Title => summary.Title ?? Date;
+    public string Title => _title ?? Date;
 
     public string Date => FormatStart(summary.StartedAt) ?? summary.Id;
 
     /// <summary>A titled meeting shows its date under the title.</summary>
-    public bool ShowsDate => summary.Title is not null;
+    public bool ShowsDate => _title is not null;
+
+    /// <summary>The recorded length, <c>hh:mm:ss</c>.</summary>
+    public string Duration => TranscriptLine.FormatTime(summary.DurationSeconds ?? 0);
+
+    /// <summary>Builds the player bar of a session from its tracks (null: no in-app player).</summary>
+    public Func<string, IReadOnlyDictionary<string, double>, PlayerBarViewModel?>? Players { get; init; }
+
+    /// <summary>The title was saved (the meetings list shows it).</summary>
+    public Func<SessionSummary, Task>? Renamed { get; init; }
+
+    /// <summary>Delete this meeting (the Meetings page asks first and offers Undo).</summary>
+    public Func<SessionSummary, Task>? DeleteMeeting { get; init; }
+
+    /// <summary>Back to the meetings list.</summary>
+    public Func<Task>? GoBack { get; init; }
+
+    /// <summary>The in-app player (phase 37); null while live, without audio, or before loading.</summary>
+    [ObservableProperty]
+    public partial PlayerBarViewModel? Player { get; private set; }
+
+    /// <summary>The line the player is playing.</summary>
+    [ObservableProperty]
+    public partial TranscriptLine? CurrentLine { get; private set; }
+
+    [ObservableProperty]
+    public partial bool IsEditingTitle { get; private set; }
+
+    [ObservableProperty]
+    public partial string TitleDraft { get; set; } = "";
+
+    /// <summary>The "Ask" tab: questions about this meeting only (phase 24); a citation shows its moment.</summary>
+    public AskViewModel Ask => _ask ??= new AskViewModel(client, localization)
+    {
+        SelectedSessionId = Id,
+        SelectedOnly = true,
+        OpenCitation = citation =>
+        {
+            FocusSegment(citation.SegmentId);
+            CueAt(citation.Start);
+            return Task.CompletedTask;
+        },
+    };
 
     /// <summary>Recording, paused or finalizing: no regeneration yet.</summary>
     public bool IsLive => summary.Status is "recording" or "paused" or "finalizing";
@@ -118,6 +170,12 @@ public sealed partial class SessionPageViewModel(
 
     public const int TranscriptTab = 1;
 
+    public const int SpeakersTab = 2;
+
+    public const int ActionItemsTab = 3;
+
+    public const int AskTab = 4;
+
     private string? _focusSegmentId;
 
     /// <summary>Show the transcript at <paramref name="segmentId"/> (now, or once it has loaded).</summary>
@@ -140,6 +198,7 @@ public sealed partial class SessionPageViewModel(
             var detail = await client.GetSessionAsync(Id, cancellationToken);
             _audio = detail.Audio ?? new Dictionary<string, double>();
             OpenAudioCommand.NotifyCanExecuteChanged();
+            CreatePlayer();
             Folder = detail.Folder;
             RegenerateTemplate ??= templates?.Find(SessionTemplate(detail));
             await Editor.LoadThresholdAsync(cancellationToken);
@@ -300,12 +359,19 @@ public sealed partial class SessionPageViewModel(
             Lines.Add(new TranscriptLine(TranscriptLine.FormatTime(segment.Start), segment.Label, segment.Text, segment.Channel)
             {
                 SegmentId = segment.SegmentId,
+                Start = segment.Start,
                 LowConfidenceParts = Editor.Highlight(segment),
             });
         }
 
         HasLowConfidence = Lines.Any(line => line.LowConfidenceParts is not null);
         ApplyFocus();
+        CurrentLine = null; // the lines were rebuilt: highlight the played one again
+        if (Player is not null)
+        {
+            OnPlayerMoved(this, Player.Position);
+        }
+
         if (!IsLive)
         {
             await Speakers.LoadAsync(transcript.Segments, cancellationToken);
@@ -356,6 +422,133 @@ public sealed partial class SessionPageViewModel(
 
         FocusedLine = Lines[index] with { IsFocused = true };
         Lines[index] = FocusedLine;
+    }
+
+    /// <summary>Show <paramref name="seconds"/> in the player (a search hit or a citation), without playing.</summary>
+    public void CueAt(double seconds)
+    {
+        if (Player is null)
+        {
+            _cue = seconds;
+            return;
+        }
+
+        Player.Position = seconds;
+    }
+
+    public void Dispose()
+    {
+        if (Player is not null)
+        {
+            Player.PositionMoved -= OnPlayerMoved;
+            Player.Dispose();
+        }
+    }
+
+    /// <summary>Play the recording from a transcript line.</summary>
+    [RelayCommand]
+    private Task PlayLineAsync(TranscriptLine? line) =>
+        line is null || Player is null ? Task.CompletedTask : Player.PlayFromAsync(line.Start);
+
+    [RelayCommand]
+    private void BeginRename()
+    {
+        TitleDraft = _title ?? "";
+        IsEditingTitle = true;
+    }
+
+    [RelayCommand]
+    private void CancelRename() => IsEditingTitle = false;
+
+    /// <summary><c>PATCH /sessions/{id}</c> with the edited title (blank = untitled).</summary>
+    [RelayCommand]
+    private async Task SaveRenameAsync()
+    {
+        if (!IsEditingTitle)
+        {
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(TitleDraft) ? null : TitleDraft.Trim();
+        if (title == _title)
+        {
+            IsEditingTitle = false;
+            return;
+        }
+
+        try
+        {
+            var renamed = await client.UpdateSessionTitleAsync(Id, title);
+            _title = renamed.Title;
+            IsEditingTitle = false;
+            Error = null;
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(ShowsDate));
+            if (Renamed is not null)
+            {
+                await Renamed(Summary);
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            Error = ErrorText(error); // the box stays open with the text
+        }
+    }
+
+    private bool CanDelete() => !IsLive && DeleteMeeting is not null;
+
+    [RelayCommand(CanExecute = nameof(CanDelete))]
+    private Task DeleteAsync() => DeleteMeeting!(Summary);
+
+    [RelayCommand]
+    private Task BackAsync() => GoBack?.Invoke() ?? Task.CompletedTask;
+
+    private void CreatePlayer()
+    {
+        if (Player is not null || IsLive || _audio.Count == 0 || Players is null)
+        {
+            return;
+        }
+
+        Player = Players(Id, _audio);
+        if (Player is null)
+        {
+            return;
+        }
+
+        Player.PositionMoved += OnPlayerMoved;
+        if (_cue is { } cue)
+        {
+            _cue = null;
+            Player.Position = cue;
+        }
+    }
+
+    /// <summary>Highlight the last line that started at or before the position.</summary>
+    private void OnPlayerMoved(object? sender, double seconds)
+    {
+        var index = -1;
+        for (var i = 0; i < Lines.Count && Lines[i].Start <= seconds; i++)
+        {
+            index = i;
+        }
+
+        var current = CurrentLine is null ? -1 : Lines.IndexOf(CurrentLine);
+        if (index == current)
+        {
+            return;
+        }
+
+        if (current >= 0)
+        {
+            Lines[current] = Lines[current] with { IsCurrent = false };
+        }
+
+        CurrentLine = index < 0 ? null : Lines[index] with { IsCurrent = true };
+        if (CurrentLine is not null)
+        {
+            Lines[index] = CurrentLine;
+        }
     }
 
     private string ErrorText(Exception error) =>

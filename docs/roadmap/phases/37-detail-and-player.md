@@ -67,15 +67,15 @@ Waveform rendering, audio editing/trimming, video.
 - **Branch:** `feature/37-detail-and-player` (stacked on `feature/33-folder-migration`, PR #51,
   itself on `feature/32-audio-in-sqlite`, PR #49)
 - **Status:** in progress
-- **Updated:** 2026-10-18 19:56
-- **Next step:** add to `SessionPageViewModel`: `Player` (built from `audio` with an `IAudioPlayer` factory; null when live or no audio), `TranscriptLine.Start` / `IsCurrent`, segment click seeks, highlight follows `PositionMoved`, `SeekTo(seconds)`.
+- **Updated:** 2026-10-18 20:00
+- **Next step:** navigation: open the session page in the shell (non-sidebar page state, back to Meetings), wire `Players` / `Renamed` / `DeleteMeeting` / `GoBack` from `HistoryViewModel.Open` (set by `MainViewModel`), dispose the old page, `OpenSegmentAsync` cues the hit / citation start; answer events also reach the page's Ask.
 
 ### Steps
 
 - [x] Start the phase (status, Progress)
 - [x] `IAudioPlayer` port, `FakeAudioPlayer`; `TranscriptLine` gets `Start` / `End` / `IsCurrent`
 - [x] `PlayerBarViewModel`: play/pause, ±10 s, seek, speed, channel (keeps position), volume
-- [ ] `SessionPageViewModel` replaces `SessionDetailViewModel` (tests moved), title edit,
+- [x] `SessionPageViewModel` replaces `SessionDetailViewModel` (tests moved), title edit,
       delete, Ask tab, segment click seeks, highlight follows position, live hides the player
 - [ ] Navigation: session page in the shell, back to Meetings; search hits / citations open it
       and seek
@@ -88,5 +88,7 @@ Waveform rendering, audio editing/trimming, video.
 - Stacked on phase 33 (user's choice to stack on 32; 37's manual check needs a migrated meeting).
 - `SessionDetailViewModel` was renamed to `SessionPageViewModel` (with its tests, `SessionPageViewModelTests.cs`) instead of rewritten: every tested behavior is kept and the page features are added to it.
 - `IAudioPlayer` (`Services/AudioPlayer.cs`): `OpenAsync(uri)` (paused), `Play`, `Pause`, `Seek`, `Rate`, `Volume` (0–100), `Position`, `Duration`, `IsPlaying`, `PositionChanged` / `StateChanged` (any thread; the ViewModel posts through `IUiDispatcher`). `PlayerBarViewModel`: tracks in the order mixed, mic, system, only those in the detail's `audio`; the stream is opened on the first play; a slider move seeks (player-driven moves do not seek back); ±10 s clamped to the duration (remembered before the first play); switching track reopens and seeks back, playing only if it was; speeds 0.75–2×; volume and speed reapplied to each new stream; an open failure shows `Error`. `PositionMoved` drives the line highlight. New strings `Player*`, `Track*`.
+- `SessionPageViewModel` page features: `Duration`; `Player` built after `GET /sessions/{id}` through the `Players` factory (none while live, without audio or without a factory); `PlayLine` plays from `TranscriptLine.Start`; `CurrentLine` / `TranscriptLine.IsCurrent` = the last line starting at or before the position (re-applied when the transcript reloads); `CueAt(seconds)` shows a moment without playing (kept until the player exists); title edit (`BeginRename` / `SaveRename` / `CancelRename`, blank = untitled, `Renamed` callback); `Delete` / `Back` call `DeleteMeeting` / `GoBack` (set by the owner); Ask tab = an `AskViewModel` scoped to the session whose citations focus the line and cue its time; `Dispose` releases the player. Tabs: 0 Minutes, 1 Transcript, 2 Speakers, 3 Action items, 4 Ask. **Tags** are not shown: sessions have no tags in the data model (no phase defines them).
+
 
 
