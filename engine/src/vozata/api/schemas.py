@@ -29,11 +29,17 @@ class LlmStatus(BaseModel):
 
 
 class StorageStatus(BaseModel):
-    """Phase 31: `warning` is a localized message when the database is in a OneDrive folder."""
+    """Phase 31: `warning` is a localized message when the database is in a OneDrive folder.
+
+    Phase 32: `size_bytes` is the database file (with its WAL), `audio_cache_bytes` the WAVs
+    built from it; both null for the file backend.
+    """
 
     backend: Literal["sqlite", "files"]
     database: str | None  # absolute path of the SQLite database
     warning: str | None
+    size_bytes: int | None = None
+    audio_cache_bytes: int | None = None
 
 
 class Health(BaseModel):
@@ -83,9 +89,11 @@ class SessionSummary(BaseModel):
 
 
 class SessionDetail(SessionSummary):
-    """`SessionSummary` + every `session.json` field + files + absolute folder.
+    """`SessionSummary` + every `session.json` field + files + absolute folder + audio.
 
     `files` and `folder` come from the file backend; a backend without folders leaves them null.
+    `audio` maps each playable track (`mic`, `system`, `mixed`) to its duration in seconds; play
+    it from `GET /sessions/{id}/audio/{track}` (phase 32).
     """
 
     model_config = ConfigDict(extra="allow")
@@ -93,6 +101,7 @@ class SessionDetail(SessionSummary):
     files: list[str] | None = None
     folder: str | None = None
     storage: Literal["sqlite", "files"] = "files"  # phase 31
+    audio: dict[Literal["mic", "system", "mixed"], float] = {}  # phase 32
 
 
 class SessionList(BaseModel):

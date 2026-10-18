@@ -41,6 +41,7 @@ session_already_active = "A recording is already in progress or still being fina
 no_active_session = "No recording is in progress."
 session_not_found = "Session \"{id}\" was not found."
 minutes_not_found = "Session \"{id}\" has no minutes yet."
+audio_not_found = "Session \"{id}\" has no \"{track}\" audio."
 session_still_recording = "Session \"{id}\" is still recording; minutes are generated when it stops."
 unknown_segment = "Segment \"{id}\" is not in the current transcript. Reload the transcript and try again."
 empty_segment_text = "Segment \"{id}\" cannot be empty. Type its text, or revert the change."

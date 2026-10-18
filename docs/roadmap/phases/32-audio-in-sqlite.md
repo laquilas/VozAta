@@ -76,8 +76,8 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** in progress
 - **Updated:** 2026-10-17 23:30
-- **Next step:** wire `SqliteAudioStore` in `bootstrap.AUDIO_STORES` (cache cleaned at engine
-  start), make `SqliteSessionRepository.folder` / `files` None and stop creating the folder.
+- **Next step:** crash test `tests/storage/sqlite/test_audio_crash.py`: a writer subprocess
+  killed mid-batch; recovery returns every committed second, both channels equal length.
 
 ### Steps
 
@@ -89,9 +89,10 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
       transaction), silence for gaps and pauses, equal-length finalize, repair; contract suite
 - [x] Reader: chunk-range `frames`, on-the-fly mix, `materialize_wav` with the LRU cache
 - [x] Config `AUDIO_CACHE_MB` (`config.py`, `settings_fields.py`, `.env.example`, UI labels)
-- [ ] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
+- [x] Bootstrap wiring (`AUDIO_STORES`, cache trimmed at engine start), recovery through
+      `SqliteAudioStore.repair`, no session folder for sqlite (`folder` / `files` None)
+- [x] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
       `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
-- [ ] Bootstrap wiring, recovery, delete helper (chunks + background `incremental_vacuum`)
 - [ ] Crash test: writer subprocess killed mid-batch
 - [ ] UI: "Play" downloads from the endpoint to a temp file and opens the OS player
 - [ ] Docs (architecture, api-contract), full suites, manual check recipe
@@ -124,3 +125,19 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   `Database.reclaim()` on a background thread. Phase 36 (`DELETE /sessions/{id}`) calls it.
 - `AUDIO_CACHE_MB` (integer, 0 to 1048576, default 2048) applies on restart; 0 keeps only the
   file just built.
+- `SqliteSessionRepository` no longer creates `OUTPUT_DIR/<id>/`; `create` still skips ids
+  whose folder exists (file-backend sessions). `folder` / `files` are None, so
+  `GET /sessions/{id}` has `folder: null`, `files: null` for sqlite. Phase 31 sessions recorded
+  with the SQLite backend keep their WAVs in their folders, which the API no longer serves;
+  phase 33 imports them (only manual-check sessions exist: phase 31 merged the same day).
+- With no folder, the retry commands in error messages name `OUTPUT_DIR/<id>` (the CLI
+  `minutes` / `diarize` open the storage of the parent folder, so that path works); `record`
+  prints the session id instead of a folder.
+- API: `GET /sessions/{id}/audio/{mic|system|mixed}` serves any backend through
+  `ApiContainer.audio` (`AudioTracks`): a generated 44-byte header plus PCM read a second at a
+  time (`api/wav_stream.py`). One range per request (`bytes=a-b`, `a-`, `-n`); malformed,
+  multiple or out-of-file ranges give `416` with `Content-Range: bytes */size`. `404
+  session_not_found` for an unknown session, `404 audio_not_found` for an unknown track or one
+  with no audio. The detail has `audio: {track: seconds}`; the file backend lists the WAVs it
+  has. `GET /health` → `storage.size_bytes` (database + WAL) and `storage.audio_cache_bytes`
+  (null for files), as phase 38 expects.

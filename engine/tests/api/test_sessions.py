@@ -173,13 +173,12 @@ def test_detail_adds_metadata_files_and_folder(api: Api) -> None:
     assert body["storage"] == "files"
 
 
-def test_detail_of_a_database_session_lists_only_its_audio(api: Api, tmp_path: Path) -> None:
+def test_detail_of_a_database_session_has_no_folder_or_files(api: Api, tmp_path: Path) -> None:
     database = Database(tmp_path / "vozata.db")
     store = SqliteSessionRepository(database, tmp_path / "db-recordings")
     session_id = store.create()
     store.write_meta(session_id, {"id": session_id, "status": "done", "language": "en"})
     store.write_minutes(session_id, "# Minutes\n")
-    (tmp_path / "db-recordings" / session_id / "mic.wav").write_bytes(b"RIFF")
     container = api.app.state.container
     api.app.state.container = dataclasses.replace(
         container, store=store, storage=StorageInfo("sqlite", database.path)
@@ -187,8 +186,8 @@ def test_detail_of_a_database_session_lists_only_its_audio(api: Api, tmp_path: P
 
     body = api.client.get(f"/sessions/{session_id}").json()
 
-    assert (body["storage"], body["has_minutes"], body["files"]) == ("sqlite", True, ["mic.wav"])
-    assert body["folder"] == str((tmp_path / "db-recordings" / session_id).resolve())
+    assert (body["storage"], body["has_minutes"]) == ("sqlite", True)
+    assert (body["files"], body["folder"], body["audio"]) == (None, None, {})
     database.close()
 
 

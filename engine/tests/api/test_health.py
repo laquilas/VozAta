@@ -18,7 +18,13 @@ def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
         "gpu": {"available": True, "name": "RTX 3050", "vram_total_mb": 6144},
         "stt": {"provider": "faster_whisper", "model": "large-v3-turbo", "device": "auto"},
         "llm": {"provider": "ollama", "model": "qwen2.5:7b", "reachable": True},
-        "storage": {"backend": "files", "database": None, "warning": None},
+        "storage": {
+            "backend": "files",
+            "database": None,
+            "warning": None,
+            "size_bytes": None,
+            "audio_cache_bytes": None,
+        },
     }
 
 
@@ -49,6 +55,34 @@ def test_health_has_no_warning_for_a_local_database(api: Api, tmp_path: Path) ->
 
     assert storage["warning"] is None
     assert storage["database"] == str((tmp_path / "vozata.db").resolve())
+
+
+def test_health_reports_the_database_and_cache_sizes(api: Api, tmp_path: Path) -> None:
+    (tmp_path / "vozata.db").write_bytes(bytes(1000))
+    (tmp_path / "vozata.db-wal").write_bytes(bytes(24))
+    (tmp_path / "cache" / "20261015_202358").mkdir(parents=True)
+    (tmp_path / "cache" / "20261015_202358" / "system.wav").write_bytes(bytes(300))
+    container = api.app.state.container
+    api.app.state.container = dataclasses.replace(
+        container,
+        storage=StorageInfo("sqlite", tmp_path / "vozata.db", None, tmp_path / "cache"),
+    )
+
+    storage = api.client.get("/health").json()["storage"]
+
+    assert (storage["size_bytes"], storage["audio_cache_bytes"]) == (1024, 300)
+
+
+def test_missing_database_and_cache_count_zero_bytes(api: Api, tmp_path: Path) -> None:
+    container = api.app.state.container
+    api.app.state.container = dataclasses.replace(
+        container,
+        storage=StorageInfo("sqlite", tmp_path / "none.db", None, tmp_path / "no-cache"),
+    )
+
+    storage = api.client.get("/health").json()["storage"]
+
+    assert (storage["size_bytes"], storage["audio_cache_bytes"]) == (0, 0)
 
 
 def test_a_remote_speech_api_is_named_by_its_host(tmp_path: Path) -> None:
