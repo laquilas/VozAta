@@ -77,9 +77,9 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:30
-- **Next step:** UI: hide "Open folder" when the session has no `folder` (`HistoryView.axaml`),
-  add `Setting_` / `SettingHelp_` strings for `STORAGE_BACKEND` and `DATABASE_PATH` in the
-  three `Strings*.resx`; run the UI suite.
+- **Next step:** docs — architecture §5/§8/§9 (SQLite schema, `STORAGE_BACKEND`,
+  `DATABASE_PATH`, OneDrive), api-contract (`GET /health` `storage`, `GET /sessions/{id}`
+  `storage`); then full suites and the manual check recipe.
 
 ### Steps
 
@@ -91,7 +91,7 @@ Audio in the database (32), importing old folders (33), settings in the database
 - [x] Bootstrap wiring, OneDrive warning in `GET /health`, `storage` field in
       `GET /sessions/{id}`, CLI session folders
 - [x] Crash test: a writer subprocess killed mid-session (`tests/storage/sqlite/test_crash.py`)
-- [ ] UI: hide "Open folder" without a folder; setting labels for the new keys
+- [x] UI: hide "Open folder" without a folder; setting labels for the new keys
 - [ ] Docs (architecture §8/§9, api-contract), full suites, manual check recipe
 
 ### Decisions and notes

@@ -122,7 +122,8 @@
                   <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="system"
                           Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlaySystem]}" />
                   <Button Margin="0,0,8,4" Command="{Binding OpenFolderCommand}"
-                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}" />
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}"
+                          IsVisible="{Binding Folder, Converter={x:Static ObjectConverters.IsNotNull}}" />
                   <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="md"
                           Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportMarkdown]}" />
                   <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="docx"

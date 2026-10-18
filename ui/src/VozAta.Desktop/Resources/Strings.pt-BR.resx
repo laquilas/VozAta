@@ -298,7 +298,19 @@
     <value>Pasta das gravações</value>
   </data>
   <data name="SettingHelp_OUTPUT_DIR" xml:space="preserve">
-    <value>Pasta onde cada sessão ganha uma subpasta com áudio, transcrição e ata.</value>
+    <value>Pasta onde cada sessão ganha uma subpasta com o seu áudio (e, com o armazenamento files, a transcrição e a ata).</value>
+  </data>
+  <data name="Setting_STORAGE_BACKEND" xml:space="preserve">
+    <value>Armazenamento das sessões</value>
+  </data>
+  <data name="SettingHelp_STORAGE_BACKEND" xml:space="preserve">
+    <value>sqlite guarda sessões, transcrições e atas em um banco de dados (vozata.db); files guarda uma pasta de arquivos JSON e Markdown por sessão. O áudio fica na pasta das gravações nos dois casos.</value>
+  </data>
+  <data name="Setting_DATABASE_PATH" xml:space="preserve">
+    <value>Arquivo do banco de dados</value>
+  </data>
+  <data name="SettingHelp_DATABASE_PATH" xml:space="preserve">
+    <value>O arquivo do banco de dados SQLite; vazio usa vozata.db na pasta das gravações. Mantenha-o fora de pastas sincronizadas pelo OneDrive: a sincronização pode bloqueá-lo ou corrompê-lo enquanto o VozAta está em execução.</value>
   </data>
   <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
     <value>Gerar ata ao parar a gravação</value>
