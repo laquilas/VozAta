@@ -96,6 +96,18 @@ public static class EngineEventParser
                     data.GetProperty("answer_id").GetString() ?? "",
                     data.GetProperty("citations").Deserialize<List<Citation>>(EngineJson.Options) ?? throw new JsonException(),
                     data.TryGetProperty("error", out var answerError) ? answerError.GetString() : null),
+                "migration_progress" => new MigrationProgressEvent(
+                    sessionId,
+                    data.GetProperty("done").GetInt32(),
+                    data.GetProperty("total").GetInt32(),
+                    data.GetProperty("current").GetString(),
+                    data.GetProperty("paused").GetBoolean()),
+                "migration_done" => new MigrationDoneEvent(
+                    sessionId,
+                    data.GetProperty("state").GetString() ?? "",
+                    data.GetProperty("imported").GetInt32(),
+                    data.GetProperty("skipped").GetInt32(),
+                    data.GetProperty("errors").GetInt32()),
                 "error" => new ErrorEvent(
                     sessionId, data.GetProperty("code").GetString() ?? "", data.GetProperty("message").GetString() ?? ""),
                 _ => new UnknownEvent(sessionId, type),

@@ -278,6 +278,11 @@
   <Style Selector=":is(TextBlock).focused">
     <Setter Property="Background" Value="{DynamicResource Brush.Highlight}" />
   </Style>
+  <!-- The line the in-app player is playing (phase 37) -->
+  <Style Selector=":is(TextBlock).current">
+    <Setter Property="Background" Value="{DynamicResource Brush.Highlight}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
 
   <!-- Minutes rendered from Markdown -->
   <Style Selector=":is(TextBlock).h1">

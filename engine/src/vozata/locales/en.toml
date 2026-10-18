@@ -158,6 +158,13 @@ recovered = "Recovered: {folder}"
 recover_failed = "The session {id} could not be recovered ({reason}). Its files were kept."
 recover_none = "No interrupted sessions found."
 recover_not_interrupted = "The session in {folder} was not interrupted, so there is nothing to recover."
+migrate_files_backend = "STORAGE_BACKEND=files keeps the meetings in folders: there is nothing to import."
+migrate_nothing = "Nothing to import."
+migrate_would = "{count} folder(s) would be imported:"
+migrate_progress = "Importing {done}/{total}: {folder}"
+migrate_skipped = "Not imported: {folder} ({message})"
+migrate_done = "Imported {imported}, not imported {skipped}."
+migrate_failed = "The import stopped ({reason}); run it again to continue."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -179,6 +186,8 @@ diarize_minutes = "generate the minutes again afterwards"
 reindex = "rebuild the search index from every recorded session"
 recover = "repair and finish a session interrupted by a crash (audio, speakers, minutes)"
 recover_all = "recover every interrupted session in OUTPUT_DIR"
+migrate = "import the meeting folders recorded before the database into it (the folders are kept)"
+migrate_dry_run = "only list the folders that would be imported"
 
 [export]
 title = "Meeting of {date}"
@@ -194,6 +203,13 @@ column_text = "Text"
 
 [storage]
 onedrive_warning = "The database {path} is in a OneDrive folder ({root}). OneDrive can lock or corrupt it while VozAta runs: set DATABASE_PATH to a folder outside OneDrive and restart the engine."
+
+[migration]
+unreadable_json = "A file of the meeting (session.json, a transcript or the action items) could not be read."
+unreadable_wav = "An audio file of the meeting could not be read."
+unsupported_wav = "An audio file of the meeting has an unsupported format (it must be mono 16-bit at the configured sample rate)."
+id_in_use = "A meeting with the same id is already in the database."
+no_space = "Not enough free disk space to import {folder}: {needed} MB needed, {free} MB free. Free some space; the import continues at the next start."
 
 [settings_test]
 ollama_ok = "Ollama answered and the model {model} is installed."

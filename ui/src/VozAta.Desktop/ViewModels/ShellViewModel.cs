@@ -84,7 +84,25 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public partial NavItem CurrentItem { get; private set; }
 
     /// <summary>The page ViewModel shown in the content area (a DataTemplate per type).</summary>
-    public object CurrentPage => CurrentItem.Page;
+    public object CurrentPage => SessionPage ?? CurrentItem.Page;
+
+    /// <summary>A meeting open as its own page (phase 37) over the Meetings entry; null when none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentPage))]
+    public partial object? SessionPage { get; private set; }
+
+    /// <summary>The user went to another page (or back to the list) while a meeting page was open.</summary>
+    public event EventHandler? SessionLeft;
+
+    /// <summary>Show a meeting page (the Meetings entry stays selected in the sidebar).</summary>
+    public void OpenSession(object page)
+    {
+        CurrentItem = Pages.First(item => item.Key == Meetings);
+        SessionPage = page;
+    }
+
+    /// <summary>The meeting page closed (back, deleted): the Meetings list shows again.</summary>
+    public void CloseSession() => SessionPage = null;
 
     /// <summary>The sidebar shows icons only (remembered in <c>ui.json</c>).</summary>
     [ObservableProperty]
@@ -108,6 +126,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (Pages.FirstOrDefault(item => item.Key == key) is { } item)
         {
             CurrentItem = item;
+            if (SessionPage is not null)
+            {
+                SessionPage = null;
+                SessionLeft?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 

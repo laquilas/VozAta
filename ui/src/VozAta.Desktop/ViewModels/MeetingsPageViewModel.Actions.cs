@@ -62,7 +62,17 @@ public sealed partial class MeetingsPageViewModel
         _undo?.Dispose();
     }
 
-    /// <summary>Open the meeting in the detail on the right.</summary>
+    /// <summary>Delete a meeting from its page (phase 37): the same question and Undo as a row.</summary>
+    public Task DeleteMeetingAsync(SessionSummary summary) => DeleteCommand.ExecuteAsync(NewRow(summary));
+
+    /// <summary>A meeting was renamed on its page (phase 37): show the new title in the list.</summary>
+    public Task OnRenamedAsync(SessionSummary summary)
+    {
+        Replace(summary);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Open the meeting as its own page (phase 37).</summary>
     [RelayCommand]
     private void Open(MeetingRow? row)
     {

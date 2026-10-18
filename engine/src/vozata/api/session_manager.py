@@ -195,6 +195,12 @@ class SessionManager:
     def current(self) -> Session | None:
         return self._session
 
+    @property
+    def busy(self) -> bool:
+        """A session records, is paused or finalizing, or one is being recovered (phase 33:
+        the folder import waits meanwhile)."""
+        return self._session is not None or self._recovering is not None
+
     def start(self, options: StartOptions) -> dict[str, Any]:
         with self._lock:
             if self._session is not None or self._recovering is not None:

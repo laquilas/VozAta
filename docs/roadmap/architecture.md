@@ -451,7 +451,8 @@ variables can miss a personal OneDrive next to a business one) and
   applied in order on the first connection by `PRAGMA user_version`, each in its own
   transaction; a database with a newer version than the engine knows is refused
   (`DatabaseVersionError`). `001_schema.sql`: tables; `002_search.sql`: the FTS table and its
-  triggers; `003_audio.sql`: `audio_chunks`. New files use `auto_vacuum=INCREMENTAL`; a file
+  triggers; `003_audio.sql`: `audio_chunks`; `004_migration.sql`: `sessions.imported_at`, an
+  index on `imported_from`, `migration_errors` (phase 33). New files use `auto_vacuum=INCREMENTAL`; a file
   created before phase 32 is converted once on open (one `VACUUM`). `Database.reclaim()` runs
   `incremental_vacuum` (after audio is deleted, in the background).
 - **No session folder** (phase 32): `create` skips ids taken by a row or by an existing folder
@@ -474,19 +475,44 @@ variables can miss a personal OneDrive next to a business one) and
 
 | Table | Columns | Notes |
 |-------|---------|-------|
-| `sessions` | `id` PK, `status`, `started_at`, `ended_at`, `duration_seconds`, `last_heartbeat_at`, `language`, `language_source`, `app_language`, `template`, `title`, `meta_json`, `imported_from` | `write_meta` is one UPSERT (a heartbeat changes one row). `meta_json` keeps every metadata key in order (the `session.json` fields without a column: devices, pauses, settings, `echo_dropped`, vocabulary…); a value stored in its column is `null` there, so `read_meta` returns exactly what was written. `meta_json` is NULL until the first `write_meta`: such a row is not listed. `imported_from` is for phase 33 |
+| `sessions` | `id` PK, `status`, `started_at`, `ended_at`, `duration_seconds`, `last_heartbeat_at`, `language`, `language_source`, `app_language`, `template`, `title`, `meta_json`, `imported_from` | `write_meta` is one UPSERT (a heartbeat changes one row). `meta_json` keeps every metadata key in order (the `session.json` fields without a column: devices, pauses, settings, `echo_dropped`, vocabulary…); a value stored in its column is `null` there, so `read_meta` returns exactly what was written. `meta_json` is NULL until the first `write_meta`: such a row is not listed. `imported_from` / `imported_at` (phase 33): the folder a session was imported from, and when |
 | `segments` | `row_id` INTEGER PK, `session_id` FK, `source` (`raw` \| `diarized` \| `edited`), `segment_id`, `channel`, `speaker_id`, `start`, `"end"`, `text`, `words_json`, `edited`; UNIQUE (`session_id`, `source`, `segment_id`) | the three transcripts of the file backend as rows; `row_id` keeps the written order and is the FTS rowid; the best transcript is edited, then diarized, then raw |
 | `translations` | PK (`session_id`, `segment_id`), `language`, `text` | live translations (29); a new one of a segment replaces the old one |
 | `speakers` | PK (`session_id`, `speaker_id`), `name` | `name` NULL = localized label |
 | `minutes` | `session_id` PK, `markdown`, `template`, `generated_at` | the Markdown exactly as written, with the session's template |
 | `action_items` | `row_id` INTEGER PK, `session_id`, `item_id`, `description`, `owner`, `due`, `source_ids_json`, `exported_url` | in written order |
 | `audio_chunks` | PK (`session_id`, `channel` `mic` \| `system`, `seq`), `start_frame`, `frames`, `pcm` BLOB; index (`session_id`, `channel`, `start_frame`) | phase 32: little-endian int16, ≤ 1 s per chunk; a range read selects the chunks overlapping it |
+| `migration_errors` | `folder` PK, `reason`, `detail`, `at` | phase 33: folders that could not be imported (`reason` = `unreadable_json` \| `unreadable_wav` \| `unsupported_wav` \| `id_in_use`, a `[migration]` locale key; `detail` the error text); not tried again while listed |
 | `segments_fts` | FTS5 (`session_id`, `segment_id`, `start`, `speaker_id` unindexed; `text`), rowid = `segments.row_id` | tokenizer `unicode61 remove_diacritics 2`; holds only each session's best source, kept in sync by triggers on insert / update / delete of `segments` (an edit replaces the diarized rows, reverting it brings them back); `reindex` rebuilds it; no `index.db` |
 
 Every child table references `sessions(id) ON DELETE CASCADE`: `discard` removes everything of a
 session (and the FTS rows, through the triggers). A session row still `recording` / `paused` /
 `finalizing` without a live session is `interrupted` (§6, phase 17); its committed segments and
 audio chunks are complete, so recovery only pads the shorter channel.
+
+**Folder import** (phase 33, `storage/migration.py` `FolderImporter`, `storage/folder_reader.py`):
+with the SQLite backend, `serve` imports every folder of `OUTPUT_DIR` recorded before phase 31
+into the database in the background (`api/migration_job.py`, started by the app lifespan), and
+`python -m vozata migrate [--dry-run]` does the same from the command line. A folder is pending
+when it has a `session.json` and no row of its id exists, or when it is the folder of a phase 31
+SQLite session (WAVs only) whose row has no audio yet; folders in `migration_errors` are
+skipped. Each folder is imported in **one transaction**, oldest first and keeping its name as
+the session id: metadata, the raw / diarized / edited transcripts, translations, speakers and
+their names, minutes (`generated_at` = the mtime of `minutes.md`), action items, then the mic
+and system WAVs streamed into 1 s chunks and padded to the same length (`mixed.wav` is not
+imported: the mix is computed on read); `imported_from` / `imported_at` mark it done. A crash
+rolls back only the folder being imported; the next start continues (idempotent). The folders
+are **never changed**, except that an interrupted one (`recording` / `paused` / `finalizing` /
+`interrupted`) first gets the phase 17 repairs (WAV headers and padding, a half-written last
+transcript line) and is imported as `interrupted`, so the recovery prompt offers it (no LLM runs
+during the import). A folder is read strictly: an unreadable `session.json`, transcript line or
+`action_items.json` (`unreadable_json`), an unreadable WAV (`unreadable_wav`) or one that is not
+mono 16-bit at `SAMPLE_RATE` (`unsupported_wav`, no resampling) records the folder in
+`migration_errors` and the import goes on. Before each folder the free space of the database's
+disk must be ≥ the folder's size × 1.1; if not, the import stops (`no_space`) and continues at
+the next start. The job waits between folders while a session records, is paused, finalizes or
+is recovered (`SessionManager.busy`). `STORAGE_BACKEND=files` disables it. **Keep a backup of
+the folders until the imported meetings are checked**; deleting them is left to the user.
 
 ### File backend (`STORAGE_BACKEND=files`)
 
@@ -838,6 +864,7 @@ graph LR
   SV --> M[Meetings: MeetingsPageViewModel → HistoryViewModel]
   SV --> A[Ask: AskPageViewModel → AskViewModel]
   SV --> C[Config: ConfigPageViewModel → SettingsViewModel, StorageViewModel, AboutViewModel]
+  SV --> P[Meeting page: SessionPageViewModel → PlayerBarViewModel → IAudioPlayer]
   R --> S[RecordingSessionService]
   SV --> S
   T[TrayViewModel] --> R
@@ -863,3 +890,20 @@ graph LR
   reaches the page). "Restart needed" and "Changed" badges, a sticky Save / Discard bar while
   dirty, and "Test" buttons next to `OLLAMA_URL`, `OPENAI_STT_URL`, `HF_TOKEN`, `AZDO_PAT` and
   `GITHUB_TOKEN` (`POST /settings/test/{target}`, saved settings, run only on click).
+- Meeting page (phase 37): opening a meeting (a Meetings row, a search hit, an Ask citation) shows
+  `SessionPageViewModel` as the shell's `SessionPage`, over the Meetings entry; Back, deleting it,
+  or picking any sidebar page closes it (unsaved transcript edits are asked about first).
+  `HistoryViewModel` still owns the open meeting (`Detail`). The page has a header (back,
+  editable title, date, duration; template + regenerate, export, "Open in external player",
+  delete through the Meetings flow with its Undo), the tabs Minutes, Transcript, Speakers, Action
+  items and Ask (scoped to the meeting), and the player bar docked at the bottom (none while live
+  or without audio). A transcript line's play button plays from its start; the line being played
+  is highlighted and scrolled into view while "Follow playback" is on; a search hit or a citation
+  shows its moment in the player without playing.
+- In-app player: the port `IAudioPlayer` (`Services/AudioPlayer.cs`), wired in `App.axaml.cs` as
+  `Func<IAudioPlayer>` (one player per meeting page, released when the page closes).
+  `LibVlcAudioPlayer` (LibVLCSharp) streams `GET /sessions/{id}/audio/{mixed|mic|system}` from the
+  engine (HTTP Range, no temp files); speed 0.75–2× keeps the pitch. Only the x64 LibVLC files an
+  audio stream needs ship (≈ 11 MB, `libvlc/win-x64/` next to the single-file executable).
+  `PlayerBarViewModel`: play/pause, −10 s / +10 s, position slider, speed, channel (switching
+  keeps the position) and volume.

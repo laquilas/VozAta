@@ -88,17 +88,20 @@ class SessionAnnotations:
         )
         return None if row is None else str(row[0])
 
-    def write_minutes(self, session_id: str, markdown: str) -> None:
-        """Stored with the session's template and the time it was written."""
+    def write_minutes(
+        self, session_id: str, markdown: str, generated_at: datetime | None = None
+    ) -> None:
+        """Stored with the session's template and the time it was written (`generated_at`,
+        default now: the folder import of phase 33 keeps the original time)."""
         check_id(session_id)
-        generated_at = self.now().isoformat(timespec="seconds")
+        written = (generated_at or self.now()).isoformat(timespec="seconds")
         with self._db.write() as db:
             db.execute(
                 "INSERT INTO minutes (session_id, markdown, template, generated_at)"
                 " VALUES (?, ?, (SELECT template FROM sessions WHERE id = ?), ?)"
                 " ON CONFLICT (session_id) DO UPDATE SET markdown = excluded.markdown,"
                 " template = excluded.template, generated_at = excluded.generated_at",
-                (session_id, markdown, session_id, generated_at),
+                (session_id, markdown, session_id, written),
             )
 
     def has_minutes(self, session_id: str) -> bool:

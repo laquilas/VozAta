@@ -29,6 +29,7 @@ from vozata.api.routes import (
     vocabulary,
 )
 from vozata.api.routes import ask as ask_routes
+from vozata.api.routes import migration as migration_routes
 from vozata.api.schemas import ErrorResponse
 
 ERROR_RESPONSES = {status: {"model": ErrorResponse} for status in (404, 409, 422, 500, 503)}
@@ -38,6 +39,8 @@ def create_app(container: ApiContainer) -> FastAPI:
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         container.broadcaster.bind(asyncio.get_running_loop())
+        if container.migration is not None:
+            container.migration.start()  # phase 33: after `bind`, so its events reach clients
         yield
         container.release_models()
 
@@ -65,6 +68,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     app.include_router(action_items.router, responses=ERROR_RESPONSES)  # phase 23
     app.include_router(recover.router, responses=ERROR_RESPONSES)  # phase 17
     app.include_router(settings_tools.router, responses=ERROR_RESPONSES)  # phase 38
+    app.include_router(migration_routes.router, responses=ERROR_RESPONSES)  # phase 33
     app.include_router(branding.router)
 
     @app.websocket("/ws")
@@ -73,6 +77,8 @@ def create_app(container: ApiContainer) -> FastAPI:
         client = container.broadcaster.subscribe()
         try:
             await websocket.send_json(container.manager.status_message())
+            if container.migration is not None and container.migration.is_running():
+                await websocket.send_json(container.migration.progress_message())  # phase 33
             interrupted = await asyncio.to_thread(container.manager.interrupted_sessions)
             if interrupted:  # phase 17: offer to recover sessions a crash cut short
                 data = {"session_ids": interrupted}

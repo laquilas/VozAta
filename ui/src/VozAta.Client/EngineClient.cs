@@ -113,6 +113,9 @@ public interface IEngineClient
 
     /// <summary><c>DELETE /storage/cache</c> (phase 38): empty the audio cache.</summary>
     Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /migration</c> (phase 33): the import of the old meeting folders.</summary>
+    Task<MigrationSummary> GetMigrationAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>The engine answered with the error envelope; <see cref="Exception.Message"/> is localized.</summary>
@@ -293,6 +296,9 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<ConnectionTestResult> TestConnectionAsync(string target, CancellationToken cancellationToken = default) =>
         SendAsync<ConnectionTestResult>(HttpMethod.Post, $"settings/test/{Escape(target)}", null, cancellationToken);
+
+    public Task<MigrationSummary> GetMigrationAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<MigrationSummary>(HttpMethod.Get, "migration", null, cancellationToken);
 
     public Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default) =>
         SendAsync<CacheCleared>(HttpMethod.Delete, "storage/cache", null, cancellationToken);

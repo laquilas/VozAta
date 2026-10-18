@@ -12,6 +12,7 @@ import logging
 import sqlite3
 import threading
 import weakref
+from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +21,7 @@ from vozata.audio.pcm import ChannelTrack, MixedTrack
 from vozata.domain import AudioTrack, Channel
 from vozata.ports import AudioMixer, AudioTrackWriter, PcmTrack
 from vozata.storage.audio_cache import WavCache
-from vozata.storage.sqlite.audio_writer import ChunkBatcher, SqliteTrackWriter
+from vozata.storage.sqlite.audio_writer import INSERT_CHUNK, ChunkBatcher, SqliteTrackWriter
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.rows import check_id
 
@@ -71,6 +72,45 @@ class SqliteAudioStore:
                 )
                 self._batchers[session_id] = batcher
         return SqliteTrackWriter(batcher, channel, self._rate)
+
+    def import_pcm(self, session_id: str, channel: Channel, blocks: Iterable[bytes]) -> int:
+        """Replace a channel's audio with `blocks` of mono 16-bit PCM (the folder import of
+        phase 33). One transaction, joining the caller's; returns the number of samples."""
+        check_id(session_id)
+        chunk_bytes = 2 * self._chunk
+        with self._db.write() as db:
+            db.execute(
+                "DELETE FROM audio_chunks WHERE session_id = ? AND channel = ?",
+                (session_id, channel.value),
+            )
+            pending = bytearray()
+            seq = start = 0
+            for block in blocks:
+                pending += block
+                rows = []
+                while len(pending) >= chunk_bytes:
+                    rows.append(
+                        (
+                            session_id,
+                            channel.value,
+                            seq,
+                            start,
+                            self._chunk,
+                            bytes(pending[:chunk_bytes]),
+                        )
+                    )
+                    del pending[:chunk_bytes]
+                    seq += 1
+                    start += self._chunk
+                db.executemany(INSERT_CHUNK, rows)
+            if len(pending) >= 2:
+                frames = len(pending) // 2
+                db.execute(
+                    INSERT_CHUNK,
+                    (session_id, channel.value, seq, start, frames, bytes(pending[: 2 * frames])),
+                )
+                start += frames
+        return start
 
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None:
         """Nothing to write: the mixed track is computed on read (`track(id, MIXED)`)."""
@@ -166,8 +206,4 @@ class SqliteAudioStore:
             frames = min(self._chunk, total - start)
             rows.append((session_id, channel.value, seq, start, frames, bytes(2 * frames)))
             seq += 1
-        db.executemany(
-            "INSERT INTO audio_chunks (session_id, channel, seq, start_frame, frames, pcm)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            rows,
-        )
+        db.executemany(INSERT_CHUNK, rows)

@@ -158,6 +158,13 @@ recovered = "Recuperada: {folder}"
 recover_failed = "A sessão {id} não pôde ser recuperada ({reason}). Os arquivos foram mantidos."
 recover_none = "Nenhuma sessão interrompida encontrada."
 recover_not_interrupted = "A sessão em {folder} não foi interrompida, então não há nada a recuperar."
+migrate_files_backend = "STORAGE_BACKEND=files mantém as reuniões em pastas: não há nada para importar."
+migrate_nothing = "Nada para importar."
+migrate_would = "{count} pasta(s) seriam importadas:"
+migrate_progress = "Importando {done}/{total}: {folder}"
+migrate_skipped = "Não importada: {folder} ({message})"
+migrate_done = "Importadas {imported}, não importadas {skipped}."
+migrate_failed = "A importação parou ({reason}); execute-a de novo para continuar."
 
 [cli.devices]
 microphones = "Microfones:"
@@ -179,6 +186,8 @@ diarize_minutes = "gera a ata novamente em seguida"
 reindex = "reconstrói o índice de busca a partir de todas as sessões gravadas"
 recover = "repara e finaliza uma sessão interrompida por uma falha (áudio, falantes, ata)"
 recover_all = "recupera todas as sessões interrompidas em OUTPUT_DIR"
+migrate = "importa para o banco de dados as pastas de reuniões gravadas antes dele (as pastas são mantidas)"
+migrate_dry_run = "apenas lista as pastas que seriam importadas"
 
 [export]
 title = "Reunião de {date}"
@@ -194,6 +203,13 @@ column_text = "Texto"
 
 [storage]
 onedrive_warning = "O banco de dados {path} está em uma pasta do OneDrive ({root}). O OneDrive pode bloqueá-lo ou corrompê-lo enquanto o VozAta está em execução: defina DATABASE_PATH para uma pasta fora do OneDrive e reinicie o motor."
+
+[migration]
+unreadable_json = "Não foi possível ler um arquivo da reunião (session.json, uma transcrição ou os itens de ação)."
+unreadable_wav = "Não foi possível ler um arquivo de áudio da reunião."
+unsupported_wav = "Um arquivo de áudio da reunião tem um formato não suportado (deve ser mono 16 bits na taxa de amostragem configurada)."
+id_in_use = "Já existe no banco de dados uma reunião com o mesmo id."
+no_space = "Não há espaço livre em disco suficiente para importar {folder}: {needed} MB necessários, {free} MB livres. Libere espaço; a importação continua na próxima inicialização."
 
 [settings_test]
 ollama_ok = "O Ollama respondeu e o modelo {model} está instalado."

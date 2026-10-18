@@ -20,7 +20,7 @@ from vozata.domain import Channel
 from vozata.storage.sqlite.db import Database
 
 _log = logging.getLogger(__name__)
-_INSERT = (
+INSERT_CHUNK = (
     "INSERT INTO audio_chunks (session_id, channel, seq, start_frame, frames, pcm)"
     " VALUES (?, ?, ?, ?, ?, ?)"
 )
@@ -93,7 +93,7 @@ class ChunkBatcher:
             rows, after = self._rows(taken)
             try:
                 with self._db.write() as db:
-                    db.executemany(_INSERT, rows)
+                    db.executemany(INSERT_CHUNK, rows)
             except BaseException:
                 with self._lock:
                     for channel, pcm in taken.items():

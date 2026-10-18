@@ -186,3 +186,57 @@ def test_sqlite_recovery_pads_the_audio_and_finishes_the_session(tmp_path: Path)
     assert [hit.session_id for hit in bootstrap.build_search_index(settings).search("hello")] == [
         session_id
     ]
+
+
+def test_the_folder_importer_reads_output_dir_into_the_database(tmp_path: Path) -> None:
+    from tests.storage.test_migration import write_wav
+
+    settings = _settings(tmp_path)
+    folder = tmp_path / "recordings" / "20261015_202358"
+    folder.mkdir(parents=True)
+    (folder / "session.json").write_text('{"id": "20261015_202358", "status": "done"}', "utf-8")
+    write_wav(folder / "mic.wav", 1.0)
+
+    importer = bootstrap.build_folder_importer(settings)
+
+    assert importer is not None
+    assert importer.pending() == ["20261015_202358"]
+    assert importer.import_one("20261015_202358") is None
+    assert bootstrap.build_store(settings).list_sessions() == ["20261015_202358"]
+
+
+def test_the_files_backend_has_no_folder_import(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, storage_backend=StorageBackend.FILES)
+
+    assert bootstrap.build_folder_importer(settings) is None
+    assert bootstrap.build_migration_job(settings, None, None, FakeLocalizer()) is None  # type: ignore[arg-type]
+
+
+class _Manager:
+    def __init__(self, interrupted: list[str]) -> None:
+        self.busy = False
+        self.interrupted = interrupted
+
+    def interrupted_sessions(self) -> list[str]:
+        return self.interrupted
+
+
+@pytest.mark.parametrize("interrupted", [[], ["20261015_202358"]])
+def test_the_migration_job_offers_to_recover_imported_interrupted_sessions(
+    tmp_path: Path, interrupted: list[str]
+) -> None:
+    from tests.api.conftest import RecordingBroadcaster
+
+    broadcaster = RecordingBroadcaster()
+    job = bootstrap.build_migration_job(
+        _settings(tmp_path),
+        _Manager(interrupted),
+        broadcaster,
+        FakeLocalizer(),  # type: ignore[arg-type]
+    )
+
+    assert job is not None
+    job.run()
+
+    offers = broadcaster.of("recovery_available")
+    assert offers == ([(None, {"session_ids": interrupted})] if interrupted else [])

@@ -1167,4 +1167,73 @@
   <data name="AboutLicenses" xml:space="preserve">
     <value>Licenses</value>
   </data>
+  <data name="MigrationProgress" xml:space="preserve">
+    <value>Importing old meetings… {0} of {1}</value>
+  </data>
+  <data name="MigrationPaused" xml:space="preserve">
+    <value>Importing old meetings paused while recording ({0} of {1})</value>
+  </data>
+  <data name="MigrationDone" xml:space="preserve">
+    <value>Old meetings imported: {0}. Not imported: {1}.</value>
+  </data>
+  <data name="MigrationFailed" xml:space="preserve">
+    <value>Importing the old meetings failed; it will be tried again at the next start.</value>
+  </data>
+  <data name="MigrationShowErrors" xml:space="preserve">
+    <value>Show errors</value>
+  </data>
+  <data name="MigrationErrorsTitle" xml:space="preserve">
+    <value>Meetings not imported</value>
+  </data>
+  <data name="MigrationKeepFolders" xml:space="preserve">
+    <value>The original folders are kept: keep a backup until you have checked the imported meetings.</value>
+  </data>
+  <data name="PlayerPlay" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="PlayerPause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="PlayerBack" xml:space="preserve">
+    <value>Back 10 seconds</value>
+  </data>
+  <data name="PlayerForward" xml:space="preserve">
+    <value>Forward 10 seconds</value>
+  </data>
+  <data name="PlayerPosition" xml:space="preserve">
+    <value>Position</value>
+  </data>
+  <data name="PlayerSpeed" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="PlayerChannel" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="PlayerVolume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="PlayerExternal" xml:space="preserve">
+    <value>Open in external player</value>
+  </data>
+  <data name="TrackMixed" xml:space="preserve">
+    <value>Both</value>
+  </data>
+  <data name="TrackMic" xml:space="preserve">
+    <value>Microphone</value>
+  </data>
+  <data name="TrackSystem" xml:space="preserve">
+    <value>System audio</value>
+  </data>
+  <data name="SessionBack" xml:space="preserve">
+    <value>Back to meetings</value>
+  </data>
+  <data name="TabAsk" xml:space="preserve">
+    <value>Ask</value>
+  </data>
+  <data name="FollowPlayback" xml:space="preserve">
+    <value>Follow playback</value>
+  </data>
+  <data name="PlayLine" xml:space="preserve">
+    <value>Play from here</value>
+  </data>
 </root>

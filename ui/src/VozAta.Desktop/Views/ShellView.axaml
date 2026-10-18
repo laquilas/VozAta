@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VozAta.Desktop.ViewModels"
              xmlns:views="using:VozAta.Desktop.Views"
+             xmlns:client="using:VozAta.Client"
              x:Class="VozAta.Desktop.Views.ShellView"
              x:DataType="vm:MainViewModel">
 
@@ -124,6 +125,44 @@
           </StackPanel>
         </Border>
 
+        <!-- Import of the old meeting folders (phase 33): progress, then the counts and errors -->
+        <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
+                IsVisible="{Binding Migration.IsVisible}">
+          <StackPanel Spacing="8">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="icon" VerticalAlignment="Top"
+                      IsVisible="{Binding Migration.IsFinished}"
+                      ToolTip.Tip="{Binding L[Dismiss]}" AutomationProperties.Name="{Binding L[Dismiss]}"
+                      Command="{Binding Migration.DismissCommand}">
+                <PathIcon Data="{StaticResource Icon.Dismiss}" />
+              </Button>
+              <Button DockPanel.Dock="Right" Classes="link" Padding="4,0" Margin="8,0"
+                      IsVisible="{Binding Migration.HasErrors}"
+                      Content="{Binding L[MigrationShowErrors]}" Command="{Binding Migration.ShowErrorsCommand}" />
+              <TextBlock Text="{Binding Migration.Text}" TextWrapping="Wrap" VerticalAlignment="Center" Classes="tabular" />
+            </DockPanel>
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding Migration.Progress}"
+                         IsVisible="{Binding Migration.IsRunning}" />
+            <TextBlock Text="{Binding L[MigrationKeepFolders]}" Classes="secondary" TextWrapping="Wrap"
+                       IsVisible="{Binding Migration.IsFinished}" />
+            <StackPanel Spacing="4" IsVisible="{Binding Migration.ErrorsOpen}">
+              <TextBlock Text="{Binding L[MigrationErrorsTitle]}" Classes="subtitle" />
+              <ItemsControl ItemsSource="{Binding Migration.Errors}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="client:MigrationFolderError">
+                    <StackPanel Margin="0,2">
+                      <SelectableTextBlock Text="{Binding Folder}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Message}" Classes="secondary" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button HorizontalAlignment="Right" Content="{Binding L[Dismiss]}"
+                      Command="{Binding Migration.CloseErrorsCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <ContentControl Content="{Binding Shell.CurrentPage}">
           <ContentControl.DataTemplates>
             <DataTemplate DataType="vm:RecorderPageViewModel">
@@ -137,6 +176,9 @@
             </DataTemplate>
             <DataTemplate DataType="vm:ConfigPageViewModel">
               <views:ConfigPage />
+            </DataTemplate>
+            <DataTemplate DataType="vm:SessionPageViewModel">
+              <views:SessionPage />
             </DataTemplate>
           </ContentControl.DataTemplates>
         </ContentControl>

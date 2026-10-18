@@ -132,7 +132,7 @@ public sealed partial class RecoveryViewModel(
             var detail = await client.GetSessionAsync(id, cancellationToken);
             return new RecoverySession(
                 id,
-                SessionDetailViewModel.FormatStart(detail.StartedAt) ?? id,
+                SessionPageViewModel.FormatStart(detail.StartedAt) ?? id,
                 TranscriptLine.FormatTime(detail.DurationSeconds ?? 0));
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)

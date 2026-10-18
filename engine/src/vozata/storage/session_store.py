@@ -16,7 +16,7 @@ from vozata.storage.files.layout import SESSION_ID as _SESSION_ID
 from vozata.storage.files.layout import SessionPaths
 from vozata.storage.files.layout import write_atomic as _write_atomic
 
-__all__ = ["SessionNotFoundError", "SessionPaths", "SessionStore"]
+__all__ = ["SessionNotFoundError", "SessionPaths", "SessionStore", "read_segments"]
 
 _log = logging.getLogger(__name__)
 
@@ -88,13 +88,13 @@ class SessionStore:
             ("raw", paths.transcript_jsonl),
         ):
             if path.is_file():
-                return source, _read_segments(path)
+                return source, read_segments(path)
         return "raw", []
 
     def load_raw_transcript(self, session_id: str) -> list[TranscriptSegment]:
         """`transcript.jsonl` as captured (empty when it does not exist)."""
         path = self.paths(session_id).transcript_jsonl
-        return _read_segments(path) if path.is_file() else []
+        return read_segments(path) if path.is_file() else []
 
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
         """Replace `transcript.diarized.jsonl` atomically (phase 14)."""
@@ -165,6 +165,7 @@ def _read_speakers(path: Path) -> dict[str, Any]:
     return {str(speaker_id): entry for speaker_id, entry in speakers.items()}
 
 
-def _read_segments(path: Path) -> list[TranscriptSegment]:
+def read_segments(path: Path) -> list[TranscriptSegment]:
+    """Every line of a `transcript*.jsonl` file (raises `ValueError` on an unreadable line)."""
     lines = path.read_text(encoding="utf-8").splitlines()
     return [TranscriptSegment.from_dict(json.loads(line)) for line in lines if line.strip()]

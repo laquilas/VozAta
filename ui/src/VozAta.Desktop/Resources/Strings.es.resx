@@ -1167,4 +1167,73 @@
   <data name="AboutLicenses" xml:space="preserve">
     <value>Licencias</value>
   </data>
+  <data name="MigrationProgress" xml:space="preserve">
+    <value>Importando reuniones antiguas… {0} de {1}</value>
+  </data>
+  <data name="MigrationPaused" xml:space="preserve">
+    <value>Importación de reuniones antiguas en pausa durante la grabación ({0} de {1})</value>
+  </data>
+  <data name="MigrationDone" xml:space="preserve">
+    <value>Reuniones antiguas importadas: {0}. No importadas: {1}.</value>
+  </data>
+  <data name="MigrationFailed" xml:space="preserve">
+    <value>La importación de las reuniones antiguas falló; se intentará de nuevo en el próximo inicio.</value>
+  </data>
+  <data name="MigrationShowErrors" xml:space="preserve">
+    <value>Mostrar errores</value>
+  </data>
+  <data name="MigrationErrorsTitle" xml:space="preserve">
+    <value>Reuniones no importadas</value>
+  </data>
+  <data name="MigrationKeepFolders" xml:space="preserve">
+    <value>Las carpetas originales se conservan: guarda una copia de seguridad hasta revisar las reuniones importadas.</value>
+  </data>
+  <data name="PlayerPlay" xml:space="preserve">
+    <value>Reproducir</value>
+  </data>
+  <data name="PlayerPause" xml:space="preserve">
+    <value>Pausar</value>
+  </data>
+  <data name="PlayerBack" xml:space="preserve">
+    <value>Retroceder 10 segundos</value>
+  </data>
+  <data name="PlayerForward" xml:space="preserve">
+    <value>Avanzar 10 segundos</value>
+  </data>
+  <data name="PlayerPosition" xml:space="preserve">
+    <value>Posición</value>
+  </data>
+  <data name="PlayerSpeed" xml:space="preserve">
+    <value>Velocidad</value>
+  </data>
+  <data name="PlayerChannel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="PlayerVolume" xml:space="preserve">
+    <value>Volumen</value>
+  </data>
+  <data name="PlayerExternal" xml:space="preserve">
+    <value>Abrir en el reproductor externo</value>
+  </data>
+  <data name="TrackMixed" xml:space="preserve">
+    <value>Ambos</value>
+  </data>
+  <data name="TrackMic" xml:space="preserve">
+    <value>Micrófono</value>
+  </data>
+  <data name="TrackSystem" xml:space="preserve">
+    <value>Audio del sistema</value>
+  </data>
+  <data name="SessionBack" xml:space="preserve">
+    <value>Volver a las reuniones</value>
+  </data>
+  <data name="TabAsk" xml:space="preserve">
+    <value>Preguntar</value>
+  </data>
+  <data name="FollowPlayback" xml:space="preserve">
+    <value>Seguir la reproducción</value>
+  </data>
+  <data name="PlayLine" xml:space="preserve">
+    <value>Reproducir desde aquí</value>
+  </data>
 </root>

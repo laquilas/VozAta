@@ -67,6 +67,22 @@ def test_a_second_start_conflicts_until_finalization_ends(
     assert manager.wait_until_finished(5)
 
 
+def test_busy_from_start_until_finalization_ends(
+    manager: SessionManager, factory: SessionFactory
+) -> None:
+    factory.stop_gate = threading.Event()
+    assert not manager.busy
+
+    manager.start(OPTIONS)
+    assert manager.busy
+    manager.stop()
+    assert manager.busy  # finalizing
+
+    factory.stop_gate.set()
+    assert manager.wait_until_finished(5)
+    assert not manager.busy
+
+
 def test_pause_resume_and_stop_drive_the_session(
     manager: SessionManager, factory: SessionFactory, store: FileSessionRepository
 ) -> None:

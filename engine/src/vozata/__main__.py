@@ -1,5 +1,5 @@
 """Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex |
-recover [<dir> | --all]`."""
+recover [<dir> | --all] | migrate [--dry-run]`."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from vozata.audio.devices import (
 )
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.diarize import run_diarize
+from vozata.cli.migrate import run_migrate
 from vozata.cli.minutes import run_minutes
 from vozata.cli.record import print_devices, run_record
 from vozata.cli.recover import run_recover
@@ -65,6 +66,8 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     target = recover.add_mutually_exclusive_group(required=True)
     target.add_argument("session_dir", type=Path, nargs="?", help=t("cli.help.session_dir"))
     target.add_argument("--all", action="store_true", help=t("cli.help.recover_all"))
+    migrate = commands.add_parser("migrate", help=t("cli.help.migrate"))
+    migrate.add_argument("--dry-run", action="store_true", help=t("cli.help.migrate_dry_run"))
     return parser
 
 
@@ -120,6 +123,10 @@ def main(
                 bootstrap.build_search_index(settings),
                 console,
                 localizer,
+            )
+        if args.command == "migrate":
+            return run_migrate(
+                bootstrap.build_folder_importer(settings), args.dry_run, console, localizer
             )
         if args.command == "recover":
             return run_recover(

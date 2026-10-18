@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from vozata.api.migration_job import MigrationJob
 from vozata.api.session_manager import SessionManager
 from vozata.api.system_info import GpuInfo
 from vozata.api.ws import EventBroadcaster
@@ -76,6 +77,9 @@ class ApiContainer:
     # (`GET /health`, `DELETE /storage/cache`, 38); None: no cache (file backend).
     audio: SessionAudio | None = None
     audio_cache: AudioCache | None = None
+    # The import of the session folders recorded before phase 31 (33): `GET /migration` and the
+    # first WebSocket messages; None: nothing to import (file backend).
+    migration: MigrationJob | None = None
     # Config page (38): `GET /settings/options` lists and `POST /settings/test/{target}` checks.
     setting_options: Callable[[], OptionLists] = lambda: OptionLists({}, {})
     connection_check: Callable[[CheckTarget, Settings], CheckResult] = lambda target, settings: (

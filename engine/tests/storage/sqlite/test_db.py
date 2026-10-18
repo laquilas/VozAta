@@ -26,6 +26,7 @@ TABLES = {
     "minutes",
     "action_items",
     "audio_chunks",
+    "migration_errors",
 }
 
 
@@ -51,6 +52,15 @@ def test_a_new_file_gets_the_whole_schema(database: Database) -> None:
     assert database.path.is_file()
     assert schema_version(db) == bundled_migrations()[-1].version
     assert TABLES | {"segments_fts"} <= _tables(db)
+
+
+def test_sessions_record_where_and_when_they_were_imported(database: Database) -> None:
+    db = database.connection()
+
+    columns = {row[1] for row in db.execute("PRAGMA table_info(sessions)")}
+    indexes = {row[1] for row in db.execute("PRAGMA index_list(sessions)")}
+    assert {"imported_from", "imported_at"} <= columns
+    assert "sessions_imported_from" in indexes
 
 
 def test_the_bundled_migrations_are_numbered_from_one_without_gaps() -> None:

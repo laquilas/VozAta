@@ -876,4 +876,30 @@ public sealed class MainViewModelTests
         await SendAsync(viewModel, new ConnectionChangedEvent(false));
         Assert.False(viewModel.Recovery.IsOpen);
     }
+
+    [Fact]
+    public async Task The_folder_import_shows_its_progress_then_its_end_and_reloads_the_meetings()
+    {
+        var viewModel = await ReadyAsync();
+
+        await SendAsync(viewModel, new ConnectionChangedEvent(true));
+        await viewModel.MigrationRefresh;
+        Assert.Contains("migration", _client.Calls);
+        Assert.False(viewModel.Migration.IsVisible); // disabled
+
+        await SendAsync(viewModel, new MigrationProgressEvent(null, 1, 2, "20261015_202358", false));
+        Assert.True(viewModel.Migration.IsRunning);
+
+        _client.Migration = new MigrationSummary("done", 2, 2, null, false, 2, 0, null, null, null, []);
+        await SendAsync(viewModel, new MigrationDoneEvent(null, "done", 2, 0, 0));
+        await viewModel.MigrationRefresh;
+        await viewModel.HistoryRefresh;
+        Assert.True(viewModel.Migration.IsFinished);
+        Assert.Equal(_localization.Format("MigrationDone", 2, 0), viewModel.Migration.Text);
+
+        _client.Migration = new MigrationSummary("running", 0, 1, null, false, 0, 0, null, null, null, []);
+        await SendAsync(viewModel, new MigrationProgressEvent(null, 0, 1, "x", false));
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+        Assert.False(viewModel.Migration.IsVisible);
+    }
 }

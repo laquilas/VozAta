@@ -82,11 +82,11 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 30 | [Storage port](phases/30-storage-port.md) | 17, 23 | done |
 | 31 | [SQLite session database](phases/31-sqlite-database.md) | 30 | done |
 | 32 | [Audio in SQLite](phases/32-audio-in-sqlite.md) | 31 | done |
-| 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | todo |
+| 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | done |
 | 34 | [UI design system](phases/34-ui-design-system.md) | 13 | done |
 | 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | done |
 | 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | done |
-| 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | todo |
+| 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | done |
 | 38 | [Config page redesign](phases/38-config-page.md) | 35 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·

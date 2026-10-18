@@ -112,6 +112,25 @@ def test_minutes_command_runs_on_the_folder(monkeypatch: pytest.MonkeyPatch) -> 
     assert received == [Path("recordings/20261015_202358")]
 
 
+def test_migrate_command_imports_the_output_dir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    received: list[tuple[Any, bool]] = []
+    monkeypatch.setattr(
+        cli, "run_migrate", lambda importer, dry, *args: received.append((importer, dry)) or 0
+    )
+
+    code, _ = _main(["migrate", "--dry-run"], env={"OUTPUT_DIR": str(tmp_path)})
+    files_code, _ = _main(
+        ["migrate"], env={"OUTPUT_DIR": str(tmp_path), "STORAGE_BACKEND": "files"}
+    )
+
+    assert (code, files_code) == (0, 0)
+    (importer, dry), (no_importer, files_dry) = received
+    assert importer is not None and importer.pending() == []
+    assert (dry, no_importer, files_dry) == (True, None, False)
+
+
 def test_reindex_command_rebuilds_the_index_in_the_output_dir(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

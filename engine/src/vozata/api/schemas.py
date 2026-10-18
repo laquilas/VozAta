@@ -380,3 +380,27 @@ class CacheCleared(BaseModel):
     """Phase 38: `DELETE /storage/cache`."""
 
     freed_bytes: int
+
+
+class MigrationErrorModel(BaseModel):
+    folder: str
+    reason: str  # unreadable_json | unreadable_wav | unsupported_wav | id_in_use
+    message: str  # localized
+    detail: str
+
+
+class Migration(BaseModel):
+    """The folder import of phase 33 (`state`: disabled | idle | running | done | no_space |
+    failed)."""
+
+    state: str
+    done: int
+    total: int
+    current: str | None
+    paused: bool
+    imported: int
+    skipped: int
+    needed_bytes: int | None
+    free_bytes: int | None
+    message: str | None  # localized, when it stopped for lack of disk space
+    errors: list[MigrationErrorModel]

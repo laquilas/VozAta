@@ -250,6 +250,21 @@ def test_minutes_keep_the_session_template_and_when_they_were_written(
     assert row.fetchone() == ("one_on_one", STARTED.isoformat(timespec="seconds"))
 
 
+def test_minutes_can_keep_the_time_they_were_first_generated(
+    repo: SqliteSessionRepository, database: Database
+) -> None:
+    session_id = repo.create(STARTED)
+    repo.write_meta(session_id, {"status": "done"})
+    generated = STARTED - timedelta(days=30, seconds=1)
+
+    repo.write_minutes(session_id, "# Minutes\n", generated_at=generated)
+
+    row = database.connection().execute(
+        "SELECT generated_at FROM minutes WHERE session_id = ?", (session_id,)
+    )
+    assert row.fetchone() == (generated.isoformat(timespec="seconds"),)
+
+
 def test_the_live_transcript_needs_no_repair(repo: SqliteSessionRepository) -> None:
     assert not isinstance(repo, RecoverableStore)  # committed segments are complete
 
