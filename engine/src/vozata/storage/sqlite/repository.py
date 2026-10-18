@@ -146,10 +146,10 @@ class SqliteSessionRepository(SessionAnnotations):
         return self._segments(session_id, "raw")
 
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
-        self._replace_segments(session_id, "diarized", segments)
+        self.replace_segments(session_id, "diarized", segments)
 
     def write_edited(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
-        self._replace_segments(session_id, "edited", segments)
+        self.replace_segments(session_id, "edited", segments)
 
     def delete_edited(self, session_id: str) -> bool:
         self._check(session_id)
@@ -177,9 +177,10 @@ class SqliteSessionRepository(SessionAnnotations):
         )
         return [row_segment(row) for row in rows]
 
-    def _replace_segments(
+    def replace_segments(
         self, session_id: str, source: str, segments: Sequence[TranscriptSegment]
     ) -> None:
+        """Replace the `raw`, `diarized` or `edited` transcript in one transaction."""
         self._check(session_id)
         with self._db.write() as db:
             db.execute(
