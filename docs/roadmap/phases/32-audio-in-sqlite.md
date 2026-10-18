@@ -76,8 +76,8 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** in progress
 - **Updated:** 2026-10-17 23:30
-- **Next step:** crash test `tests/storage/sqlite/test_audio_crash.py`: a writer subprocess
-  killed mid-batch; recovery returns every committed second, both channels equal length.
+- **Next step:** UI: "Play" downloads `GET /sessions/{id}/audio/{track}` to a temp file and
+  opens the OS player (`SessionDetailViewModel.OpenAudio`), enabled from `detail.audio`.
 
 ### Steps
 
@@ -93,7 +93,7 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
       `SqliteAudioStore.repair`, no session folder for sqlite (`folder` / `files` None)
 - [x] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
       `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
-- [ ] Crash test: writer subprocess killed mid-batch
+- [x] Crash test: writer subprocess killed mid-batch (`tests/storage/sqlite/test_audio_crash.py`)
 - [ ] UI: "Play" downloads from the endpoint to a temp file and opens the OS player
 - [ ] Docs (architecture, api-contract), full suites, manual check recipe
 
@@ -141,3 +141,7 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   with no audio. The detail has `audio: {track: seconds}`; the file backend lists the WAVs it
   has. `GET /health` → `storage.size_bytes` (database + WAL) and `storage.audio_cache_bytes`
   (null for files), as phase 38 expects.
+- Crash test: a child process records both channels (synthetic samples, 5x real time, commit
+  every 0.05 s) and is killed once 3 s are committed; every committed sample reads back
+  unchanged, only whole chunks exist, and `repair` evens the channels without losing any. Run
+  8 times with the phase 31 crash test: stable.
