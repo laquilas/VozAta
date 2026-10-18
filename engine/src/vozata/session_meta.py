@@ -8,6 +8,7 @@ from typing import Any, Protocol
 
 from vozata.config import Settings
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
+from vozata.session_title import stored_title
 
 SCHEMA_VERSION = 1
 
@@ -25,6 +26,9 @@ class DeviceNames(Protocol):
 
     @property
     def vocabulary(self) -> tuple[str, ...]: ...
+
+    @property
+    def title(self) -> str | None: ...
 
 
 class SessionMeta:
@@ -64,6 +68,8 @@ class SessionMeta:
                 "MIX_MODE": settings.mix_mode.value,
             },
         }
+        if components.title is not None:
+            self._meta["title"] = components.title  # phase 35; absent = untitled
 
     @classmethod
     def restore(cls, store: MetaStore, session_id: str, meta: dict[str, Any]) -> SessionMeta:
@@ -79,6 +85,16 @@ class SessionMeta:
         if language is ConversationLanguage.AUTO:
             return
         self._update(language=language.value, language_source=source)
+
+    @property
+    def title(self) -> str | None:
+        """The meeting title (phase 35); None when untitled."""
+        with self._lock:
+            return stored_title(self._meta)
+
+    def set_title(self, title: str | None) -> None:
+        """Rename the meeting (normalized title; None clears it), also while recording."""
+        self._update(title=title)
 
     def set_status(self, status: SessionStatus) -> None:
         self._update(status=status.value)

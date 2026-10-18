@@ -78,6 +78,8 @@ class FakeSession:
             "ended_at": None,
             "language": language,
         }
+        if self.options.title is not None:
+            self.meta["title"] = self.options.title
         self._set(SessionStatus.RECORDING)
 
     def pause(self) -> None:

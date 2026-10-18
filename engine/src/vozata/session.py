@@ -71,6 +71,7 @@ class SessionComponents:
     embedder_factory: Callable[[], SpeakerEmbedder] | None = None  # None: no live speakers
     translate_to: str | None = None  # live translation language (phase 29); None = off
     translator_factory: Callable[[], Translator] | None = None  # built on the translation thread
+    title: str | None = None  # meeting title at start (phase 35), normalized; None = untitled
 
 
 class SessionStartError(RuntimeError):

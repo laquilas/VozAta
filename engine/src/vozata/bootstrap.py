@@ -322,6 +322,7 @@ def build_session(
     vocabulary: Sequence[str] = (),
     env_file: Path | None = None,
     translate_to: TranslationTarget | None = None,
+    title: str | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -331,7 +332,8 @@ def build_session(
     minutes follow (VRAM rule). `template` (default `MINUTES_TEMPLATE`) is the minutes template,
     stored in `session.json` even when minutes are off. `vocabulary` (this meeting's terms) is
     merged with the glossary file (`vocabulary_path(settings, env_file)`), session terms first.
-    `translate_to` (default `TRANSLATE_TO`) is the live translation language (phase 29).
+    `translate_to` (default `TRANSLATE_TO`) is the live translation language (phase 29); `title`
+    (normalized, phase 35) is stored in the metadata.
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -385,6 +387,7 @@ def build_session(
         embedder_factory=build_embedder_factory(settings),
         translate_to=translation_target,
         translator_factory=translator_factory,
+        title=title,
     )
     return RecordingSession(
         settings,
@@ -534,6 +537,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             env_file=env_file,
             shared=shared,
             translate_to=options.translate_to,
+            title=options.title,
         )
 
     def minutes_generator(template: str | None = None) -> MinutesGenerator:

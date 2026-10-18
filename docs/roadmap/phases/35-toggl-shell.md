@@ -78,12 +78,12 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** engine — optional `title` on `POST /sessions`, `SessionSummary.title`, title in
-  `session.json` and in the repository contract suite (`tests/api/test_session_title.py`).
+- **Next step:** engine — `PATCH /sessions/{id}` `{title}`: the live session renames through its
+  `SessionMeta`, a stored one through `read_meta` / `write_meta` (`tests/api/test_session_title.py`).
 
 ### Steps
 
-- [ ] Engine: `title` on start, in `session.json` and `SessionSummary`; contract suite
+- [x] Engine: `title` on start, in `session.json` and `SessionSummary`; contract suite
 - [ ] Engine: `PATCH /sessions/{id}` `{title}` while recording and after
 - [ ] Engine: title in the minutes prompt (en / pt-BR / es) and as the export document title
 - [ ] Docs: api-contract, architecture §8

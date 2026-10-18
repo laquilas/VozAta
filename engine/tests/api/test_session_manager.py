@@ -34,6 +34,7 @@ def test_start_returns_the_summary_and_passes_the_options(
         "duration_seconds": 0.0,
         "language": "pt",
         "has_minutes": False,
+        "title": None,
     }
     assert factory.sessions[0].options == OPTIONS
     manager.stop()

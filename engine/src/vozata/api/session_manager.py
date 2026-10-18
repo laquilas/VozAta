@@ -77,6 +77,7 @@ class StartOptions:
     translate_to: TranslationTarget | None = (
         None  # live translation (phase 29); None = TRANSLATE_TO
     )
+    title: str | None = None  # meeting title (phase 35), already normalized; None = untitled
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]

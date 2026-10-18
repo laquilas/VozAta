@@ -59,6 +59,7 @@ class StartSession(BaseModel):
     template: str | None = None  # phase 20
     vocabulary: list[str] | None = None  # phase 19
     translate_to: TranslationTargetValue | None = None  # phase 29; None = TRANSLATE_TO
+    title: str | None = None  # phase 35; trimmed, at most 200 characters; blank = untitled
 
 
 class SessionSummary(BaseModel):
@@ -69,6 +70,7 @@ class SessionSummary(BaseModel):
     duration_seconds: float | None
     language: str | None
     has_minutes: bool
+    title: str | None = None  # phase 35; None = untitled
 
 
 class SessionDetail(SessionSummary):

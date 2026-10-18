@@ -149,6 +149,7 @@ def test_list_sessions_newest_first_with_paging(api: Api) -> None:
         "duration_seconds": 90.0,
         "language": "en",
         "has_minutes": False,
+        "title": None,
     }
 
 

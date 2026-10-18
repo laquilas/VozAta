@@ -59,6 +59,7 @@ unknown_task_target = "O destino de exportação \"{target}\" não está configu
 action_items_unavailable = "A extração de itens de ação não está disponível neste motor."
 session_not_interrupted = "A sessão \"{id}\" não foi interrompida, então não há nada a recuperar."
 recovery_failed = "A sessão \"{id}\" não pôde ser recuperada ({reason}). Os arquivos foram mantidos; o motivo está em session.json."
+title_too_long = "O título pode ter no máximo {max} caracteres."
 
 [languages]
 en = "inglês"

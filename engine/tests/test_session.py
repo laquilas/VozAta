@@ -131,6 +131,7 @@ class _Rig:
         search_index: TranscriptSearch | None = None,
         vocabulary: tuple[str, ...] = (),
         embedder_factory: Callable[[], SpeakerEmbedder] | None = None,
+        title: str | None = None,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -170,6 +171,7 @@ class _Rig:
                 search_index=search_index,
                 vocabulary=vocabulary,
                 embedder_factory=embedder_factory,
+                title=title,
             ),
             self.observer,
             language,
@@ -771,3 +773,19 @@ def test_session_json_gets_a_heartbeat_with_the_length_so_far(tmp_path: Path) ->
 
     rig.session.stop()
     assert rig.store.read_meta(rig.session.id)["status"] == "done"
+
+
+def test_the_title_given_at_start_is_stored_in_session_json(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Weekly sync")
+    rig.session.start()
+    rig.session.stop()
+
+    assert rig.store.read_meta(rig.session.id)["title"] == "Weekly sync"
+
+
+def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+    rig.session.stop()
+
+    assert "title" not in rig.store.read_meta(rig.session.id)

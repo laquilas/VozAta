@@ -59,6 +59,7 @@ unknown_task_target = "Export target \"{target}\" is not configured. Configured 
 action_items_unavailable = "Extracting action items is not available in this engine."
 session_not_interrupted = "Session \"{id}\" was not interrupted, so there is nothing to recover."
 recovery_failed = "Session \"{id}\" could not be recovered ({reason}). Its files were kept; the reason is saved in session.json."
+title_too_long = "The title can have at most {max} characters."
 
 [languages]
 en = "English"
