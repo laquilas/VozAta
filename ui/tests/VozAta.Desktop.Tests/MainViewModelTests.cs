@@ -63,13 +63,13 @@ public sealed class MainViewModelTests
 
         Assert.Equal("pt-BR", _localization.Language);
         Assert.Equal("pt-BR", viewModel.SelectedAppLanguage!.Value);
-        Assert.Equal("es", viewModel.SelectedLanguage.Value);
+        Assert.Equal("es", viewModel.Recorder.SelectedLanguage.Value);
         Assert.Equal("GPU: RTX 3050 (6144 MB)", viewModel.Health.GpuText);
         Assert.Equal("Fala: large-v3 em auto", viewModel.Health.SpeechText);
         Assert.Equal("Ata: qwen2.5:7b pronto", viewModel.Health.MinutesText);
         Assert.Equal("Motor conectado", viewModel.EngineText);
-        Assert.True(viewModel.StartCommand.CanExecute(null));
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.True(viewModel.Recorder.StartCommand.CanExecute(null));
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
     }
 
     [Fact]
@@ -79,11 +79,11 @@ public sealed class MainViewModelTests
 
         var viewModel = await ReadyAsync();
 
-        Assert.Equal([Laptop, Mic], viewModel.Devices.Inputs);
-        Assert.Equal((Mic, Speakers), (viewModel.Devices.SelectedMic, viewModel.Devices.SelectedLoopback));
-        Assert.Equal(("Host", "Others"), (viewModel.MicMeter.Label, viewModel.SystemMeter.Label));
+        Assert.Equal([Laptop, Mic], viewModel.Recorder.Devices.Inputs);
+        Assert.Equal((Mic, Speakers), (viewModel.Recorder.Devices.SelectedMic, viewModel.Recorder.Devices.SelectedLoopback));
+        Assert.Equal(("Host", "Others"), (viewModel.Recorder.MicMeter.Label, viewModel.Recorder.SystemMeter.Label));
         viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
-        Assert.Equal(("Host", "Outros"), (viewModel.MicMeter.Label, viewModel.SystemMeter.Label));
+        Assert.Equal(("Host", "Outros"), (viewModel.Recorder.MicMeter.Label, viewModel.Recorder.SystemMeter.Label));
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class MainViewModelTests
         _client.DevicesError = FakeEngineClient.ApiError("devices_failed", "WASAPI did not answer.");
 
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Contains("WASAPI did not answer.", viewModel.Notifications);
         Assert.Equal(new StartSessionRequest(null, null, "pt", "general"), _client.StartRequests.Single());
@@ -102,15 +102,15 @@ public sealed class MainViewModelTests
     public async Task Start_sends_the_selected_devices_and_locks_them_while_recording()
     {
         var viewModel = await ReadyAsync();
-        viewModel.Devices.SelectedMic = Laptop;
+        viewModel.Recorder.Devices.SelectedMic = Laptop;
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         var request = _client.StartRequests.Single();
         Assert.Equal((1, 7), (request.MicDeviceId, request.SystemDeviceId));
-        Assert.False(viewModel.Devices.IsEnabled);
+        Assert.False(viewModel.Recorder.Devices.IsEnabled);
         await SendAsync(viewModel, new StatusEvent("s", "done", 3));
-        Assert.True(viewModel.Devices.IsEnabled);
+        Assert.True(viewModel.Recorder.Devices.IsEnabled);
     }
 
     [Fact]
@@ -118,38 +118,38 @@ public sealed class MainViewModelTests
     {
         var viewModel = await ReadyAsync();
         Assert.Equal(0, _timer.Running);
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         Assert.Equal(1, _timer.Running);
 
         await SendAsync(viewModel, new LevelEvent("s", "mic", -15));
         await SendAsync(viewModel, new LevelEvent("s", "system", -30));
-        Assert.Equal((0.75, 0.5), (viewModel.MicMeter.Level, viewModel.SystemMeter.Level));
+        Assert.Equal((0.75, 0.5), (viewModel.Recorder.MicMeter.Level, viewModel.Recorder.SystemMeter.Level));
         await SendAsync(viewModel, new LevelEvent("s", "mic", -60));
         _clock.Advance(TimeSpan.FromSeconds(0.2));
         _timer.Tick();
-        Assert.True(viewModel.MicMeter.Level < 0.75);
+        Assert.True(viewModel.Recorder.MicMeter.Level < 0.75);
 
         await SendAsync(viewModel, new StatusEvent("s", "done", 3));
         Assert.Equal(0, _timer.Running);
-        Assert.Equal(0, viewModel.MicMeter.Level);
+        Assert.Equal(0, viewModel.Recorder.MicMeter.Level);
     }
 
     [Fact]
     public async Task Silent_system_audio_shows_the_no_signal_hint_but_not_while_paused()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new StatusEvent("s", "paused", 1));
 
         _clock.Advance(TimeSpan.FromSeconds(31));
         _timer.Tick();
-        Assert.False(viewModel.SystemMeter.NoSignal);
+        Assert.False(viewModel.Recorder.SystemMeter.NoSignal);
         await SendAsync(viewModel, new StatusEvent("s", "recording", 32));
         _clock.Advance(TimeSpan.FromSeconds(30));
         _timer.Tick();
 
-        Assert.True(viewModel.SystemMeter.NoSignal);
-        Assert.False(viewModel.MicMeter.NoSignal);
+        Assert.True(viewModel.Recorder.SystemMeter.NoSignal);
+        Assert.False(viewModel.Recorder.MicMeter.NoSignal);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
         Assert.Equal((1200d, 820d), (viewModel.WindowWidth, viewModel.WindowHeight));
 
-        viewModel.Devices.SelectedMic = Laptop;
+        viewModel.Recorder.Devices.SelectedMic = Laptop;
         viewModel.WindowWidth = 1000;
         await viewModel.ShutdownAsync(TimeSpan.FromSeconds(1));
 
@@ -184,7 +184,7 @@ public sealed class MainViewModelTests
         Assert.Single(viewModel.History.Rows);
         Assert.Single(_client.ListRequests);
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await viewModel.HistoryRefresh;
         Assert.Equal(2, _client.ListRequests.Count);
         await SendAsync(viewModel, new StatusEvent("s", "paused", 3));
@@ -262,7 +262,7 @@ public sealed class MainViewModelTests
         await SendAsync(viewModel, new SpeakersRelabeledEvent(id));
         await viewModel.HistoryRefresh;
 
-        Assert.Equal(["User 1"], viewModel.Segments.Select(line => line.Label));
+        Assert.Equal(["User 1"], viewModel.Recorder.Segments.Select(line => line.Label));
         Assert.Equal(["User 1"], viewModel.History.Detail!.Lines.Select(line => line.Label));
     }
 
@@ -278,7 +278,7 @@ public sealed class MainViewModelTests
         await SendAsync(viewModel, new SpeakersRelabeledEvent(null));
         await viewModel.HistoryRefresh;
 
-        Assert.Equal(["Hi."], viewModel.Segments.Select(line => line.Text));
+        Assert.Equal(["Hi."], viewModel.Recorder.Segments.Select(line => line.Text));
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public sealed class MainViewModelTests
         await viewModel.HistoryRefresh;
 
         Assert.Contains(_localization["EngineUnavailable"], viewModel.Notifications);
-        Assert.Equal(["User 2"], viewModel.Segments.Select(line => line.Label));
+        Assert.Equal(["User 2"], viewModel.Recorder.Segments.Select(line => line.Label));
     }
 
     [Fact]
@@ -338,8 +338,8 @@ public sealed class MainViewModelTests
 
         Assert.Equal("es", _localization.Language);
         Assert.Equal("es", viewModel.SelectedAppLanguage!.Value);
-        Assert.Equal("auto", viewModel.SelectedLanguage.Value);
-        Assert.Equal("Host", viewModel.MicMeter.Label);
+        Assert.Equal("auto", viewModel.Recorder.SelectedLanguage.Value);
+        Assert.Equal("Host", viewModel.Recorder.MicMeter.Label);
         Assert.Single(_client.Updates);  // the language switch did not save again
     }
 
@@ -373,19 +373,19 @@ public sealed class MainViewModelTests
     public async Task Pause_and_resume_toggle_through_the_engine()
     {
         var viewModel = await ReadyAsync();
-        Assert.False(viewModel.PauseResumeCommand.CanExecute(null));
-        await viewModel.StartCommand.ExecuteAsync(null);
-        Assert.Equal("Pause", viewModel.PauseResumeText);
+        Assert.False(viewModel.Recorder.PauseResumeCommand.CanExecute(null));
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        Assert.Equal("Pause", viewModel.Recorder.PauseResumeText);
 
-        await viewModel.PauseResumeCommand.ExecuteAsync(null);
-        Assert.Equal(RecordingState.Paused, viewModel.State);
-        Assert.True(viewModel.IsPaused && viewModel.IsRecording && !viewModel.IsActivelyRecording);
-        Assert.Equal("Resume", viewModel.PauseResumeText);
-        Assert.True(viewModel.StopCommand.CanExecute(null));
+        await viewModel.Recorder.PauseResumeCommand.ExecuteAsync(null);
+        Assert.Equal(RecordingState.Paused, viewModel.Recorder.State);
+        Assert.True(viewModel.Recorder.IsPaused && viewModel.Recorder.IsRecording && !viewModel.Recorder.IsActivelyRecording);
+        Assert.Equal("Resume", viewModel.Recorder.PauseResumeText);
+        Assert.True(viewModel.Recorder.StopCommand.CanExecute(null));
 
-        await viewModel.PauseResumeCommand.ExecuteAsync(null);
+        await viewModel.Recorder.PauseResumeCommand.ExecuteAsync(null);
 
-        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
         Assert.Equal(["pause", "resume"], _client.Calls.Where(call => call is "pause" or "resume"));
     }
 
@@ -393,27 +393,27 @@ public sealed class MainViewModelTests
     public async Task The_timer_freezes_while_paused_and_follows_the_engine_after_resume()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new StatusEvent("s", "recording", 10));
 
         await SendAsync(viewModel, new StatusEvent("s", "paused", 12));
         await SendAsync(viewModel, new StatusEvent("s", "paused", 40));  // heartbeat while paused
-        Assert.Equal("00:00:12", viewModel.Elapsed);
+        Assert.Equal("00:00:12", viewModel.Recorder.Elapsed);
         await SendAsync(viewModel, new StatusEvent("s", "recording", 41));
 
-        Assert.Equal("00:00:41", viewModel.Elapsed);
+        Assert.Equal("00:00:41", viewModel.Recorder.Elapsed);
     }
 
     [Fact]
     public async Task A_rejected_pause_is_shown_and_keeps_recording()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         _client.PauseError = FakeEngineClient.ApiError("no_active_session", "Nothing is recording.");
 
-        await viewModel.PauseResumeCommand.ExecuteAsync(null);
+        await viewModel.Recorder.PauseResumeCommand.ExecuteAsync(null);
 
-        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
         Assert.Contains("Nothing is recording.", viewModel.Notifications);
     }
 
@@ -424,7 +424,7 @@ public sealed class MainViewModelTests
 
         viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
 
-        Assert.Equal("Pausar", viewModel.PauseResumeText);
+        Assert.Equal("Pausar", viewModel.Recorder.PauseResumeText);
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public sealed class MainViewModelTests
 
         Assert.Equal(_localization["EngineStartFailed"], viewModel.EngineText);
         Assert.Contains(_localization["EngineStartFailed"], viewModel.Notifications);
-        Assert.False(viewModel.StartCommand.CanExecute(null));
+        Assert.False(viewModel.Recorder.StartCommand.CanExecute(null));
         Assert.DoesNotContain("settings", _client.Calls);
     }
 
@@ -465,24 +465,24 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
 
         Assert.Equal("en", _localization.Language);
-        Assert.Equal("en", viewModel.SelectedLanguage.Value);
+        Assert.Equal("en", viewModel.Recorder.SelectedLanguage.Value);
     }
 
     [Fact]
     public async Task Start_sends_the_selected_language_and_clears_the_previous_transcript()
     {
         var viewModel = await ReadyAsync();
-        viewModel.Segments.Add(new TranscriptLine("00:00:01", "Me", "old", "mic"));
-        viewModel.SelectedLanguage = viewModel.ConversationLanguages.Single(option => option.Value == "auto");
+        viewModel.Recorder.Segments.Add(new TranscriptLine("00:00:01", "Me", "old", "mic"));
+        viewModel.Recorder.SelectedLanguage = viewModel.Recorder.ConversationLanguages.Single(option => option.Value == "auto");
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Equal("auto", _client.StartRequests.Single().Language);
-        Assert.Empty(viewModel.Segments);
-        Assert.Equal(RecordingState.Recording, viewModel.State);
-        Assert.True(viewModel.IsRecording);
-        Assert.False(viewModel.StartCommand.CanExecute(null));
-        Assert.True(viewModel.StopCommand.CanExecute(null));
+        Assert.Empty(viewModel.Recorder.Segments);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
+        Assert.True(viewModel.Recorder.IsRecording);
+        Assert.False(viewModel.Recorder.StartCommand.CanExecute(null));
+        Assert.True(viewModel.Recorder.StopCommand.CanExecute(null));
     }
 
     [Fact]
@@ -491,9 +491,9 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
         _client.StartError = FakeEngineClient.ApiError("device_timeout", "O microfone não abriu.");
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
         Assert.Contains("O microfone não abriu.", viewModel.Notifications);
     }
 
@@ -503,30 +503,30 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
         _client.StartError = new EngineUnavailableException("refused", new HttpRequestException());
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Contains(_localization["EngineUnavailable"], viewModel.Notifications);
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
     }
 
     [Fact]
     public async Task Status_events_drive_the_state_machine_and_elapsed_time()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         await SendAsync(viewModel, new StatusEvent("s", "recording", 3725.4));
-        Assert.Equal("01:02:05", viewModel.Elapsed);
+        Assert.Equal("01:02:05", viewModel.Recorder.Elapsed);
         await SendAsync(viewModel, new StatusEvent("s", "paused", 3726));
-        Assert.Equal(RecordingState.Paused, viewModel.State);
-        Assert.Equal(_localization["StatePaused"], viewModel.StatusText);
-        await viewModel.StopCommand.ExecuteAsync(null);
-        Assert.Equal(RecordingState.Finalizing, viewModel.State);
-        Assert.False(viewModel.StopCommand.CanExecute(null));
+        Assert.Equal(RecordingState.Paused, viewModel.Recorder.State);
+        Assert.Equal(_localization["StatePaused"], viewModel.Recorder.StatusText);
+        await viewModel.Recorder.StopCommand.ExecuteAsync(null);
+        Assert.Equal(RecordingState.Finalizing, viewModel.Recorder.State);
+        Assert.False(viewModel.Recorder.StopCommand.CanExecute(null));
         await SendAsync(viewModel, new StatusEvent("s", "done", 3730));
 
-        Assert.Equal(RecordingState.Idle, viewModel.State);
-        Assert.True(viewModel.StartCommand.CanExecute(null));
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
+        Assert.True(viewModel.Recorder.StartCommand.CanExecute(null));
     }
 
     [Fact]
@@ -536,9 +536,9 @@ public sealed class MainViewModelTests
 
         await SendAsync(viewModel, new StatusEvent("s", "recording", 10));
 
-        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
         await SendAsync(viewModel, new StatusEvent(null, "idle", null));
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
     }
 
     [Fact]
@@ -551,12 +551,12 @@ public sealed class MainViewModelTests
 
         Assert.Equal(
             [new TranscriptLine("00:01:05", "Eu", "Bom dia.", "mic"), new TranscriptLine("00:01:10", "Outros", "Oi.", "system")],
-            viewModel.Segments);
-        Assert.Equal("[00:01:05] Eu: Bom dia.", viewModel.Segments[0].Display);
-        Assert.True(viewModel.Segments[0].IsMic);
-        Assert.False(viewModel.Segments[0].IsSystem);
-        Assert.True(viewModel.Segments[1].IsSystem);
-        Assert.False(viewModel.Segments[1].IsMic);
+            viewModel.Recorder.Segments);
+        Assert.Equal("[00:01:05] Eu: Bom dia.", viewModel.Recorder.Segments[0].Display);
+        Assert.True(viewModel.Recorder.Segments[0].IsMic);
+        Assert.False(viewModel.Recorder.Segments[0].IsSystem);
+        Assert.True(viewModel.Recorder.Segments[1].IsSystem);
+        Assert.False(viewModel.Recorder.Segments[1].IsMic);
     }
 
     [Theory]
@@ -577,10 +577,10 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
 
         await SendAsync(viewModel, new LanguageDetectedEvent("s", "pt"));
-        Assert.Equal("Detected: Portuguese", viewModel.DetectedLanguage);
+        Assert.Equal("Detected: Portuguese", viewModel.Recorder.DetectedLanguage);
         viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "es");
 
-        Assert.Equal("Detectado: Portugués", viewModel.DetectedLanguage);
+        Assert.Equal("Detectado: Portugués", viewModel.Recorder.DetectedLanguage);
         Assert.Equal("es", _localization.Language);
     }
 
@@ -588,21 +588,21 @@ public sealed class MainViewModelTests
     public async Task Interim_text_is_one_line_per_channel_replaced_in_place_then_by_the_segment()
     {
         var viewModel = await ReadyAsync();
-        Assert.True(viewModel.IsTranscriptEmpty);
+        Assert.True(viewModel.Recorder.IsTranscriptEmpty);
 
         await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 65.2, "Bom"));
         await SendAsync(viewModel, new PartialEvent("s", "system", "system", "Outros", 70, "Oi"));
         await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 65.2, "Bom dia, pess"));
 
-        Assert.False(viewModel.IsTranscriptEmpty);
+        Assert.False(viewModel.Recorder.IsTranscriptEmpty);
         Assert.Equal(
             [new TranscriptLine("00:01:05", "Eu", "Bom dia, pess", "mic"), new TranscriptLine("00:01:10", "Outros", "Oi", "system")],
-            viewModel.Partials);
+            viewModel.Recorder.Partials);
         await SendAsync(viewModel, new SegmentEvent("s", Line("mic", "Eu", 65.2, "Bom dia, pessoal.")));
-        Assert.Equal([new TranscriptLine("00:01:10", "Outros", "Oi", "system")], viewModel.Partials);
+        Assert.Equal([new TranscriptLine("00:01:10", "Outros", "Oi", "system")], viewModel.Recorder.Partials);
         await SendAsync(viewModel, new PartialEvent("s", "system", "system", "Outros", 70, ""));
-        Assert.Empty(viewModel.Partials);
-        Assert.Single(viewModel.Segments);
+        Assert.Empty(viewModel.Recorder.Partials);
+        Assert.Single(viewModel.Recorder.Segments);
     }
 
     [Fact]
@@ -611,13 +611,13 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
         await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 1, "stale"));
 
-        await viewModel.StartCommand.ExecuteAsync(null);
-        Assert.Empty(viewModel.Partials);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        Assert.Empty(viewModel.Recorder.Partials);
         await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 1, "Hel"));
         await SendAsync(viewModel, new StatusEvent("s", "done", 5));
 
-        Assert.Empty(viewModel.Partials);
-        Assert.True(viewModel.IsTranscriptEmpty);
+        Assert.Empty(viewModel.Recorder.Partials);
+        Assert.True(viewModel.Recorder.IsTranscriptEmpty);
     }
 
     [Fact]
@@ -625,28 +625,28 @@ public sealed class MainViewModelTests
     {
         var viewModel = await ReadyAsync();
 
-        await viewModel.StartCommand.ExecuteAsync(null);
-        Assert.Equal(RecordingState.Recording, viewModel.State);
-        Assert.False(viewModel.IsModelLoading);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
+        Assert.False(viewModel.Recorder.IsModelLoading);
         await SendAsync(viewModel, new ModelLoadingEvent("s", true));
 
-        Assert.True(viewModel.IsModelLoading);
-        Assert.True(viewModel.StopCommand.CanExecute(null));
+        Assert.True(viewModel.Recorder.IsModelLoading);
+        Assert.True(viewModel.Recorder.StopCommand.CanExecute(null));
         await SendAsync(viewModel, new ModelLoadingEvent("s", false));
-        Assert.False(viewModel.IsModelLoading);
+        Assert.False(viewModel.Recorder.IsModelLoading);
     }
 
     [Fact]
     public async Task The_model_loading_indicator_is_cleared_when_the_session_ends()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new ModelLoadingEvent("s", true));
 
         await SendAsync(viewModel, new StatusEvent("s", "done", 5));
 
-        Assert.False(viewModel.IsModelLoading);
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.False(viewModel.Recorder.IsModelLoading);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
     }
 
     [Fact]
@@ -669,7 +669,7 @@ public sealed class MainViewModelTests
         await SendAsync(viewModel, new ConnectionChangedEvent(false));
 
         Assert.Equal(_localization["EngineDisconnected"], viewModel.EngineText);
-        Assert.False(viewModel.StartCommand.CanExecute(null));
+        Assert.False(viewModel.Recorder.StartCommand.CanExecute(null));
         await SendAsync(viewModel, new UnknownEvent("s", "speakers_relabeled"));
         await SendAsync(viewModel, new LevelEvent("s", "mic", -20));
     }
@@ -678,13 +678,13 @@ public sealed class MainViewModelTests
     public async Task Stop_errors_are_shown_and_keep_recording()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         _client.StopError = FakeEngineClient.ApiError("no_active_session", "Nada gravando.");
 
-        await viewModel.StopCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StopCommand.ExecuteAsync(null);
 
         Assert.Contains("Nada gravando.", viewModel.Notifications);
-        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
     }
 
     [Fact]
@@ -700,13 +700,13 @@ public sealed class MainViewModelTests
     public async Task Closing_while_recording_asks_and_stops_the_session_first()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.True(await viewModel.ConfirmCloseAsync());
 
         Assert.Equal([_localization["ConfirmCloseTitle"]], _dialogs.Asked);
         Assert.Equal("stop", _client.Calls[^1]);
-        Assert.Equal(RecordingState.Finalizing, viewModel.State);
+        Assert.Equal(RecordingState.Finalizing, viewModel.Recorder.State);
     }
 
     [Fact]
@@ -733,21 +733,21 @@ public sealed class MainViewModelTests
     public async Task Declining_the_close_keeps_recording()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         _dialogs.Answer = false;
 
         Assert.False(await viewModel.ConfirmCloseAsync());
 
         Assert.DoesNotContain("stop", _client.Calls);
-        Assert.Equal(RecordingState.Recording, viewModel.State);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
     }
 
     [Fact]
     public async Task Shutdown_waits_for_finalization_before_stopping_the_engine()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
-        await viewModel.StopCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StopCommand.ExecuteAsync(null);
 
         var shutdown = viewModel.ShutdownAsync(TimeSpan.FromSeconds(5));
         await Task.Delay(50);
@@ -763,8 +763,8 @@ public sealed class MainViewModelTests
     public async Task Shutdown_gives_up_waiting_after_the_timeout()
     {
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
-        await viewModel.StopCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StopCommand.ExecuteAsync(null);
 
         await viewModel.ShutdownAsync(TimeSpan.FromMilliseconds(50));
 
@@ -775,12 +775,12 @@ public sealed class MainViewModelTests
     public async Task Status_text_follows_the_ui_language()
     {
         var viewModel = await ReadyAsync();
-        Assert.Equal("Ready", viewModel.StatusText);
+        Assert.Equal("Ready", viewModel.Recorder.StatusText);
 
         viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
 
-        Assert.Equal("Pronto", viewModel.StatusText);
-        Assert.Equal("Português", viewModel.ConversationLanguages.Single(option => option.Value == "pt").Label);
+        Assert.Equal("Pronto", viewModel.Recorder.StatusText);
+        Assert.Equal("Português", viewModel.Recorder.ConversationLanguages.Single(option => option.Value == "pt").Label);
     }
 
     [Fact]
@@ -804,7 +804,7 @@ public sealed class MainViewModelTests
         _events.Complete();
         await viewModel.EventLoop!;
 
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
     }
 
     [Fact]
@@ -820,12 +820,12 @@ public sealed class MainViewModelTests
 
         await viewModel.Recovery.RecoverCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new StatusEvent(id, "finalizing", 90));
-        Assert.Equal(RecordingState.Finalizing, viewModel.State); // Start waits for the recovery
-        Assert.False(viewModel.StartCommand.CanExecute(null));
+        Assert.Equal(RecordingState.Finalizing, viewModel.Recorder.State); // Start waits for the recovery
+        Assert.False(viewModel.Recorder.StartCommand.CanExecute(null));
 
         await SendAsync(viewModel, new StatusEvent(id, "done", 90));
         await viewModel.RecoveryRefresh;
-        Assert.Equal(RecordingState.Idle, viewModel.State);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
         Assert.Contains(_localization.Format("SessionRecovered", id), viewModel.Notifications);
         Assert.Equal([id], _client.Recovered);
     }

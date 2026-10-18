@@ -78,8 +78,8 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** UI — `RecordingSessionService` (shared state) and `RecorderPageViewModel` split
-  out of `MainViewModel` (title, Enter starts, chips locked while recording);
+- **Next step:** UI — `RecorderPageViewModel.Title`: sent on start, patched (debounced, Enter
+  commits) while recording, Enter starts when idle, `CanEditOptions` false while recording;
   `RecorderPageViewModelTests.cs`.
 
 ### Steps
@@ -88,10 +88,11 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - [x] Engine: `PATCH /sessions/{id}` `{title}` while recording and after — `fc66b75`
 - [x] Engine: title in the minutes prompt (en / pt-BR / es) and as the export document title —
       `2956745`, `dd74ba4`
-- [x] Docs: api-contract, architecture §8
-- [x] Docs — `3ee4679`
-- [x] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync`
-- [ ] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel`
+- [x] Docs: api-contract, architecture §8 — `3ee4679`
+- [x] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync` — `6d283d5`
+- [x] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel`
+- [ ] UI: meeting title on the recorder page (sent on start, patched while recording, Enter
+      starts), options locked while recording
 - [ ] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
       Meetings / Ask / Config page ViewModels
 - [ ] UI: shell view (sidebar, toasts, recovery banner) and the recorder page timer bar; tray
@@ -110,3 +111,8 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - `PATCH` of the session being recorded or finalized goes through its own `SessionMeta` (it keeps
   rewriting `session.json` until done, so a direct write would be lost); any other session is
   rewritten through the repository. A session being recovered → `409 session_being_recovered`.
+- UI split: `MainViewModel` stays the `MainWindow` DataContext (engine connection and events,
+  notifications, recovery, tray, interface language, window size), because every view binds its
+  strings through `$parent[Window].((vm:MainViewModel)DataContext).L[...]`. Recording moved to
+  `RecorderPageViewModel`; the shared state (state, elapsed, session id, title) is
+  `RecordingSessionService`. Existing tests reach the recorder through `viewModel.Recorder`.

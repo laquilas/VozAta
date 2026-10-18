@@ -48,8 +48,8 @@ public sealed class ThemeRenderTests
                 Render(viewModel, tab: 2, $"settings-{theme}.png");
 
                 // Start goes to the fake engine only: no audio is captured.
-                await viewModel.StartCommand.ExecuteAsync(null);
-                Assert.True(viewModel.IsRecording);
+                await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+                Assert.True(viewModel.Recorder.IsRecording);
                 AddTranscript(viewModel);
                 Render(viewModel, tab: 0, $"recording-active-{theme}.png");
                 return 5;
@@ -166,12 +166,12 @@ public sealed class ThemeRenderTests
 
     private static void AddTranscript(MainViewModel viewModel)
     {
-        viewModel.Segments.Add(new TranscriptLine("00:00:05", "Me", "Good morning, shall we start with the design tokens?", "mic"));
-        viewModel.Segments.Add(new TranscriptLine("00:00:10", "Others", "Yes, the dark theme looks good already.", "system")
+        viewModel.Recorder.Segments.Add(new TranscriptLine("00:00:05", "Me", "Good morning, shall we start with the design tokens?", "mic"));
+        viewModel.Recorder.Segments.Add(new TranscriptLine("00:00:10", "Others", "Yes, the dark theme looks good already.", "system")
         {
             Translation = "Sim, o tema escuro já está bom.",
         });
-        viewModel.Partials.Add(new TranscriptLine("00:00:15", "Me", "Then the icons and the", "mic"));
+        viewModel.Recorder.Partials.Add(new TranscriptLine("00:00:15", "Me", "Then the icons and the", "mic"));
     }
 
     private static void AddSetting(

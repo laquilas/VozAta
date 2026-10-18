@@ -25,7 +25,7 @@ public sealed class TrayViewModelTests
             await Task.Delay(5);
         }
 
-        return (main, new TrayViewModel(main, _localization, _preferences));
+        return (main, new TrayViewModel(main.Recorder, _localization, _preferences));
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class TrayViewModelTests
         Assert.Equal("Resume", tray.PauseResumeText);
         await tray.StopCommand.ExecuteAsync(null);
 
-        Assert.Equal(RecordingState.Finalizing, main.State);
+        Assert.Equal(RecordingState.Finalizing, main.Recorder.State);
         Assert.Equal(["start", "pause", "stop"], _client.Calls.Where(call => call is "start" or "pause" or "stop"));
     }
 
@@ -83,7 +83,7 @@ public sealed class TrayViewModelTests
     {
         var (main, _) = await ReadyAsync();
 
-        Assert.Same(main.StartCommand, main.Tray.StartCommand);
+        Assert.Same(main.Recorder.StartCommand, main.Tray.StartCommand);
     }
 
     [Fact]

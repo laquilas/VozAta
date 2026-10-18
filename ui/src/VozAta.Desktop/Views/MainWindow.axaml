@@ -71,54 +71,54 @@
           <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,8">
             <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
               <Button Classes="primary large"
-                      Command="{Binding StartCommand}"
-                      IsVisible="{Binding !IsRecording}"
+                      Command="{Binding Recorder.StartCommand}"
+                      IsVisible="{Binding !Recorder.IsRecording}"
                       Content="{Binding L[Start]}" />
               <Button Classes="danger large"
                       AutomationProperties.Name="{Binding L[Stop]}"
-                      Command="{Binding StopCommand}"
-                      IsVisible="{Binding IsRecording}">
+                      Command="{Binding Recorder.StopCommand}"
+                      IsVisible="{Binding Recorder.IsRecording}">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                   <PathIcon Classes="inline" Data="{StaticResource Icon.Stop}" />
                   <TextBlock Text="{Binding L[Stop]}" />
                 </StackPanel>
               </Button>
-              <Button Classes="large" Padding="22,14" Command="{Binding PauseResumeCommand}"
-                      IsVisible="{Binding IsRecording}" Content="{Binding PauseResumeText}" />
+              <Button Classes="large" Padding="22,14" Command="{Binding Recorder.PauseResumeCommand}"
+                      IsVisible="{Binding Recorder.IsRecording}" Content="{Binding Recorder.PauseResumeText}" />
               <StackPanel VerticalAlignment="Center" Spacing="2">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Ellipse Classes="state-dot recording"
-                           IsVisible="{Binding IsActivelyRecording}" />
+                           IsVisible="{Binding Recorder.IsActivelyRecording}" />
                   <Ellipse Classes="state-dot paused"
-                           IsVisible="{Binding IsPaused}" />
-                  <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
+                           IsVisible="{Binding Recorder.IsPaused}" />
+                  <TextBlock Text="{Binding Recorder.StatusText}" FontWeight="SemiBold" />
                 </StackPanel>
-                <TextBlock Text="{Binding Elapsed}" Classes="timer" />
+                <TextBlock Text="{Binding Recorder.Elapsed}" Classes="timer" />
                 <TextBlock Text="{Binding L[ModelLoading]}" Classes="hint warning"
-                           IsVisible="{Binding IsModelLoading}" />
+                           IsVisible="{Binding Recorder.IsModelLoading}" />
               </StackPanel>
             </StackPanel>
 
             <StackPanel Grid.Column="2" Spacing="4" MinWidth="230">
               <TextBlock Text="{Binding L[ConversationLanguage]}" />
               <ComboBox HorizontalAlignment="Stretch"
-                        ItemsSource="{Binding ConversationLanguages}"
-                        SelectedItem="{Binding SelectedLanguage}"
-                        IsEnabled="{Binding !IsRecording}">
+                        ItemsSource="{Binding Recorder.ConversationLanguages}"
+                        SelectedItem="{Binding Recorder.SelectedLanguage}"
+                        IsEnabled="{Binding !Recorder.IsRecording}">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:ChoiceOption">
                     <TextBlock Text="{Binding Label}" />
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
-              <TextBlock Text="{Binding DetectedLanguage}" FontStyle="Italic"
-                         IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding Recorder.DetectedLanguage}" FontStyle="Italic"
+                         IsVisible="{Binding Recorder.DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
               <!-- Live translation (phase 29) -->
               <TextBlock Text="{Binding L[TranslateTo]}" Margin="0,6,0,0" />
               <ComboBox HorizontalAlignment="Stretch"
-                        ItemsSource="{Binding TranslationLanguages}"
-                        SelectedItem="{Binding SelectedTranslation}"
-                        IsEnabled="{Binding !IsRecording}"
+                        ItemsSource="{Binding Recorder.TranslationLanguages}"
+                        SelectedItem="{Binding Recorder.SelectedTranslation}"
+                        IsEnabled="{Binding !Recorder.IsRecording}"
                         AutomationProperties.Name="{Binding L[TranslateTo]}">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:ChoiceOption">
@@ -128,9 +128,9 @@
               </ComboBox>
               <TextBlock Text="{Binding L[MinutesTemplate]}" Margin="0,6,0,0" />
               <ComboBox HorizontalAlignment="Stretch"
-                        ItemsSource="{Binding Templates.Items}"
-                        SelectedItem="{Binding SelectedTemplate}"
-                        IsEnabled="{Binding !IsRecording}"
+                        ItemsSource="{Binding Recorder.Templates.Items}"
+                        SelectedItem="{Binding Recorder.SelectedTemplate}"
+                        IsEnabled="{Binding !Recorder.IsRecording}"
                         AutomationProperties.Name="{Binding L[MinutesTemplate]}"
                         DisplayMemberBinding="{Binding Name, x:DataType=vm:TemplateOption}" />
               <TextBlock Text="{Binding L[InterfaceLanguage]}" Margin="0,6,0,0" />
@@ -148,8 +148,8 @@
 
           <!-- Terms for this meeting (phase 19): sent with Start, merged with the glossary -->
           <Expander DockPanel.Dock="Top" Margin="16,0,16,8" HorizontalAlignment="Stretch"
-                    Header="{Binding L[SessionTerms]}" IsEnabled="{Binding !IsRecording}">
-            <TextBox Text="{Binding SessionTerms}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="50"
+                    Header="{Binding L[SessionTerms]}" IsEnabled="{Binding !Recorder.IsRecording}">
+            <TextBox Text="{Binding Recorder.SessionTerms}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="50"
                      PlaceholderText="{Binding L[SessionTermsHint]}"
                      AutomationProperties.Name="{Binding L[SessionTerms]}" />
           </Expander>
@@ -157,7 +157,7 @@
           <!-- Devices (locked while recording) and level meters -->
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,24,*" Margin="16,0,16,8">
             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" x:DataType="vm:DevicesViewModel"
-                  DataContext="{Binding Devices}" IsEnabled="{Binding IsEnabled}">
+                  DataContext="{Binding Recorder.Devices}" IsEnabled="{Binding IsEnabled}">
               <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Microphone]}"
                          VerticalAlignment="Center" Margin="0,0,8,4" />
               <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,4"
@@ -176,14 +176,14 @@
                         DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
             </Grid>
             <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
-              <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding MicMeter}">
+              <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding Recorder.MicMeter}">
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
                 <Panel Grid.Column="1" Height="12">
                   <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Classes="meter-mic-peak" />
                   <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Classes="meter-mic" />
                 </Panel>
               </Grid>
-              <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding SystemMeter}">
+              <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding Recorder.SystemMeter}">
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
                 <Panel Grid.Column="1" Height="12">
                   <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Classes="meter-system-peak" />
@@ -191,7 +191,7 @@
                 </Panel>
               </Grid>
               <TextBlock Text="{Binding L[NoSystemSignal]}" Classes="warning" TextWrapping="Wrap"
-                         IsVisible="{Binding SystemMeter.NoSignal}" />
+                         IsVisible="{Binding Recorder.SystemMeter.NoSignal}" />
             </StackPanel>
           </Grid>
 
@@ -199,10 +199,10 @@
           <Border Margin="16,8,16,16" Classes="outline">
             <Panel>
               <TextBlock Text="{Binding L[TranscriptEmpty]}" Classes="secondary" Margin="16"
-                         TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
+                         TextWrapping="Wrap" IsVisible="{Binding Recorder.IsTranscriptEmpty}" />
               <ScrollViewer views:AutoScroll.IsEnabled="True">
                 <StackPanel Margin="12">
-                  <ItemsControl ItemsSource="{Binding Segments}">
+                  <ItemsControl ItemsSource="{Binding Recorder.Segments}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:TranscriptLine">
                         <StackPanel Margin="0,3">
@@ -218,7 +218,7 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <!-- Interim text (phase 28): grey italic, replaced in place, removed by the segment -->
-                  <ItemsControl ItemsSource="{Binding Partials}">
+                  <ItemsControl ItemsSource="{Binding Recorder.Partials}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:TranscriptLine">
                         <TextBlock Text="{Binding Display}" Classes="partial"

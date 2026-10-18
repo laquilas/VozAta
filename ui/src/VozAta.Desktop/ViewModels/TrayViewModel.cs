@@ -14,46 +14,46 @@ public enum TrayState
 }
 
 /// <summary>
-/// The system-tray menu: Start, Pause–Resume and Stop reuse the main window's commands; Show and
+/// The system-tray menu: Start, Pause–Resume and Stop reuse the recorder page's commands; Show and
 /// Quit are requests the composition root turns into window calls.
 /// </summary>
 public sealed partial class TrayViewModel : ObservableObject
 {
-    private readonly MainViewModel _main;
+    private readonly RecorderPageViewModel _recorder;
     private readonly ILocalizationService _localization;
     private readonly IUiPreferences _preferences;
 
-    public TrayViewModel(MainViewModel main, ILocalizationService localization, IUiPreferences preferences)
+    public TrayViewModel(RecorderPageViewModel recorder, ILocalizationService localization, IUiPreferences preferences)
     {
-        _main = main;
+        _recorder = recorder;
         _localization = localization;
         _preferences = preferences;
         MinimizeToTray = preferences.Load().MinimizeToTray;
-        main.PropertyChanged += OnMainChanged;
+        recorder.PropertyChanged += OnRecorderChanged;
     }
 
     public event Action? ShowRequested;
 
     public event Action? QuitRequested;
 
-    public IAsyncRelayCommand StartCommand => _main.StartCommand;
+    public IAsyncRelayCommand StartCommand => _recorder.StartCommand;
 
-    public IAsyncRelayCommand PauseResumeCommand => _main.PauseResumeCommand;
+    public IAsyncRelayCommand PauseResumeCommand => _recorder.PauseResumeCommand;
 
-    public IAsyncRelayCommand StopCommand => _main.StopCommand;
+    public IAsyncRelayCommand StopCommand => _recorder.StopCommand;
 
-    public TrayState State => _main.State switch
+    public TrayState State => _recorder.State switch
     {
         RecordingState.Recording => TrayState.Recording,
         RecordingState.Paused => TrayState.Paused,
         _ => TrayState.Idle,
     };
 
-    public string ToolTip => _localization.Format("TrayToolTip", _main.StatusText);
+    public string ToolTip => _localization.Format("TrayToolTip", _recorder.StatusText);
 
     public string StartText => _localization["Start"];
 
-    public string PauseResumeText => _main.PauseResumeText;
+    public string PauseResumeText => _recorder.PauseResumeText;
 
     public string StopText => _localization["Stop"];
 
@@ -65,6 +65,9 @@ public sealed partial class TrayViewModel : ObservableObject
     [ObservableProperty]
     public partial bool MinimizeToTray { get; set; }
 
+    /// <summary>Every text, after a language switch.</summary>
+    public void RefreshTexts() => OnPropertyChanged(string.Empty);
+
     partial void OnMinimizeToTrayChanged(bool value) =>
         _preferences.Save(_preferences.Load() with { MinimizeToTray = value });
 
@@ -74,18 +77,13 @@ public sealed partial class TrayViewModel : ObservableObject
     [RelayCommand]
     private void Quit() => QuitRequested?.Invoke();
 
-    private void OnMainChanged(object? sender, PropertyChangedEventArgs args)
+    private void OnRecorderChanged(object? sender, PropertyChangedEventArgs args)
     {
-        switch (args.PropertyName)
+        if (args.PropertyName == nameof(RecorderPageViewModel.State))
         {
-            case nameof(MainViewModel.State):
-                OnPropertyChanged(nameof(State));
-                OnPropertyChanged(nameof(ToolTip));
-                OnPropertyChanged(nameof(PauseResumeText));
-                break;
-            case nameof(MainViewModel.L):
-                OnPropertyChanged(string.Empty); // every text, after a language switch
-                break;
+            OnPropertyChanged(nameof(State));
+            OnPropertyChanged(nameof(ToolTip));
+            OnPropertyChanged(nameof(PauseResumeText));
         }
     }
 }
