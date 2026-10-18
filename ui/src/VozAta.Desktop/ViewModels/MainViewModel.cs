@@ -43,7 +43,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IShellService shell,
         IFileSaver saver,
         IThemeService theme,
-        IPathPicker? paths = null)
+        IPathPicker? paths = null,
+        Func<IAudioPlayer>? players = null,
+        Uri? engineUri = null)
     {
         _client = client;
         _events = events;
@@ -64,6 +66,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
         Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates);
+        History.Players = players is null ? null : (id, tracks) => new PlayerBarViewModel(
+            players(), dispatcher, track => AudioUri(engineUri, id, track), tracks, localization);
+        History.Renamed = Meetings.OnRenamedAsync;
+        History.DeleteMeeting = Meetings.DeleteMeetingAsync;
+        History.PropertyChanged += OnHistoryChanged;
         Migration = new MigrationViewModel(client, localization, () => Task.WhenAll(History.LoadAsync(), Meetings.LoadAsync()));
         Shell = new ShellViewModel(
             Recorder,
@@ -74,6 +81,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Session,
             localization,
             preferences);
+        Shell.SessionLeft += OnSessionLeft;
         Settings.Saved += OnSettingsSaved;
         Session.PropertyChanged += OnSessionChanged;
         var saved = preferences.Load();
@@ -308,6 +316,42 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>The URL of a session track (<c>GET /sessions/{id}/audio/{track}</c>, phase 32).</summary>
+    public static Uri AudioUri(Uri? engineUri, string sessionId, string track) =>
+        new(engineUri ?? new Uri("http://127.0.0.1:8765/"), $"sessions/{Uri.EscapeDataString(sessionId)}/audio/{track}");
+
+    /// <summary>The last return to the list started by the sidebar (tests await it).</summary>
+    public Task SessionClosing { get; private set; } = Task.CompletedTask;
+
+    /// <summary>A meeting opened or closed: show its page, or the list again (phase 37).</summary>
+    private void OnHistoryChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(HistoryViewModel.Detail))
+        {
+            return;
+        }
+
+        if (History.Detail is { } page)
+        {
+            Shell.OpenSession(page);
+        }
+        else
+        {
+            Shell.CloseSession();
+        }
+    }
+
+    private void OnSessionLeft(object? sender, EventArgs args) => SessionClosing = LeaveSessionAsync();
+
+    /// <summary>Another page was chosen while a meeting was open: close it, unless the user keeps unsaved edits.</summary>
+    private async Task LeaveSessionAsync()
+    {
+        if (!await History.CloseAsync() && History.Detail is { } page)
+        {
+            Shell.OpenSession(page);
+        }
+    }
+
     /// <summary>A session appeared or finished: the history reloads.</summary>
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs args)
     {
@@ -360,9 +404,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 break;
             case AnswerChunkEvent chunk:
                 History.Ask.OnAnswerChunk(chunk);
+                History.Detail?.Ask.OnAnswerChunk(chunk); // the meeting page's Ask tab (phase 37)
                 break;
             case AnswerDoneEvent done:
                 History.Ask.OnAnswerDone(done);
+                History.Detail?.Ask.OnAnswerDone(done);
                 break;
             case StatusEvent status:
                 Recorder.Handle(status);
@@ -429,6 +475,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Tray.RefreshTexts();
         Shell.RefreshTexts();
         Migration.RefreshTexts();
+        History.Detail?.Player?.RefreshTexts();
     }
 
     private void RefreshTexts()

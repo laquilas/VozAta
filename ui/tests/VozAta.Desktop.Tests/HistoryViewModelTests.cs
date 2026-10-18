@@ -36,7 +36,7 @@ public sealed class HistoryViewModelTests
 
         Assert.Equal([(HistoryViewModel.PageSize, 0)], _client.ListRequests);
         var row = history.Rows[0];
-        Assert.Equal(SessionDetailViewModel.FormatStart(Session(16).StartedAt), row.Date);
+        Assert.Equal(SessionPageViewModel.FormatStart(Session(16).StartedAt), row.Date);
         Assert.Equal(("01:02:05", "Detect automatically", false, false), (row.Duration, row.Language, row.HasMinutes, row.IsLive));
         Assert.Equal("Portuguese", history.Rows[1].Language);
         Assert.False(history.IsEmpty);

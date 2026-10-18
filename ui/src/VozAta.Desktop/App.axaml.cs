@@ -84,6 +84,8 @@ public partial class App : Application
         services.AddSingleton<IFileSaver>(_ => new AvaloniaFileSaver(desktop));
         services.AddSingleton<IPathPicker>(_ => new AvaloniaPathPicker(desktop));
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
+        services.AddSingleton<Func<IAudioPlayer>>(_ => () => new LibVlcAudioPlayer()); // one per meeting page (37)
+        services.AddSingleton(baseUri); // the player streams GET /sessions/{id}/audio/{track} from here
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

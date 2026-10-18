@@ -37,6 +37,12 @@ public sealed record TranscriptLine(string Timestamp, string Label, string Text,
     /// <summary>The line a search result opened (highlighted and scrolled into view).</summary>
     public bool IsFocused { get; init; }
 
+    /// <summary>Where the segment starts in the recording, in seconds (session page, phase 37).</summary>
+    public double Start { get; init; }
+
+    /// <summary>The line the in-app player is playing (highlighted, followed by the scroll).</summary>
+    public bool IsCurrent { get; init; }
+
     /// <summary>The text split around low-confidence words (phase 21); null when none is highlighted.</summary>
     public IReadOnlyList<TextPart>? LowConfidenceParts { get; init; }
 

@@ -864,6 +864,7 @@ graph LR
   SV --> M[Meetings: MeetingsPageViewModel → HistoryViewModel]
   SV --> A[Ask: AskPageViewModel → AskViewModel]
   SV --> C[Config: ConfigPageViewModel → SettingsViewModel, StorageViewModel, AboutViewModel]
+  SV --> P[Meeting page: SessionPageViewModel → PlayerBarViewModel → IAudioPlayer]
   R --> S[RecordingSessionService]
   SV --> S
   T[TrayViewModel] --> R
@@ -889,3 +890,20 @@ graph LR
   reaches the page). "Restart needed" and "Changed" badges, a sticky Save / Discard bar while
   dirty, and "Test" buttons next to `OLLAMA_URL`, `OPENAI_STT_URL`, `HF_TOKEN`, `AZDO_PAT` and
   `GITHUB_TOKEN` (`POST /settings/test/{target}`, saved settings, run only on click).
+- Meeting page (phase 37): opening a meeting (a Meetings row, a search hit, an Ask citation) shows
+  `SessionPageViewModel` as the shell's `SessionPage`, over the Meetings entry; Back, deleting it,
+  or picking any sidebar page closes it (unsaved transcript edits are asked about first).
+  `HistoryViewModel` still owns the open meeting (`Detail`). The page has a header (back,
+  editable title, date, duration; template + regenerate, export, "Open in external player",
+  delete through the Meetings flow with its Undo), the tabs Minutes, Transcript, Speakers, Action
+  items and Ask (scoped to the meeting), and the player bar docked at the bottom (none while live
+  or without audio). A transcript line's play button plays from its start; the line being played
+  is highlighted and scrolled into view while "Follow playback" is on; a search hit or a citation
+  shows its moment in the player without playing.
+- In-app player: the port `IAudioPlayer` (`Services/AudioPlayer.cs`), wired in `App.axaml.cs` as
+  `Func<IAudioPlayer>` (one player per meeting page, released when the page closes).
+  `LibVlcAudioPlayer` (LibVLCSharp) streams `GET /sessions/{id}/audio/{mixed|mic|system}` from the
+  engine (HTTP Range, no temp files); speed 0.75–2× keeps the pitch. Only the x64 LibVLC files an
+  audio stream needs ship (≈ 11 MB, `libvlc/win-x64/` next to the single-file executable).
+  `PlayerBarViewModel`: play/pause, −10 s / +10 s, position slider, speed, channel (switching
+  keeps the position) and volume.

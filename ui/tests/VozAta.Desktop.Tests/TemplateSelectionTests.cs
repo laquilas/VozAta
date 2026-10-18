@@ -143,7 +143,7 @@ public sealed class TemplateSelectionTests
     [Fact]
     public async Task A_detail_without_templates_regenerates_with_the_session_template()
     {
-        var detail = new SessionDetailViewModel(_client, new FakeShell(), _localization, new FakeFileSaver(), _client.Sessions[0]);
+        var detail = new SessionPageViewModel(_client, new FakeShell(), _localization, new FakeFileSaver(), _client.Sessions[0]);
 
         await detail.LoadAsync();
         await detail.RegenerateMinutesCommand.ExecuteAsync(null);

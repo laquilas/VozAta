@@ -37,7 +37,7 @@ public sealed class RecoveryViewModelTests
         Assert.True(viewModel.IsOpen);
         Assert.Equal(
             [
-                new RecoverySession(First, SessionDetailViewModel.FormatStart(_client.Details[First].StartedAt)!, "00:12:34"),
+                new RecoverySession(First, SessionPageViewModel.FormatStart(_client.Details[First].StartedAt)!, "00:12:34"),
                 new RecoverySession(Second, Second, "00:00:00"),
             ],
             viewModel.Sessions);
@@ -93,7 +93,7 @@ public sealed class RecoveryViewModelTests
 
         await viewModel.OnStatusAsync(new StatusEvent(First, "done", 754));
         Assert.Equal([First, Second], _client.Recovered);
-        Assert.Equal([_localization.Format("SessionRecovered", SessionDetailViewModel.FormatStart(_client.Details[First].StartedAt))], _notes);
+        Assert.Equal([_localization.Format("SessionRecovered", SessionPageViewModel.FormatStart(_client.Details[First].StartedAt))], _notes);
 
         await viewModel.OnStatusAsync(new StatusEvent(Second, "done", 0));
         Assert.Null(viewModel.Recovering);

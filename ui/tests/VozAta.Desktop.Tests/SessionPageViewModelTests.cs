@@ -6,7 +6,7 @@ using VozAta.Desktop.ViewModels;
 
 namespace VozAta.Desktop.Tests;
 
-public sealed class SessionDetailViewModelTests : IDisposable
+public sealed class SessionPageViewModelTests : IDisposable
 {
     private const string Id = "20261016_090000";
     private const string Folder = @"C:\VozAta\recordings\20261016_090000";
@@ -25,7 +25,7 @@ public sealed class SessionDetailViewModelTests : IDisposable
         }
     }
 
-    public SessionDetailViewModelTests()
+    public SessionPageViewModelTests()
     {
         _client.Details[Id] = Detail(["mic.wav", "mixed.wav", "session.json", "system.wav", "transcript.jsonl"]);
         _client.Transcripts[Id] = new Transcript("raw",
@@ -42,7 +42,7 @@ public sealed class SessionDetailViewModelTests : IDisposable
     private static SessionDetail Detail(IReadOnlyList<string> files) =>
         new(Id, "done", null, null, 75, "pt", true, files, Folder, new Dictionary<string, double> { ["mic"] = 75, ["system"] = 75, ["mixed"] = 75 });
 
-    private SessionDetailViewModel Create(string status = "done") =>
+    private SessionPageViewModel Create(string status = "done") =>
         new(_client, _shell, _localization, _saver, Summary(status), audioFolder: _audioFolder);
 
     [Fact]
@@ -53,8 +53,8 @@ public sealed class SessionDetailViewModelTests : IDisposable
         await detail.LoadAsync();
 
         Assert.Equal(
-            [new TranscriptLine("00:00:02", "Me", "Good morning.", "mic") { SegmentId = "mic-000001" },
-             new TranscriptLine("00:01:05", "Others", "Hi.", "system") { SegmentId = "system-000001" }],
+            [new TranscriptLine("00:00:02", "Me", "Good morning.", "mic") { SegmentId = "mic-000001", Start = 2.4 },
+             new TranscriptLine("00:01:05", "Others", "Hi.", "system") { SegmentId = "system-000001", Start = 65 }],
             detail.Lines);
         Assert.True(detail.HasMinutes);
         Assert.Equal(
@@ -126,7 +126,7 @@ public sealed class SessionDetailViewModelTests : IDisposable
         Assert.Equal("Others", detail.Lines[^1].Label);
         await detail.OnSpeakersRelabeledAsync(Id);
 
-        Assert.Equal([new TranscriptLine("00:01:05", "User 1", "Hi.", "system") { SegmentId = "system-000001" }], detail.Lines);
+        Assert.Equal([new TranscriptLine("00:01:05", "User 1", "Hi.", "system") { SegmentId = "system-000001", Start = 65 }], detail.Lines);
         Assert.Null(detail.Error);
     }
 
@@ -290,7 +290,7 @@ public sealed class SessionDetailViewModelTests : IDisposable
     [Fact]
     public void A_titled_meeting_shows_its_title_with_the_date_under_it()
     {
-        var detail = new SessionDetailViewModel(_client, _shell, _localization, _saver, Summary() with { Title = "Budget review" });
+        var detail = new SessionPageViewModel(_client, _shell, _localization, _saver, Summary() with { Title = "Budget review" });
 
         Assert.Equal("Budget review", detail.Title);
         Assert.Equal(Summary().StartedAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture), detail.Date);
