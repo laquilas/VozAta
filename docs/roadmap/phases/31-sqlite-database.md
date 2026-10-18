@@ -77,9 +77,8 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:30
-- **Next step:** docs — architecture §5/§8/§9 (SQLite schema, `STORAGE_BACKEND`,
-  `DATABASE_PATH`, OneDrive), api-contract (`GET /health` `storage`, `GET /sessions/{id}`
-  `storage`); then full suites and the manual check recipe.
+- **Next step:** full engine and UI suites, ruff, then the manual check recipe in Progress and
+  the PR.
 
 ### Steps
 
