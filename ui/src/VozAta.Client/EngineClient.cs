@@ -98,6 +98,15 @@ public interface IEngineClient
     /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
     Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /settings/options</c> (phase 38): the lists the Config page offers.</summary>
+    Task<SettingOptions> GetSettingOptionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /settings/test/{target}</c> (phase 38): check a service with the saved settings.</summary>
+    Task<ConnectionTestResult> TestConnectionAsync(string target, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /storage/cache</c> (phase 38): empty the audio cache.</summary>
+    Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>The engine answered with the error envelope; <see cref="Exception.Message"/> is localized.</summary>
@@ -263,6 +272,15 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>
         SendAsync<SettingsUpdateResult>(HttpMethod.Put, "settings", new { values }, cancellationToken);
+
+    public Task<SettingOptions> GetSettingOptionsAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<SettingOptions>(HttpMethod.Get, "settings/options", null, cancellationToken);
+
+    public Task<ConnectionTestResult> TestConnectionAsync(string target, CancellationToken cancellationToken = default) =>
+        SendAsync<ConnectionTestResult>(HttpMethod.Post, $"settings/test/{Escape(target)}", null, cancellationToken);
+
+    public Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<CacheCleared>(HttpMethod.Delete, "storage/cache", null, cancellationToken);
 
     private async Task<T> SendAsync<T>(
         HttpMethod method, string path, object? body, CancellationToken cancellationToken)

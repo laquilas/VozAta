@@ -22,6 +22,10 @@ public sealed partial class HealthViewModel(IEngineClient client, ILocalizationS
     [ObservableProperty]
     public partial string? Error { get; private set; }
 
+    /// <summary>The engine version (Config → About, phase 38); empty until the first check.</summary>
+    [ObservableProperty]
+    public partial string EngineVersion { get; private set; } = "";
+
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -44,6 +48,7 @@ public sealed partial class HealthViewModel(IEngineClient client, ILocalizationS
             return;
         }
 
+        EngineVersion = health.Version;
         GpuText = health.Gpu.Available
             ? localization.Format("GpuName", health.Gpu.Name, health.Gpu.VramTotalMb)
             : localization["GpuNone"];

@@ -193,3 +193,19 @@ column_text = "Texto"
 
 [storage]
 onedrive_warning = "O banco de dados {path} está em uma pasta do OneDrive ({root}). O OneDrive pode bloqueá-lo ou corrompê-lo enquanto o VozAta está em execução: defina DATABASE_PATH para uma pasta fora do OneDrive e reinicie o motor."
+
+[settings_test]
+ollama_ok = "O Ollama respondeu e o modelo {model} está instalado."
+ollama_model_missing = "O Ollama respondeu, mas o modelo {model} não está instalado: execute `ollama pull {model}`."
+stt_api_ok = "A API de fala em {host} aceitou a chave."
+hf_token_ok = "O token abre {models}."
+azure_devops_ok = "Projeto {project} do Azure DevOps encontrado; o token funciona."
+github_ok = "Repositório {repo} do GitHub encontrado; o token funciona."
+not_configured = "Preencha e salve {keys} primeiro."
+unauthorized = "O serviço recusou as credenciais (HTTP {status})."
+terms_not_accepted = "O token funciona, mas a conta dele não aceitou os termos de {model}: abra huggingface.co/{model} e aceite-os."
+not_found = "{what} não foi encontrado, ou o token não tem acesso."
+http_error = "O serviço respondeu com HTTP {status}."
+unreachable = "Não foi possível acessar {host}."
+invalid_response = "O serviço respondeu algo inesperado."
+unavailable = "Os testes de conexão não estão disponíveis neste motor."

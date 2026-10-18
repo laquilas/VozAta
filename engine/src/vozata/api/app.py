@@ -21,6 +21,7 @@ from vozata.api.routes import (
     search,
     sessions,
     settings,
+    settings_tools,
     speakers,
     templates,
     transcript_edit,
@@ -61,6 +62,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     app.include_router(ask_routes.router, responses=ERROR_RESPONSES)  # phase 24
     app.include_router(action_items.router, responses=ERROR_RESPONSES)  # phase 23
     app.include_router(recover.router, responses=ERROR_RESPONSES)  # phase 17
+    app.include_router(settings_tools.router, responses=ERROR_RESPONSES)  # phase 38
     app.include_router(branding.router)
 
     @app.websocket("/ws")

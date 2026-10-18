@@ -31,6 +31,9 @@ from vozata.audio.portaudio import PortAudioThread
 from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
+from vozata.connection_checks import ConnectionChecks
+from vozata.diarization.embedder import MODEL as EMBEDDING_MODEL
+from vozata.diarization.pyannote import MODEL as DIARIZATION_MODEL
 from vozata.diarization.subprocess_diarizer import pyannote_from_settings
 from vozata.diarization.subprocess_embedder import pyannote_embedder_from_settings
 from vozata.domain import (
@@ -77,6 +80,7 @@ from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
+from vozata.settings_options import SettingsOptions
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.folder import open_session_folder as open_files_folder
 from vozata.storage.files.recycle_bin import Send2TrashRecycler
@@ -585,6 +589,30 @@ def _devices(
     return {Channel.MIC: mic, Channel.SYSTEM: system}
 
 
+def hf_hub_cache() -> Path:
+    """Where Hugging Face models (Whisper, pyannote) are downloaded (`HF_HOME` / `HF_HUB_CACHE`)."""
+    try:
+        from huggingface_hub import constants
+    except ImportError:  # pragma: no cover - installed with faster-whisper
+        return Path.home() / ".cache" / "huggingface" / "hub"
+    return Path(constants.HF_HUB_CACHE)
+
+
+def build_setting_options(
+    settings_now: Callable[[], Settings], gpu_available: Callable[[], bool]
+) -> SettingsOptions:
+    """The Config page lists (phase 38): registry keys, cached models, Ollama's pulled models."""
+    providers = {
+        "stt_providers": list(TRANSCRIBERS),
+        "llm_providers": list(LANGUAGE_MODELS),
+        "diarization_providers": list(DIARIZERS),
+        "translation_providers": list(TRANSLATORS),
+    }
+    return SettingsOptions(
+        providers, hf_hub_cache(), lambda: settings_now().ollama_url, gpu_available
+    )
+
+
 def build_api_container(settings: Settings, env_file: Path | None = None) -> ApiContainer:
     """Everything `api.app.create_app` needs, wired with the real providers.
 
@@ -660,6 +688,8 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared.release()  # VRAM rule, as for answers
         return build_action_item_extractor(settings_file.current)  # current language
 
+    gpu_info = functools.cache(query_gpu)  # the GPU does not change while running
+    options = build_setting_options(lambda: settings_file.current, lambda: gpu_info().available)
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
@@ -672,7 +702,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         broadcaster=broadcaster,
         manager=manager,
         devices=WasapiCatalog(),
-        gpu_info=functools.cache(query_gpu),  # the GPU does not change while running
+        gpu_info=gpu_info,
         llm_reachable=llm_reachable,
         regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
         release_models=shared.release if shared is not None else lambda: None,
@@ -686,4 +716,6 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         task_targets=lambda: task_targets(settings_file.current),
         task_exporter=lambda target: build_task_exporter(settings_file.current, target),
         storage=storage_info(settings),
+        setting_options=options.collect,
+        connection_check=ConnectionChecks((DIARIZATION_MODEL, EMBEDDING_MODEL)).run,
     )

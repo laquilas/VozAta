@@ -1,0 +1,389 @@
+from __future__ import annotations
+
+import base64
+import dataclasses
+import logging
+from collections.abc import Callable
+from pathlib import Path
+
+import httpx
+import pytest
+
+from tests.api.conftest import Api
+from vozata.config import Settings
+from vozata.connection_checks import CheckResult, CheckTarget, ConnectionChecks
+
+HF_MODELS = ("pyannote/speaker-diarization-community-1", "pyannote/wespeaker-voxceleb-resnet34-LM")
+SECRETS = ("sk-stt-secret", "hf_secret_token", "azdo-secret-pat", "ghp_secret_token")
+
+
+def _settings(**overrides: object) -> Settings:
+    values: dict[str, object] = {
+        "ollama_url": "http://ollama.test:11434",
+        "ollama_model": "qwen2.5:7b",
+        "openai_stt_url": "https://stt.example.com/v1",
+        "openai_stt_key": "sk-stt-secret",
+        "hf_token": "hf_secret_token",
+        "azdo_org_url": "https://dev.azure.com/contoso",
+        "azdo_project": "Voz Ata",
+        "azdo_pat": "azdo-secret-pat",
+        "github_repo": "contoso/vozata",
+        "github_token": "ghp_secret_token",
+    }
+    values.update(overrides)
+    return Settings(**values)  # type: ignore[arg-type]
+
+
+def _run(
+    target: CheckTarget,
+    handler: Callable[[httpx.Request], httpx.Response],
+    settings: Settings | None = None,
+) -> tuple[CheckResult, list[httpx.Request]]:
+    seen: list[httpx.Request] = []
+
+    def record(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return handler(request)
+
+    checks = ConnectionChecks(HF_MODELS, transport=httpx.MockTransport(record))
+    return checks.run(target, settings or _settings()), seen
+
+
+def _status(code: int, **kwargs: object) -> Callable[[httpx.Request], httpx.Response]:
+    return lambda request: httpx.Response(code, **kwargs)  # type: ignore[arg-type]
+
+
+def _refused(request: httpx.Request) -> httpx.Response:
+    raise httpx.ConnectError("refused", request=request)
+
+
+# Ollama
+
+
+def test_ollama_success_when_the_model_is_pulled() -> None:
+    result, seen = _run(CheckTarget.OLLAMA, _status(200, json={"models": [{"name": "qwen2.5:7b"}]}))
+
+    assert result == CheckResult(True, "ollama_ok", {"model": "qwen2.5:7b"})
+    assert str(seen[0].url) == "http://ollama.test:11434/api/tags"
+
+
+def test_ollama_accepts_the_latest_tag() -> None:
+    settings = _settings(ollama_model="llama3")
+    result, _ = _run(
+        CheckTarget.OLLAMA, _status(200, json={"models": [{"name": "llama3:latest"}]}), settings
+    )
+
+    assert result.ok
+
+
+def test_ollama_reports_a_missing_model() -> None:
+    result, _ = _run(CheckTarget.OLLAMA, _status(200, json={"models": [{"name": "other"}]}))
+
+    assert result == CheckResult(False, "ollama_model_missing", {"model": "qwen2.5:7b"})
+
+
+def test_ollama_server_error() -> None:
+    result, _ = _run(CheckTarget.OLLAMA, _status(500))
+
+    assert result == CheckResult(False, "http_error", {"status": 500})
+
+
+def test_ollama_unreachable_names_the_host() -> None:
+    result, _ = _run(CheckTarget.OLLAMA, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "ollama.test"})
+
+
+def test_a_reply_that_is_not_json_is_an_invalid_response() -> None:
+    result, _ = _run(CheckTarget.OLLAMA, _status(200, text="<html>"))
+
+    assert result == CheckResult(False, "invalid_response")
+
+
+def test_an_error_without_a_request_names_no_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    from vozata import connection_checks
+
+    def fail(client: httpx.Client, settings: Settings) -> CheckResult:
+        raise httpx.TransportError("socket closed")  # raised outside a request: no `.request`
+
+    checks = ConnectionChecks(HF_MODELS)
+    monkeypatch.setitem(checks._checks, CheckTarget.OLLAMA, fail)  # noqa: SLF001
+
+    assert checks.run(CheckTarget.OLLAMA, _settings()) == CheckResult(
+        False, "unreachable", {"host": "?"}
+    )
+    assert connection_checks._has_request(httpx.TransportError("x")) is False  # noqa: SLF001
+
+
+# Speech-to-text API
+
+
+def test_stt_api_success_sends_the_key_as_bearer() -> None:
+    result, seen = _run(CheckTarget.STT_API, _status(200, json={"data": []}))
+
+    assert result == CheckResult(True, "stt_api_ok", {"host": "stt.example.com"})
+    assert str(seen[0].url) == "https://stt.example.com/v1/models"
+    assert seen[0].headers["Authorization"] == "Bearer sk-stt-secret"
+
+
+def test_stt_api_without_a_key_sends_no_authorization() -> None:
+    _, seen = _run(CheckTarget.STT_API, _status(200), _settings(openai_stt_key=None))
+
+    assert "Authorization" not in seen[0].headers
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_stt_api_rejected_key(status: int) -> None:
+    result, _ = _run(CheckTarget.STT_API, _status(status))
+
+    assert result == CheckResult(False, "unauthorized", {"status": status})
+
+
+def test_stt_api_unreachable() -> None:
+    result, _ = _run(CheckTarget.STT_API, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "stt.example.com"})
+
+
+def test_stt_api_without_a_url_is_not_configured() -> None:
+    result, seen = _run(CheckTarget.STT_API, _status(200), _settings(openai_stt_url=""))
+
+    assert result == CheckResult(False, "not_configured", {"keys": "OPENAI_STT_URL"})
+    assert seen == []
+
+
+# Hugging Face token
+
+
+def test_hf_token_success_checks_every_gated_model() -> None:
+    result, seen = _run(CheckTarget.HF_TOKEN, _status(200))
+
+    assert result.ok and result.code == "hf_token_ok"
+    assert [request.method for request in seen] == ["HEAD", "HEAD"]
+    assert [request.url.path for request in seen] == [
+        f"/{model}/resolve/main/config.yaml" for model in HF_MODELS
+    ]
+    assert seen[0].headers["Authorization"] == "Bearer hf_secret_token"
+
+
+def test_hf_token_redirect_to_the_file_is_success() -> None:
+    result, _ = _run(CheckTarget.HF_TOKEN, _status(302, headers={"Location": "https://cdn"}))
+
+    assert result.ok
+
+
+def test_hf_token_invalid() -> None:
+    result, _ = _run(CheckTarget.HF_TOKEN, _status(401))
+
+    assert result == CheckResult(False, "unauthorized", {"status": 401})
+
+
+def test_hf_token_terms_not_accepted_names_the_model() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403 if "wespeaker" in request.url.path else 200)
+
+    result, _ = _run(CheckTarget.HF_TOKEN, handler)
+
+    assert result == CheckResult(False, "terms_not_accepted", {"model": HF_MODELS[1]})
+
+
+def test_hf_token_other_error() -> None:
+    result, _ = _run(CheckTarget.HF_TOKEN, _status(500))
+
+    assert result == CheckResult(False, "http_error", {"status": 500})
+
+
+def test_hf_token_unreachable() -> None:
+    result, _ = _run(CheckTarget.HF_TOKEN, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "huggingface.co"})
+
+
+def test_hf_token_missing() -> None:
+    result, seen = _run(CheckTarget.HF_TOKEN, _status(200), _settings(hf_token=None))
+
+    assert result == CheckResult(False, "not_configured", {"keys": "HF_TOKEN"})
+    assert seen == []
+
+
+# Azure DevOps
+
+
+def test_azure_devops_success_reads_the_project_with_basic_auth() -> None:
+    result, seen = _run(CheckTarget.AZURE_DEVOPS, _status(200, json={"name": "Voz Ata"}))
+
+    assert result == CheckResult(True, "azure_devops_ok", {"project": "Voz Ata"})
+    assert seen[0].url.raw_path.startswith(b"/contoso/_apis/projects/Voz%20Ata?")
+    assert seen[0].url.params["api-version"] == "7.1"
+    expected = base64.b64encode(b":azdo-secret-pat").decode()
+    assert seen[0].headers["Authorization"] == f"Basic {expected}"
+
+
+@pytest.mark.parametrize("status", [401, 203, 302])
+def test_azure_devops_rejected_token(status: int) -> None:
+    result, _ = _run(CheckTarget.AZURE_DEVOPS, _status(status))
+
+    assert result == CheckResult(False, "unauthorized", {"status": 401})
+
+
+def test_azure_devops_unknown_project() -> None:
+    result, _ = _run(CheckTarget.AZURE_DEVOPS, _status(404))
+
+    assert result == CheckResult(False, "not_found", {"what": "Voz Ata"})
+
+
+def test_azure_devops_unreachable() -> None:
+    result, _ = _run(CheckTarget.AZURE_DEVOPS, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "dev.azure.com"})
+
+
+def test_azure_devops_not_configured() -> None:
+    result, _ = _run(CheckTarget.AZURE_DEVOPS, _status(200), _settings(azdo_pat=None))
+
+    assert not result.ok and result.code == "not_configured"
+
+
+# GitHub
+
+
+def test_github_success() -> None:
+    result, seen = _run(CheckTarget.GITHUB, _status(200, json={"full_name": "contoso/vozata"}))
+
+    assert result == CheckResult(True, "github_ok", {"repo": "contoso/vozata"})
+    assert str(seen[0].url) == "https://api.github.com/repos/contoso/vozata"
+    assert seen[0].headers["Authorization"] == "Bearer ghp_secret_token"
+
+
+def test_github_rejected_token() -> None:
+    result, _ = _run(CheckTarget.GITHUB, _status(401))
+
+    assert result == CheckResult(False, "unauthorized", {"status": 401})
+
+
+def test_github_unknown_repository() -> None:
+    result, _ = _run(CheckTarget.GITHUB, _status(404))
+
+    assert result == CheckResult(False, "not_found", {"what": "contoso/vozata"})
+
+
+def test_github_server_error() -> None:
+    result, _ = _run(CheckTarget.GITHUB, _status(502))
+
+    assert result == CheckResult(False, "http_error", {"status": 502})
+
+
+def test_github_unreachable() -> None:
+    result, _ = _run(CheckTarget.GITHUB, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "api.github.com"})
+
+
+def test_github_not_configured() -> None:
+    result, _ = _run(CheckTarget.GITHUB, _status(200), _settings(github_repo=None))
+
+    assert result == CheckResult(False, "not_configured", {"keys": "GITHUB_REPO, GITHUB_TOKEN"})
+
+
+# Secrets
+
+
+@pytest.mark.parametrize("target", list(CheckTarget))
+@pytest.mark.parametrize("code", [200, 401, 403, 404, 500])
+def test_secrets_are_never_in_results_or_logs(
+    target: CheckTarget, code: int, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    result, _ = _run(target, _status(code, json={"models": []}))
+
+    text = repr(result) + caplog.text
+    assert not any(secret in text for secret in SECRETS)
+
+
+# API
+
+
+def _checks_api(api: Api, handler: Callable[[httpx.Request], httpx.Response]) -> None:
+    checks = ConnectionChecks(HF_MODELS, transport=httpx.MockTransport(handler))
+    container = api.app.state.container
+    api.app.state.container = dataclasses.replace(container, connection_check=checks.run)
+
+
+def test_the_test_endpoint_returns_a_localized_message(api: Api) -> None:
+    _checks_api(api, _status(200, json={"models": [{"name": "qwen2.5:7b"}]}))
+
+    response = api.client.post("/settings/test/ollama")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "message": "Ollama answered and the model qwen2.5:7b is installed.",
+    }
+
+
+def test_the_test_endpoint_uses_the_saved_settings(api: Api, tmp_path: Path) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(404)
+
+    _checks_api(api, handler)
+    api.client.put("/settings", json={"values": {"GITHUB_REPO": "me/repo", "GITHUB_TOKEN": "t0k"}})
+
+    body = api.client.post("/settings/test/github").json()
+
+    assert body["ok"] is False
+    assert "me/repo" in body["message"]
+    assert "t0k" not in body["message"]
+    assert seen[0].headers["Authorization"] == "Bearer t0k"
+
+
+def test_the_test_endpoint_rejects_an_unknown_target(api: Api) -> None:
+    response = api.client.post("/settings/test/smtp")
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_request"
+
+
+def test_without_checks_the_endpoint_says_unavailable(api: Api) -> None:
+    body = api.client.post("/settings/test/github").json()
+
+    assert body == {"ok": False, "message": "Connection tests are not available in this engine."}
+
+
+@pytest.mark.parametrize("language", ["en", "pt-BR", "es"])
+def test_every_result_code_has_a_message_in_every_language(language: str) -> None:
+    from vozata.domain import AppLanguage
+    from vozata.i18n import TomlLocalizer
+
+    localizer = TomlLocalizer(AppLanguage(language))
+    params = {
+        "model": "m",
+        "host": "h",
+        "models": "a, b",
+        "project": "p",
+        "repo": "r",
+        "keys": "K",
+        "status": 401,
+        "what": "w",
+    }
+    for code in (
+        "ollama_ok",
+        "ollama_model_missing",
+        "stt_api_ok",
+        "hf_token_ok",
+        "azure_devops_ok",
+        "github_ok",
+        "not_configured",
+        "unauthorized",
+        "terms_not_accepted",
+        "not_found",
+        "http_error",
+        "unreachable",
+        "invalid_response",
+        "unavailable",
+    ):
+        text = localizer.t(f"settings_test.{code}", **params)
+        assert text and not text.startswith("settings_test.")

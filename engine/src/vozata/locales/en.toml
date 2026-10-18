@@ -193,3 +193,19 @@ column_text = "Text"
 
 [storage]
 onedrive_warning = "The database {path} is in a OneDrive folder ({root}). OneDrive can lock or corrupt it while VozAta runs: set DATABASE_PATH to a folder outside OneDrive and restart the engine."
+
+[settings_test]
+ollama_ok = "Ollama answered and the model {model} is installed."
+ollama_model_missing = "Ollama answered, but the model {model} is not installed: run `ollama pull {model}`."
+stt_api_ok = "The speech API at {host} accepted the key."
+hf_token_ok = "The token opens {models}."
+azure_devops_ok = "Azure DevOps project {project} found; the token works."
+github_ok = "GitHub repository {repo} found; the token works."
+not_configured = "Fill in and save {keys} first."
+unauthorized = "The service rejected the credentials (HTTP {status})."
+terms_not_accepted = "The token works, but its account has not accepted the terms of {model}: open huggingface.co/{model} and accept them."
+not_found = "{what} was not found, or the token cannot see it."
+http_error = "The service answered with HTTP {status}."
+unreachable = "Could not reach {host}."
+invalid_response = "The service answered with something unexpected."
+unavailable = "Connection tests are not available in this engine."

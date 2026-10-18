@@ -1029,4 +1029,136 @@
   <data name="GoToRecorder" xml:space="preserve">
     <value>Recording {0} — open the recorder</value>
   </data>
+  <data name="ConfigSection_desktop" xml:space="preserve">
+    <value>Desktop app</value>
+  </data>
+  <data name="ConfigSection_vocabulary" xml:space="preserve">
+    <value>Vocabulary</value>
+  </data>
+  <data name="ConfigSection_storage" xml:space="preserve">
+    <value>Storage</value>
+  </data>
+  <data name="ConfigSection_about" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="ConfigSections" xml:space="preserve">
+    <value>Sections</value>
+  </data>
+  <data name="ConfigSearch" xml:space="preserve">
+    <value>Search settings</value>
+  </data>
+  <data name="ConfigNoResults" xml:space="preserve">
+    <value>No setting matches the search.</value>
+  </data>
+  <data name="ConfigUnsaved" xml:space="preserve">
+    <value>You have unsaved changes.</value>
+  </data>
+  <data name="SettingChanged" xml:space="preserve">
+    <value>Changed</value>
+  </data>
+  <data name="SettingNotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="SettingOptionsUnreachable" xml:space="preserve">
+    <value>The list could not be read: the service did not answer.</value>
+  </data>
+  <data name="SettingInvalidUrl" xml:space="preserve">
+    <value>Enter a full address that starts with http:// or https://.</value>
+  </data>
+  <data name="SettingBrowse" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="SecretStored" xml:space="preserve">
+    <value>Saved (hidden)</value>
+  </data>
+  <data name="SecretNotSet" xml:space="preserve">
+    <value>Not set</value>
+  </data>
+  <data name="SecretWillBeRemoved" xml:space="preserve">
+    <value>Removed when you save</value>
+  </data>
+  <data name="SecretReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="SecretRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="SecretKeep" xml:space="preserve">
+    <value>Keep the saved value</value>
+  </data>
+  <data name="ConnectionTest" xml:space="preserve">
+    <value>Test</value>
+  </data>
+  <data name="ConnectionTesting" xml:space="preserve">
+    <value>Testing…</value>
+  </data>
+  <data name="ConnectionTestHint" xml:space="preserve">
+    <value>Checks the service with the saved settings: save your changes first.</value>
+  </data>
+  <data name="StorageBackend" xml:space="preserve">
+    <value>Storage</value>
+  </data>
+  <data name="StorageBackendSqlite" xml:space="preserve">
+    <value>SQLite database (vozata.db)</value>
+  </data>
+  <data name="StorageBackendFiles" xml:space="preserve">
+    <value>Folders (one per meeting)</value>
+  </data>
+  <data name="StorageDatabase" xml:space="preserve">
+    <value>Database</value>
+  </data>
+  <data name="StorageDatabaseSize" xml:space="preserve">
+    <value>Database size</value>
+  </data>
+  <data name="StorageNoDatabase" xml:space="preserve">
+    <value>No database</value>
+  </data>
+  <data name="StorageAudioCache" xml:space="preserve">
+    <value>Audio cache</value>
+  </data>
+  <data name="StorageAudioCacheHelp" xml:space="preserve">
+    <value>WAV files made from the database for playback. They are made again when needed.</value>
+  </data>
+  <data name="StorageClearCache" xml:space="preserve">
+    <value>Clear cache</value>
+  </data>
+  <data name="StorageClearCacheTitle" xml:space="preserve">
+    <value>Clear the audio cache?</value>
+  </data>
+  <data name="StorageClearCacheMessage" xml:space="preserve">
+    <value>The cached WAV files are deleted. The recordings stay in the database and are cached again when you play them.</value>
+  </data>
+  <data name="StorageKeepCache" xml:space="preserve">
+    <value>Keep</value>
+  </data>
+  <data name="StorageCacheCleared" xml:space="preserve">
+    <value>Freed {0}.</value>
+  </data>
+  <data name="StorageOpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="StorageRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="SizeBytes" xml:space="preserve">
+    <value>{0} B</value>
+  </data>
+  <data name="SizeKilobytes" xml:space="preserve">
+    <value>{0:0.#} KB</value>
+  </data>
+  <data name="SizeMegabytes" xml:space="preserve">
+    <value>{0:0.#} MB</value>
+  </data>
+  <data name="SizeGigabytes" xml:space="preserve">
+    <value>{0:0.##} GB</value>
+  </data>
+  <data name="AboutAppVersion" xml:space="preserve">
+    <value>App version</value>
+  </data>
+  <data name="AboutEngineVersion" xml:space="preserve">
+    <value>Engine version</value>
+  </data>
+  <data name="AboutLicenses" xml:space="preserve">
+    <value>Licenses</value>
+  </data>
 </root>
