@@ -160,6 +160,21 @@ def test_each_thread_has_its_own_connection(database: Database) -> None:
     assert theirs[0] is not mine
 
 
+def test_the_connection_of_a_finished_thread_is_closed_by_the_next_new_one(
+    database: Database,
+) -> None:
+    theirs: list[sqlite3.Connection] = []
+    thread = threading.Thread(target=lambda: theirs.append(database.connection()))
+    thread.start()
+    thread.join()
+    theirs[0].execute("SELECT 1")  # still open: nobody has opened a connection since
+
+    database.connection()  # this thread's first one
+
+    with pytest.raises(sqlite3.ProgrammingError):
+        theirs[0].execute("SELECT 1")
+
+
 def test_a_failed_write_is_rolled_back(database: Database) -> None:
     with pytest.raises(RuntimeError), database.write() as db:
         db.execute("INSERT INTO sessions (id) VALUES ('20261015_202358')")

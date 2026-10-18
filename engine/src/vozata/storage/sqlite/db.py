@@ -106,7 +106,7 @@ class Database:
         self._migrated = False
         self._local = threading.local()
         self._write_lock = threading.RLock()
-        self._connections: list[sqlite3.Connection] = []
+        self._connections: dict[threading.Thread, sqlite3.Connection] = {}
         self._connections_lock = threading.Lock()
 
     @property
@@ -143,7 +143,12 @@ class Database:
         db.execute("PRAGMA foreign_keys = ON")
         self._local.db = db
         with self._connections_lock:
-            self._connections.append(db)
+            # Threads come and go (one set per recording): close what finished threads left.
+            for thread, old in list(self._connections.items()):
+                if not thread.is_alive():
+                    old.close()
+                    del self._connections[thread]
+            self._connections[threading.current_thread()] = db
         return db
 
     @contextlib.contextmanager
@@ -187,7 +192,7 @@ class Database:
     def close(self) -> None:
         """Close every thread's connection (the next use opens a new one)."""
         with self._connections_lock:
-            connections, self._connections = self._connections, []
-        for db in connections:
+            connections, self._connections = self._connections, {}
+        for db in connections.values():
             db.close()
         self._local = threading.local()
