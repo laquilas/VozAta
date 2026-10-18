@@ -178,6 +178,7 @@ recover_all = "recupera todas las sesiones interrumpidas en OUTPUT_DIR"
 
 [export]
 title = "Reunión del {date}"
+date = "Fecha: {value}"
 duration = "Duración: {value}"
 language = "Idioma: {value}"
 minutes = "Acta"

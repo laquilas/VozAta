@@ -178,6 +178,7 @@ recover_all = "recover every interrupted session in OUTPUT_DIR"
 
 [export]
 title = "Meeting of {date}"
+date = "Date: {value}"
 duration = "Duration: {value}"
 language = "Language: {value}"
 minutes = "Minutes"

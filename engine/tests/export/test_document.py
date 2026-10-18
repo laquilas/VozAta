@@ -71,6 +71,31 @@ def test_the_document_has_localized_title_details_and_rows() -> None:
     ]
 
 
+def test_a_titled_meeting_uses_its_title_and_keeps_the_date_in_the_details() -> None:
+    localizer = TomlLocalizer(AppLanguage.ES)
+    summary = {**SUMMARY, "title": "Presupuesto 2027"}
+
+    document = build_document(summary, MINUTES, [], SpeakerLabeler(localizer), localizer)
+
+    assert document.title == "Presupuesto 2027"
+    assert document.details == [
+        "Fecha: 2026-10-16 09:00",
+        "Duración: 01:02:05",
+        "Idioma: Portugués",
+    ]
+
+
+def test_a_blank_title_falls_back_to_the_date_title() -> None:
+    localizer = TomlLocalizer(AppLanguage.EN)
+
+    document = build_document(
+        {**SUMMARY, "title": "  "}, None, [], SpeakerLabeler(localizer), localizer
+    )
+
+    assert document.title == "Meeting of 2026-10-16 09:00"
+    assert not any(detail.startswith("Date:") for detail in document.details)
+
+
 def test_a_session_without_minutes_or_known_details_still_exports() -> None:
     localizer = FakeLocalizer()
     summary = {"id": "20261016_090000", "started_at": None, "duration_seconds": None}
