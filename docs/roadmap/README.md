@@ -87,7 +87,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | done |
 | 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | todo |
 | 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | todo |
-| 38 | [Config page redesign](phases/38-config-page.md) | 35 | in progress (`feature/38-config-page`) |
+| 38 | [Config page redesign](phases/38-config-page.md) | 35 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·

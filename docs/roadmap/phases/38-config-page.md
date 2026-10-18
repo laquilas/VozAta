@@ -51,15 +51,15 @@ and a Storage section. The `.env` file stays the source of the engine settings.
 
 ## Acceptance criteria
 
-- [ ] Engine tests: options per source (fakes for registries, HF cache dir, Ollama tags via
+- [x] Engine tests: options per source (fakes for registries, HF cache dir, Ollama tags via
       `httpx.MockTransport`), every test target with success / auth error / unreachable, secrets
       absent from responses and logs.
-- [ ] UI tests: section navigation, search filtering across sections, choice editor with an
+- [x] UI tests: section navigation, search filtering across sections, choice editor with an
       unknown value, folder picker (fake), URL validation, dirty/save/discard, test button states,
       storage section values.
-- [ ] Manual: change the Whisper model from the list, the Ollama model from the installed ones,
+- [ ] Manual (`pending manual (credentials)`, recipe in Progress): change the Whisper model from the list, the Ollama model from the installed ones,
       pick an output folder, test Ollama and the HF token (✓), restart banner after a restart key.
-- [ ] Resource parity test and the `.env.example` label test pass.
+- [x] Resource parity test and the `.env.example` label test pass.
 
 ## Tests
 
@@ -79,9 +79,9 @@ settings.
 ## Progress
 
 - **Branch:** `feature/38-config-page`
-- **Status:** in progress
-- **Updated:** 2026-10-17 14:30
-- **Next step:** Tick the acceptance criteria, set the README status to done, write the manual check recipe, run the full engine + UI suites, open the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 15:30
+- **Next step:** Open the PR, wait for CI; then the manual check recipe below (tokens: pending manual (credentials)).
 
 ### Steps
 
@@ -92,7 +92,7 @@ settings.
 - [x] UI: editor kinds (options combo, path + Browse, url validation, secret Replace/Remove, Changed badge)
 - [x] UI: `ConfigPageViewModel` sections + search, test buttons, Storage and About sections
 - [x] UI: `ConfigPage.axaml` (sections list, search, cards, sticky Save / Discard bar) + screenshots
-- [ ] Docs (api-contract, architecture §9), full suites, PR
+- [x] Docs (api-contract, architecture §9 and §16), full suites, PR
 
 ### Decisions and notes
 
@@ -104,3 +104,41 @@ settings.
 - Browse: `*_DIR` keys pick a folder, `*_FILE` keys a file, `DATABASE_PATH` a folder (the file name is kept, default `vozata.db`).
 - Choice keys that also have an `options_source` (`WHISPER_DEVICE`, `DIARIZATION_DEVICE` → `devices`) keep their fixed list and only mark unavailable entries (cuda without a GPU).
 - Options and storage load with the page at start-up (`MainViewModel.InitializeAsync` → `ConfigPageViewModel.LoadAsync`); connection tests run only on click.
+
+### Manual check recipe
+
+Run on the reference machine with the app (`dotnet run --project ui/src/VozAta.Desktop`), Ollama
+running, and a copy of the real `engine/.env` (keep a backup: Save writes it). No recording is
+needed; no microphone, speaker or GPU work is involved except loading the models on restart.
+
+1. Open **Config** (Ctrl+4). The left list shows General … API, Desktop app, Vocabulary, Storage,
+   About. Type `model` in the search box: only the matching keys of Transcription, Speakers and
+   Minutes stay; click **Audio** in the list: the search clears.
+2. **Transcription → WHISPER_MODEL**: open the list; `large-v3-turbo` / `large-v3` (cached) have
+   no "Not installed" tag, the others do. Pick `small`: the "Changed" and "Not installed" tags
+   appear and the Save bar slides in. Discard.
+3. **Minutes → OLLAMA_MODEL**: the list shows the models of `ollama list`. Type `nonexistent:1b`:
+   "Not installed". Pick an installed one instead. Stop Ollama (`ollama` tray → Quit), restart
+   the app, open Minutes: the list is empty and says the service did not answer; start Ollama again.
+4. **Minutes → OLLAMA_URL**: type `localhost:11434`: the URL error shows and Save is disabled;
+   fix it to `http://localhost:11434`. Click **Test**: `✓ Ollama answered and the model … is
+   installed.` Stop Ollama, Test again: `Could not reach localhost.`
+5. **General → OUTPUT_DIR**: Browse… → pick a scratch folder → the path appears, "Changed" and
+   "applies after a restart". Save: the restart banner lists it. Click **Restart engine**; the
+   banner goes away and `engine/.env` has the new `OUTPUT_DIR` (comments kept). Put the old value
+   back the same way.
+6. **Speakers → HF_TOKEN** (`pending manual (credentials)`): the box shows "Saved (hidden)", never
+   the token. Click **Test**: ✓ with the pyannote model names; with a token whose account did not
+   accept the terms: the "accept the terms of …" message; Replace → type a wrong token → Save →
+   Test: "rejected the credentials (HTTP 401)". Restore the real token with Replace.
+7. **Transcription → OPENAI_STT_URL / Task export → AZDO_PAT, GITHUB_TOKEN** (`pending manual
+   (credentials)`): Test with real values → ✓; with a wrong token → "rejected the credentials".
+   Check the engine log: it names only the target and the result code, never a token.
+8. **Storage**: backend, database path (Open folder opens Explorer there), database size; the
+   OneDrive warning shows when `vozata.db` is under OneDrive. With phase 32 merged, play a meeting
+   to fill `OUTPUT_DIR/cache/`, then **Clear cache** → confirm → "Freed …" and the size drops to 0 B.
+9. **About**: app and engine versions, GPU and models; Check again refreshes; license links open
+   the browser.
+10. Switch the interface language to Português and Español (Desktop app): every section title,
+    badge, button and message is translated.
+
