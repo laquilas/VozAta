@@ -77,6 +77,7 @@ from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
+from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.folder import open_session_folder as open_files_folder
 from vozata.storage.files.repository import FileSessionRepository
@@ -84,6 +85,7 @@ from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_folder import SessionFolder
 from vozata.storage.session_store import SessionStore
+from vozata.storage.sqlite.audio import SqliteAudioStore
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.location import onedrive_root
 from vozata.storage.sqlite.repository import SqliteSessionRepository
@@ -95,6 +97,7 @@ from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
+AUDIO_CACHE_DIR = "cache"  # in `OUTPUT_DIR` (phase 32)
 
 _log = logging.getLogger(__name__)
 
@@ -165,8 +168,8 @@ TASK_EXPORTERS: dict[str, TaskTarget] = {
         lambda s: GitHubIssuesExporter(s.github_repo or "", s.github_token or ""),
     ),
 }
-# Storage backends (phases 30-31), chosen by `STORAGE_BACKEND`: the only place that builds them.
-# The audio stays in WAV files in `OUTPUT_DIR/<id>/` for both until phase 32.
+# Storage backends (phases 30-32), chosen by `STORAGE_BACKEND`: the only place that builds them.
+# `sqlite` keeps the audio in the database too (phase 32); `files` keeps WAVs in `OUTPUT_DIR/<id>/`.
 REPOSITORIES: dict[StorageBackend, Callable[[Settings], SessionRepository]] = {
     StorageBackend.SQLITE: lambda settings: SqliteSessionRepository(
         open_database(settings), settings.output_dir
@@ -174,10 +177,15 @@ REPOSITORIES: dict[StorageBackend, Callable[[Settings], SessionRepository]] = {
     StorageBackend.FILES: lambda settings: FileSessionRepository(SessionStore(settings.output_dir)),
 }
 AUDIO_STORES: dict[StorageBackend, Callable[[Settings], SessionAudio]] = {
-    backend: lambda settings: FileAudioStore(
+    StorageBackend.SQLITE: lambda settings: SqliteAudioStore(
+        open_database(settings),
+        settings.sample_rate,
+        MIXERS[settings.mix_mode](),
+        audio_cache(settings),
+    ),
+    StorageBackend.FILES: lambda settings: FileAudioStore(
         SessionStore(settings.output_dir), settings.sample_rate
-    )
-    for backend in StorageBackend
+    ),
 }
 SEARCHES: dict[StorageBackend, Callable[[Settings], SqliteSearch | SearchIndex]] = {
     StorageBackend.SQLITE: lambda settings: SqliteSearch(open_database(settings)),
@@ -242,13 +250,32 @@ def close_databases() -> None:
         database.close()
 
 
+def audio_cache(settings: Settings) -> WavCache:
+    """`OUTPUT_DIR/cache`: WAVs built from the database, up to `AUDIO_CACHE_MB` (phase 32)."""
+    return WavCache(settings.output_dir / AUDIO_CACHE_DIR, settings.audio_cache_mb * 1024 * 1024)
+
+
+def clean_audio_cache(settings: Settings) -> None:
+    """Trim the WAV cache to its limit (engine start); a failure is only logged."""
+    if settings.storage_backend is not StorageBackend.SQLITE:
+        return
+    try:
+        audio_cache(settings).clean()
+    except OSError:
+        _log.exception("Cleaning the audio cache failed")
+
+
 def storage_info(settings: Settings) -> StorageInfo:
-    """The backend, its database file (SQLite) and the OneDrive root that holds it, if any."""
+    """The backend, its database file (SQLite), the OneDrive root that holds it, if any, and
+    the WAV cache folder."""
     if settings.storage_backend is not StorageBackend.SQLITE:
         return StorageInfo(settings.storage_backend.value)
     path = settings.database_file
     return StorageInfo(
-        settings.storage_backend.value, path, onedrive_root(path, settings.onedrive_roots)
+        settings.storage_backend.value,
+        path,
+        onedrive_root(path, settings.onedrive_roots),
+        audio_cache(settings).root,
     )
 
 
@@ -591,6 +618,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     labeler = build_labeler(settings, localizer)
     store = build_store(settings)
     audio = build_audio_store(settings)
+    clean_audio_cache(settings)
     broadcaster = EventBroadcaster()
     env_file = env_file or Path(".env")
     settings_file = SettingsFile(env_file, settings)
@@ -682,4 +710,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         task_targets=lambda: task_targets(settings_file.current),
         task_exporter=lambda target: build_task_exporter(settings_file.current, target),
         storage=storage_info(settings),
+        audio=audio,
     )

@@ -19,7 +19,8 @@ from vozata.session import SessionStartError
 class _FakeSession:
     def __init__(self, start_error: SessionStartError | None = None) -> None:
         self.status: SessionStatus | None = None
-        self.folder = Path("recordings/20261015_202358")
+        self.folder: Path | None = Path("recordings/20261015_202358")
+        self.id = "20261015_202358"
         self.calls: list[str] = []
         self._start_error = start_error
         self.paused_twice = threading.Event()
@@ -98,6 +99,16 @@ def test_records_until_ctrl_c_then_stops_and_reports_the_folder() -> None:
         "cli.controls",
         f"cli.saved(folder={folder})",
     ]
+
+
+def test_without_a_folder_the_session_id_is_reported() -> None:
+    session = _FakeSession()
+    session.folder = None  # the SQLite backend keeps the audio in the database (phase 32)
+
+    _, out, _ = _run(session, "", _interrupt)
+
+    assert "cli.recording(folder=20261015_202358)" in out
+    assert "cli.saved(folder=20261015_202358)" in out
 
 
 def test_ctrl_c_is_ignored_while_finalizing_and_restored_afterwards() -> None:

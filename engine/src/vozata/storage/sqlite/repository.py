@@ -1,13 +1,12 @@
 """`SqliteSessionRepository`: the `SessionRepository` port over `vozata.db` (phase 31).
 
-Sessions, transcripts, speakers, translations, minutes and action items are rows of one database
-(architecture §8). The audio stays in WAV files in `OUTPUT_DIR/<id>/` until phase 32, so `create`
-also makes that folder and `discard` removes it; nothing else is written there.
+Sessions, transcripts, speakers, translations, minutes, action items and (phase 32) the audio are
+rows of one database (architecture §8): nothing is written to `OUTPUT_DIR/<id>/`, so `folder` and
+`files` are None.
 """
 
 from __future__ import annotations
 
-import shutil
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -48,17 +47,14 @@ class SqliteSessionRepository(SessionAnnotations):
         return self._db
 
     def create(self, started_at: datetime | None = None) -> str:
-        """A new session row and its (audio) folder, named after the start time; ids already
-        used by a row or a folder (file-backend sessions) are skipped."""
+        """A new session row named after the start time; ids already used by a row or by a
+        folder in `OUTPUT_DIR` (file-backend sessions, imported by phase 33) are skipped."""
         base = (started_at or self.now()).strftime("%Y%m%d_%H%M%S")
-        self._root.mkdir(parents=True, exist_ok=True)
         suffix = 1
         while True:
             session_id = base if suffix == 1 else f"{base}_{suffix}"
             suffix += 1
-            try:
-                (self._root / session_id).mkdir()
-            except FileExistsError:
+            if (self._root / session_id).exists():
                 continue
             with self._db.write() as db:
                 inserted = db.execute(
@@ -66,13 +62,12 @@ class SqliteSessionRepository(SessionAnnotations):
                 ).rowcount
             if inserted:
                 return session_id
-            (self._root / session_id).rmdir()
 
     def discard(self, session_id: str) -> None:
+        """Delete the session row; every other row of it (audio included) cascades."""
         self._check(session_id)
         with self._db.write() as db:
-            db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))  # cascades
-        shutil.rmtree(self._root / session_id, ignore_errors=True)
+            db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
 
     def read_meta(self, session_id: str) -> dict[str, Any]:
         self._check(session_id)
@@ -149,17 +144,14 @@ class SqliteSessionRepository(SessionAnnotations):
         return deleted > 0
 
     def folder(self, session_id: str) -> Path | None:
-        """The folder holding the session's WAVs (audio stays in files until phase 32)."""
+        """None: the session has no folder (its audio is in the database, phase 32)."""
         self._check(session_id)
-        return self._root / session_id
+        return None
 
     def files(self, session_id: str) -> list[str] | None:
-        """The audio files of the session (no JSON or Markdown is written next to them)."""
-        root = self._root / session_id
+        """None: no files (the API plays the audio from `/sessions/{id}/audio/{track}`)."""
         self._check(session_id)
-        if not root.is_dir():
-            return []
-        return sorted(item.name for item in root.iterdir() if item.is_file())
+        return None
 
     def _segments(self, session_id: str, source: str) -> list[TranscriptSegment]:
         rows = self._db.connection().execute(

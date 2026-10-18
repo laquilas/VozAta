@@ -81,6 +81,7 @@ class StorageInfo:
     backend: str
     database: Path | None = None  # the SQLite database file
     onedrive_root: Path | None = None  # the OneDrive folder that holds `database` (a risk)
+    audio_cache: Path | None = None  # the folder of WAVs built from the database (phase 32)
 
 
 class WhisperDevice(StrEnum):
