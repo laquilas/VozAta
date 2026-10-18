@@ -17,6 +17,7 @@ from pathlib import Path
 from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
+from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
 from vozata.api.session_manager import SessionManager, StartOptions
 from vozata.api.system_info import query_gpu
@@ -86,6 +87,7 @@ from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.folder import open_session_folder as open_files_folder
 from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
+from vozata.storage.migration import FolderImporter
 from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_folder import SessionFolder
@@ -294,6 +296,45 @@ def build_store(settings: Settings, output_dir: Path | None = None) -> SessionRe
 def build_audio_store(settings: Settings, output_dir: Path | None = None) -> SessionAudio:
     """The audio store matching `build_store` (same `output_dir`)."""
     return AUDIO_STORES[settings.storage_backend](_at(settings, output_dir))
+
+
+def build_folder_importer(settings: Settings) -> FolderImporter | None:
+    """The import of the session folders of `OUTPUT_DIR` into `vozata.db` (phase 33); None
+    with `STORAGE_BACKEND=files` (nothing to import into)."""
+    repository = build_store(settings)
+    audio = build_audio_store(settings)
+    if not isinstance(repository, SqliteSessionRepository) or not isinstance(
+        audio, SqliteAudioStore
+    ):
+        return None
+    files = FileSessionRepository(SessionStore(settings.output_dir))
+    return FolderImporter(
+        settings.output_dir,
+        files,
+        FileAudioStore(files.store, settings.sample_rate),
+        repository,
+        audio,
+        settings.sample_rate,
+    )
+
+
+def build_migration_job(
+    settings: Settings, manager: SessionManager, broadcaster: EventBroadcaster, localizer: Localizer
+) -> MigrationJob | None:
+    """The folder import as a background job of `serve`: it waits while a session is busy and,
+    when it imported interrupted recordings, offers to recover them (`recovery_available`)."""
+    importer = build_folder_importer(settings)
+    if importer is None:
+        return None
+
+    def offer_recovery() -> None:
+        interrupted = manager.interrupted_sessions()
+        if interrupted:
+            broadcaster.publish("recovery_available", None, {"session_ids": interrupted})
+
+    return MigrationJob(
+        importer, broadcaster, localizer, should_pause=lambda: manager.busy, on_done=offer_recovery
+    )
 
 
 def build_search_index(settings: Settings) -> SqliteSearch | SearchIndex:
@@ -717,6 +758,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
+    migration = build_migration_job(settings, manager, broadcaster, localizer)  # started by the app
     return ApiContainer(
         settings=settings,
         settings_file=settings_file,
@@ -742,6 +784,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         storage=storage_info(settings),
         audio=audio,
         audio_cache=audio.cache if isinstance(audio, SqliteAudioStore) else None,
+        migration=migration,
         setting_options=options.collect,
         connection_check=ConnectionChecks((DIARIZATION_MODEL, EMBEDDING_MODEL)).run,
     )

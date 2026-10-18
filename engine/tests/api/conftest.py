@@ -179,7 +179,9 @@ class FakeDevices:
 class Api:
     """The real app over fakes, plus handles on the fakes for assertions."""
 
-    def __init__(self, tmp_path: Path, settings: Any = None, recovery: Any = None) -> None:
+    def __init__(
+        self, tmp_path: Path, settings: Any = None, recovery: Any = None, migration: Any = None
+    ) -> None:
         from fastapi.testclient import TestClient
 
         from vozata.api.app import create_app
@@ -232,6 +234,7 @@ class Api:
                 (session_id, template)
             ),
             vocabulary_file=lambda: self.vocabulary_file,
+            migration=migration(self) if migration is not None else None,  # phase 33
         )
         self.app = create_app(container)
         self.client = TestClient(self.app, raise_server_exceptions=False)

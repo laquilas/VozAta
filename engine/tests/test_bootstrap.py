@@ -313,6 +313,8 @@ def test_build_api_container_wires_real_providers(
     assert (
         container.audio_cache is container.audio.cache
     )  # one cache: health, DELETE /storage/cache
+    assert container.migration is not None  # phase 33, started by the app's lifespan
+    assert container.migration.summary()["state"] == "idle"
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
     assert built == [
         {
