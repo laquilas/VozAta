@@ -83,7 +83,7 @@ public sealed partial class HistoryViewModel(
     public partial SessionRow? Selected { get; set; }
 
     [ObservableProperty]
-    public partial SessionDetailViewModel? Detail { get; private set; }
+    public partial SessionPageViewModel? Detail { get; private set; }
 
     /// <summary>The load started by the last selection (tests await it).</summary>
     public Task DetailLoading { get; private set; } = Task.CompletedTask;
@@ -250,7 +250,7 @@ public sealed partial class HistoryViewModel(
 
     private void Open(SessionRow? row)
     {
-        Detail = row is null ? null : new SessionDetailViewModel(client, shell, localization, saver, row.Summary, templates, dialogs);
+        Detail = row is null ? null : new SessionPageViewModel(client, shell, localization, saver, row.Summary, templates, dialogs);
         DetailLoading = Detail?.LoadAsync() ?? Task.CompletedTask;
     }
 
@@ -269,7 +269,7 @@ public sealed partial class HistoryViewModel(
 
     private SessionRow ToRow(SessionSummary summary) => new(
         summary,
-        SessionDetailViewModel.FormatStart(summary.StartedAt) ?? summary.Id,
+        SessionPageViewModel.FormatStart(summary.StartedAt) ?? summary.Id,
         TranscriptLine.FormatTime(summary.DurationSeconds ?? 0),
         summary.Language is { } code && LanguageKeys.TryGetValue(code, out var key) ? localization[key] : summary.Language ?? "");
 }

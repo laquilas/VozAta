@@ -67,9 +67,8 @@ Waveform rendering, audio editing/trimming, video.
 - **Branch:** `feature/37-detail-and-player` (stacked on `feature/33-folder-migration`, PR #51,
   itself on `feature/32-audio-in-sqlite`, PR #49)
 - **Status:** in progress
-- **Updated:** 2026-10-18 20:00
-- **Next step:** add `IAudioPlayer` (port) and `FakeAudioPlayer`, then `PlayerBarViewModel`
-  test-first.
+- **Updated:** 2026-10-18 19:53
+- **Next step:** add `IAudioPlayer` (port) and `FakeAudioPlayer`, then `PlayerBarViewModel` test-first.
 
 ### Steps
 
@@ -87,3 +86,5 @@ Waveform rendering, audio editing/trimming, video.
 ### Decisions and notes
 
 - Stacked on phase 33 (user's choice to stack on 32; 37's manual check needs a migrated meeting).
+- `SessionDetailViewModel` was renamed to `SessionPageViewModel` (with its tests, `SessionPageViewModelTests.cs`) instead of rewritten: every tested behavior is kept and the page features are added to it.
+

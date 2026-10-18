@@ -189,7 +189,7 @@ public sealed class SpeakersViewModelTests
         _client.Transcripts[Id] = new Transcript("diarized", Segments);
         _client.MinutesText[Id] = "## Summary";
         var summary = new SessionSummary(Id, "done", null, null, 75, "pt", true);
-        var detail = new SessionDetailViewModel(_client, new FakeShell(), _localization, new FakeFileSaver(), summary);
+        var detail = new SessionPageViewModel(_client, new FakeShell(), _localization, new FakeFileSaver(), summary);
 
         await detail.LoadAsync();
         detail.Speakers.Rows[2].Name = "Carla";
@@ -212,7 +212,7 @@ public sealed class SpeakersViewModelTests
         _client.Transcripts[Id] = new Transcript("raw", Segments);
         _client.SpeakersError = new InvalidOperationException("must not be called");
         var summary = new SessionSummary(Id, "recording", null, null, 5, "pt", false);
-        var detail = new SessionDetailViewModel(_client, new FakeShell(), _localization, new FakeFileSaver(), summary);
+        var detail = new SessionPageViewModel(_client, new FakeShell(), _localization, new FakeFileSaver(), summary);
 
         await detail.LoadAsync();
 

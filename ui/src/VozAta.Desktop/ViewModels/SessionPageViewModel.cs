@@ -15,7 +15,7 @@ namespace VozAta.Desktop.ViewModels;
 /// (default: <c>%TEMP%\VozAta\audio</c>) and opening it in the default player, until the in-app
 /// player of phase 37.
 /// </summary>
-public sealed partial class SessionDetailViewModel(
+public sealed partial class SessionPageViewModel(
     IEngineClient client,
     IShellService shell,
     ILocalizationService localization,

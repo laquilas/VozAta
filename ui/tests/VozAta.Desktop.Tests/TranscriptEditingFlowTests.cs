@@ -33,7 +33,7 @@ public sealed class TranscriptEditingFlowTests
     private static SessionSummary Summary(string id, string status = "done") =>
         new(id, status, new DateTimeOffset(2026, 10, 16, 9, 0, 0, TimeSpan.Zero), null, 70, "en", true);
 
-    private SessionDetailViewModel Detail(string status = "done") =>
+    private SessionPageViewModel Detail(string status = "done") =>
         new(_client, new FakeShell(), _localization, new FakeFileSaver(), Summary(First, status), dialogs: _dialogs);
 
     private HistoryViewModel History() =>

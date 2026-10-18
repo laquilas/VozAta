@@ -3,7 +3,7 @@
              xmlns:vm="using:VozAta.Desktop.ViewModels"
              xmlns:views="using:VozAta.Desktop.Views"
              x:Class="VozAta.Desktop.Views.SessionDetailView"
-             x:DataType="vm:SessionDetailViewModel">
+             x:DataType="vm:SessionPageViewModel">
 
   <!-- One meeting: minutes, transcript, speakers, action items (the Meetings page detail until phase 37) -->
   <DockPanel>

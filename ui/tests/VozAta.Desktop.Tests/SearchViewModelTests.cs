@@ -278,7 +278,7 @@ public sealed class SearchNavigationTests
 
         Assert.Equal("session_002", history.Selected!.Id);
         var detail = history.Detail!;
-        Assert.Equal(SessionDetailViewModel.TranscriptTab, detail.SelectedTab);
+        Assert.Equal(SessionPageViewModel.TranscriptTab, detail.SelectedTab);
         Assert.Equal("mic-000002", detail.FocusedLine!.SegmentId);
         Assert.True(detail.FocusedLine.IsFocused);
         Assert.Same(detail.FocusedLine, detail.Lines[1]);
@@ -335,7 +335,7 @@ public sealed class SearchNavigationTests
     public async Task Focus_waits_for_the_transcript_to_load()
     {
         AddSessions(1);
-        var detail = new SessionDetailViewModel(
+        var detail = new SessionPageViewModel(
             _client, new FakeShell(), new LocalizationService(), new FakeFileSaver(), Session(1));
 
         detail.FocusSegment("mic-000002");
@@ -343,14 +343,14 @@ public sealed class SearchNavigationTests
         await detail.LoadAsync();
 
         Assert.Equal("mic-000002", detail.FocusedLine!.SegmentId);
-        Assert.Equal(SessionDetailViewModel.TranscriptTab, detail.SelectedTab);
+        Assert.Equal(SessionPageViewModel.TranscriptTab, detail.SelectedTab);
     }
 
     [Fact]
     public async Task An_unknown_segment_is_ignored()
     {
         AddSessions(1);
-        var detail = new SessionDetailViewModel(
+        var detail = new SessionPageViewModel(
             _client, new FakeShell(), new LocalizationService(), new FakeFileSaver(), Session(1));
         await detail.LoadAsync();
 
