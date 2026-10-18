@@ -448,6 +448,7 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "language": "pt", "language_source": "selected",
   "app_language": "en",
   "template": "general",
+  "title": "Weekly sync",
   "vocabulary": ["Avalonia", "N5 Sensors"],
   "devices": {"mic": "Headset Microphone", "system": "Headphones [Loopback]"},
   "pauses": [{"start": 120.5, "end": 180.0}],
@@ -495,6 +496,13 @@ regeneration.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (step 2); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
+`title` (35) is the meeting title (`session_title.py`: trimmed, one line, at most 200 characters):
+written at start when given, changed by `PATCH /sessions/{id}` (through the live session's
+`SessionMeta` while it is active, else `read_meta` / `write_meta` of the `SessionRepository`);
+absent or `null` = untitled. It is given to the minutes prompt as context
+(`minutes.meeting_title`) and is the export document title (the date then moves to the details).
+The SQLite backend (31) keeps it in `sessions.title`; the repository contract suite checks that it
+round-trips.
 
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
 With live speakers (15) `transcript.jsonl` already holds best-effort `system:<n>` ids; the
