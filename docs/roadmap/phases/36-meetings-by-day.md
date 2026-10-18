@@ -41,13 +41,15 @@ total on top, compact rows with title, tags and duration, and quick actions on h
 
 ## Acceptance criteria
 
-- [ ] Engine tests: range query and totals (time zones, midnight), delete cascade, delete while
+- [x] Engine tests: range query and totals (time zones, midnight), delete cascade, delete while
       recording → 409, Recycle Bin path for files (fake).
-- [ ] UI tests: grouping, totals, week navigation, infinite scroll, rename, delete confirm/undo,
+- [x] UI tests: grouping, totals, week navigation, infinite scroll, rename, delete confirm/undo,
       search filtering, live row pinned.
 - [ ] Manual: with a week of meetings (migrated or recorded), the list matches Toggl's layout;
-      rename, delete and play work. Screenshots light and dark in the PR.
-- [ ] Resource parity test passes.
+      rename, delete and play work. Screenshots light and dark in the PR. — *pending manual (user,
+      on the reference machine; recipe in Progress). Headless light/dark renders of the page are
+      produced by `ThemeRenderTests` and attached to the PR.*
+- [x] Resource parity test passes.
 
 ## Tests
 
@@ -66,25 +68,79 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 ## Progress
 
 - **Branch:** `feature/36-meetings-by-day`
-- **Status:** in progress
-- **Updated:** 2026-10-17 22:40
-- **Next step:** run the full engine and UI suites, `ruff`, `dotnet format`; tick the acceptance
-  criteria, set the README status to `done`, write the manual check recipe, open the PR.
+- **Status:** ready for PR
+- **Updated:** 2026-10-17 23:15
+- **Next step:** the user runs the manual check recipe below on the reference machine, attaches
+  real screenshots if wanted, and merges the PR.
 
 ### Steps
 
-- [x] Start the phase (README status, Progress)
+- [x] Start the phase (README status, Progress) — `5a98709`
 - [x] Repository: `list_range`, `speaker_count`, `delete` (both backends, contract suite; files
-      go to the Recycle Bin through a `Recycler` port)
+      go to the Recycle Bin through a `Recycler` port) — `1a5422c`
 - [x] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
-      `speaker_count`, `has_action_items`, `template`
-- [x] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
+      `speaker_count`, `has_action_items`, `template` — `6fcecba`
+- [x] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared) —
+      `96b7ad9`, architecture `526706d`
 - [x] UI client: range and delete calls, new summary fields (`ListSessionDaysAsync`,
-      `DeleteSessionAsync`, `VozAta.Client/Meetings.cs`, `Fakes/FakeEngineClient.Meetings.cs`)
-- [x] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
-- [x] UI: inline rename, delete with confirmation and undo, search filtering, row actions
-- [x] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots
-- [ ] Full suites, acceptance criteria, PR
+      `DeleteSessionAsync`, `VozAta.Client/Meetings.cs`, `Fakes/FakeEngineClient.Meetings.cs`) —
+      `186e3f4`
+- [x] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live
+      row), inline rename, delete with confirmation and undo, search filtering, row actions —
+      `4b51ad8`
+- [x] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots — `0a0859d`
+- [x] Full suites (engine 1457 passed, 3 deselected, 99 % coverage, new modules 100 %; UI 560
+      passed), `ruff check` / `ruff format --check`, `dotnet format --verify-no-changes`,
+      acceptance criteria, PR
+- [ ] Manual check on the reference machine — pending manual (user), recipe below
+
+### Manual check recipe
+
+No microphone, speakers or GPU were used by the agent; run this on the reference machine, one
+phase at a time, after `git checkout feature/36-meetings-by-day`.
+
+1. Install the new dependency: `.venv/Scripts/python -m pip install -e "engine[dev]"`
+   (adds `Send2Trash`). Build the UI: `dotnet build ui/VozAta.sln`.
+2. **File backend** — copy `engine/recordings` to a scratch folder (e.g. `C:\temp\vozata-36`),
+   then in `engine/.env` set `STORAGE_BACKEND=files` and `OUTPUT_DIR=C:\temp\vozata-36`.
+   Start the app: `dotnet run --project ui/src/VozAta.Desktop`; press Ctrl+2 (Meetings).
+   - Header: ◀ ▶, "This week" and its `h:mm:ss` total, the search box, refresh.
+   - Day cards newest first ("Today", "Yesterday", "Wed, 14 Oct"…) with the day total on the
+     right; rows: title (or grey "Untitled meeting"), template and language pills, people icon
+     with the diarized speaker count, start–end time, duration right-aligned.
+   - Scroll down: older weeks load ("Last week", "6 Oct – 12 Oct"…) until no
+     "Load older meetings" button is left. ◀ / ▶ / "This week" move a week at a time.
+   - `curl "http://127.0.0.1:8765/sessions?from=<monday>&to=<sunday>"` shows the same days and
+     totals; `storage` is `files`.
+3. **Rename** — hover a row → pencil → type a title → Enter: the row shows it, and it is still
+   there after refresh (`session.json.title`). Pencil → Esc: nothing changes. A blank title makes
+   it "Untitled meeting" again.
+4. **Delete (files)** — hover → trash: the dialog says the meeting goes to the Recycle Bin →
+   Delete → the row disappears and a toast "… moved to the Recycle Bin. Undo" appears bottom
+   left. Click Undo: the row is back and its folder is still in `OUTPUT_DIR`. Delete again and
+   wait 8 s: the folder is gone from `OUTPUT_DIR` and is in the Windows Recycle Bin (restore it
+   from there to undo the test).
+5. **Delete (SQLite)** — set `STORAGE_BACKEND=sqlite` (default database, or `DATABASE_PATH` to a
+   scratch file), restart the app, delete a test meeting: the dialog says it is permanent, there
+   is no Undo, `GET /sessions/<id>` answers 404 and its audio folder is gone.
+6. **Play / export** — hover → ▶ opens `mixed.wav` in the default player (a meeting without a
+   mix shows "This meeting has no mixed recording to play."); hover → export icon → "Export
+   Word" → the save dialog → the file opens in Word.
+7. **Search** — type a word that was said: the weeks are replaced by the matching meetings (title,
+   date · duration) with their snippets; clicking a snippet opens the detail on the right at that
+   line; clearing the box brings the weeks back.
+8. **Live row** — start a short test recording on the Recorder page (your consent; any
+   devices), go to Meetings: the recording is pinned on top with a pulsing red dot and the running
+   time, without a trash button; `curl -X DELETE http://127.0.0.1:8765/sessions/<live id>`
+   answers `409 session_still_active`. Stop it; after finalizing it moves into "Today".
+9. **UI Automation** — with Accessibility Insights / Inspect, the row actions are named "Play
+   the recording", "Export", "Rename", "Delete" (also while faded), the export formats "Export
+   Markdown / Word / PDF", the title box "Meeting title (Enter saves, Esc cancels)", the toast
+   "Undo" / "Dismiss", the header "Previous week" / "Next week", and the confirm dialog buttons
+   have automation ids `ConfirmYes` / `ConfirmNo`.
+10. **Languages** — Config → interface language pt-BR, then es: "Esta semana" / "Hoje" / "Hoy",
+    weekday and month names follow the language, and so do the dialog and toast texts.
+11. Restore `engine/.env` (`STORAGE_BACKEND`, `OUTPUT_DIR`) afterwards.
 
 ### Decisions and notes
 
