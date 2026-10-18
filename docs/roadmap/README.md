@@ -80,7 +80,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 28 | [Live interim text](phases/28-live-partials.md) | 27, 07 | done |
 | 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | done |
 | 30 | [Storage port](phases/30-storage-port.md) | 17, 23 | done |
-| 31 | [SQLite session database](phases/31-sqlite-database.md) | 30 | todo |
+| 31 | [SQLite session database](phases/31-sqlite-database.md) | 30 | in progress (`feature/31-sqlite-database`) |
 | 32 | [Audio in SQLite](phases/32-audio-in-sqlite.md) | 31 | todo |
 | 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | todo |
 | 34 | [UI design system](phases/34-ui-design-system.md) | 13 | done |

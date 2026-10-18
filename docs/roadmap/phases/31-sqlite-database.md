@@ -71,3 +71,27 @@ Audio in the database (32), importing old folders (33), settings in the database
 
 > Execute phase 31 of the roadmap (`docs/roadmap/phases/31-sqlite-database.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/31-sqlite-database`
+- **Status:** in progress
+- **Updated:** 2026-10-17 21:30
+- **Next step:** write `storage/sqlite/db.py` and the migrations (`001_schema.sql`,
+  `002_search.sql`) test-first in `tests/storage/sqlite/test_db.py`.
+
+### Steps
+
+- [x] Start the phase (status, Progress); phase 30 manual check part B recorded as done
+- [ ] `Database` (WAL, foreign keys, per-thread connections, write lock) and migrations
+- [ ] `SqliteSessionRepository` passing the phase 30 contract suite; cascade delete
+- [ ] FTS: `segments_fts` kept in sync by triggers on the best source; `SqliteSearch`
+- [ ] Config (`STORAGE_BACKEND`, `DATABASE_PATH`), bootstrap wiring, OneDrive warning in
+      `GET /health`, `storage` field in `GET /sessions/{id}`, CLI session folders
+- [ ] Crash test: a writer subprocess killed mid-session
+- [ ] UI: hide "Open folder" without a folder; setting labels for the new keys
+- [ ] Docs (architecture §8/§9, api-contract), full suites, manual check recipe
+
+### Decisions and notes
+
+- (none yet)
