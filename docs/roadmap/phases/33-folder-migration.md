@@ -70,7 +70,7 @@ Exporting the database back to folders (backlog), deleting the folders.
 - **Branch:** `feature/33-folder-migration` (stacked on `feature/32-audio-in-sqlite`, PR #49)
 - **Status:** in progress
 - **Updated:** 2026-10-18 19:39
-- **Next step:** commit the CLI `migrate` command (written, tested), then the UI: client DTOs (`Migration.cs`, done), `MigrationViewModel`, banner in `ShellView.axaml`, strings.
+- **Next step:** UI: `MigrationViewModel` (banner while running, summary when done, errors dialog), wired in `MainViewModel` (events + `GET /migration` on connect), markup in `ShellView.axaml`, strings in the three resx; client DTOs in `VozAta.Client/Migration.cs` are written but not committed yet.
 
 ### Steps
 
@@ -81,7 +81,7 @@ Exporting the database back to folders (backlog), deleting the folders.
       folders (repairs only), bad folders → `migration_errors`, free-space check
 - [x] `SessionManager.busy`; background migration job in `serve` (pauses while recording)
 - [ ] API: `GET /migration`, `migration_progress` / `migration_done` events, first WS messages
-- [ ] CLI `python -m vozata migrate [--dry-run]`
+- [x] CLI `python -m vozata migrate [--dry-run]`
 - [ ] UI: client DTOs, `MigrationViewModel`, banner + done toast + errors dialog, strings
 - [ ] Docs (architecture §8, api-contract), full suites, manual check recipe
 
@@ -93,6 +93,8 @@ Exporting the database back to folders (backlog), deleting the folders.
 - `SqliteAudioStore.import_pcm(id, channel, blocks)` replaces a channel's chunks from PCM blocks in one transaction (joins the caller's); `audio_writer.INSERT_CHUNK` is the shared insert. `write_minutes(..., generated_at=None)` keeps the original minutes time on import.
 - `FolderImporter(output_dir, files, file_audio, repository, audio, sample_rate, free_space, now)`: `pending()` (folders with `session.json` and no row of that id, plus phase 31 SQLite session folders holding WAVs whose row has no audio; minus `migration_errors`), oldest first; `import_one(id)` → None or the recorded `MigrationError`; raises `NotEnoughSpaceError` before writing. The folder id stays the session id. `storage/folder_reader.py` reads a folder strictly (an unreadable transcript line or `action_items.json` is an error, unlike the file backend). Reasons: `unreadable_json`, `unreadable_wav`, `unsupported_wav` (not mono 16-bit at `SAMPLE_RATE`; no resampling), `id_in_use`. Minutes keep the mtime of `minutes.md` as `generated_at`. Interrupted folders get the phase 17 repairs only (WAV headers + pad, half-written transcript line); no LLM; the row is `interrupted` so the recovery prompt offers it. `SqliteSessionRepository.replace_segments` is public (used for `raw`).
 - `SessionManager.busy`: a session is active (until finalization ends) or being recovered. `api/migration_job.py` `MigrationJob`: states `idle` / `running` / `done` / `no_space` / `failed`; waits (1 s polls) while `busy` before each folder; publishes `migration_progress {done, total, current, paused}` before each folder and on pause, and `migration_done {state, imported, skipped, errors}` (`errors`: count of every recorded folder). `GET /migration` (`disabled` with the file backend) adds `needed_bytes`, `free_bytes`, a localized `message` for `no_space`, and `errors: [{folder, reason, message, detail}]`. The job is built by `bootstrap.build_migration_job` (SQLite only) and **started by the app lifespan after `broadcaster.bind`** (so its events reach clients; building a container in tests starts no thread). When it ends it publishes `recovery_available` if interrupted sessions exist (imported interrupted folders). `/ws` sends `migration_progress` right after the first `status` while running.
+- CLI `python -m vozata migrate [--dry-run]` (`cli/migrate.py`): exit 0 when every pending folder was handled (unreadable ones are reported, not fatal); 1 with `STORAGE_BACKEND=files`, a short disk (sizes in MB) or a database error (`cli.migrate_failed`).
+
 
 
 
