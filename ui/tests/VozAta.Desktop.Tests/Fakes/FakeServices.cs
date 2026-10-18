@@ -119,6 +119,14 @@ internal sealed class FakePreferences : IUiPreferences
     }
 }
 
+/// <summary>Records the themes it was asked to apply.</summary>
+internal sealed class FakeThemeService : IThemeService
+{
+    public List<string> Applied { get; } = [];
+
+    public void Apply(string theme) => Applied.Add(theme);
+}
+
 /// <summary>Records the paths it was asked to open.</summary>
 internal sealed class FakeShell : IShellService
 {

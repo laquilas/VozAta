@@ -1,0 +1,120 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Design tokens (phase 34), Toggl Track style: deep purple sidebar, pink accent.
+    Views use these keys only (brushes through DynamicResource so the theme switches live); they never
+    hold hex colors or raw font sizes. Every text/background pair used by the views is checked for a
+    WCAG contrast ratio of at least 4.5:1 in both themes by ThemeContrastTests: when a pair fails,
+    change the token here, not the view.
+  -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <!-- Surfaces and text -->
+      <SolidColorBrush x:Key="Brush.Surface" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Brush.SurfaceAlt" Color="#F5F2F7" />
+      <SolidColorBrush x:Key="Brush.Border" Color="#DCD3E0" />
+      <SolidColorBrush x:Key="Brush.TextPrimary" Color="#2C1338" />
+      <SolidColorBrush x:Key="Brush.TextSecondary" Color="#5F5168" />
+      <!-- Sidebar (phase 35) -->
+      <SolidColorBrush x:Key="Brush.Sidebar" Color="#2C1338" />
+      <SolidColorBrush x:Key="Brush.SidebarText" Color="#FFFFFF" />
+      <!-- Accent: start button, selection, tags -->
+      <SolidColorBrush x:Key="Brush.Accent" Color="#E57CD8" />
+      <SolidColorBrush x:Key="Brush.AccentHover" Color="#D965CB" />
+      <SolidColorBrush x:Key="Brush.AccentPressed" Color="#EE9BE3" />
+      <SolidColorBrush x:Key="Brush.OnAccent" Color="#2C1338" />
+      <SolidColorBrush x:Key="Brush.AccentText" Color="#A12597" />
+      <SolidColorBrush x:Key="Brush.AccentSubtle" Color="#FBE8F8" />
+      <!-- Status: fills (Danger, Warning, Success), text on surfaces (…Text), banner backgrounds (…Surface) -->
+      <SolidColorBrush x:Key="Brush.Danger" Color="#C62828" />
+      <SolidColorBrush x:Key="Brush.DangerHover" Color="#B71C1C" />
+      <SolidColorBrush x:Key="Brush.DangerPressed" Color="#8E0000" />
+      <SolidColorBrush x:Key="Brush.OnDanger" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Brush.DangerText" Color="#B3261E" />
+      <SolidColorBrush x:Key="Brush.DangerSurface" Color="#FDECEA" />
+      <SolidColorBrush x:Key="Brush.Warning" Color="#F59E0B" />
+      <SolidColorBrush x:Key="Brush.WarningText" Color="#8A4B00" />
+      <SolidColorBrush x:Key="Brush.WarningSurface" Color="#FFF4E0" />
+      <SolidColorBrush x:Key="Brush.Success" Color="#2E7D32" />
+      <SolidColorBrush x:Key="Brush.SuccessText" Color="#1B6B21" />
+      <SolidColorBrush x:Key="Brush.Info" Color="#1E88E5" />
+      <SolidColorBrush x:Key="Brush.InfoSurface" Color="#E8F1FC" />
+      <!-- Transcript speakers and level meters -->
+      <SolidColorBrush x:Key="Brush.ChannelMic" Color="#2E7D32" />
+      <SolidColorBrush x:Key="Brush.ChannelSystem" Color="#1565C0" />
+      <SolidColorBrush x:Key="Brush.ChannelOther" Color="#6A1B9A" />
+      <SolidColorBrush x:Key="Brush.MeterMic" Color="#2E7D32" />
+      <SolidColorBrush x:Key="Brush.MeterMicPeak" Color="#A5D6A7" />
+      <SolidColorBrush x:Key="Brush.MeterSystem" Color="#1565C0" />
+      <SolidColorBrush x:Key="Brush.MeterSystemPeak" Color="#90CAF9" />
+      <!-- The transcript line a search result opened -->
+      <SolidColorBrush x:Key="Brush.Highlight" Color="#33FFD54F" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="Brush.Surface" Color="#1B1620" />
+      <SolidColorBrush x:Key="Brush.SurfaceAlt" Color="#251F2B" />
+      <SolidColorBrush x:Key="Brush.Border" Color="#3E3546" />
+      <SolidColorBrush x:Key="Brush.TextPrimary" Color="#F4EEF7" />
+      <SolidColorBrush x:Key="Brush.TextSecondary" Color="#BBAFC3" />
+      <SolidColorBrush x:Key="Brush.Sidebar" Color="#2C1338" />
+      <SolidColorBrush x:Key="Brush.SidebarText" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Brush.Accent" Color="#E57CD8" />
+      <SolidColorBrush x:Key="Brush.AccentHover" Color="#EC95E1" />
+      <SolidColorBrush x:Key="Brush.AccentPressed" Color="#F2AEE9" />
+      <SolidColorBrush x:Key="Brush.OnAccent" Color="#2C1338" />
+      <SolidColorBrush x:Key="Brush.AccentText" Color="#EE9BE3" />
+      <SolidColorBrush x:Key="Brush.AccentSubtle" Color="#4A2346" />
+      <SolidColorBrush x:Key="Brush.Danger" Color="#C62828" />
+      <SolidColorBrush x:Key="Brush.DangerHover" Color="#B71C1C" />
+      <SolidColorBrush x:Key="Brush.DangerPressed" Color="#8E0000" />
+      <SolidColorBrush x:Key="Brush.OnDanger" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Brush.DangerText" Color="#FF8A80" />
+      <SolidColorBrush x:Key="Brush.DangerSurface" Color="#3D1C1C" />
+      <SolidColorBrush x:Key="Brush.Warning" Color="#F5B041" />
+      <SolidColorBrush x:Key="Brush.WarningText" Color="#FFC266" />
+      <SolidColorBrush x:Key="Brush.WarningSurface" Color="#3A2B12" />
+      <SolidColorBrush x:Key="Brush.Success" Color="#2E7D32" />
+      <SolidColorBrush x:Key="Brush.SuccessText" Color="#86D08A" />
+      <SolidColorBrush x:Key="Brush.Info" Color="#64B5F6" />
+      <SolidColorBrush x:Key="Brush.InfoSurface" Color="#162A40" />
+      <SolidColorBrush x:Key="Brush.ChannelMic" Color="#86D08A" />
+      <SolidColorBrush x:Key="Brush.ChannelSystem" Color="#90CAF9" />
+      <SolidColorBrush x:Key="Brush.ChannelOther" Color="#D9A3E3" />
+      <SolidColorBrush x:Key="Brush.MeterMic" Color="#66BB6A" />
+      <SolidColorBrush x:Key="Brush.MeterMicPeak" Color="#2E5E31" />
+      <SolidColorBrush x:Key="Brush.MeterSystem" Color="#64B5F6" />
+      <SolidColorBrush x:Key="Brush.MeterSystemPeak" Color="#244A6E" />
+      <SolidColorBrush x:Key="Brush.Highlight" Color="#55B08A00" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Spacing scale (StackPanel.Spacing and friends) -->
+  <x:Double x:Key="Space.1">4</x:Double>
+  <x:Double x:Key="Space.2">8</x:Double>
+  <x:Double x:Key="Space.3">12</x:Double>
+  <x:Double x:Key="Space.4">16</x:Double>
+  <x:Double x:Key="Space.5">24</x:Double>
+  <x:Double x:Key="Space.6">32</x:Double>
+
+  <!-- Insets built from the spacing scale -->
+  <Thickness x:Key="Inset.Page">16,8,16,16</Thickness>
+  <Thickness x:Key="Inset.Card">12</Thickness>
+  <Thickness x:Key="Inset.Banner">12,8</Thickness>
+  <Thickness x:Key="Inset.StatusBar">12,6</Thickness>
+
+  <!-- Corner radii -->
+  <CornerRadius x:Key="Radius.Small">4</CornerRadius>
+  <CornerRadius x:Key="Radius.Medium">8</CornerRadius>
+  <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
+
+  <!-- Type scale (Inter) -->
+  <x:Double x:Key="FontSize.Tiny">11</x:Double>
+  <x:Double x:Key="FontSize.Caption">12</x:Double>
+  <x:Double x:Key="FontSize.Small">13</x:Double>
+  <x:Double x:Key="FontSize.Body">14</x:Double>
+  <x:Double x:Key="FontSize.Reading">15</x:Double>
+  <x:Double x:Key="FontSize.Subtitle">16</x:Double>
+  <x:Double x:Key="FontSize.Title">18</x:Double>
+  <x:Double x:Key="FontSize.Heading">22</x:Double>
+  <x:Double x:Key="FontSize.Timer">22</x:Double>
+</ResourceDictionary>

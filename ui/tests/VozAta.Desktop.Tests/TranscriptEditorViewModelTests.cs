@@ -163,7 +163,8 @@ public sealed class TranscriptEditorViewModelTests
         var segment = Create().Segments[1];
 
         Assert.Equal("[00:01:05] Others", segment.Header);
-        Assert.Equal("#1565C0", segment.Color);
+        Assert.True(segment.IsSystem);
+        Assert.False(segment.IsMic);
         Assert.Equal("[00:01:05] Others", segment.ToString());
     }
 

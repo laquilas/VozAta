@@ -667,3 +667,23 @@ Decision: **Opus-MT (MarianMT) models converted to CTranslate2**, registered as 
   `translation_failed` instead.
 - Models come from `TRANSLATION_MODEL_DIR` (`<dir>/opus-mt-<name>/` with `model.bin`,
   `source.spm`, `target.spm`) or are downloaded once with `huggingface_hub.snapshot_download`.
+
+## 15. Desktop design system (phase 34)
+
+The desktop look comes from three resource files in `ui/src/VozAta.Desktop/Themes/`, merged in
+`App.axaml` after `FluentTheme`; views hold no hex color, raw `FontSize` or glyph button
+(`ThemeTokensTests`).
+
+| File | Content |
+|------|---------|
+| `Tokens.axaml` | `ThemeDictionaries` `Light` / `Dark`: `Brush.*` (surfaces, text, sidebar, accent, status fills / text / surfaces, transcript channels, meters); `Space.1`–`Space.6`, `Inset.*`, `Radius.Small/Medium/Pill`, `FontSize.*` |
+| `Icons.axaml` | `Icon.*` `StreamGeometry` from Fluent UI System Icons (MIT, `Assets/licenses/`) |
+| `Controls.axaml` | style classes: `Button.primary/danger/large/round-start/round-stop/ghost/icon/link`, `Border.card/outline/divider/statusbar/tag/banner`, `TextBlock.caption/secondary/hint/title/subtitle/timer/tabular/error/warning/success/channel` |
+
+- Text on the pink accent uses the dark purple `Brush.OnAccent`; status colors have separate fill,
+  text and surface tokens. Every text/background pair is ≥ 4.5:1 in both themes (`ThemeContrastTests`);
+  when a pair fails, the token changes, not the view.
+- Theme preference: `ui.json` (`%APPDATA%/VozAta/ui.json`, desktop-only, not `.env`) key `theme` =
+  `system` (default) | `light` | `dark`, chosen in Settings → Desktop app and applied at once through
+  `IThemeService`.
+- Debug builds open `ThemeGalleryWindow` with `--theme-gallery` (every token and style in both themes).

@@ -47,7 +47,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IClock clock,
         IUiTimer timer,
         IShellService shell,
-        IFileSaver saver)
+        IFileSaver saver,
+        IThemeService theme)
     {
         _client = client;
         _events = events;
@@ -64,6 +65,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Settings = new SettingsViewModel(client, process, localization);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(this, localization, preferences);
+        Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
         Settings.Saved += OnSettingsSaved;
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
@@ -119,6 +121,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public Task TemplatesRefresh { get; private set; } = Task.CompletedTask;
 
     public HistoryViewModel History { get; }
+
+    /// <summary>The theme picker of Settings → Desktop app (phase 34).</summary>
+    public AppearanceViewModel Appearance { get; }
 
     /// <summary>Crash recovery dialog (phase 17), opened by <c>recovery_available</c>.</summary>
     public RecoveryViewModel Recovery { get; }
@@ -771,6 +776,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(PauseResumeText));
         OnPropertyChanged(nameof(EngineText));
         Health.RefreshTexts();
+        Appearance.RefreshTexts();
     }
 
     private void RefreshDetectedLanguage()

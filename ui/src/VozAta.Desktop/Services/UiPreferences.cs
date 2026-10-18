@@ -15,7 +15,8 @@ public sealed record UiPreferencesData(
     DeviceChoice? Loopback = null,
     double? WindowWidth = null,
     double? WindowHeight = null,
-    bool MinimizeToTray = false);
+    bool MinimizeToTray = false,
+    string Theme = "system");
 
 public interface IUiPreferences
 {

@@ -10,26 +10,9 @@
         Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}"
         MinWidth="640" MinHeight="420">
 
-  <Window.Styles>
-    <!-- Stop stays red in every state; Fluent would otherwise grey it on hover/press -->
-    <Style Selector="Button.danger">
-      <Setter Property="Background" Value="#C62828" />
-      <Setter Property="Foreground" Value="White" />
-    </Style>
-    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#B71C1C" />
-      <Setter Property="Foreground" Value="White" />
-    </Style>
-    <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#8E0000" />
-      <Setter Property="Foreground" Value="White" />
-    </Style>
-  </Window.Styles>
-
   <DockPanel>
     <!-- Status bar: engine, GPU, speech model, minutes model -->
-    <Border DockPanel.Dock="Bottom" Padding="12,6"
-            Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+    <Border DockPanel.Dock="Bottom" Classes="statusbar">
       <WrapPanel>
         <Image Source="/Assets/vozata-64.png" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"
                ToolTip.Tip="{Binding L[AppTitle]}" />
@@ -44,14 +27,13 @@
     <ItemsControl DockPanel.Dock="Top" Margin="16,0" ItemsSource="{Binding Notifications}">
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="x:String">
-          <Border Margin="0,4" Padding="12,8" CornerRadius="4" Background="#FFF3E0" BorderBrush="#FB8C00"
-                  BorderThickness="1">
+          <Border Margin="0,4" Classes="banner warning">
             <DockPanel>
               <Button DockPanel.Dock="Right" Margin="12,0,0,0"
                       Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Dismiss]}"
                       Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DismissNotificationCommand}"
                       CommandParameter="{Binding}" />
-              <TextBlock Text="{Binding}" Foreground="#4E342E" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding}" TextWrapping="Wrap" VerticalAlignment="Center" />
             </DockPanel>
           </Border>
         </DataTemplate>
@@ -59,25 +41,24 @@
     </ItemsControl>
 
     <!-- Crash recovery dialog (phase 17): interrupted sessions with Recover / Later -->
-    <Border DockPanel.Dock="Top" Margin="16,4" Padding="16,12" CornerRadius="4" BorderThickness="1"
-            BorderBrush="#1E88E5" Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+    <Border DockPanel.Dock="Top" Margin="16,4" Padding="16,12" Classes="banner info"
             IsVisible="{Binding Recovery.IsOpen}">
       <StackPanel Spacing="8">
-        <TextBlock Text="{Binding L[RecoveryTitle]}" FontWeight="SemiBold" FontSize="16" />
+        <TextBlock Text="{Binding L[RecoveryTitle]}" Classes="subtitle" />
         <TextBlock Text="{Binding L[RecoveryMessage]}" TextWrapping="Wrap" />
         <ItemsControl ItemsSource="{Binding Recovery.Sessions}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RecoverySession">
               <Grid ColumnDefinitions="Auto,Auto" Margin="0,2">
                 <TextBlock Text="{Binding Started}" FontWeight="SemiBold" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="1" Text="{Binding Duration}" Foreground="Gray" />
+                <TextBlock Grid.Column="1" Text="{Binding Duration}" Classes="secondary tabular" />
               </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
           <Button Content="{Binding L[RecoveryLater]}" Command="{Binding Recovery.LaterCommand}" />
-          <Button Classes="accent" Content="{Binding L[RecoveryRecover]}"
+          <Button Classes="primary" Content="{Binding L[RecoveryRecover]}"
                   Command="{Binding Recovery.RecoverCommand}" />
         </StackPanel>
       </StackPanel>
@@ -89,31 +70,31 @@
           <!-- Controls: Start/Stop, state, elapsed time, languages -->
           <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,8">
             <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-              <Button Classes="accent" FontSize="18" Padding="28,14"
+              <Button Classes="primary large"
                       Command="{Binding StartCommand}"
                       IsVisible="{Binding !IsRecording}"
                       Content="{Binding L[Start]}" />
-              <Button Classes="danger" FontSize="18" Padding="28,14"
+              <Button Classes="danger large"
                       AutomationProperties.Name="{Binding L[Stop]}"
                       Command="{Binding StopCommand}"
                       IsVisible="{Binding IsRecording}">
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                  <Rectangle Width="14" Height="14" Fill="White" VerticalAlignment="Center" />
+                  <PathIcon Classes="inline" Data="{StaticResource Icon.Stop}" />
                   <TextBlock Text="{Binding L[Stop]}" />
                 </StackPanel>
               </Button>
-              <Button FontSize="18" Padding="22,14" Command="{Binding PauseResumeCommand}"
+              <Button Classes="large" Padding="22,14" Command="{Binding PauseResumeCommand}"
                       IsVisible="{Binding IsRecording}" Content="{Binding PauseResumeText}" />
               <StackPanel VerticalAlignment="Center" Spacing="2">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Ellipse Width="14" Height="14" Fill="#E53935" VerticalAlignment="Center"
+                  <Ellipse Classes="state-dot recording"
                            IsVisible="{Binding IsActivelyRecording}" />
-                  <Ellipse Width="14" Height="14" Fill="#FFB300" VerticalAlignment="Center"
+                  <Ellipse Classes="state-dot paused"
                            IsVisible="{Binding IsPaused}" />
                   <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
                 </StackPanel>
-                <TextBlock Text="{Binding Elapsed}" FontSize="22" FontFamily="Consolas, monospace" />
-                <TextBlock Text="{Binding L[ModelLoading]}" FontStyle="Italic" Foreground="#E65100"
+                <TextBlock Text="{Binding Elapsed}" Classes="timer" />
+                <TextBlock Text="{Binding L[ModelLoading]}" Classes="hint warning"
                            IsVisible="{Binding IsModelLoading}" />
               </StackPanel>
             </StackPanel>
@@ -182,10 +163,12 @@
               <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,4"
                         ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedMic}"
                         DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
-              <Button Grid.Column="2" Grid.RowSpan="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                      Content="⟳" Command="{Binding RefreshCommand}"
+              <Button Grid.Column="2" Grid.RowSpan="2" Margin="8,0,0,0" Classes="icon"
+                      Command="{Binding RefreshCommand}"
                       ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}"
-                      AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}" />
+                      AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RefreshDevices]}">
+                <PathIcon Data="{StaticResource Icon.Refresh}" />
+              </Button>
               <TextBlock Grid.Row="1" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SystemOutput]}"
                          VerticalAlignment="Center" Margin="0,0,8,0" />
               <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
@@ -196,27 +179,26 @@
               <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding MicMeter}">
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
                 <Panel Grid.Column="1" Height="12">
-                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#A5D6A7" />
-                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#2E7D32" Background="Transparent" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Classes="meter-mic-peak" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Classes="meter-mic" />
                 </Panel>
               </Grid>
               <Grid ColumnDefinitions="90,*" x:DataType="vm:LevelMeterViewModel" DataContext="{Binding SystemMeter}">
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
                 <Panel Grid.Column="1" Height="12">
-                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Foreground="#90CAF9" />
-                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Foreground="#1565C0" Background="Transparent" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Peak}" Classes="meter-system-peak" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Classes="meter-system" />
                 </Panel>
               </Grid>
-              <TextBlock Text="{Binding L[NoSystemSignal]}" Foreground="#E65100" TextWrapping="Wrap"
+              <TextBlock Text="{Binding L[NoSystemSignal]}" Classes="warning" TextWrapping="Wrap"
                          IsVisible="{Binding SystemMeter.NoSignal}" />
             </StackPanel>
           </Grid>
 
           <!-- Live transcript -->
-          <Border Margin="16,8,16,16" BorderThickness="1" CornerRadius="4"
-                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+          <Border Margin="16,8,16,16" Classes="outline">
             <Panel>
-              <TextBlock Text="{Binding L[TranscriptEmpty]}" Opacity="0.6" Margin="16"
+              <TextBlock Text="{Binding L[TranscriptEmpty]}" Classes="secondary" Margin="16"
                          TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
               <ScrollViewer views:AutoScroll.IsEnabled="True">
                 <StackPanel Margin="12">
@@ -224,10 +206,11 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:TranscriptLine">
                         <StackPanel Margin="0,3">
-                          <SelectableTextBlock Text="{Binding Display}" Foreground="{Binding Color}"
-                                               TextWrapping="Wrap" FontSize="15" />
+                          <SelectableTextBlock Text="{Binding Display}" Classes="channel reading"
+                                               Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}"
+                                               TextWrapping="Wrap" />
                           <!-- Live translation (phase 29): smaller and muted, under its line -->
-                          <SelectableTextBlock Text="{Binding Translation}" Foreground="Gray" FontSize="13"
+                          <SelectableTextBlock Text="{Binding Translation}" Classes="translation"
                                                TextWrapping="Wrap" Margin="16,1,0,0"
                                                IsVisible="{Binding HasTranslation}" />
                         </StackPanel>
@@ -238,8 +221,8 @@
                   <ItemsControl ItemsSource="{Binding Partials}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:TranscriptLine">
-                        <TextBlock Text="{Binding Display}" Foreground="Gray" FontStyle="Italic"
-                                   TextWrapping="Wrap" Margin="0,3" FontSize="15" />
+                        <TextBlock Text="{Binding Display}" Classes="partial"
+                                   TextWrapping="Wrap" Margin="0,3" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

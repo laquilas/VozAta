@@ -36,6 +36,33 @@ public sealed class UiPreferencesTests : IDisposable
         Assert.Contains("\"mic\"", File.ReadAllText(FilePath));
     }
 
+    [Fact]
+    public void The_theme_follows_the_system_until_one_is_chosen()
+    {
+        Assert.Equal("system", new UiPreferencesData().Theme);
+    }
+
+    [Fact]
+    public void The_theme_is_saved_and_restored()
+    {
+        new JsonFileUiPreferences(FilePath).Save(new UiPreferencesData(Theme: "dark"));
+
+        Assert.Equal("dark", new JsonFileUiPreferences(FilePath).Load().Theme);
+        Assert.Contains("\"theme\"", File.ReadAllText(FilePath));
+    }
+
+    [Fact]
+    public void A_file_saved_before_the_theme_existed_follows_the_system()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        File.WriteAllText(FilePath, """{"minimize_to_tray": true}""");
+
+        var loaded = new JsonFileUiPreferences(FilePath).Load();
+
+        Assert.True(loaded.MinimizeToTray);
+        Assert.Equal("system", loaded.Theme);
+    }
+
     [Theory]
     [InlineData("not json")]
     [InlineData("[1, 2]")]

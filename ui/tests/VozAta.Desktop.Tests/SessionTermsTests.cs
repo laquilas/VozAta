@@ -15,7 +15,7 @@ public sealed class SessionTermsTests
     {
         var viewModel = new MainViewModel(
             _client, _events, new FakeEngineProcess(), new ImmediateDispatcher(), new LocalizationService(), new FakeDialogs(),
-            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver());
+            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(), new FakeThemeService());
         await viewModel.InitializeAsync();
         _events.Send(new ConnectionChangedEvent(true));
         for (var i = 0; i < 200 && viewModel.EngineStatus != EngineStatus.Connected; i++)
