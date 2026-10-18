@@ -72,8 +72,9 @@ public sealed record SessionDetail(
     double? DurationSeconds,
     string? Language,
     bool HasMinutes,
-    IReadOnlyList<string> Files,
-    string Folder)
+    IReadOnlyList<string>? Files,
+    string? Folder,
+    IReadOnlyDictionary<string, double>? Audio = null)
 {
     /// <summary>Every other `session.json` field (devices, pauses, settings...).</summary>
     [JsonExtensionData]

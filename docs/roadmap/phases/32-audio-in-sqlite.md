@@ -76,8 +76,8 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** in progress
 - **Updated:** 2026-10-17 23:30
-- **Next step:** UI: "Play" downloads `GET /sessions/{id}/audio/{track}` to a temp file and
-  opens the OS player (`SessionDetailViewModel.OpenAudio`), enabled from `detail.audio`.
+- **Next step:** docs (architecture §6/§8/§9, api-contract), then full suites and the manual
+  check recipe.
 
 ### Steps
 
@@ -94,7 +94,7 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - [x] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
       `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
 - [x] Crash test: writer subprocess killed mid-batch (`tests/storage/sqlite/test_audio_crash.py`)
-- [ ] UI: "Play" downloads from the endpoint to a temp file and opens the OS player
+- [x] UI: "Play" downloads from the endpoint to a temp file and opens the OS player
 - [ ] Docs (architecture, api-contract), full suites, manual check recipe
 
 ### Decisions and notes
@@ -145,3 +145,12 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   every 0.05 s) and is killed once 3 s are committed; every committed sample reads back
   unchanged, only whole chunks exist, and `repair` evens the channels without losing any. Run
   8 times with the phase 31 crash test: stable.
+- UI: "Play mixed / mic / system" download the track through
+  `IEngineClient.DownloadAudioAsync` (streamed, `ResponseHeadersRead`) into
+  `%TEMP%\VozAta\audio\<id>-<track>.wav` and open it with the shell, for both backends (the
+  file backend serves its WAVs through the same endpoint). The buttons are enabled from the
+  detail's `audio` field. A file the player still holds open is opened again without a new
+  download; a failed download shows the error and deletes the partial file. The folder is a
+  constructor parameter of `SessionDetailViewModel` (default under `%TEMP%`), so
+  `HistoryViewModel` (which phase 36 rewrites) is unchanged. "Open folder" stays hidden when
+  `folder` is null (phase 31). `SessionDetail.Files` / `Folder` are nullable.

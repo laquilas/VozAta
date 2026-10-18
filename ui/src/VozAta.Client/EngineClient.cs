@@ -59,6 +59,12 @@ public interface IEngineClient
     /// <summary><c>GET /sessions/{id}/export?format=</c>: <c>md</c>, <c>docx</c> or <c>pdf</c>.</summary>
     Task<ExportedFile> ExportSessionAsync(string id, string format, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// <c>GET /sessions/{id}/audio/{track}</c> (phase 32): <c>mic</c>, <c>system</c> or <c>mixed</c> as a WAV,
+    /// streamed into <paramref name="destination"/>.
+    /// </summary>
+    Task DownloadAudioAsync(string id, string track, Stream destination, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /search</c> (phase 22): best matches first across every transcript.</summary>
     Task<SearchResults> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
 
@@ -240,6 +246,15 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         return new ExportedFile(string.IsNullOrEmpty(name) ? $"{id}-minutes.{format}" : name, content);
     }
 
+    public async Task DownloadAudioAsync(
+        string id, string track, Stream destination, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Get, $"sessions/{Escape(id)}/audio/{Escape(track)}", null, cancellationToken,
+            HttpCompletionOption.ResponseHeadersRead);
+        await response.Content.CopyToAsync(destination, cancellationToken);
+    }
+
     public Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>
         SendAsync<SettingsUpdateResult>(HttpMethod.Put, "settings", new { values }, cancellationToken);
@@ -253,7 +268,11 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     }
 
     private async Task<HttpResponseMessage> SendRawAsync(
-        HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+        HttpMethod method,
+        string path,
+        object? body,
+        CancellationToken cancellationToken,
+        HttpCompletionOption completion = HttpCompletionOption.ResponseContentRead)
     {
         using var request = new HttpRequestMessage(method, path);
         if (body is not null)
@@ -264,7 +283,7 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         HttpResponseMessage response;
         try
         {
-            response = await http.SendAsync(request, cancellationToken);
+            response = await http.SendAsync(request, completion, cancellationToken);
         }
         catch (HttpRequestException error)
         {

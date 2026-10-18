@@ -1,3 +1,4 @@
+using System.Net;
 using VozAta.Client;
 using VozAta.Desktop.Services;
 using VozAta.Desktop.Tests.Fakes;
@@ -5,7 +6,7 @@ using VozAta.Desktop.ViewModels;
 
 namespace VozAta.Desktop.Tests;
 
-public sealed class SessionDetailViewModelTests
+public sealed class SessionDetailViewModelTests : IDisposable
 {
     private const string Id = "20261016_090000";
     private const string Folder = @"C:\VozAta\recordings\20261016_090000";
@@ -14,6 +15,15 @@ public sealed class SessionDetailViewModelTests
     private readonly FakeShell _shell = new();
     private readonly LocalizationService _localization = new();
     private readonly FakeFileSaver _saver = new();
+    private readonly string _audioFolder = Path.Combine(Path.GetTempPath(), "VozAta.Tests", Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_audioFolder))
+        {
+            Directory.Delete(_audioFolder, recursive: true);
+        }
+    }
 
     public SessionDetailViewModelTests()
     {
@@ -30,9 +40,10 @@ public sealed class SessionDetailViewModelTests
         new(Id, status, new DateTimeOffset(2026, 10, 16, 9, 0, 0, TimeSpan.Zero), null, 75, "pt", true);
 
     private static SessionDetail Detail(IReadOnlyList<string> files) =>
-        new(Id, "done", null, null, 75, "pt", true, files, Folder);
+        new(Id, "done", null, null, 75, "pt", true, files, Folder, new Dictionary<string, double> { ["mic"] = 75, ["system"] = 75, ["mixed"] = 75 });
 
-    private SessionDetailViewModel Create(string status = "done") => new(_client, _shell, _localization, _saver, Summary(status));
+    private SessionDetailViewModel Create(string status = "done") =>
+        new(_client, _shell, _localization, _saver, Summary(status), audioFolder: _audioFolder);
 
     [Fact]
     public async Task Loading_fills_the_transcript_and_the_minutes()
@@ -171,28 +182,98 @@ public sealed class SessionDetailViewModelTests
     }
 
     [Fact]
-    public async Task Folder_and_audio_open_with_the_shell()
+    public async Task The_folder_opens_with_the_shell()
     {
         var detail = Create();
         await detail.LoadAsync();
 
         detail.OpenFolderCommand.Execute(null);
-        detail.OpenAudioCommand.Execute("mixed");
-        detail.OpenAudioCommand.Execute("system");
 
-        Assert.Equal([Folder, Path.Combine(Folder, "mixed.wav"), Path.Combine(Folder, "system.wav")], _shell.Opened);
+        Assert.Equal([Folder], _shell.Opened);
     }
 
     [Fact]
-    public async Task Missing_audio_files_cannot_be_opened()
+    public async Task A_track_is_downloaded_from_the_engine_then_opened_in_the_player()
     {
-        _client.Details[Id] = Detail(["session.json"]);
         var detail = Create();
         await detail.LoadAsync();
 
+        await detail.OpenAudioCommand.ExecuteAsync("mixed");
+        await detail.OpenAudioCommand.ExecuteAsync("system");
+
+        var mixed = Path.Combine(_audioFolder, $"{Id}-mixed.wav");
+        var system = Path.Combine(_audioFolder, $"{Id}-system.wav");
+        Assert.Equal([(Id, "mixed"), (Id, "system")], _client.AudioDownloads);
+        Assert.Equal([mixed, system], _shell.Opened);
+        Assert.Equal("RIFF"u8.ToArray(), await File.ReadAllBytesAsync(mixed));
+        Assert.Null(detail.Error);
+    }
+
+    [Fact]
+    public async Task A_track_still_open_in_the_player_is_opened_again_without_downloading()
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+        Directory.CreateDirectory(_audioFolder);
+        var path = Path.Combine(_audioFolder, $"{Id}-mic.wav");
+        await File.WriteAllBytesAsync(path, [1]);
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            await detail.OpenAudioCommand.ExecuteAsync("mic");
+        }
+
+        Assert.Empty(_client.AudioDownloads);
+        Assert.Equal([path], _shell.Opened);
+    }
+
+    [Fact]
+    public async Task A_failed_download_shows_the_error_and_leaves_no_partial_file()
+    {
+        _client.AudioError = new EngineApiException(HttpStatusCode.NotFound, "audio_not_found", "No audio.");
+        var detail = Create();
+        await detail.LoadAsync();
+
+        await detail.OpenAudioCommand.ExecuteAsync("mic");
+
+        Assert.Equal("No audio.", detail.Error);
+        Assert.Empty(_shell.Opened);
+        Assert.False(File.Exists(Path.Combine(_audioFolder, $"{Id}-mic.wav")));
+    }
+
+    [Fact]
+    public async Task An_unreachable_engine_is_reported_when_playing()
+    {
+        _client.AudioError = new EngineUnavailableException("down", new HttpRequestException());
+        var detail = Create();
+        await detail.LoadAsync();
+
+        await detail.OpenAudioCommand.ExecuteAsync("system");
+
+        Assert.Equal(_localization["EngineUnavailable"], detail.Error);
+    }
+
+    [Fact]
+    public async Task Tracks_without_audio_cannot_be_played_and_a_sqlite_session_has_no_folder()
+    {
+        _client.Details[Id] = new SessionDetail(Id, "done", null, null, 75, "pt", true, null, null, new Dictionary<string, double> { ["mic"] = 75 });
+        var detail = Create();
+        Assert.False(detail.OpenAudioCommand.CanExecute("mic")); // before loading
+        await detail.LoadAsync();
+
+        Assert.True(detail.OpenAudioCommand.CanExecute("mic"));
         Assert.False(detail.OpenAudioCommand.CanExecute("mixed"));
         Assert.False(detail.OpenAudioCommand.CanExecute(null));
-        Assert.True(detail.OpenFolderCommand.CanExecute(null));
+        Assert.False(detail.OpenFolderCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task An_old_engine_without_the_audio_field_plays_nothing()
+    {
+        _client.Details[Id] = new SessionDetail(Id, "done", null, null, 75, "pt", true, ["mic.wav"], Folder);
+        var detail = Create();
+        await detail.LoadAsync();
+
+        Assert.False(detail.OpenAudioCommand.CanExecute("mic"));
     }
 
     [Fact]

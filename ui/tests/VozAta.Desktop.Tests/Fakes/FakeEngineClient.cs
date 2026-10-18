@@ -202,6 +202,23 @@ internal sealed partial class FakeEngineClient : IEngineClient
             : Task.FromException<ExportedFile>(ExportError);
     }
 
+    public List<(string Id, string Track)> AudioDownloads { get; } = [];
+
+    /// <summary>When set, <see cref="DownloadAudioAsync"/> writes one byte, then fails with it.</summary>
+    public Exception? AudioError { get; set; }
+
+    public async Task DownloadAudioAsync(string id, string track, Stream destination, CancellationToken cancellationToken = default)
+    {
+        AudioDownloads.Add((id, track));
+        if (AudioError is not null)
+        {
+            await destination.WriteAsync(new byte[] { 0x52 }, cancellationToken);
+            throw AudioError;
+        }
+
+        await destination.WriteAsync("RIFF"u8.ToArray(), cancellationToken);
+    }
+
     /// <summary>The template of each regeneration, in the same order as <see cref="Regenerated"/>.</summary>
     public List<string?> RegeneratedTemplates { get; } = [];
 
