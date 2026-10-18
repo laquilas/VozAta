@@ -69,14 +69,14 @@ Exporting the database back to folders (backlog), deleting the folders.
 
 - **Branch:** `feature/33-folder-migration` (stacked on `feature/32-audio-in-sqlite`, PR #49)
 - **Status:** in progress
-- **Updated:** 2026-10-18 19:21
-- **Next step:** add `SqliteAudioStore.import_pcm` (bulk chunks inside the caller's transaction) and `write_minutes(generated_at=...)`, with tests.
+- **Updated:** 2026-10-18 19:22
+- **Next step:** write `storage/migration.py` (`FolderImporter`) test-first in `tests/storage/test_migration.py`.
 
 ### Steps
 
 - [x] Start the phase (status, Progress)
 - [x] Schema `004_migration.sql`: `imported_at`, index on `imported_from`, `migration_errors`
-- [ ] `import_track` bulk audio helper; `write_minutes(generated_at=...)`
+- [x] `import_track` bulk audio helper; `write_minutes(generated_at=...)`
 - [ ] `storage/migration.py` `FolderImporter`: full import in one transaction, interrupted
       folders (repairs only), bad folders → `migration_errors`, free-space check
 - [ ] `SessionManager.busy`; background migration job in `serve` (pauses while recording)
@@ -90,4 +90,6 @@ Exporting the database back to folders (backlog), deleting the folders.
 - Stacked on phase 32 (user's choice): the PR targets `feature/32-audio-in-sqlite`; GitHub
   retargets it to `main` once #49 merges.
 - Schema `004_migration.sql`: `sessions.imported_at`, index `sessions_imported_from`, and `migration_errors(folder PK, reason, detail, at)` (`reason` is a `[migration]` locale key, `detail` the error text). A folder listed there is not tried again.
+- `SqliteAudioStore.import_pcm(id, channel, blocks)` replaces a channel's chunks from PCM blocks in one transaction (joins the caller's); `audio_writer.INSERT_CHUNK` is the shared insert. `write_minutes(..., generated_at=None)` keeps the original minutes time on import.
+
 

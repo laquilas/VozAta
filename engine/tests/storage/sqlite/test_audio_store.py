@@ -284,3 +284,51 @@ def test_unknown_ids_are_refused(store: SqliteAudioStore) -> None:
 
 def _raise(error: Exception):
     raise error
+
+
+def test_imported_pcm_is_cut_into_whole_chunks_and_a_shorter_last_one(
+    store: SqliteAudioStore, database: Database, session_id: str
+) -> None:
+    samples = (np.arange(int(2.5 * RATE)) % 1000).astype("<i2")
+    blocks = [samples[i : i + 7000].tobytes() for i in range(0, len(samples), 7000)]
+
+    with database.write():  # joins the caller's transaction
+        frames = store.import_pcm(session_id, Channel.MIC, blocks)
+
+    assert frames == len(samples)
+    assert _chunks(database, Channel.MIC) == [
+        (0, 0, RATE),
+        (1, RATE, RATE),
+        (2, 2 * RATE, RATE // 2),
+    ]
+    assert np.array_equal(store.frames(session_id, Channel.MIC, 0, len(samples)), samples)
+
+
+def test_importing_again_replaces_the_channel(
+    store: SqliteAudioStore, database: Database, session_id: str
+) -> None:
+    store.import_pcm(session_id, Channel.SYSTEM, [bytes(4 * RATE)])
+    store.import_pcm(session_id, Channel.SYSTEM, [bytes(2 * RATE + 1)])  # an odd byte is dropped
+
+    assert _chunks(database, Channel.SYSTEM) == [(0, 0, RATE)]
+    assert store.length(session_id, Channel.SYSTEM) == RATE
+
+
+def test_an_empty_import_leaves_the_channel_empty(
+    store: SqliteAudioStore, database: Database, session_id: str
+) -> None:
+    assert store.import_pcm(session_id, Channel.MIC, []) == 0
+    assert _chunks(database, Channel.MIC) == []
+
+
+def test_a_failed_import_writes_nothing(
+    store: SqliteAudioStore, database: Database, session_id: str
+) -> None:
+    def blocks():
+        yield bytes(4 * RATE)
+        raise OSError("unreadable WAV")
+
+    with pytest.raises(OSError):
+        store.import_pcm(session_id, Channel.MIC, blocks())
+
+    assert _chunks(database, Channel.MIC) == []
