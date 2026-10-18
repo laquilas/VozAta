@@ -64,3 +64,29 @@ Exporting the database back to folders (backlog), deleting the folders.
 
 > Execute phase 33 of the roadmap (`docs/roadmap/phases/33-folder-migration.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/33-folder-migration` (stacked on `feature/32-audio-in-sqlite`, PR #49)
+- **Status:** in progress
+- **Updated:** 2026-10-18 12:00
+- **Next step:** add `004_migration.sql` (`sessions.imported_at`, index on `imported_from`,
+  `migration_errors`) with its tests in `tests/storage/sqlite/test_db.py`.
+
+### Steps
+
+- [x] Start the phase (status, Progress)
+- [ ] Schema `004_migration.sql`: `imported_at`, index on `imported_from`, `migration_errors`
+- [ ] `import_track` bulk audio helper; `write_minutes(generated_at=...)`
+- [ ] `storage/migration.py` `FolderImporter`: full import in one transaction, interrupted
+      folders (repairs only), bad folders → `migration_errors`, free-space check
+- [ ] `SessionManager.busy`; background migration job in `serve` (pauses while recording)
+- [ ] API: `GET /migration`, `migration_progress` / `migration_done` events, first WS messages
+- [ ] CLI `python -m vozata migrate [--dry-run]`
+- [ ] UI: client DTOs, `MigrationViewModel`, banner + done toast + errors dialog, strings
+- [ ] Docs (architecture §8, api-contract), full suites, manual check recipe
+
+### Decisions and notes
+
+- Stacked on phase 32 (user's choice): the PR targets `feature/32-audio-in-sqlite`; GitHub
+  retargets it to `main` once #49 merges.
