@@ -8,9 +8,11 @@ import pytest
 
 from tests.fakes import FakeLocalizer
 from vozata import __main__ as cli
+from vozata import bootstrap
 from vozata.audio.devices import DeviceInfo
 from vozata.config import ConfigError
 from vozata.domain import ConversationLanguage
+from vozata.storage.sqlite.search import SqliteSearch
 
 MIC = DeviceInfo(9, "Headset Mic", 2, 48000, False)
 LOOPBACK = DeviceInfo(10, "Speakers [Loopback]", 2, 48000, True)
@@ -113,17 +115,21 @@ def test_minutes_command_runs_on_the_folder(monkeypatch: pytest.MonkeyPatch) -> 
 def test_reindex_command_rebuilds_the_index_in_the_output_dir(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    received: list[tuple[Path, Path]] = []
+    received: list[tuple[Any, Any]] = []
     monkeypatch.setattr(
-        cli,
-        "run_reindex",
-        lambda store, index, *args: received.append((store.store._root, index._path)) or 0,
+        cli, "run_reindex", lambda store, index, *args: received.append((store, index)) or 0
     )
 
     code, _ = _main(["reindex"], env={"OUTPUT_DIR": str(tmp_path)})
+    files_code, _ = _main(
+        ["reindex"], env={"OUTPUT_DIR": str(tmp_path), "STORAGE_BACKEND": "files"}
+    )
 
-    assert code == 0
-    assert received == [(tmp_path, tmp_path / "index.db")]
+    assert (code, files_code) == (0, 0)
+    (sqlite_store, sqlite_index), (files_store, files_index) = received
+    assert isinstance(sqlite_index, SqliteSearch)
+    assert sqlite_store.database.path == tmp_path / "vozata.db"
+    assert (files_store.store._root, files_index._path) == (tmp_path, tmp_path / "index.db")
 
 
 @pytest.mark.parametrize(
@@ -137,7 +143,8 @@ def test_recover_command_targets_a_folder_or_every_session(
 
     def fake_run(session_dir: Path | None, build: Any, *args: Any) -> int:
         recovery = build(None)
-        received.append((session_dir, recovery.store.store._root, recovery._stale_after))
+        root = recovery.store.folder("20261015_202358").parent
+        received.append((session_dir, root, recovery._stale_after))
         return 0
 
     monkeypatch.setattr(cli, "run_recover", fake_run)
@@ -243,7 +250,8 @@ def test_diarize_command_runs_on_the_folder_and_can_chain_the_minutes(
     received: list[tuple[Path, bool]] = []
     minutes: list[Path] = []
 
-    def diarize(folder, settings, console, localizer, build, then):  # type: ignore[no-untyped-def]
+    def diarize(folder, settings, console, localizer, build, then, open_folder):  # type: ignore[no-untyped-def]
+        assert open_folder.func is bootstrap.open_session_folder  # the configured storage
         received.append((folder, then is not None))
         return then() if then is not None else 0
 

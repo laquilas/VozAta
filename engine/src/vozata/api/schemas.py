@@ -28,12 +28,21 @@ class LlmStatus(BaseModel):
     reachable: bool
 
 
+class StorageStatus(BaseModel):
+    """Phase 31: `warning` is a localized message when the database is in a OneDrive folder."""
+
+    backend: Literal["sqlite", "files"]
+    database: str | None  # absolute path of the SQLite database
+    warning: str | None
+
+
 class Health(BaseModel):
     engine: Literal["ok"] = "ok"
     version: str
     gpu: GpuStatus
     stt: SttStatus
     llm: LlmStatus
+    storage: StorageStatus
 
 
 class Device(BaseModel):
@@ -83,6 +92,7 @@ class SessionDetail(SessionSummary):
 
     files: list[str] | None = None
     folder: str | None = None
+    storage: Literal["sqlite", "files"] = "files"  # phase 31
 
 
 class SessionList(BaseModel):

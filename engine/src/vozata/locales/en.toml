@@ -187,3 +187,6 @@ no_minutes = "No minutes were generated for this session."
 column_time = "Time"
 column_speaker = "Speaker"
 column_text = "Text"
+
+[storage]
+onedrive_warning = "The database {path} is in a OneDrive folder ({root}). OneDrive can lock or corrupt it while VozAta runs: set DATABASE_PATH to a folder outside OneDrive and restart the engine."

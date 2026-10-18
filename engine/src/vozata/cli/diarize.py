@@ -10,6 +10,7 @@ from vozata.config import ConfigError, Settings
 from vozata.diarization.session_diarization import diarize_session
 from vozata.ports import Diarizer, Localizer, SessionNotFoundError
 from vozata.storage.files.folder import open_session_folder
+from vozata.storage.session_folder import SessionFolder
 
 
 def run_diarize(
@@ -19,14 +20,19 @@ def run_diarize(
     localizer: Localizer,
     build_diarizer: Callable[[Settings], Diarizer],
     then_minutes: Callable[[], int] | None = None,
+    open_folder: Callable[[Path], SessionFolder] | None = None,
 ) -> int:
-    """Write `transcript.diarized.jsonl` + `speakers.json`, even when `DIARIZATION_ENABLED` is off.
+    """Store the diarized transcript and the speakers, even when `DIARIZATION_ENABLED` is off.
 
-    With `then_minutes`, the minutes are generated again from the diarized transcript. A session
-    folder belongs to the file backend, so the command works on the file backend of its parent.
+    With `then_minutes`, the minutes are generated again from the diarized transcript.
+    `open_folder` gives the storage of the session folder (default: the file backend of its
+    parent).
     """
     t = localizer.t
-    folder = open_session_folder(session_dir, settings.sample_rate)
+    if open_folder is None:
+        folder = open_session_folder(session_dir, settings.sample_rate)
+    else:
+        folder = open_folder(session_dir)
     try:
         folder.repository.read_meta(folder.session_id)
         found = diarize_session(

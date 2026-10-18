@@ -4,6 +4,7 @@ recover [<dir> | --all]`."""
 from __future__ import annotations
 
 import argparse
+import functools
 import logging
 import sys
 from collections.abc import Mapping, Sequence
@@ -89,6 +90,7 @@ def main(
         if args.command == "serve":
             return run_serve(settings, console, localizer, _build_app, _uvicorn_run)
         if args.command in ("minutes", "diarize"):
+            open_folder = functools.partial(bootstrap.open_session_folder, settings)
 
             def minutes() -> int:
                 return run_minutes(
@@ -98,6 +100,7 @@ def main(
                     localizer,
                     labeler,
                     bootstrap.build_minutes_generator,
+                    open_folder,
                 )
 
             if args.command == "minutes":
@@ -109,6 +112,7 @@ def main(
                 localizer,
                 bootstrap.build_diarizer,
                 minutes if args.minutes else None,
+                open_folder,
             )
         if args.command == "reindex":
             return run_reindex(

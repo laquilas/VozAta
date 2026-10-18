@@ -81,7 +81,7 @@ def list_sessions(
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
 def session_detail(session_id: str, c: Container) -> dict[str, Any]:
     meta = c.store.read_meta(session_id)
-    detail = {**meta, **_summary(c, session_id)}
+    detail = {**meta, **_summary(c, session_id), "storage": c.storage.backend}
     folder = c.store.folder(session_id)
     if folder is not None:  # file backend
         detail["files"] = c.store.files(session_id)

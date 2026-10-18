@@ -187,3 +187,6 @@ no_minutes = "Nenhuma ata foi gerada para esta sessão."
 column_time = "Hora"
 column_speaker = "Falante"
 column_text = "Texto"
+
+[storage]
+onedrive_warning = "O banco de dados {path} está em uma pasta do OneDrive ({root}). O OneDrive pode bloqueá-lo ou corrompê-lo enquanto o VozAta está em execução: defina DATABASE_PATH para uma pasta fora do OneDrive e reinicie o motor."

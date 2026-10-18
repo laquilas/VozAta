@@ -170,14 +170,14 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
 class Translator(Protocol):           # OpusMtTranslator (29), CPU; built on the translation thread
     def translate(self, text: str, source: str, target: str) -> str: ...  # raises TranslationError
     def close(self) -> None: ...
-class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
-    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
+class TranscriptSearch(Protocol):     # SearchIndex (22, files) / SqliteSearch (31, sqlite); reused by 21 and 24
+    def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace (SqliteSearch: no-op, triggers)
     def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
 
-# Storage (30): every read and write of session data. REPOSITORIES / AUDIO_STORES in bootstrap.py
-# (one entry, "files", until STORAGE_BACKEND arrives in 31). Shared contract suites:
+# Storage (30, 31): every read and write of session data. REPOSITORIES / AUDIO_STORES / SEARCHES
+# in bootstrap.py, keyed by STORAGE_BACKEND (sqlite | files). Shared contract suites:
 # tests/storage/repository_contract.py and tests/storage/audio_contract.py.
-class SessionRepository(Protocol):    # FileSessionRepository (30); raises SessionNotFoundError
+class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessionRepository (30); raises SessionNotFoundError
     def now(self) -> datetime: ...
     def create(self, started_at: datetime | None = None) -> str: ...  # id YYYYMMDD_HHMMSS[_n]
     def discard(self, session_id: str) -> None: ...
@@ -193,8 +193,8 @@ class SessionRepository(Protocol):    # FileSessionRepository (30); raises Sessi
     def speaker_names(...) / write_speakers(session_id, ids) / rename_speakers(session_id, names)
     def read_minutes(self, session_id: str) -> str | None: ...; write_minutes(session_id, markdown); has_minutes(session_id)
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
-    def folder(self, session_id: str) -> Path | None: ...  # file backend only (None otherwise)
-    def files(self, session_id: str) -> list[str] | None: ...  # idem
+    def folder(self, session_id: str) -> Path | None: ...  # the session folder; sqlite: the audio folder until 32 (None after)
+    def files(self, session_id: str) -> list[str] | None: ...  # idem (sqlite: only the WAVs)
 class AudioTrackWriter(AudioSink, Protocol):  # AlignedWavWriter; gaps and pauses become silence
     paused: bool; samples_written: int
 class AudioStore(Protocol):           # FileAudioStore (30)
@@ -206,7 +206,7 @@ class AudioReader(Protocol):          # int16 mono samples
     def sample_rate(self, session_id: str, channel: Channel) -> int: ...
     def materialize_wav(self, session_id: str, channel: Channel) -> Path: ...  # file backend: the WAV itself
 class SessionAudio(AudioStore, AudioReader, Protocol): ...  # what RecordingSession gets
-class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository]
+class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository] (sqlite: audio only)
     def repair(self, session_id: str) -> float | None: ...  # recorded seconds if it holds audio; StoreRepairError
 ```
 
@@ -397,15 +397,55 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 
 ## 8. Data model and session folder
 
-> **Planned (M6, phases 31–33):** sessions, transcripts, speakers, translations, minutes, action
-> items, the search index and the audio (≈1 s PCM chunks) move into one SQLite database,
-> `vozata.db` (`DATABASE_PATH`, default `OUTPUT_DIR/vozata.db`), behind the `SessionRepository` /
-> `AudioStore` ports that phase 30 introduced (§5); existing folders are imported automatically
-> and kept. The folder layout below
-> stays as the `STORAGE_BACKEND=files` backend. Schema and guarantees are defined in
-> [phase 31](phases/31-sqlite-database.md) and [phase 32](phases/32-audio-in-sqlite.md) and land
-> here when implemented. The desktop UI moves to a Toggl Track–style shell (sidebar, timer bar,
-> pages) with theme tokens in phases 34–38.
+Two storage backends, chosen by `STORAGE_BACKEND` (restart): **`sqlite`** (default since phase
+31) keeps sessions, transcripts, speakers, translations, minutes, action items and the search
+index in one database, `vozata.db` (see *SQLite backend* below); **`files`** keeps the folder
+layout of the table below. With both, the audio stays in WAV files in `OUTPUT_DIR/<id>/` until
+phase 32 moves it into the database (≈1 s PCM chunks); phase 33 imports existing folders. The
+desktop UI moves to a Toggl Track–style shell (sidebar, timer bar, pages) with theme tokens in
+phases 34–38.
+
+### SQLite backend (phase 31)
+
+`vozata.db` lives at `DATABASE_PATH` (empty = `OUTPUT_DIR/vozata.db`); `storage/sqlite/` and
+`bootstrap.py` are the only modules that know it. **Keep it out of OneDrive-synced folders**:
+OneDrive locks the file while uploading and syncs it without its `-wal` file, which can corrupt
+a database in use. The engine logs a warning when it opens a database under a OneDrive root
+(`OneDrive` / `OneDriveConsumer` / `OneDriveCommercial` environment variables, plus the
+`UserFolder` of every account under `HKCU\Software\Microsoft\OneDrive\Accounts` on Windows: the
+variables can miss a personal OneDrive next to a business one) and
+`GET /health` shows it as `storage.warning`; it does not refuse to start.
+
+- **Connections** (`storage/sqlite/db.py`, `Database`): one per thread (`threading.local`),
+  `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_timeout=10000`; writes are
+  serialized by one lock and run in `BEGIN IMMEDIATE` transactions. A live transcript segment is
+  committed with `synchronous=FULL` before `emit` returns, so every emitted segment survives a
+  crash and recovery has nothing to repair in the database. One `Database` per file per process
+  (`bootstrap.open_database`); nothing touches the disk before the first connection.
+- **Migrations**: numbered scripts `storage/sqlite/migrations/NNN_name.sql` (package data),
+  applied in order on the first connection by `PRAGMA user_version`, each in its own
+  transaction; a database with a newer version than the engine knows is refused
+  (`DatabaseVersionError`). `001_schema.sql`: tables; `002_search.sql`: the FTS table and its
+  triggers.
+- **Session folder**: `create` also makes `OUTPUT_DIR/<id>/` for the WAVs (skipping ids taken
+  by a row or an existing folder) and `discard` removes it; nothing but audio is written there.
+
+| Table | Columns | Notes |
+|-------|---------|-------|
+| `sessions` | `id` PK, `status`, `started_at`, `ended_at`, `duration_seconds`, `last_heartbeat_at`, `language`, `language_source`, `app_language`, `template`, `title`, `meta_json`, `imported_from` | `write_meta` is one UPSERT (a heartbeat changes one row). `meta_json` keeps every metadata key in order (the `session.json` fields without a column: devices, pauses, settings, `echo_dropped`, vocabulary…); a value stored in its column is `null` there, so `read_meta` returns exactly what was written. `meta_json` is NULL until the first `write_meta`: such a row is not listed. `imported_from` is for phase 33 |
+| `segments` | `row_id` INTEGER PK, `session_id` FK, `source` (`raw` \| `diarized` \| `edited`), `segment_id`, `channel`, `speaker_id`, `start`, `"end"`, `text`, `words_json`, `edited`; UNIQUE (`session_id`, `source`, `segment_id`) | the three transcripts of the file backend as rows; `row_id` keeps the written order and is the FTS rowid; the best transcript is edited, then diarized, then raw |
+| `translations` | PK (`session_id`, `segment_id`), `language`, `text` | live translations (29); a new one of a segment replaces the old one |
+| `speakers` | PK (`session_id`, `speaker_id`), `name` | `name` NULL = localized label |
+| `minutes` | `session_id` PK, `markdown`, `template`, `generated_at` | the Markdown exactly as written, with the session's template |
+| `action_items` | `row_id` INTEGER PK, `session_id`, `item_id`, `description`, `owner`, `due`, `source_ids_json`, `exported_url` | in written order |
+| `segments_fts` | FTS5 (`session_id`, `segment_id`, `start`, `speaker_id` unindexed; `text`), rowid = `segments.row_id` | tokenizer `unicode61 remove_diacritics 2`; holds only each session's best source, kept in sync by triggers on insert / update / delete of `segments` (an edit replaces the diarized rows, reverting it brings them back); `reindex` rebuilds it; no `index.db` |
+
+Every child table references `sessions(id) ON DELETE CASCADE`: `discard` removes everything of a
+session (and the FTS rows, through the triggers). A session row still `recording` / `paused` /
+`finalizing` without a live session is `interrupted` (§6, phase 17); its committed segments are
+complete, so only the WAVs are repaired.
+
+### File backend (`STORAGE_BACKEND=files`)
 
 `OUTPUT_DIR/YYYYMMDD_HHMMSS/` (the folder name is the session id). Since phase 30 only
 `storage/` (the file backend `storage/files/`) and `bootstrap.py` know these names; everything
@@ -426,7 +466,7 @@ else goes through the storage ports (§5):
 | `transcript.translated.jsonl` | 29 | live translations, append-only: `{"segment_id", "language", "text"}` per line (created with the first one; the last line of a segment wins); merged into `GET /sessions/{id}/transcript` as `translation` by `segment_id` |
 | `action_items.json` | 23 | extracted items + export results |
 
-`OUTPUT_DIR/index.db` — SQLite FTS5 search index (22): table `segments(session_id, segment_id,
+`OUTPUT_DIR/index.db` — SQLite FTS5 search index of the file backend (22): table `segments(session_id, segment_id,
 start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`
 (case- and accent-insensitive). It is derived data: stop step 6 replaces the session's rows with
 its best transcript (precedence below), `python -m vozata reindex` rebuilds it from every session,
@@ -536,7 +576,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `APP_LANGUAGE` | `en` | 01 | `en` / `pt-BR` / `es` |
 | `TRANSCRIPTION_LANGUAGE` | *(empty)* | 01 | default conversation language `en`/`pt`/`es`/`auto`; empty = derived from `APP_LANGUAGE` |
 | `MIC_LABEL` / `SYSTEM_LABEL` | *(empty)* | 01 | override localized labels |
-| `OUTPUT_DIR` | `recordings` | 01 | sessions root |
+| `OUTPUT_DIR` | `recordings` | 01 | sessions root (session folders; with `sqlite` they hold only audio) |
+| `STORAGE_BACKEND` | `sqlite` | 31 | `sqlite` (one database, `vozata.db`) / `files` (one folder of JSON and Markdown per session); restart |
+| `DATABASE_PATH` | *(empty)* = `OUTPUT_DIR/vozata.db` | 31 | the SQLite database file; keep it out of OneDrive-synced folders (warning at start and in `GET /health`); restart |
 | `STT_PROVIDER` | `faster_whisper` | 03 | registry key |
 | `WHISPER_MODEL` | `large-v3-turbo` | 03 | GPU model |
 | `WHISPER_DEVICE` | `auto` | 03 | `auto` / `cuda` / `cpu` |

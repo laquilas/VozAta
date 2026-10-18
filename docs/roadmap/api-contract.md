@@ -20,7 +20,7 @@ own rows. Changing a row requires updating both sides.
 
 | Method | Path | Phase | Request | Response |
 |--------|------|-------|---------|----------|
-| GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}}` |
+| GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}, storage: {backend: "sqlite"\|"files", database, warning}}`; `storage` (31): `database` is the absolute path of `vozata.db` (null for `files`), `warning` a localized message when it is in a OneDrive-synced folder, else null |
 | GET | `/favicon.ico` | — | — | the VozAta logo (`image/x-icon`, package data copied from `assets/web/favicon.ico`); not in the OpenAPI schema |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
 | POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es", title?: str}` | `201 SessionSummary`; `title` (35): the meeting title, trimmed (whitespace runs, new lines too, become one space), at most 200 characters (`422 title_too_long`), blank = untitled, stored as `session.json.title`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none) |
@@ -60,7 +60,9 @@ own rows. Changing a row requires updating both sides.
  "title": "Weekly sync"}  // title (35): null = untitled
 // SessionDetail = SessionSummary + full session.json fields + files: ["mic.wav", ...]
 //   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
-//   files / folder come from the file backend; null for a backend without folders (30, used from 31)
+//   files / folder: null for a backend without folders (30). With STORAGE_BACKEND=sqlite (31) they
+//   are the audio folder and its WAVs (no JSON / Markdown there) until phase 32 moves the audio
+//   + storage: "sqlite" | "files" (31)
 // Segment (labels resolved for display; raw files store only speaker_id; `edited` from phase 21:
 //   true when the user changed the text, then `words` is empty)
 //   `translation` from phase 29: {language, text} in GET /sessions/{id}/transcript, null when

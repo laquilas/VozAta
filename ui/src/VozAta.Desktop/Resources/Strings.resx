@@ -289,7 +289,19 @@
     <value>Recordings folder</value>
   </data>
   <data name="SettingHelp_OUTPUT_DIR" xml:space="preserve">
-    <value>Folder where each session gets its own subfolder with audio, transcript and minutes.</value>
+    <value>Folder where each session gets its own subfolder with its audio (and, with the files storage, its transcript and minutes).</value>
+  </data>
+  <data name="Setting_STORAGE_BACKEND" xml:space="preserve">
+    <value>Session storage</value>
+  </data>
+  <data name="SettingHelp_STORAGE_BACKEND" xml:space="preserve">
+    <value>sqlite keeps sessions, transcripts and minutes in one database (vozata.db); files keeps one folder of JSON and Markdown files per session. Audio stays in the recordings folder either way.</value>
+  </data>
+  <data name="Setting_DATABASE_PATH" xml:space="preserve">
+    <value>Database file</value>
+  </data>
+  <data name="SettingHelp_DATABASE_PATH" xml:space="preserve">
+    <value>The SQLite database file; empty uses vozata.db in the recordings folder. Keep it out of OneDrive-synced folders: sync can lock or corrupt it while VozAta runs.</value>
   </data>
   <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
     <value>Write minutes when recording stops</value>

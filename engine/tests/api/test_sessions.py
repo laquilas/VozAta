@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import threading
 from pathlib import Path
@@ -7,7 +8,9 @@ from pathlib import Path
 import pytest
 
 from tests.api.conftest import START_ERROR, Api
-from vozata.domain import Channel, ConversationLanguage, TranscriptSegment
+from vozata.domain import Channel, ConversationLanguage, StorageInfo, TranscriptSegment
+from vozata.storage.sqlite.db import Database
+from vozata.storage.sqlite.repository import SqliteSessionRepository
 
 SESSION = "20261015_202358"
 
@@ -167,6 +170,26 @@ def test_detail_adds_metadata_files_and_folder(api: Api) -> None:
     assert body["devices"] == {"mic": "Headset Mic"}
     assert body["files"] == ["minutes.md", "session.json", "transcript.jsonl"]
     assert body["folder"] == str(root.resolve())
+    assert body["storage"] == "files"
+
+
+def test_detail_of_a_database_session_lists_only_its_audio(api: Api, tmp_path: Path) -> None:
+    database = Database(tmp_path / "vozata.db")
+    store = SqliteSessionRepository(database, tmp_path / "db-recordings")
+    session_id = store.create()
+    store.write_meta(session_id, {"id": session_id, "status": "done", "language": "en"})
+    store.write_minutes(session_id, "# Minutes\n")
+    (tmp_path / "db-recordings" / session_id / "mic.wav").write_bytes(b"RIFF")
+    container = api.app.state.container
+    api.app.state.container = dataclasses.replace(
+        container, store=store, storage=StorageInfo("sqlite", database.path)
+    )
+
+    body = api.client.get(f"/sessions/{session_id}").json()
+
+    assert (body["storage"], body["has_minutes"], body["files"]) == ("sqlite", True, ["mic.wav"])
+    assert body["folder"] == str((tmp_path / "db-recordings" / session_id).resolve())
+    database.close()
 
 
 def test_detail_without_a_session_folder_has_no_files_or_folder(

@@ -289,7 +289,19 @@
     <value>Carpeta de grabaciones</value>
   </data>
   <data name="SettingHelp_OUTPUT_DIR" xml:space="preserve">
-    <value>Carpeta donde cada sesión tiene su propia subcarpeta con audio, transcripción y acta.</value>
+    <value>Carpeta donde cada sesión tiene su propia subcarpeta con su audio (y, con el almacenamiento files, su transcripción y acta).</value>
+  </data>
+  <data name="Setting_STORAGE_BACKEND" xml:space="preserve">
+    <value>Almacenamiento de sesiones</value>
+  </data>
+  <data name="SettingHelp_STORAGE_BACKEND" xml:space="preserve">
+    <value>sqlite guarda sesiones, transcripciones y actas en una base de datos (vozata.db); files guarda una carpeta de archivos JSON y Markdown por sesión. El audio queda en la carpeta de grabaciones en ambos casos.</value>
+  </data>
+  <data name="Setting_DATABASE_PATH" xml:space="preserve">
+    <value>Archivo de base de datos</value>
+  </data>
+  <data name="SettingHelp_DATABASE_PATH" xml:space="preserve">
+    <value>El archivo de base de datos SQLite; vacío usa vozata.db en la carpeta de grabaciones. Mantenlo fuera de carpetas sincronizadas con OneDrive: la sincronización puede bloquearlo o dañarlo mientras VozAta se ejecuta.</value>
   </data>
   <data name="Setting_GENERATE_MINUTES" xml:space="preserve">
     <value>Generar acta al detener la grabación</value>

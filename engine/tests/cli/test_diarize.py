@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from tests.fakes import FakeDiarizer, FakeLocalizer
+from vozata import bootstrap
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.diarize import run_diarize
 from vozata.config import ConfigError, Settings
@@ -90,3 +91,28 @@ def test_failures_exit_1_with_the_reason(tmp_path: Path) -> None:
     assert code == 1
     assert out.startswith("cli.diarize_failed(reason=errors.config.missing_hf_token(")
     assert not (folder / "transcript.diarized.jsonl").exists()
+
+
+def test_a_database_session_folder_is_read_through_the_given_storage(tmp_path: Path) -> None:
+    settings = Settings(output_dir=tmp_path / "recordings")  # STORAGE_BACKEND=sqlite
+    store = bootstrap.build_store(settings)
+    session_id = store.create()
+    store.write_meta(session_id, {"language": "en"})
+    sink = store.open_transcript(session_id, SpeakerLabeler(FakeLocalizer()))
+    sink.emit(TranscriptSegment("mic-000001", Channel.MIC, "mic", 1.0, 2.0, "Hi.", ()))
+    folder = tmp_path / "recordings" / session_id
+    out = io.StringIO()
+    localizer = FakeLocalizer()
+    console = ConsoleObserver(localizer, SpeakerLabeler(localizer), out)
+
+    code = run_diarize(
+        folder,
+        settings,
+        console,
+        localizer,
+        lambda settings: FakeDiarizer([]),
+        open_folder=lambda path: bootstrap.open_session_folder(settings, path),
+    )
+
+    assert code == 1  # only the microphone spoke
+    assert out.getvalue() == f"cli.no_system_speech(folder={folder.resolve()})\n"

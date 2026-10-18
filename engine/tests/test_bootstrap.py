@@ -19,12 +19,20 @@ from vozata.audio.devices import DeviceInfo
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
-from vozata.domain import AppLanguage, Channel, ChunkMode, ConversationLanguage, MixMode
+from vozata.domain import (
+    AppLanguage,
+    Channel,
+    ChunkMode,
+    ConversationLanguage,
+    MixMode,
+    StorageInfo,
+)
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import UnknownTemplateError
 from vozata.session import SessionStartError
-from vozata.storage.search_index import SearchIndex
+from vozata.storage.sqlite.repository import SqliteSessionRepository
+from vozata.storage.sqlite.search import SqliteSearch
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
 
@@ -110,8 +118,9 @@ def test_build_session_uses_the_default_devices_and_settings(
     assert components.diarizer_factory is None  # DIARIZATION_ENABLED defaults to false
     assert components.embedder_factory is None  # LIVE_DIARIZATION_ENABLED defaults to false
     assert session._language is ConversationLanguage.ES
-    assert isinstance(components.search_index, SearchIndex)
-    assert components.search_index._path == tmp_path / "recordings" / "index.db"
+    assert isinstance(components.search_index, SqliteSearch)  # STORAGE_BACKEND=sqlite
+    assert isinstance(session._store, SqliteSessionRepository)
+    assert session._store.database.path == tmp_path / "recordings" / "vozata.db"
     assert devices == []
     assert not (tmp_path / "recordings").exists()  # nothing is created before start()
 
@@ -297,8 +306,8 @@ def test_build_api_container_wires_real_providers(
     assert isinstance(container.regenerate_minutes, MinutesJob)
     assert container.llm_reachable() is False
     assert container.store.list_sessions() == []
-    assert isinstance(container.search_index, SearchIndex)
-    assert container.search_index._path == tmp_path / "recordings" / "index.db"
+    assert isinstance(container.search_index, SqliteSearch)
+    assert container.storage == StorageInfo("sqlite", tmp_path / "recordings" / "vozata.db")
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
     assert built == [
         {
