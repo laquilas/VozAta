@@ -70,3 +70,30 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 
 > Execute phase 32 of the roadmap (`docs/roadmap/phases/32-audio-in-sqlite.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/32-audio-in-sqlite`
+- **Status:** in progress
+- **Updated:** 2026-10-17 23:30
+- **Next step:** add migration `003_audio.sql` (`audio_chunks`) and switch new databases to
+  `auto_vacuum=INCREMENTAL` in `storage/sqlite/db.py`.
+
+### Steps
+
+- [x] Start the phase (status, Progress)
+- [ ] Schema: `audio_chunks` migration, `auto_vacuum=INCREMENTAL`
+- [ ] `SqliteAudioStore`: buffered capture, writer thread (1 s batches, both channels per
+      transaction), silence for gaps and pauses, equal-length finalize, repair; contract suite
+- [ ] Reader: chunk-range `frames`, on-the-fly mix, `materialize_wav` with the LRU cache
+      (`AUDIO_CACHE_MB`)
+- [ ] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
+      `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
+- [ ] Bootstrap wiring, recovery, delete helper (chunks + background `incremental_vacuum`)
+- [ ] Crash test: writer subprocess killed mid-batch
+- [ ] UI: "Play" downloads from the endpoint to a temp file and opens the OS player
+- [ ] Docs (architecture, api-contract), full suites, manual check recipe
+
+### Decisions and notes
+
+- (none yet)
