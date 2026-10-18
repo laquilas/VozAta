@@ -62,3 +62,29 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 
 > Execute phase 36 of the roadmap (`docs/roadmap/phases/36-meetings-by-day.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/36-meetings-by-day`
+- **Status:** in progress
+- **Updated:** 2026-10-17 22:40
+- **Next step:** add `list_range`, `speaker_count` and `delete` to the `SessionRepository` port
+  with contract tests in `engine/tests/storage/repository_contract.py` (both backends).
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [ ] Repository: `list_range`, `speaker_count` (both backends, contract suite)
+- [ ] Repository: `delete` (SQLite permanent; files to the Recycle Bin through a `Recycler` port)
+- [ ] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
+      `speaker_count`, `has_action_items`, `template`
+- [ ] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
+- [ ] UI client: range and delete calls, new summary fields
+- [ ] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
+- [ ] UI: inline rename, delete with confirmation and undo, search filtering, row actions
+- [ ] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots
+- [ ] Full suites, acceptance criteria, PR
+
+### Decisions and notes
+
+- (none yet)
