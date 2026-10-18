@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Mapping
+import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 from dotenv import dotenv_values
 
@@ -19,6 +21,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    StorageBackend,
     TranslationTarget,
     WhisperDevice,
     default_conversation_language,
@@ -33,6 +36,9 @@ KEYS = tuple(field.key for field in FIELDS)
 _TRUE = ("true", "1", "yes", "on")
 _FALSE = ("false", "0", "no", "off")
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
+DATABASE_FILE = "vozata.db"  # in `OUTPUT_DIR` when `DATABASE_PATH` is empty (phase 31)
+_ONEDRIVE_VARIABLES = ("OneDrive", "OneDriveConsumer", "OneDriveCommercial")
+_ONEDRIVE_ACCOUNTS = r"Software\Microsoft\OneDrive\Accounts"  # under HKEY_CURRENT_USER
 MAX_SPEAKERS_LIMIT = 20
 # Ollama `keep_alive`: whole seconds (`0`, `-1`, `300`) or a Go duration (`5m`, `1h30m`, `250ms`).
 _DURATION = re.compile(r"-?\d+|-?(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+")
@@ -138,6 +144,17 @@ class Settings:
     # API (phase 06)
     api_host: str = "127.0.0.1"
     api_port: int = 8765
+    # Storage (phase 31)
+    storage_backend: StorageBackend = StorageBackend.SQLITE
+    database_path: Path | None = None  # None: `OUTPUT_DIR/vozata.db`
+    # OneDrive roots of this user (`OneDrive*` environment variables, Windows): the database
+    # must not live under one while the engine runs.
+    onedrive_roots: tuple[Path, ...] = ()
+
+    @property
+    def database_file(self) -> Path:
+        """`DATABASE_PATH`, else `vozata.db` in `OUTPUT_DIR`."""
+        return self.database_path or self.output_dir / DATABASE_FILE
 
     @property
     def effective_echo_hold_seconds(self) -> float:
@@ -231,7 +248,58 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
+        storage_backend=_choice(raw, "STORAGE_BACKEND", StorageBackend, StorageBackend.SQLITE),
+        database_path=Path(raw["DATABASE_PATH"]) if "DATABASE_PATH" in raw else None,
+        onedrive_roots=(
+            onedrive_roots(os.environ, onedrive_registry_roots())
+            if env is None
+            else onedrive_roots(env)  # an explicit mapping (tests): no registry
+        ),
     )
+
+
+def onedrive_roots(env: Mapping[str, str], registry: Sequence[Path] = ()) -> tuple[Path, ...]:
+    """The folders OneDrive syncs, from `OneDrive`, `OneDriveConsumer` and `OneDriveCommercial`
+    (any case; Windows sets them for the signed-in user), then `registry` (every account,
+    `onedrive_registry_roots`). Empty values and repeats are skipped."""
+    names = {name.upper() for name in _ONEDRIVE_VARIABLES}
+    from_env = [
+        Path(value.strip())
+        for key, value in env.items()
+        if key.upper() in names and value and value.strip()
+    ]
+    return tuple(dict.fromkeys([*from_env, *registry]))
+
+
+def onedrive_registry_roots(registry: Any | None = None) -> tuple[Path, ...]:
+    """The `UserFolder` of every OneDrive account (`Personal`, `Business1`, ...) under
+    `HKCU\\Software\\Microsoft\\OneDrive\\Accounts`; the environment variables can miss one
+    (e.g. a personal OneDrive next to a business one). `registry` is the `winreg` module (tests:
+    a fake); empty off Windows. Unreadable keys and values are skipped."""
+    if registry is None:
+        if sys.platform != "win32":
+            return ()
+        import winreg as registry  # pragma: no cover - tests never read the real registry
+    roots: list[Path] = []
+    try:
+        with registry.OpenKey(registry.HKEY_CURRENT_USER, _ONEDRIVE_ACCOUNTS) as accounts:
+            index = 0
+            while True:
+                try:
+                    name = registry.EnumKey(accounts, index)
+                except OSError:
+                    break
+                index += 1
+                try:
+                    with registry.OpenKey(accounts, name) as account:
+                        folder, _ = registry.QueryValueEx(account, "UserFolder")
+                except OSError:
+                    continue
+                if isinstance(folder, str) and folder.strip():
+                    roots.append(Path(folder.strip()))
+    except OSError:
+        return ()
+    return tuple(dict.fromkeys(roots))
 
 
 def _read(env: Mapping[str, str] | None, env_file: Path | None) -> dict[str, str]:

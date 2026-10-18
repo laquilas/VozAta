@@ -12,6 +12,7 @@ from vozata.api.system_info import GpuInfo
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
+from vozata.domain import StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.template_repository import TemplateRepository, bundled_templates
 from vozata.ports import (
@@ -64,3 +65,5 @@ class ApiContainer:
     extract_action_items: Callable[[str], None] | None = None
     task_targets: Callable[[], list[str]] = list
     task_exporter: Callable[[str], TaskExporter | None] = lambda target: None
+    # The storage backend (31): `GET /health` and the `storage` field of a session.
+    storage: StorageInfo = StorageInfo(StorageBackend.FILES.value)

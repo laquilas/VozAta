@@ -8,6 +8,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import logging
+import os
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -39,6 +40,8 @@ from vozata.domain import (
     ConversationLanguage,
     MixMode,
     SessionStatus,
+    StorageBackend,
+    StorageInfo,
     TranslationTarget,
 )
 from vozata.export.docx import DocxExporter
@@ -75,10 +78,16 @@ from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
 from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.folder import open_session_folder as open_files_folder
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
+from vozata.storage.session_folder import SessionFolder
 from vozata.storage.session_store import SessionStore
+from vozata.storage.sqlite.db import Database
+from vozata.storage.sqlite.location import onedrive_root
+from vozata.storage.sqlite.repository import SqliteSessionRepository
+from vozata.storage.sqlite.search import SqliteSearch
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.shared import SharedTranscriber
@@ -156,17 +165,26 @@ TASK_EXPORTERS: dict[str, TaskTarget] = {
         lambda s: GitHubIssuesExporter(s.github_repo or "", s.github_token or ""),
     ),
 }
-# Storage backends (phase 30): the only place that builds them. The `STORAGE_BACKEND` key comes
-# with the SQLite backend (phase 31); until then the file backend is the only one.
-STORAGE_BACKEND = "files"
-REPOSITORIES: dict[str, Callable[[Settings], SessionRepository]] = {
-    "files": lambda settings: FileSessionRepository(SessionStore(settings.output_dir)),
-}
-AUDIO_STORES: dict[str, Callable[[Settings], SessionAudio]] = {
-    "files": lambda settings: FileAudioStore(
-        SessionStore(settings.output_dir), settings.sample_rate
+# Storage backends (phases 30-31), chosen by `STORAGE_BACKEND`: the only place that builds them.
+# The audio stays in WAV files in `OUTPUT_DIR/<id>/` for both until phase 32.
+REPOSITORIES: dict[StorageBackend, Callable[[Settings], SessionRepository]] = {
+    StorageBackend.SQLITE: lambda settings: SqliteSessionRepository(
+        open_database(settings), settings.output_dir
     ),
+    StorageBackend.FILES: lambda settings: FileSessionRepository(SessionStore(settings.output_dir)),
 }
+AUDIO_STORES: dict[StorageBackend, Callable[[Settings], SessionAudio]] = {
+    backend: lambda settings: FileAudioStore(
+        SessionStore(settings.output_dir), settings.sample_rate
+    )
+    for backend in StorageBackend
+}
+SEARCHES: dict[StorageBackend, Callable[[Settings], SqliteSearch | SearchIndex]] = {
+    StorageBackend.SQLITE: lambda settings: SqliteSearch(open_database(settings)),
+    StorageBackend.FILES: lambda settings: SearchIndex(settings.output_dir / "index.db"),
+}
+_databases: dict[Path, Database] = {}  # one per file in this process, shared by every user
+_databases_lock = threading.Lock()
 MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
     MixMode.STEREO: StereoMixer,
@@ -193,18 +211,74 @@ def _at(settings: Settings, output_dir: Path | None) -> Settings:
     return settings if output_dir is None else dataclasses.replace(settings, output_dir=output_dir)
 
 
+def open_database(settings: Settings) -> Database:
+    """The database of `settings.database_file`, opened (and migrated) once per process.
+
+    Opening a database in a OneDrive folder logs a warning (also shown by `GET /health`).
+    """
+    path = settings.database_file
+    key = Path(os.path.normcase(os.path.abspath(path)))
+    with _databases_lock:
+        database = _databases.get(key)
+        if database is None:
+            root = onedrive_root(path, settings.onedrive_roots)
+            if root is not None:
+                _log.warning(
+                    "The database %s is in the OneDrive folder %s: sync can lock or corrupt it "
+                    "while the engine runs. Set DATABASE_PATH to a folder outside OneDrive.",
+                    path,
+                    root,
+                )
+            database = _databases[key] = Database(path)
+        return database
+
+
+def close_databases() -> None:
+    """Close every database this process opened (tests; the engine keeps them open)."""
+    with _databases_lock:
+        databases = list(_databases.values())
+        _databases.clear()
+    for database in databases:
+        database.close()
+
+
+def storage_info(settings: Settings) -> StorageInfo:
+    """The backend, its database file (SQLite) and the OneDrive root that holds it, if any."""
+    if settings.storage_backend is not StorageBackend.SQLITE:
+        return StorageInfo(settings.storage_backend.value)
+    path = settings.database_file
+    return StorageInfo(
+        settings.storage_backend.value, path, onedrive_root(path, settings.onedrive_roots)
+    )
+
+
 def build_store(settings: Settings, output_dir: Path | None = None) -> SessionRepository:
-    """The session repository of `OUTPUT_DIR` (or of `output_dir`, for a CLI session folder)."""
-    return REPOSITORIES[STORAGE_BACKEND](_at(settings, output_dir))
+    """The session repository of `OUTPUT_DIR` (or of `output_dir`, for a CLI session folder).
+
+    With `sqlite` and an empty `DATABASE_PATH`, the database is `vozata.db` in that folder.
+    """
+    return REPOSITORIES[settings.storage_backend](_at(settings, output_dir))
 
 
 def build_audio_store(settings: Settings, output_dir: Path | None = None) -> SessionAudio:
     """The audio store matching `build_store` (same `output_dir`)."""
-    return AUDIO_STORES[STORAGE_BACKEND](_at(settings, output_dir))
+    return AUDIO_STORES[settings.storage_backend](_at(settings, output_dir))
 
 
-def build_search_index(settings: Settings) -> SearchIndex:
-    return SearchIndex(settings.output_dir / "index.db")
+def build_search_index(settings: Settings) -> SqliteSearch | SearchIndex:
+    """`segments_fts` in the database (`sqlite`) or `OUTPUT_DIR/index.db` (`files`)."""
+    return SEARCHES[settings.storage_backend](settings)
+
+
+def open_session_folder(settings: Settings, session_dir: Path) -> SessionFolder:
+    """A session folder named on the command line (`minutes`, `diarize`), in the storage of
+    its parent folder."""
+    path = session_dir.resolve()
+    if settings.storage_backend is StorageBackend.FILES:
+        return open_files_folder(path, settings.sample_rate)
+    at = _at(settings, path.parent)
+    database = at.database_file.resolve()
+    return SessionFolder(path, build_store(at), build_audio_store(at), database, database)
 
 
 def vocabulary_path(settings: Settings, env_file: Path | None = None) -> Path:
@@ -603,4 +677,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         ),
         task_targets=lambda: task_targets(settings_file.current),
         task_exporter=lambda target: build_task_exporter(settings_file.current, target),
+        storage=storage_info(settings),
     )

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 from vozata import __version__
 from vozata.api.container import ApiContainer
 from vozata.api.deps import container
-from vozata.api.schemas import GpuStatus, Health, LlmStatus, SttStatus
+from vozata.api.schemas import GpuStatus, Health, LlmStatus, StorageStatus, SttStatus
 from vozata.config import Settings
 from vozata.transcription.openai_compatible import remote_host
 
@@ -30,7 +30,18 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
             model=current.ollama_model,
             reachable=c.llm_reachable(),
         ),
+        storage=_storage(c),
     )
+
+
+def _storage(c: ApiContainer) -> StorageStatus:
+    """The backend, the absolute database path, and the OneDrive warning (phase 31)."""
+    info = c.storage
+    database = str(info.database.resolve()) if info.database is not None else None
+    warning = None
+    if info.onedrive_root is not None:
+        warning = c.localizer.t("storage.onedrive_warning", path=database, root=info.onedrive_root)
+    return StorageStatus(backend=info.backend, database=database, warning=warning)
 
 
 def _stt(settings: Settings) -> SttStatus:

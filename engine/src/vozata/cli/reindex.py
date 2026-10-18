@@ -3,14 +3,23 @@
 from __future__ import annotations
 
 import sqlite3
+from typing import Protocol
 
 from vozata.cli.console import ConsoleObserver
 from vozata.ports import Localizer, SessionRepository
-from vozata.storage.search_index import SearchIndex
+
+
+class RebuildableIndex(Protocol):
+    """`SearchIndex` (file backend) or `SqliteSearch` (SQLite backend, phase 31)."""
+
+    def rebuild(self, store: SessionRepository) -> int: ...
 
 
 def run_reindex(
-    store: SessionRepository, index: SearchIndex, console: ConsoleObserver, localizer: Localizer
+    store: SessionRepository,
+    index: RebuildableIndex,
+    console: ConsoleObserver,
+    localizer: Localizer,
 ) -> int:
     """Replace the whole index with each session's best transcript."""
     try:

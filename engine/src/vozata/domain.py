@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -56,6 +57,22 @@ class ChunkMode(StrEnum):
 class MixMode(StrEnum):
     MONO = "mono"
     STEREO = "stereo"
+
+
+class StorageBackend(StrEnum):
+    """Where sessions are stored (phase 31): one SQLite database, or one folder per session."""
+
+    SQLITE = "sqlite"
+    FILES = "files"
+
+
+@dataclass(frozen=True)
+class StorageInfo:
+    """The storage the engine started with (`GET /health`, phase 31)."""
+
+    backend: str
+    database: Path | None = None  # the SQLite database file
+    onedrive_root: Path | None = None  # the OneDrive folder that holds `database` (a risk)
 
 
 class WhisperDevice(StrEnum):

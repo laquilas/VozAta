@@ -45,10 +45,12 @@ recovery code again. No user-visible change.
       file (check with a grep for `SessionPaths`, `.wav"`, `minutes.md`, `.jsonl`).
 - [x] Contract test suite passes for `FileSessionRepository` / `FileAudioStore`.
 - [x] Full engine suite green, diff coverage ≥ 80 %.
-- [ ] Manual: record a 1-minute session from the desktop app, then open minutes, transcript, play
+- [x] Manual: record a 1-minute session from the desktop app, then open minutes, transcript, play
       audio, export docx, run `recover` on a simulated crash (phase 17 recipe A): same results as
-      before. *(`recover` on a simulated crash done offline 2026-10-17; the recording part is
-      pending: see the manual check recipe in Progress.)*
+      before. *(`recover` on a simulated crash done offline 2026-10-17; the recording (recipe
+      part B) verified on the reference machine 2026-10-17: a real 67 s recording from the
+      desktop app, same file set as `main`, API 200s, History shows the session. The tracker
+      export of step 5 is left to a manual run with credentials.)*
 
 ## Tests
 
@@ -114,7 +116,9 @@ Any new storage backend (31, 32), migration (33), API shape changes.
 
 ### Manual check recipe
 
-Status: **A done 2026-10-17 (offline, minutes off); B pending** — run B on the reference machine,
+Status: **A done 2026-10-17 (offline, minutes off); B done 2026-10-17** (real 67 s recording from
+the desktop app, same file set as `main`, API 200s, History shows the session; the tracker export
+of step 5 is pending a manual run with credentials) — run B on the reference machine,
 one phase at a time (audio is shared). Nothing about the files may differ from `main`: same
 names, same content, same messages.
 
@@ -135,7 +139,8 @@ Expected (seen with `GENERATE_MINUTES=false`, `DIARIZATION_ENABLED=false`): the 
 `duration_seconds: 5.699` and `ended_at`. With minutes on (Ollama running), `minutes.md` is also
 written (beta on Friday / Ana).
 
-**B. Real recording from the desktop app (pending, needs the microphone and speakers).**
+**B. Real recording from the desktop app (done 2026-10-17; the tracker export is pending, it
+needs credentials).**
 
 1. Note the newest folder in `engine/recordings`, then start the app
    (`dotnet run --project ui/src/VozAta.Desktop`) and record ~1 minute while speaking and playing

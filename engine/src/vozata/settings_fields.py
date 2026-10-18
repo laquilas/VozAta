@@ -13,6 +13,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    StorageBackend,
     TranslationTarget,
     WhisperDevice,
 )
@@ -60,6 +61,16 @@ FIELDS: tuple[Field, ...] = (
     Field("MIC_LABEL", "mic_label", "string", group="general"),
     Field("SYSTEM_LABEL", "system_label", "string", group="general"),
     Field("OUTPUT_DIR", "output_dir", "path", group="general", applies="restart"),
+    # Storage (phase 31)
+    Field(
+        "STORAGE_BACKEND",
+        "storage_backend",
+        "choice",
+        StorageBackend,
+        group="general",
+        applies="restart",
+    ),
+    Field("DATABASE_PATH", "database_path", "path", group="general", applies="restart"),
     Field("MIX_MODE", "mix_mode", "choice", MixMode, group="audio"),
     # Transcription (phase 03)
     Field("TAIL_MARGIN_SECONDS", "tail_margin_seconds", "number", group="transcription"),
