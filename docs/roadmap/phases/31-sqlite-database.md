@@ -79,8 +79,8 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** ready for PR
 - **Updated:** 2026-10-17 22:10
-- **Next step:** open the PR; before merge run part B of the manual check recipe below on the
-  reference machine (audio hardware, one phase at a time), then part C last.
+- **Next step:** PR #46 is open (CI green); before merge run part B of the manual check recipe
+  below on the reference machine (audio hardware, one phase at a time), then part C last.
 
 ### Steps
 
@@ -94,6 +94,7 @@ Audio in the database (32), importing old folders (33), settings in the database
 - [x] Crash test: a writer subprocess killed mid-session (`tests/storage/sqlite/test_crash.py`)
 - [x] UI: hide "Open folder" without a folder; setting labels for the new keys
 - [x] Docs (architecture §5/§8/§9, api-contract), full suites, manual check recipe
+- [x] PR #46 opened; CI (lint, format, compile) green
 
 ### Decisions and notes
 
