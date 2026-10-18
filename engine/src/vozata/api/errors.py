@@ -14,6 +14,7 @@ from vozata.api.session_manager import (
     SessionBeingRecoveredError,
     SessionConflictError,
     SessionNotInterruptedError,
+    SessionStillActiveError,
 )
 from vozata.config import ConfigError
 from vozata.ports import Localizer, SessionNotFoundError
@@ -60,6 +61,10 @@ def install_error_handlers(app: FastAPI, localizer: Localizer) -> None:
     @app.exception_handler(SessionNotInterruptedError)
     async def not_interrupted(request: Request, error: SessionNotInterruptedError) -> JSONResponse:
         return respond(409, "session_not_interrupted", id=str(error))
+
+    @app.exception_handler(SessionStillActiveError)
+    async def still_active(request: Request, error: SessionStillActiveError) -> JSONResponse:
+        return respond(409, "session_still_active", id=str(error))
 
     @app.exception_handler(SessionNotFoundError)
     async def not_found(request: Request, error: SessionNotFoundError) -> JSONResponse:

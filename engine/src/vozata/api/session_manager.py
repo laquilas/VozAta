@@ -43,6 +43,10 @@ class SessionBeingRecoveredError(RuntimeError):
     """The session is being recovered right now (`409 session_being_recovered`, phase 35)."""
 
 
+class SessionStillActiveError(RuntimeError):
+    """Delete of the session being recorded, finalized or recovered (`409`, phase 36)."""
+
+
 class Recovery(Protocol):
     """Crash recovery (`storage.recovery.SessionRecovery`, phase 17)."""
 
@@ -242,6 +246,18 @@ class SessionManager:
             meta = self._store.read_meta(session_id)
             self._store.write_meta(session_id, {**meta, "title": title})
         return session_summary(self._store, session_id)
+
+    def delete(self, session_id: str) -> None:
+        """Delete a finished session through the repository (phase 36). The session being
+        recorded, finalized or recovered raises `SessionStillActiveError`; held under the lock,
+        so it cannot start being recovered meanwhile."""
+        with self._lock:
+            session = self._session
+            if session is not None and _started_id([session]) == session_id:
+                raise SessionStillActiveError(session_id)
+            if self._recovering == session_id:
+                raise SessionStillActiveError(session_id)
+            self._store.delete(session_id)
 
     def recover(self, session_id: str) -> None:
         """Finish an `interrupted` session on a background thread (phase 17).

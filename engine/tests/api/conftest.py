@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from tests.fakes import FakeLocalizer
+from tests.fakes import FakeLocalizer, FakeRecycler
 from vozata.api.session_manager import SessionManager, StartOptions
 from vozata.api.ws import EventBroadcaster
 from vozata.domain import ConversationLanguage, SessionStatus
@@ -188,7 +188,8 @@ class Api:
         from vozata.config import Settings
 
         self.settings = settings or Settings(output_dir=tmp_path / "recordings")
-        self.store = FileSessionRepository(SessionStore(self.settings.output_dir))
+        self.recycler = FakeRecycler(tmp_path / "recycle-bin")  # never the real one (phase 36)
+        self.store = FileSessionRepository(SessionStore(self.settings.output_dir), self.recycler)
         self.factory = SessionFactory(self.store)
         self.broadcaster = RecordingBroadcaster()
         self.labeler = SpeakerLabeler(FakeLocalizer())

@@ -104,6 +104,18 @@ def update_session(session_id: str, body: UpdateSession, c: Container) -> dict[s
     return c.manager.rename(session_id, _title(body.title))
 
 
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(session_id: str, c: Container) -> None:
+    """Delete a meeting (phase 36): permanently in the database, to the Recycle Bin for the file
+    backend; its search hits go with it."""
+    try:
+        c.manager.delete(session_id)
+    except OSError as error:  # e.g. a file of the session is open in another program
+        raise ApiError(500, "session_delete_failed", id=session_id, reason=error) from None
+    if c.search_index is not None:
+        c.search_index.index_session(session_id, [])
+
+
 @router.get("/sessions/{session_id}/transcript", response_model=Transcript)
 def transcript(session_id: str, c: Container) -> dict[str, Any]:
     source, segments = c.store.load_transcript_with_source(session_id)

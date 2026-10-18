@@ -68,8 +68,9 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - **Branch:** `feature/36-meetings-by-day`
 - **Status:** in progress
 - **Updated:** 2026-10-17 22:40
-- **Next step:** `DELETE /sessions/{id}` through `SessionManager.delete` (409 while the session
-  is recorded, finalized or recovered) in `tests/api/test_session_delete.py`.
+- **Next step:** UI client: `ListSessionRangeAsync(from, to)` and `DeleteSessionAsync(id)` in
+  `EngineClient.cs`, DTOs in a new `VozAta.Client/Meetings.cs`, fakes in
+  `Fakes/FakeEngineClient.Meetings.cs`.
 
 ### Steps
 
@@ -78,7 +79,7 @@ Calendar/reports view, tags beyond template and language, bulk actions.
       go to the Recycle Bin through a `Recycler` port)
 - [x] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
       `speaker_count`, `has_action_items`, `template`
-- [ ] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
+- [x] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
 - [ ] UI client: range and delete calls, new summary fields
 - [ ] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
 - [ ] UI: inline rename, delete with confirmation and undo, search filtering, row actions
