@@ -78,13 +78,13 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** engine — title in the minutes prompt (`minutes.meeting_title` in the three
-  locales, `tests/minutes/test_prompt_title.py`) and as the export document title.
+- **Next step:** engine — the title as the export document title (`export/document.py`), the date
+  moving to the details line (`tests/export/test_document.py`).
 
 ### Steps
 
 - [x] Engine: `title` on start, in `session.json` and `SessionSummary`; contract suite — `9b1a671`
-- [x] Engine: `PATCH /sessions/{id}` `{title}` while recording and after
+- [x] Engine: `PATCH /sessions/{id}` `{title}` while recording and after — `fc66b75`
 - [ ] Engine: title in the minutes prompt (en / pt-BR / es) and as the export document title
 - [ ] Docs: api-contract, architecture §8
 - [ ] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync`

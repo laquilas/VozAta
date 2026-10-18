@@ -10,6 +10,7 @@ from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import SessionRepository
+from vozata.session_title import stored_title
 
 GeneratorFactory = Callable[[str | None], MinutesGenerator]  # template id; None = the default
 
@@ -39,7 +40,9 @@ def write_session_minutes(
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
     named = labeler.with_names(store.speaker_names(session_id))
     generator = build_generator(template or stored_template(meta))
-    minutes = generator.generate(segments, named, language, stored_vocabulary(meta))
+    minutes = generator.generate(
+        segments, named, language, stored_vocabulary(meta), stored_title(meta)
+    )
     store.write_minutes(session_id, minutes + "\n")
     if meta.get("template") != generator.template_id:
         latest = store.read_meta(session_id)

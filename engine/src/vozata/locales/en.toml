@@ -83,6 +83,7 @@ Write concise notes in {output_language} with what this part says for these head
 Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
 glossary = "Glossary: these names and terms may appear in the transcript, possibly misheard. Use exactly these spellings: {terms}"
+meeting_title = "The user titled this meeting \"{title}\". Use the title as context for the minutes, not as something that was said."
 transcript_label = "Transcript:"
 notes_label = "Notes:"
 

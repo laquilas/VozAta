@@ -797,6 +797,18 @@ def test_renaming_while_recording_survives_later_metadata_writes(tmp_path: Path)
     assert (meta["title"], meta["status"]) == ("Final", "done")
 
 
+def test_the_minutes_at_stop_get_the_latest_title(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")], title="Draft")
+    rig.session.start()
+    rig.session.set_title("Budget review")
+
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    assert "minutes.meeting_title(title=Budget review)" in rig.llm.prompts[0][1]
+
+
 def test_clearing_the_title_while_recording_leaves_it_null(tmp_path: Path) -> None:
     rig = _Rig(tmp_path, title="Draft")
     rig.session.start()

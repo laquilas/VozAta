@@ -20,7 +20,8 @@ class MinutesGenerator:
 
     A transcript longer than `max_chars` is split at segment boundaries; each part is summarized
     into notes (map) and the notes become the minutes (reduce). `vocabulary` (phase 19) is given
-    to every prompt as a glossary of spellings. `LanguageModelError` propagates.
+    to every prompt as a glossary of spellings, and `title` (phase 35) as context.
+    `LanguageModelError` propagates.
     The model is released after every job, even a failed one, so it never holds the GPU while
     Whisper loads for the next recording (architecture §6, VRAM rule).
     """
@@ -47,6 +48,7 @@ class MinutesGenerator:
         labeler: SpeakerLabeler,
         conversation_language: ConversationLanguage,
         vocabulary: Sequence[str] = (),
+        title: str | None = None,
     ) -> str:
         if not segments:
             raise ValueError("Cannot write minutes for an empty transcript")
@@ -55,7 +57,7 @@ class MinutesGenerator:
             for segment in sorted(segments, key=lambda segment: segment.start)
         ]
         try:
-            return self._summarize(lines, conversation_language, tuple(vocabulary))
+            return self._summarize(lines, conversation_language, tuple(vocabulary), title)
         finally:
             self._release()
 
@@ -64,17 +66,18 @@ class MinutesGenerator:
         lines: list[str],
         conversation_language: ConversationLanguage,
         glossary: tuple[str, ...],
+        title: str | None,
     ) -> str:
         loc, template, language = self._localizer, self._template, conversation_language
         transcript = "\n".join(lines)
         if len(transcript) <= self._max_chars:
-            return self._ask(minutes_prompt(loc, template, transcript, language, glossary))
+            return self._ask(minutes_prompt(loc, template, transcript, language, glossary, title))
         parts = _split(lines, self._max_chars)
         notes = [
-            self._ask(map_prompt(loc, template, part, i, len(parts), language, glossary))
+            self._ask(map_prompt(loc, template, part, i, len(parts), language, glossary, title))
             for i, part in enumerate(parts, start=1)
         ]
-        return self._ask(reduce_prompt(loc, template, notes, language, glossary))
+        return self._ask(reduce_prompt(loc, template, notes, language, glossary, title))
 
     def _release(self) -> None:
         try:
