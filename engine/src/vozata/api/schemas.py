@@ -82,6 +82,10 @@ class SessionSummary(BaseModel):
     language: str | None
     has_minutes: bool
     title: str | None = None  # phase 35; None = untitled
+    # phase 36 (meetings list): speakers found by diarization, any action item, minutes template
+    speaker_count: int = 0
+    has_action_items: bool = False
+    template: str | None = None
 
 
 class SessionDetail(SessionSummary):
@@ -100,6 +104,23 @@ class SessionDetail(SessionSummary):
 class SessionList(BaseModel):
     items: list[SessionSummary]
     total: int
+
+
+class SessionDay(BaseModel):
+    """One local day of `GET /sessions?from=&to=` (phase 36)."""
+
+    date: str  # YYYY-MM-DD, local time zone
+    total_seconds: float
+    items: list[SessionSummary]
+
+
+class SessionDays(BaseModel):
+    """Meetings of a date range grouped by local start day, newest first (phase 36)."""
+
+    days: list[SessionDay]
+    total_seconds: float
+    has_earlier: bool  # sessions started before `from` exist
+    storage: Literal["sqlite", "files"] = "files"  # what `DELETE /sessions/{id}` does
 
 
 class WordModel(BaseModel):

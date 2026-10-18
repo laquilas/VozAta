@@ -391,6 +391,30 @@ class SessionRepository(Protocol):
         """Names of the files in the session folder, sorted; None without a folder."""
         ...
 
+    # Meetings page (phase 36)
+
+    def list_range(self, start: datetime, end: datetime) -> list[str]:
+        """Ids of the sessions with metadata that started in `[start, end)` (aware datetimes),
+        newest first; a session without `started_at` starts at the local time of its id."""
+        ...
+
+    def speaker_count(self, session_id: str) -> int:
+        """How many speakers diarization found (0 before diarization or without speakers)."""
+        ...
+
+    def delete(self, session_id: str) -> None:
+        """Delete a session and everything of it (phase 36): permanently in the database; the
+        file backend moves the session folder to the Recycle Bin. `SessionNotFoundError` when
+        there is no such session."""
+        ...
+
+
+@runtime_checkable
+class Recycler(Protocol):
+    """Moves a file or folder to the Recycle Bin (phase 36); never deletes it permanently."""
+
+    def recycle(self, path: Path) -> None: ...
+
 
 @runtime_checkable
 class AudioTrackWriter(AudioSink, Protocol):

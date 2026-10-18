@@ -115,6 +115,37 @@ def test_discard_cascades_to_every_table_and_removes_the_folder(
     assert repo.list_sessions() == [other]
 
 
+def test_delete_is_permanent_in_every_table_and_removes_the_audio_folder(
+    repo: SqliteSessionRepository, database: Database
+) -> None:
+    session_id = _full_session(repo)
+    other = _full_session(repo)
+    folder = repo.folder(session_id)
+    assert folder is not None
+    (folder / "mixed.wav").write_bytes(b"RIFF")
+
+    repo.delete(session_id)
+
+    for table in ("segments", "translations", "speakers", "minutes", "action_items"):
+        rows = database.connection().execute(
+            f"SELECT COUNT(*) FROM {table} WHERE session_id = ?", (session_id,)
+        )
+        assert rows.fetchone()[0] == 0, table
+    assert _count(database, "sessions") == 1
+    assert _count(database, "segments_fts") == len(RAW)  # the search index follows
+    assert not folder.exists()
+    assert repo.list_sessions() == [other]
+
+
+def test_a_session_row_without_metadata_can_be_deleted(repo: SqliteSessionRepository) -> None:
+    session_id = repo.create(STARTED)  # a recording that never wrote its metadata
+
+    repo.delete(session_id)
+
+    with pytest.raises(SessionNotFoundError):
+        repo.delete(session_id)
+
+
 def test_metadata_fields_go_to_their_columns_and_the_rest_to_meta_json(
     repo: SqliteSessionRepository, database: Database
 ) -> None:

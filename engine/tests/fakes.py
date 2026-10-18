@@ -316,6 +316,23 @@ class FakeTaskExporter:
         self.closed = True
 
 
+class FakeRecycler:
+    """A Recycle Bin in a test folder (phase 36): moves what it is given there, never touching
+    the real one; `recycled` lists the original paths in order."""
+
+    def __init__(self, bin_dir: Path) -> None:
+        self.bin_dir = bin_dir
+        self.recycled: list[Path] = []
+        self.error: OSError | None = None
+
+    def recycle(self, path: Path) -> None:
+        if self.error is not None:
+            raise self.error
+        self.bin_dir.mkdir(parents=True, exist_ok=True)
+        path.rename(self.bin_dir / f"{len(self.recycled)}-{path.name}")
+        self.recycled.append(path)
+
+
 def minutes_template(language: str = "en", template_id: str = "general") -> LocalizedTemplate:
     """A bundled minutes template in one language (phase 20)."""
     return TemplateRepository().get(template_id).localized(language)

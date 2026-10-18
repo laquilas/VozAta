@@ -28,7 +28,9 @@ own rows. Changing a row requires updating both sides.
 | POST | `/sessions/current/resume` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
 | GET | `/sessions` | 06 | `?limit=&offset=` | `{items: [SessionSummary], total}` newest first |
+| GET | `/sessions` | 36 | `?from=YYYY-MM-DD&to=YYYY-MM-DD` (local dates, both included; both required) | `{days: [{date, total_seconds, items: [SessionSummary]}], total_seconds, has_earlier, storage}`: the meetings that started in those local days, grouped by local start day (a meeting crossing midnight stays on its start day), days and items newest first; empty days are left out; totals add `duration_seconds` (the live one for the session being recorded); `has_earlier` = a session started before `from` exists (the UI stops loading older weeks); `storage` = `sqlite` \| `files` (what `DELETE` does). `422 invalid_date_range` when one date is missing or `from` > `to`. Without `from` / `to` the paged form above answers |
 | GET | `/sessions/{id}` | 06 | — | `SessionDetail` |
+| DELETE | `/sessions/{id}` | 36 | — | `204`; deletes the meeting: its metadata, transcripts, speakers, translations, minutes, action items and audio, and its search hits. SQLite backend: permanent. File backend: the session folder goes to the Recycle Bin (`send2trash`), never deleted permanently. `409 session_still_active` while it is being recorded, paused, finalized or recovered; `404 session_not_found`; `500 session_delete_failed` when the folder cannot be moved (e.g. a file is open), nothing is deleted then |
 | PATCH | `/sessions/{id}` | 35 | `{title: str \| null}` (no other keys) | `SessionSummary`; renames the meeting, also while it is recording, paused or finalizing (the live session updates its own `session.json`); `null` or blank clears the title; same trimming and `422 title_too_long` as `POST /sessions`; `404 session_not_found`, `409 session_being_recovered` |
 | GET | `/sessions/{id}/transcript` | 06 | — | `{source: "raw"\|"diarized"\|"edited", segments: [Segment]}` (precedence rule in architecture §8); each `Segment` has `translation` (29) from `transcript.translated.jsonl`, `null` when the segment was not translated |
 | GET | `/sessions/{id}/minutes` | 06 | — | `{markdown}` or `404 minutes_not_found` |
@@ -60,7 +62,10 @@ own rows. Changing a row requires updating both sides.
 // SessionSummary
 {"id": "20261015_202358", "status": "recording", "started_at": "...", "ended_at": null,
  "duration_seconds": 83.4, "language": "pt", "has_minutes": false,
- "title": "Weekly sync"}  // title (35): null = untitled
+ "title": "Weekly sync",  // title (35): null = untitled
+ "speaker_count": 2, "has_action_items": true, "template": "daily"}
+// speaker_count / has_action_items / template (36): speakers found by diarization (0 before),
+//   whether the session has action items, the minutes template id in session.json (null = none)
 // SessionDetail = SessionSummary + full session.json fields + files: ["mic.wav", ...]
 //   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
 //   files / folder: null for a backend without folders (30). With STORAGE_BACKEND=sqlite (31) they

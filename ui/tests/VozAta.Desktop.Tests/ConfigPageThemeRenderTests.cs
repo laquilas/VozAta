@@ -21,7 +21,7 @@ public sealed class ConfigPageThemeRenderTests
         var rendered = await ThemeRenderTests.Session.Value.Dispatch<int>(
             async () =>
             {
-                var viewModel = await ThemeRenderTests.SeededAsync(theme, Seed);
+                var (viewModel, _) = await ThemeRenderTests.SeededAsync(theme, Seed);
                 var config = viewModel.Config;
                 viewModel.Notifications.Clear(); // the toast would hide the Save bar
 

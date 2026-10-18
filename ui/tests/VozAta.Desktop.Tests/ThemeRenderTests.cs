@@ -39,12 +39,29 @@ public sealed class ThemeRenderTests
         var rendered = await Session.Value.Dispatch<int>(
             async () =>
             {
-                var viewModel = await SeededAsync(theme);
+                var (viewModel, client) = await SeededAsync(theme);
                 Assert.Equal(theme == "dark" ? "Dark" : "Light", Application.Current!.ActualThemeVariant.ToString());
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-idle-{theme}.png");
-                Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-minutes-{theme}.png");
+                Render<SessionDetailView>(viewModel, ShellViewModel.Meetings, $"meetings-minutes-{theme}.png");
                 viewModel.History.Detail!.SelectedTab = 1;
-                Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-transcript-{theme}.png");
+                Render<SessionDetailView>(viewModel, ShellViewModel.Meetings, $"meetings-transcript-{theme}.png");
+                viewModel.History.Selected = null; // the list alone, as on opening the page (phase 36)
+                await viewModel.Meetings.LoadOlderCommand.ExecuteAsync(null);
+                Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-week-{theme}.png");
+                var row = viewModel.Meetings.Weeks[0].Days[1].Rows[0];
+                viewModel.Meetings.BeginRenameCommand.Execute(row);
+                row.EditTitle = "Design review — tokens";
+                viewModel.Meetings.ToggleExportCommand.Execute(viewModel.Meetings.Weeks[0].Days[0].Rows[0]);
+                Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-rename-export-{theme}.png");
+                viewModel.Meetings.CancelRenameCommand.Execute(row);
+                viewModel.Meetings.ToggleExportCommand.Execute(viewModel.Meetings.Weeks[0].Days[0].Rows[0]);
+                await viewModel.Meetings.DeleteCommand.ExecuteAsync(viewModel.Meetings.Weeks[0].Days[0].Rows[^1]);
+                Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-undo-{theme}.png");
+                viewModel.Meetings.UndoCommand.Execute(null);
+                viewModel.Meetings.Search.Query = "tokens";
+                await viewModel.Meetings.Search.Pending;
+                Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-search-{theme}.png");
+                viewModel.Meetings.Search.Query = "";
                 Render<AskView>(viewModel, ShellViewModel.Ask, $"ask-{theme}.png");
                 Render<ConfigPage>(viewModel, ShellViewModel.Config, $"config-{theme}.png");
 
@@ -55,15 +72,20 @@ public sealed class ThemeRenderTests
                 viewModel.Recorder.Handle(new StatusEvent("20261016_090000", "recording", 754));
                 AddTranscript(viewModel);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-{theme}.png");
-                Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-while-recording-{theme}.png");
+                await viewModel.HistoryRefresh;
+                var live = new DateTimeOffset(new DateTime(2026, 10, 16, 14, 0, 0, DateTimeKind.Local));
+                client.Sessions.Add(new SessionSummary("20261016_140000", "recording", live, null, 754, "en", false, "Weekly design review"));
+                await viewModel.Meetings.LoadAsync(); // the live meeting is pinned on the Meetings page
+                Assert.NotNull(viewModel.Meetings.Live);
+                Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-while-recording-{theme}.png");
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-collapsed-{theme}.png");
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
-                return 9;
+                return 14;
             },
             CancellationToken.None);
 
-        Assert.Equal(9, rendered);
+        Assert.Equal(14, rendered);
     }
 
 #if DEBUG
@@ -125,7 +147,8 @@ public sealed class ThemeRenderTests
     }
 
     /// <summary>A main window with a bit of everything: transcript, notification, history detail, settings.</summary>
-    internal static async Task<MainViewModel> SeededAsync(string theme, Action<FakeEngineClient>? seed = null)
+    internal static async Task<(MainViewModel ViewModel, FakeEngineClient Client)> SeededAsync(
+        string theme, Action<FakeEngineClient>? seed = null)
     {
         var client = new FakeEngineClient
         {
@@ -139,8 +162,11 @@ public sealed class ThemeRenderTests
         AddSetting(client, "WHISPER_MODEL", "string", "large-v3-turbo", "transcription", applies: "restart");
         client.VocabularyTerms.AddRange(["VozAta", "Avalonia", "WASAPI"]);
         var started = new DateTimeOffset(2026, 10, 16, 9, 0, 0, TimeSpan.Zero);
-        client.Sessions.Add(new SessionSummary("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, "Weekly sync"));
+        client.Sessions.Add(new SessionSummary("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, "Weekly sync", 4, true, "general"));
+        AddWeekOfMeetings(client);
         client.Sessions.Add(new SessionSummary("20261015_140000", "done", started.AddDays(-1).AddHours(5), null, 1800, "pt", false));
+        client.SearchHits.Add(new SearchHit("20261014_160000", "mic-000003", 312, "mic", "Me", "the design \u0002tokens\u0003 are ready for review"));
+        client.SearchHits.Add(new SearchHit("20261016_090000", "mic-000001", 5, "mic", "Me", "shall we start with the design \u0002tokens\u0003?"));
         client.Details["20261016_090000"] = new SessionDetail("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, [], @"C:\recordings\20261016_090000");
         client.MinutesText["20261016_090000"] = "# Weekly sync\n\n## Decisions\n\n- Ship the design system first.\n- Keep the layout until phase 35.";
         client.Transcripts["20261016_090000"] = new Transcript("raw", [
@@ -173,7 +199,32 @@ public sealed class ThemeRenderTests
             await Task.Delay(5);
         }
 
-        return viewModel;
+        return (viewModel, client);
+    }
+
+    /// <summary>A week and a bit of meetings for the Meetings page (phase 36): titled and untitled, tags, speakers.</summary>
+    private static void AddWeekOfMeetings(FakeEngineClient client)
+    {
+        (int Day, int Hour, int Minute, int Minutes, string? Title, string Language, string? Template, int Speakers)[] meetings =
+        [
+            (16, 11, 30, 72, "Client onboarding — Acme", "pt", "client", 3),
+            (15, 10, 0, 15, "Daily standup", "en", "daily", 4),
+            (14, 16, 0, 55, "Design review — tokens", "en", "general", 2),
+            (13, 9, 30, 22, null, "es", null, 0),
+            (12, 15, 0, 48, "Retro sprint 41", "pt", "retrospective", 5),
+            (8, 10, 0, 31, "1:1 with Ana", "pt", "one_on_one", 2),
+            (6, 13, 0, 12, null, "en", null, 0),
+        ];
+        foreach (var (day, hour, minute, minutes, title, language, template, speakers) in meetings)
+        {
+            var start = new DateTimeOffset(new DateTime(2026, 10, day, hour, minute, 0, DateTimeKind.Local));
+            var id = start.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            client.Sessions.Add(new SessionSummary(
+                id, "done", start, start.AddMinutes(minutes), minutes * 60.0 + 17, language, title is not null, title, speakers, speakers > 2, template));
+        }
+
+        var older = new DateTimeOffset(new DateTime(2026, 9, 22, 10, 0, 0, DateTimeKind.Local));
+        client.Sessions.Add(new SessionSummary("20260922_100000", "done", older, older.AddMinutes(40), 2400, "pt", true, "Kick-off"));
     }
 
     private static void AddTranscript(MainViewModel viewModel)

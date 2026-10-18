@@ -83,6 +83,7 @@ from vozata.settings_file import SettingsFile
 from vozata.settings_options import SettingsOptions
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.folder import open_session_folder as open_files_folder
+from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
@@ -175,7 +176,10 @@ REPOSITORIES: dict[StorageBackend, Callable[[Settings], SessionRepository]] = {
     StorageBackend.SQLITE: lambda settings: SqliteSessionRepository(
         open_database(settings), settings.output_dir
     ),
-    StorageBackend.FILES: lambda settings: FileSessionRepository(SessionStore(settings.output_dir)),
+    StorageBackend.FILES: lambda settings: FileSessionRepository(
+        SessionStore(settings.output_dir),
+        Send2TrashRecycler(),  # deleted folders (phase 36)
+    ),
 }
 AUDIO_STORES: dict[StorageBackend, Callable[[Settings], SessionAudio]] = {
     backend: lambda settings: FileAudioStore(

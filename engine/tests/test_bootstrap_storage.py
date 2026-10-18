@@ -14,6 +14,7 @@ from vozata.config import Settings
 from vozata.domain import Channel, StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
 from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.sqlite.repository import SqliteSessionRepository
@@ -58,7 +59,9 @@ def test_database_path_moves_the_database(tmp_path: Path) -> None:
 def test_the_files_backend_keeps_folders_and_index_db(tmp_path: Path) -> None:
     settings = _settings(tmp_path, storage_backend=StorageBackend.FILES)
 
-    assert isinstance(bootstrap.build_store(settings), FileSessionRepository)
+    store = bootstrap.build_store(settings)
+    assert isinstance(store, FileSessionRepository)
+    assert isinstance(store._recycler, Send2TrashRecycler)  # deletes go to the Recycle Bin (36)
     index = bootstrap.build_search_index(settings)
     assert isinstance(index, SearchIndex)
     assert index._path == tmp_path / "recordings" / "index.db"

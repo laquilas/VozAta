@@ -66,6 +66,19 @@ class SessionAnnotations:
                 [(session_id, key, (name or "").strip() or None) for key, name in names.items()],
             )
 
+    def speaker_count(self, session_id: str) -> int:
+        """Speakers found by diarization (`system:<n>`; renamed `mic` / `system` do not count)."""
+        check_id(session_id)
+        row = (
+            self._db.connection()
+            .execute(
+                "SELECT COUNT(*) FROM speakers WHERE session_id = ? AND speaker_id LIKE 'system:%'",
+                (session_id,),
+            )
+            .fetchone()
+        )
+        return int(row[0])
+
     def read_minutes(self, session_id: str) -> str | None:
         check_id(session_id)
         row = (

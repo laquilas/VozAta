@@ -18,6 +18,7 @@ from vozata.domain import ActionItem, TranscriptSegment, Translation
 from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
 from vozata.ports import (
+    Recycler,
     SessionNotFoundError,
     StoreRepairError,
     TranscriptSink,
@@ -27,14 +28,17 @@ from vozata.storage import action_items
 from vozata.storage.files.layout import SessionPaths
 from vozata.storage.files.repair import repair_transcript
 from vozata.storage.files.translations import TranslationsFile, read_translations
+from vozata.storage.session_range import newest_in_range
 from vozata.storage.session_store import SessionStore
 
 
 class FileSessionRepository:
     """`SessionRepository` (and `RecoverableStore` for the transcript) of the file backend."""
 
-    def __init__(self, store: SessionStore) -> None:
+    def __init__(self, store: SessionStore, recycler: Recycler | None = None) -> None:
+        """`recycler` takes deleted session folders (phase 36); without one, `delete` fails."""
         self._store = store
+        self._recycler = recycler
 
     @property
     def store(self) -> SessionStore:
@@ -134,6 +138,30 @@ class FileSessionRepository:
         if not root.is_dir():
             raise SessionNotFoundError(session_id)
         return sorted(item.name for item in root.iterdir() if item.is_file())
+
+    def list_range(self, start: datetime, end: datetime) -> list[str]:
+        sessions = []
+        for session_id in self.list_sessions():
+            try:
+                meta = self.read_meta(session_id)
+            except (SessionNotFoundError, ValueError):  # removed meanwhile, or unreadable
+                continue
+            sessions.append((session_id, meta.get("started_at")))
+        return newest_in_range(sessions, start, end)
+
+    def speaker_count(self, session_id: str) -> int:
+        return sum(
+            speaker_id.startswith("system:") for speaker_id in self._store.speaker_ids(session_id)
+        )
+
+    def delete(self, session_id: str) -> None:
+        """Move the session folder to the Recycle Bin (never deleted permanently, phase 36)."""
+        root = self.paths(session_id).root
+        if not root.is_dir():
+            raise SessionNotFoundError(session_id)
+        if self._recycler is None:
+            raise RuntimeError("no Recycle Bin to move deleted sessions to")
+        self._recycler.recycle(root)
 
     def repair(self, session_id: str) -> float | None:
         """Set aside a half-written last line of `transcript.jsonl` (phase 17)."""
