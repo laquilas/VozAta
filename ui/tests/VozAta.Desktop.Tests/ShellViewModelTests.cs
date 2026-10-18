@@ -97,6 +97,20 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public void The_main_window_binds_every_shortcut_to_its_page()
+    {
+        var shell = Create().Shell;
+        var window = System.Xml.Linq.XDocument.Load(
+            Path.Combine(ThemeTokensTests.DesktopFolder(), "Views", "MainWindow.axaml"));
+
+        var bindings = window.Descendants()
+            .Where(element => element.Name.LocalName == "KeyBinding")
+            .Select(element => ((string?)element.Attribute("Gesture"), (string?)element.Attribute("CommandParameter")));
+
+        Assert.Equal(shell.Pages.Select(item => ((string?)item.Gesture, (string?)item.Key)), bindings);
+    }
+
+    [Fact]
     public void The_sidebar_collapse_is_remembered()
     {
         var shell = Create().Shell;

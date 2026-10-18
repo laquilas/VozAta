@@ -41,22 +41,29 @@ public sealed class ThemeRenderTests
             {
                 var viewModel = await SeededAsync(theme);
                 Assert.Equal(theme == "dark" ? "Dark" : "Light", Application.Current!.ActualThemeVariant.ToString());
-                Render(viewModel, tab: 0, $"recording-idle-{theme}.png");
-                Render(viewModel, tab: 1, $"history-minutes-{theme}.png");
+                Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-idle-{theme}.png");
+                Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-minutes-{theme}.png");
                 viewModel.History.Detail!.SelectedTab = 1;
-                Render(viewModel, tab: 1, $"history-transcript-{theme}.png");
-                Render(viewModel, tab: 2, $"settings-{theme}.png");
+                Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-transcript-{theme}.png");
+                Render<AskView>(viewModel, ShellViewModel.Ask, $"ask-{theme}.png");
+                Render<SettingsView>(viewModel, ShellViewModel.Config, $"config-{theme}.png");
 
                 // Start goes to the fake engine only: no audio is captured.
+                viewModel.Recorder.Title = "Weekly design review";
                 await viewModel.Recorder.StartCommand.ExecuteAsync(null);
                 Assert.True(viewModel.Recorder.IsRecording);
+                viewModel.Recorder.Handle(new StatusEvent("20261016_090000", "recording", 754));
                 AddTranscript(viewModel);
-                Render(viewModel, tab: 0, $"recording-active-{theme}.png");
-                return 5;
+                Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-{theme}.png");
+                Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-while-recording-{theme}.png");
+                viewModel.Shell.ToggleSidebarCommand.Execute(null);
+                Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-collapsed-{theme}.png");
+                viewModel.Shell.ToggleSidebarCommand.Execute(null);
+                return 9;
             },
             CancellationToken.None);
 
-        Assert.Equal(5, rendered);
+        Assert.Equal(9, rendered);
     }
 
 #if DEBUG
@@ -86,14 +93,18 @@ public sealed class ThemeRenderTests
     }
 #endif
 
-    private static void Render(MainViewModel viewModel, int tab, string name)
+    /// <summary>Show <paramref name="page"/> in a new main window, check its view is there, save the frame.</summary>
+    private static void Render<TView>(MainViewModel viewModel, string page, string name)
+        where TView : Control
     {
+        viewModel.Shell.NavigateCommand.Execute(page);
         var window = new MainWindow { DataContext = viewModel, Width = 1280, Height = 860 };
         window.Show();
         try
         {
-            window.GetVisualDescendant<TabControl>().SelectedIndex = tab;
             Dispatcher.UIThread.RunJobs();
+            Assert.Single(Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<ShellView>());
+            Assert.NotNull(window.GetVisualDescendant<TView>());
             var frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);
             Save(frame, name);
@@ -128,7 +139,7 @@ public sealed class ThemeRenderTests
         AddSetting(client, "WHISPER_MODEL", "string", "large-v3-turbo", "transcription", applies: "restart");
         client.VocabularyTerms.AddRange(["VozAta", "Avalonia", "WASAPI"]);
         var started = new DateTimeOffset(2026, 10, 16, 9, 0, 0, TimeSpan.Zero);
-        client.Sessions.Add(new SessionSummary("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true));
+        client.Sessions.Add(new SessionSummary("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, "Weekly sync"));
         client.Sessions.Add(new SessionSummary("20261015_140000", "done", started.AddDays(-1).AddHours(5), null, 1800, "pt", false));
         client.Details["20261016_090000"] = new SessionDetail("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, [], @"C:\recordings\20261016_090000");
         client.MinutesText["20261016_090000"] = "# Weekly sync\n\n## Decisions\n\n- Ship the design system first.\n- Keep the layout until phase 35.";

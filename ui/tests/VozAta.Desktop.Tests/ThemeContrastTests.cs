@@ -20,7 +20,8 @@ public sealed class ThemeContrastTests
         [
             ("TextPrimary", "Surface"), ("TextPrimary", "SurfaceAlt"),
             ("TextSecondary", "Surface"), ("TextSecondary", "SurfaceAlt"),
-            ("SidebarText", "Sidebar"),
+            ("SidebarText", "Sidebar"), ("SidebarText", "SidebarHover"), ("SidebarText", "SidebarSelected"),
+            ("SidebarTextMuted", "Sidebar"), ("SidebarTextMuted", "SidebarHover"), ("SidebarTextMuted", "SidebarSelected"),
             ("OnAccent", "Accent"), ("OnAccent", "AccentHover"), ("OnAccent", "AccentPressed"),
             ("OnDanger", "Danger"), ("OnDanger", "DangerHover"), ("OnDanger", "DangerPressed"),
             ("AccentText", "Surface"), ("AccentText", "SurfaceAlt"),

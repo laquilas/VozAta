@@ -84,6 +84,13 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     /// <summary>The recording shown on every page (state, elapsed time, title).</summary>
     public RecordingSessionService Session { get; }
 
+    /// <summary>
+    /// Localized strings for the page and its flyouts (popups have no window ancestor to reach
+    /// <see cref="MainViewModel.L"/>); a new instance per language switch.
+    /// </summary>
+    [ObservableProperty]
+    public partial Strings L { get; private set; }
+
     public IReadOnlyList<ChoiceOption> ConversationLanguages { get; }
 
     [ObservableProperty]
@@ -317,6 +324,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
     public void RefreshTexts()
     {
+        L = new Strings(_localization);
         foreach (var option in ConversationLanguages.Concat(TranslationLanguages))
         {
             option.Refresh(_localization);

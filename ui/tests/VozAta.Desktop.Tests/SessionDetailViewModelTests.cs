@@ -201,7 +201,19 @@ public sealed class SessionDetailViewModelTests
         var detail = Create();
 
         Assert.Equal(Summary().StartedAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture), detail.Title);
+        Assert.Equal(detail.Title, detail.Date);
+        Assert.False(detail.ShowsDate);
         Assert.Equal(Id, detail.Id);
+    }
+
+    [Fact]
+    public void A_titled_meeting_shows_its_title_with_the_date_under_it()
+    {
+        var detail = new SessionDetailViewModel(_client, _shell, _localization, _saver, Summary() with { Title = "Budget review" });
+
+        Assert.Equal("Budget review", detail.Title);
+        Assert.Equal(Summary().StartedAt!.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture), detail.Date);
+        Assert.True(detail.ShowsDate);
     }
 
     [Theory]

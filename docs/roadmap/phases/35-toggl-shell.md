@@ -78,10 +78,8 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** UI views — `Views/ShellView.axaml` (sidebar, page DataTemplates, recording
-  banner, notifications as toasts, recovery banner) inside `MainWindow`, `Views/RecorderPage.axaml`
-  (timer bar with title, chips with flyouts, round start/stop, pause; meters in the device chips;
-  live transcript), `Views/AskPage.axaml`; Ctrl+1…4 key bindings on `MainWindow`.
+- **Next step:** run the full engine and UI suites, `ruff`, `dotnet format`; tick the acceptance
+  criteria, write the manual check recipe, set the phase to `done`; open the PR.
 
 ### Steps
 
@@ -96,10 +94,10 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - [x] UI: meeting title on the recorder page (sent on start, patched while recording, Enter
       starts), options locked while recording — `898f1e8`
 - [x] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
-      Meetings / Ask / Config page ViewModels
-- [ ] UI: shell view (sidebar, toasts, recovery banner) and the recorder page timer bar; tray
+      Meetings / Ask / Config page ViewModels — `9c7164f`
+- [x] UI: shell view (sidebar, toasts, recovery banner) and the recorder page timer bar; tray
       tooltip with the title; strings in en / pt-BR / es
-- [ ] UI: headless renders of the new shell (idle and recording, light and dark)
+- [x] UI: headless renders of the new shell (idle and recording, light and dark)
 - [ ] Full suites, acceptance criteria, PR
 
 ### Decisions and notes
@@ -128,5 +126,13 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
   the Ask page switches to Meetings, then opens the meeting there. The sidebar theme button
   (`AppearanceViewModel.ToggleCommand`) flips light ↔ dark from what is shown now
   (`IThemeService.IsDark`). `ui.json` gains `sidebar_collapsed`.
+- Views: the shell is `Views/ShellView.axaml` (a `UserControl` inside `MainWindow`), not
+  `ShellWindow.axaml`, because `MainWindow` stays the only window. The Ask page reuses `AskView`
+  (now a page, no longer an expander under the history). The interface language picker moved
+  from the start screen to Config → Desktop app; the bottom status bar is gone (engine status in
+  the sidebar, health on the Config page). The recorder page has its own `L` because flyouts are
+  popups without a window ancestor. The meeting title shows in the history list and the detail
+  heading (date under it); renaming a past meeting in the UI is left to phase 37 (the engine
+  already supports it).
 - The resx strings for the whole phase (nav labels, placeholder, untitled, sidebar, tray) were
   added in the title commit.

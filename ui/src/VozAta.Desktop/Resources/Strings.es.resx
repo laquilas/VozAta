@@ -126,12 +126,6 @@
   <data name="NoSystemSignal" xml:space="preserve">
     <value>Sin sonido del audio del sistema desde hace 30 s. Revisa el dispositivo de salida predeterminado de Windows y los auriculares.</value>
   </data>
-  <data name="TabRecording" xml:space="preserve">
-    <value>Grabación</value>
-  </data>
-  <data name="TabHistory" xml:space="preserve">
-    <value>Historial</value>
-  </data>
   <data name="HistoryRefresh" xml:space="preserve">
     <value>Actualizar</value>
   </data>
@@ -212,9 +206,6 @@
   </data>
   <data name="Loading" xml:space="preserve">
     <value>Cargando…</value>
-  </data>
-  <data name="TabSettings" xml:space="preserve">
-    <value>Configuración</value>
   </data>
   <data name="SettingsGroup_general" xml:space="preserve">
     <value>General</value>

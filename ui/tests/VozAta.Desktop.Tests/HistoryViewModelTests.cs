@@ -189,5 +189,18 @@ public sealed class HistoryViewModelTests
         var row = history.Rows[0];
         Assert.Equal($"{row.Date}, 01:02:05, Portuguese", row.ToString());
         Assert.Equal("JBL Quantum Stream", new AudioDevice(4, "JBL Quantum Stream", 48000, 1).ToString());
+        Assert.Equal((null, false), (row.Title, row.HasTitle));
+    }
+
+    [Fact]
+    public async Task A_titled_meeting_shows_its_title_in_the_list()
+    {
+        _client.Sessions.Add(Session(16) with { Title = "Budget review" });
+        var history = Create();
+        await history.LoadAsync();
+
+        var row = history.Rows[0];
+        Assert.Equal(("Budget review", true), (row.Title, row.HasTitle));
+        Assert.Equal($"Budget review, {row.Date}, 01:02:05, Portuguese", row.ToString());
     }
 }

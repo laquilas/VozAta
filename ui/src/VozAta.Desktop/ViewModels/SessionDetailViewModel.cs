@@ -34,7 +34,13 @@ public sealed partial class SessionDetailViewModel(
 
     public string Id => summary.Id;
 
-    public string Title => FormatStart(summary.StartedAt) ?? summary.Id;
+    /// <summary>The heading: the meeting title (phase 35), else the start date.</summary>
+    public string Title => summary.Title ?? Date;
+
+    public string Date => FormatStart(summary.StartedAt) ?? summary.Id;
+
+    /// <summary>A titled meeting shows its date under the title.</summary>
+    public bool ShowsDate => summary.Title is not null;
 
     /// <summary>Recording, paused or finalizing: no regeneration yet.</summary>
     public bool IsLive => summary.Status is "recording" or "paused" or "finalizing";

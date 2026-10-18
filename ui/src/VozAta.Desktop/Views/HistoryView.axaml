@@ -69,8 +69,11 @@
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:SessionRow">
               <StackPanel Spacing="2">
+                <!-- Meeting title (phase 35); untitled meetings show only the date -->
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                           IsVisible="{Binding HasTitle}" />
                 <StackPanel Orientation="Horizontal">
-                  <TextBlock Text="{Binding Date}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Date}" FontWeight="SemiBold" Classes.secondary="{Binding HasTitle}" />
                   <Border Classes="tag live" Margin="6,0,0,0" IsVisible="{Binding IsLive}">
                     <TextBlock
                                Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[LiveBadge]}" />
@@ -92,9 +95,8 @@
       </Panel>
     </DockPanel>
 
-    <!-- Selected session; "Ask the meetings" (phase 24) below it -->
+    <!-- Selected session ("Ask the meetings" moved to the Ask page in phase 35) -->
     <DockPanel Grid.Column="2">
-    <views:AskView DockPanel.Dock="Bottom" DataContext="{Binding Ask}" />
     <Panel>
       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistorySelect]}" Classes="secondary"
                  Margin="8" TextWrapping="Wrap"
@@ -104,7 +106,8 @@
           <DataTemplate x:DataType="vm:SessionDetailViewModel">
             <DockPanel>
               <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
-                <TextBlock Text="{Binding Title}" Classes="title" />
+                <TextBlock Text="{Binding Title}" Classes="title" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Date}" Classes="secondary" IsVisible="{Binding ShowsDate}" />
                 <WrapPanel>
                   <ComboBox Margin="0,0,4,4" MinWidth="170"
                             ItemsSource="{Binding Templates}" SelectedItem="{Binding RegenerateTemplate}"

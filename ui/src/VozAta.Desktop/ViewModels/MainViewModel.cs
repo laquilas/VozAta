@@ -132,10 +132,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public int HandledEvents { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(EngineText), nameof(IsEngineConnected))]
+    [NotifyPropertyChangedFor(nameof(EngineText), nameof(IsEngineConnected), nameof(IsEngineDown))]
     public partial EngineStatus EngineStatus { get; private set; } = EngineStatus.Starting;
 
     public bool IsEngineConnected => EngineStatus == EngineStatus.Connected;
+
+    /// <summary>The engine dropped or failed to start (red dot in the sidebar).</summary>
+    public bool IsEngineDown => EngineStatus is EngineStatus.Disconnected or EngineStatus.Failed;
 
     public string EngineText => EngineStatus switch
     {

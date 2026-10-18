@@ -299,6 +299,122 @@
     <Setter Property="Margin" Value="16,2,0,2" />
   </Style>
 
+  <!-- Shell (phase 35): sidebar, nav items, timer bar, chips, toasts ============== -->
+
+  <Style Selector="Border.sidebar">
+    <Setter Property="Background" Value="{DynamicResource Brush.Sidebar}" />
+    <Setter Property="Width" Value="216" />
+    <Setter Property="Padding" Value="8,12" />
+  </Style>
+  <Style Selector="Border.sidebar.collapsed">
+    <Setter Property="Width" Value="60" />
+  </Style>
+  <Style Selector="Border.sidebar :is(TextBlock)">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SidebarText}" />
+  </Style>
+  <Style Selector="Border.sidebar :is(TextBlock).muted">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SidebarTextMuted}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Small}" />
+  </Style>
+  <Style Selector="Border.sidebar :is(TextBlock).brand">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Title}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.sidebar PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SidebarText}" />
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+  </Style>
+
+  <!-- A sidebar entry: icon + label, filled when hovered or current -->
+  <Style Selector="Button.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SidebarText}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+  </Style>
+  <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.SidebarHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SidebarText}" />
+  </Style>
+  <Style Selector="Button.nav:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.SidebarSelected}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.SidebarText}" />
+  </Style>
+  <Style Selector="Button.nav.current">
+    <Setter Property="Background" Value="{DynamicResource Brush.SidebarSelected}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.nav.current:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.SidebarSelected}" />
+  </Style>
+
+  <!-- The timer bar across the top of the recorder page -->
+  <Style Selector="Border.timerbar">
+    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+    <Setter Property="Padding" Value="16,10" />
+  </Style>
+  <!-- The title box: borderless, large, part of the bar -->
+  <Style Selector="TextBox.title-input">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Title}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.title-input:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.title-input:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <!-- The big timer of the bar -->
+  <Style Selector=":is(TextBlock).timer.large">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Heading}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinWidth" Value="104" />
+    <Setter Property="TextAlignment" Value="Right" />
+  </Style>
+
+  <!-- Option chips (template, languages, devices): a pill that opens a flyout -->
+  <Style Selector="Button.chip">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Pill}" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Small}" />
+  </Style>
+  <Style Selector="Button.chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+  </Style>
+  <Style Selector="Button.chip PathIcon">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+  </Style>
+  <Style Selector="Button.chip :is(TextBlock).caption">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Tiny}" />
+  </Style>
+
+  <!-- Notifications float over the page, bottom right -->
+  <Style Selector="Border.toast">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Warning}" />
+    <Setter Property="BorderThickness" Value="1,1,1,4" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.Banner}" />
+    <Setter Property="BoxShadow" Value="0 4 12 0 #33000000" />
+  </Style>
+
   <!-- Recording state and level meters ========================================== -->
 
   <Style Selector="Ellipse.state-dot">
@@ -311,6 +427,28 @@
   </Style>
   <Style Selector="Ellipse.state-dot.paused">
     <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.small">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+  </Style>
+  <!-- Engine status in the sidebar: green when connected, amber while starting, red when down -->
+  <Style Selector="Ellipse.state-dot.engine">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.engine.connected">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Success}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.engine.down">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Danger}" />
+  </Style>
+
+  <!-- Slim level meter inside a device chip -->
+  <Style Selector="ProgressBar.slim">
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="CornerRadius" Value="2" />
   </Style>
 
   <Style Selector="ProgressBar.meter-mic">

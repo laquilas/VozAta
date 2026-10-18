@@ -4,10 +4,12 @@
              x:Class="VozAta.Desktop.Views.AskView"
              x:DataType="vm:AskViewModel">
 
-  <!-- Ask the meetings (phase 24): one question at a time, streamed answer, clickable sources -->
-  <Expander HorizontalAlignment="Stretch" Margin="0,8,0,0"
-            Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskHeader]}">
-    <DockPanel MaxHeight="320">
+  <!-- Ask the meetings (phase 24), the Ask page since phase 35: one question at a time, streamed
+       answer, clickable sources (they open the meeting on the Meetings page) -->
+  <DockPanel>
+    <TextBlock DockPanel.Dock="Top" Classes="title" Margin="0,0,0,10"
+               Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskHeader]}" />
+    <DockPanel>
       <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
         <Button DockPanel.Dock="Right" Margin="6,0,0,0"
                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskButton]}"
@@ -51,5 +53,5 @@
         </StackPanel>
       </ScrollViewer>
     </DockPanel>
-  </Expander>
+  </DockPanel>
 </UserControl>
