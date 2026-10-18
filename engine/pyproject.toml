@@ -38,7 +38,8 @@ version = { attr = "vozata.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-vozata = ["locales/*.toml", "export/fonts/*", "minutes/templates/*.toml", "api/static/*"]
+vozata = ["locales/*.toml", "export/fonts/*", "minutes/templates/*.toml", "api/static/*",
+          "storage/sqlite/migrations/*.sql"]
 
 [tool.ruff]
 line-length = 100
