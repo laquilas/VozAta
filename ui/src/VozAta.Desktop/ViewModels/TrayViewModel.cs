@@ -30,6 +30,13 @@ public sealed partial class TrayViewModel : ObservableObject
         _preferences = preferences;
         MinimizeToTray = preferences.Load().MinimizeToTray;
         recorder.PropertyChanged += OnRecorderChanged;
+        recorder.Session.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(RecordingSessionService.Title))
+            {
+                OnPropertyChanged(nameof(ToolTip));
+            }
+        };
     }
 
     public event Action? ShowRequested;
@@ -49,7 +56,10 @@ public sealed partial class TrayViewModel : ObservableObject
         _ => TrayState.Idle,
     };
 
-    public string ToolTip => _localization.Format("TrayToolTip", _recorder.StatusText);
+    /// <summary>"VozAta — Recording", with the meeting title when the recording has one (phase 35).</summary>
+    public string ToolTip => _recorder.Session.Title is { } title
+        ? _localization.Format("TrayToolTipTitled", _recorder.StatusText, title)
+        : _localization.Format("TrayToolTip", _recorder.StatusText);
 
     public string StartText => _localization["Start"];
 

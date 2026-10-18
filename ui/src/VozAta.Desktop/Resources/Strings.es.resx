@@ -909,4 +909,40 @@
   <data name="SessionRecovered" xml:space="preserve">
     <value>La sesión de {0} se recuperó.</value>
   </data>
+  <data name="TrayToolTipTitled" xml:space="preserve">
+    <value>VozAta — {0}: {1}</value>
+  </data>
+  <data name="NavRecorder" xml:space="preserve">
+    <value>Grabadora</value>
+  </data>
+  <data name="NavMeetings" xml:space="preserve">
+    <value>Reuniones</value>
+  </data>
+  <data name="NavAsk" xml:space="preserve">
+    <value>Preguntar</value>
+  </data>
+  <data name="NavConfig" xml:space="preserve">
+    <value>Configuración</value>
+  </data>
+  <data name="TitlePlaceholder" xml:space="preserve">
+    <value>¿De qué trata esta reunión?</value>
+  </data>
+  <data name="MeetingTitle" xml:space="preserve">
+    <value>Título de la reunión</value>
+  </data>
+  <data name="Untitled" xml:space="preserve">
+    <value>Reunión sin título</value>
+  </data>
+  <data name="SidebarCollapse" xml:space="preserve">
+    <value>Contraer la barra lateral</value>
+  </data>
+  <data name="SidebarExpand" xml:space="preserve">
+    <value>Expandir la barra lateral</value>
+  </data>
+  <data name="ThemeToggle" xml:space="preserve">
+    <value>Alternar entre claro y oscuro</value>
+  </data>
+  <data name="GoToRecorder" xml:space="preserve">
+    <value>Grabando {0} — abrir la grabadora</value>
+  </data>
 </root>

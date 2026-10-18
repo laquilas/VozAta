@@ -79,6 +79,23 @@ public sealed class TrayViewModelTests
     }
 
     [Fact]
+    public async Task The_tooltip_shows_the_meeting_title_while_recording()
+    {
+        var (main, tray) = await ReadyAsync();
+        var changed = new List<string?>();
+        tray.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        main.Recorder.Title = "Weekly sync";
+
+        await tray.StartCommand.ExecuteAsync(null);
+        Assert.Equal("VozAta — Recording: Weekly sync", tray.ToolTip);
+        main.Recorder.Title = "Budget review";
+        await main.Recorder.EnterCommand.ExecuteAsync(null);
+
+        Assert.Equal("VozAta — Recording: Budget review", tray.ToolTip);
+        Assert.Contains(nameof(TrayViewModel.ToolTip), changed);
+    }
+
+    [Fact]
     public async Task The_main_window_owns_a_tray_menu()
     {
         var (main, _) = await ReadyAsync();

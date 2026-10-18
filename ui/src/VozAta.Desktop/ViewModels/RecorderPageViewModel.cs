@@ -17,6 +17,12 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     /// <summary>Meter animation rate (~30 fps); level events arrive at ~10 Hz per channel.</summary>
     public static readonly TimeSpan MeterInterval = TimeSpan.FromMilliseconds(33);
 
+    /// <summary>A title edited while recording is sent once typing pauses this long (Enter sends it at once).</summary>
+    public static readonly TimeSpan TitleDebounce = TimeSpan.FromMilliseconds(800);
+
+    /// <summary>The engine's limit for a meeting title (phase 35).</summary>
+    public const int MaxTitleLength = 200;
+
     private readonly IEngineClient _client;
     private readonly ILocalizationService _localization;
     private readonly IUiTimer _timer;
@@ -31,7 +37,11 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private string _defaultTranslation = "off";
     private string? _liveSessionId; // the session whose lines Segments shows
     private TaskCompletionSource _idle = NewIdleSignal(completed: true);
+    private readonly Func<TimeSpan, CancellationToken, Task> _titleDelay;
+    private CancellationTokenSource? _titleTyping; // the pending debounced title update
+    private string? _sentTitle; // the title the engine has for the live session
 
+    /// <param name="titleDelay">Waits out the title debounce (tests pass a controllable one).</param>
     public RecorderPageViewModel(
         IEngineClient client,
         ILocalizationService localization,
@@ -41,8 +51,10 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         MinutesTemplatesViewModel templates,
         RecordingSessionService session,
         Action<string> notify,
+        Func<TimeSpan, CancellationToken, Task>? titleDelay = null,
         CancellationToken cancellation = default)
     {
+        _titleDelay = titleDelay ?? Task.Delay;
         _client = client;
         _localization = localization;
         _timer = timer;
@@ -95,6 +107,22 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
     /// <summary>The last template reload after a language change (tests await it).</summary>
     public Task TemplatesRefresh { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// "What is this meeting about?" (phase 35): sent with Start, and while recording sent to the
+    /// engine once typing pauses or on Enter. Cleared when the recording ends.
+    /// </summary>
+    [ObservableProperty]
+    public partial string Title { get; set; } = "";
+
+    /// <summary>The last title update started by an edit (tests await it).</summary>
+    public Task TitleSave { get; private set; } = Task.CompletedTask;
+
+    /// <summary>The title box is editable before and during a recording (not while it starts or finalizes).</summary>
+    public bool CanEditTitle => State is RecordingState.Idle or RecordingState.Recording or RecordingState.Paused;
+
+    /// <summary>Devices, languages, template and terms (the chips) apply to the next recording only.</summary>
+    public bool CanEditOptions => State == RecordingState.Idle;
 
     /// <summary>"Terms for this meeting": comma or newline separated (phase 19).</summary>
     [ObservableProperty]
@@ -305,6 +333,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     {
         Session.PropertyChanged -= OnSessionChanged;
         _meterTicks?.Dispose();
+        _titleTyping?.Cancel();
     }
 
     private bool CanStart() => State == RecordingState.Idle && IsEngineConnected;
@@ -348,12 +377,21 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         try
         {
             var terms = VocabularyViewModel.ParseTerms(SessionTerms);
+            var title = NormalizeTitle(Title);
             var request = new StartSessionRequest(
                 Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value, SelectedTemplate?.Id,
                 terms.Count > 0 ? terms : null,
-                SelectedTranslation.Value == _defaultTranslation ? null : SelectedTranslation.Value);
-            await _client.StartSessionAsync(request, _cancellation);
+                SelectedTranslation.Value == _defaultTranslation ? null : SelectedTranslation.Value,
+                title);
+            var started = await _client.StartSessionAsync(request, _cancellation);
+            _sentTitle = started.Title;
+            Session.SessionId = started.Id;
+            Session.Title = started.Title;
             SetState(RecordingState.Recording);
+            if (NormalizeTitle(Title) != _sentTitle)
+            {
+                ScheduleTitleSave(); // edited while the engine was starting
+            }
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
@@ -362,13 +400,97 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         }
     }
 
+    /// <summary>Enter in the title box: starts when idle (like Toggl); while recording, sends the title now.</summary>
+    [RelayCommand]
+    private async Task EnterAsync()
+    {
+        if (StartCommand.CanExecute(null))
+        {
+            await StartCommand.ExecuteAsync(null);
+        }
+        else if (IsRecording)
+        {
+            await SaveTitleNowAsync();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanStop))]
     private async Task StopAsync()
     {
         try
         {
+            await SaveTitleNowAsync(); // a title still being typed belongs to this meeting
             await _client.StopSessionAsync(_cancellation);
             SetState(RecordingState.Finalizing);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            _notify(ErrorText(error));
+        }
+    }
+
+    /// <summary>The engine's form of a title: trimmed, whitespace runs as one space; blank = null.</summary>
+    public static string? NormalizeTitle(string? title)
+    {
+        var words = (title ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return words.Length == 0 ? null : string.Join(' ', words);
+    }
+
+    partial void OnTitleChanged(string value)
+    {
+        if (IsRecording)
+        {
+            ScheduleTitleSave();
+        }
+    }
+
+    private void ScheduleTitleSave()
+    {
+        _titleTyping?.Cancel();
+        _titleTyping = new CancellationTokenSource();
+        TitleSave = SaveTitleAfterTypingAsync(_titleTyping.Token);
+    }
+
+    private async Task SaveTitleAfterTypingAsync(CancellationToken typing)
+    {
+        try
+        {
+            await _titleDelay(TitleDebounce, typing);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // more typing (or Enter / Stop) took over
+        }
+
+        await SaveTitleAsync();
+    }
+
+    /// <summary>Send the title at once, dropping a pending debounced update.</summary>
+    private Task SaveTitleNowAsync()
+    {
+        _titleTyping?.Cancel();
+        _titleTyping = null;
+        TitleSave = SaveTitleAsync();
+        return TitleSave;
+    }
+
+    /// <summary><c>PATCH /sessions/{id}</c> when the title differs from what the engine has.</summary>
+    private async Task SaveTitleAsync()
+    {
+        var title = NormalizeTitle(Title);
+        if (Session.SessionId is not { } sessionId || title == _sentTitle)
+        {
+            return;
+        }
+
+        try
+        {
+            var saved = await _client.UpdateSessionTitleAsync(sessionId, title, _cancellation);
+            _sentTitle = saved.Title;
+            if (Session.SessionId == sessionId)
+            {
+                Session.Title = saved.Title;
+            }
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
@@ -381,6 +503,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         switch (args.PropertyName)
         {
             case nameof(RecordingSessionService.State):
+                OnPropertyChanged(nameof(CanEditTitle));
+                OnPropertyChanged(nameof(CanEditOptions));
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(IsRecording));
                 OnPropertyChanged(nameof(IsPaused));
@@ -476,6 +600,11 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             Session.Elapsed = TranscriptLine.FormatTime(seconds);
         }
 
+        if (status.Status is "recording" or "paused" && status.SessionId is { } sessionId)
+        {
+            Session.SessionId = sessionId; // also adopts a recording that started before the app connected
+        }
+
         SetState(status.Status switch
         {
             "recording" => RecordingState.Recording,
@@ -493,6 +622,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         }
 
         var wasRecording = IsRecording;
+        var hadSession = State is RecordingState.Recording or RecordingState.Paused or RecordingState.Finalizing;
         Session.State = state;
         Devices.IsEnabled = state == RecordingState.Idle;
         UpdateMeters(wasRecording);
@@ -500,6 +630,11 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         {
             IsModelLoading = false;
             Partials.Clear();
+            if (hadSession)
+            {
+                EndTitle(); // the next meeting starts untitled; this one is renamed from history
+            }
+
             _idle.TrySetResult();
         }
     }
@@ -526,6 +661,16 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         var recording = State == RecordingState.Recording;
         MicMeter.SetActive(recording);
         SystemMeter.SetActive(recording);
+    }
+
+    private void EndTitle()
+    {
+        _titleTyping?.Cancel();
+        _titleTyping = null;
+        _sentTitle = null;
+        Session.SessionId = null;
+        Session.Title = null;
+        Title = ""; // not recording any more: nothing is sent
     }
 
     private void TickMeters()

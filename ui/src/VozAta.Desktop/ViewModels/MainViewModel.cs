@@ -54,7 +54,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Session = new RecordingSessionService();
         var templates = new MinutesTemplatesViewModel(client);
         Recorder = new RecorderPageViewModel(
-            client, localization, preferences, clock, timer, templates, Session, Notify, _stop.Token);
+            client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token);
         History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization);

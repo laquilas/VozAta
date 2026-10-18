@@ -78,9 +78,9 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** UI — `RecorderPageViewModel.Title`: sent on start, patched (debounced, Enter
-  commits) while recording, Enter starts when idle, `CanEditOptions` false while recording;
-  `RecorderPageViewModelTests.cs`.
+- **Next step:** UI — `ShellViewModel` (Pages, CurrentPage, NavigateCommand, Ctrl+1…4, sidebar
+  collapse saved in `ui.json`, recording indicator) and the Meetings / Ask / Config page
+  ViewModels; `ShellViewModelTests.cs`.
 
 ### Steps
 
@@ -90,8 +90,9 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
       `2956745`, `dd74ba4`
 - [x] Docs: api-contract, architecture §8 — `3ee4679`
 - [x] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync` — `6d283d5`
-- [x] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel`
-- [ ] UI: meeting title on the recorder page (sent on start, patched while recording, Enter
+- [x] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel` —
+      `068dd87`
+- [x] UI: meeting title on the recorder page (sent on start, patched while recording, Enter
       starts), options locked while recording
 - [ ] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
       Meetings / Ask / Config page ViewModels
@@ -116,3 +117,9 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
   strings through `$parent[Window].((vm:MainViewModel)DataContext).L[...]`. Recording moved to
   `RecorderPageViewModel`; the shared state (state, elapsed, session id, title) is
   `RecordingSessionService`. Existing tests reach the recorder through `viewModel.Recorder`.
+- Title while recording: sent once typing pauses for 800 ms, at once on Enter, and before Stop;
+  cleared when the recording ends (the next meeting starts untitled; rename the old one later). A
+  failed start keeps the typed title. Editable while idle, recording or paused (not while starting
+  or finalizing).
+- The resx strings for the whole phase (nav labels, placeholder, untitled, sidebar, tray) were
+  added in the title commit.

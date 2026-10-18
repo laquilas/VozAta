@@ -58,7 +58,9 @@ internal sealed partial class FakeEngineClient : IEngineClient
     {
         Calls.Add("start");
         StartRequests.Add(request);
-        return StartError is null ? Task.FromResult(Summary("recording")) : Task.FromException<SessionSummary>(StartError);
+        return StartError is null
+            ? Task.FromResult(Summary("recording") with { Title = request.Title })
+            : Task.FromException<SessionSummary>(StartError);
     }
 
     /// <summary>Every <c>PATCH /sessions/{id}</c> title, in order (phase 35).</summary>
