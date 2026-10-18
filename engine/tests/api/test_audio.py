@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import io
+import threading
 import wave
 from collections.abc import Iterator
 from datetime import datetime
@@ -161,3 +162,23 @@ def store_session(api: Api) -> str:
     session_id = api.store.create(datetime(2026, 10, 15, 20, 23, 58))
     api.store.write_meta(session_id, {"id": session_id, "status": "done"})
     return session_id
+
+
+def test_deleting_a_session_drops_its_audio_and_cached_wavs(
+    api: Api, recorded: str, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    audio = api.app.state.container.audio
+    cached = audio.materialize_wav(recorded, Channel.SYSTEM)
+    reclaimed = threading.Event()
+    monkeypatch.setattr(database, "reclaim", reclaimed.set)
+    container = api.app.state.container
+    monkeypatch.setattr(container.manager, "_store", container.store)  # the SQLite repository
+    api.app.state.container = dataclasses.replace(container, search_index=None)
+
+    response = api.client.delete(f"/sessions/{recorded}")
+
+    assert response.status_code == 204
+    assert database.connection().execute("SELECT COUNT(*) FROM audio_chunks").fetchone() == (0,)
+    assert not cached.exists()
+    assert reclaimed.wait(5)
+    assert api.client.get(f"/sessions/{recorded}/audio/mic").status_code == 404

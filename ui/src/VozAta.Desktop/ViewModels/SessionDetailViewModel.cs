@@ -35,7 +35,7 @@ public sealed partial class SessionDetailViewModel(
 
     private IReadOnlyDictionary<string, double> _audio = new Dictionary<string, double>();
 
-    private readonly string _audioFolder = audioFolder ?? Path.Combine(Path.GetTempPath(), "VozAta", "audio");
+    private readonly string _audioFolder = audioFolder ?? AudioPlayback.DefaultFolder;
 
     public string Id => summary.Id;
 
@@ -279,44 +279,13 @@ public sealed partial class SessionDetailViewModel(
     private async Task OpenAudioAsync(string? track)
     {
         Error = null;
-        var path = Path.Combine(_audioFolder, $"{Id}-{track}.wav");
         try
         {
-            Directory.CreateDirectory(_audioFolder);
-            FileStream file;
-            try
-            {
-                file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-            }
-            catch (IOException) when (File.Exists(path))
-            {
-                shell.Open(path); // in use by the player: already downloaded
-                return;
-            }
-
-            await using (file)
-            {
-                await client.DownloadAudioAsync(Id, track!, file);
-            }
-
-            shell.Open(path);
+            await AudioPlayback.OpenAsync(client, shell, _audioFolder, Id, track!);
         }
-        catch (Exception error) when (error is EngineApiException or EngineUnavailableException or IOException or UnauthorizedAccessException)
+        catch (Exception error) when (AudioPlayback.IsExpected(error))
         {
-            TryDelete(path);
             Error = error is EngineUnavailableException ? localization["EngineUnavailable"] : error.Message;
-        }
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            File.Delete(path);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            // Left for the next download to overwrite.
         }
     }
 

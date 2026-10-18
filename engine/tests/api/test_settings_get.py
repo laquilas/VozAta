@@ -26,7 +26,18 @@ def test_settings_returns_every_key_with_its_schema(api: Api) -> None:
         "secret": False,
         "group": "audio",
         "applies": "next_session",
+        "options_source": None,
     }
+
+
+def test_keys_with_a_list_name_their_options_source(api: Api) -> None:
+    schema = {item["key"]: item for item in api.client.get("/settings").json()["schema"]}
+
+    assert schema["WHISPER_MODEL"]["options_source"] == "whisper_models"
+    assert schema["OLLAMA_MODEL"]["options_source"] == "ollama_models"
+    assert schema["STT_PROVIDER"]["options_source"] == "stt_providers"
+    assert schema["WHISPER_DEVICE"]["options_source"] == "devices"
+    assert schema["WHISPER_DEVICE"]["choices"] == ["auto", "cuda", "cpu"]  # still a fixed list
 
 
 def test_settings_expose_the_low_confidence_threshold(api: Api) -> None:

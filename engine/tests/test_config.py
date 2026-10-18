@@ -310,6 +310,7 @@ def test_settings_schema_describes_type_default_and_choices() -> None:
         "secret": False,
         "group": "segmentation",
         "applies": "next_session",
+        "options_source": None,
     }
     assert schema["MIX_MODE"]["choices"] == ["mono", "stereo"]
     assert schema["MIX_MODE"]["type"] == "choice"
@@ -322,6 +323,7 @@ def test_settings_schema_describes_type_default_and_choices() -> None:
         "secret": False,
         "group": "api",
         "applies": "restart",
+        "options_source": None,
     }
     assert schema["TRANSCRIPTION_LANGUAGE"]["default"] is None
     assert schema["TRANSCRIPTION_LANGUAGE"]["choices"] == ["en", "pt", "es", "auto"]

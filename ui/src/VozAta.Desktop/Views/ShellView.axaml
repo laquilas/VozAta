@@ -130,13 +130,13 @@
               <views:RecorderPage />
             </DataTemplate>
             <DataTemplate DataType="vm:MeetingsPageViewModel">
-              <views:HistoryView DataContext="{Binding History}" />
+              <views:MeetingsPage />
             </DataTemplate>
             <DataTemplate DataType="vm:AskPageViewModel">
               <views:AskView DataContext="{Binding Ask}" Margin="{StaticResource Inset.Page}" />
             </DataTemplate>
             <DataTemplate DataType="vm:ConfigPageViewModel">
-              <views:SettingsView DataContext="{Binding Settings}" />
+              <views:ConfigPage />
             </DataTemplate>
           </ContentControl.DataTemplates>
         </ContentControl>

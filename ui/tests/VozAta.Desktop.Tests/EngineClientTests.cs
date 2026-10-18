@@ -129,6 +129,66 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Meetings_of_a_week_are_read_by_day_with_the_new_summary_fields()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"days": [{"date": "2026-10-14", "total_seconds": 4200.5, "items": [
+               {"id": "20261014_153000", "status": "done", "started_at": "2026-10-14T15:30:00-03:00",
+                "ended_at": "2026-10-14T15:40:00-03:00", "duration_seconds": 600.5, "language": "en",
+                "has_minutes": true, "title": "Weekly sync", "speaker_count": 3,
+                "has_action_items": true, "template": "daily"}]}],
+             "total_seconds": 4200.5, "has_earlier": true, "storage": "sqlite"}
+            """);
+
+        var week = await new EngineClient(handler.Client()).ListSessionDaysAsync(
+            new DateOnly(2026, 10, 12), new DateOnly(2026, 10, 18));
+
+        Assert.Equal("/sessions?from=2026-10-12&to=2026-10-18", handler.Requests.Single().Path);
+        var day = week.Days.Single();
+        Assert.Equal(new DateOnly(2026, 10, 14), day.Date);
+        Assert.Equal(4200.5, day.TotalSeconds);
+        var item = day.Items.Single();
+        Assert.Equal((3, true, "daily"), (item.SpeakerCount, item.HasActionItems, item.Template));
+        Assert.True(week.HasEarlier);
+        Assert.False(week.DeletesToRecycleBin);
+        Assert.Equal(4200.5, week.TotalSeconds);
+    }
+
+    [Fact]
+    public async Task A_summary_without_the_phase_36_fields_has_defaults()
+    {
+        var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);
+
+        var summary = await new EngineClient(handler.Client()).StartSessionAsync(new StartSessionRequest());
+
+        Assert.Equal((0, false, null), (summary.SpeakerCount, summary.HasActionItems, summary.Template));
+        Assert.True(new SessionDays([], 0, false).DeletesToRecycleBin);
+    }
+
+    [Fact]
+    public async Task Delete_sends_a_delete_and_a_409_becomes_an_api_exception()
+    {
+        var calls = 0;
+        var handler = new FakeHttpHandler(_ => ++calls == 1
+            ? new HttpResponseMessage(HttpStatusCode.NoContent)
+            : new HttpResponseMessage(HttpStatusCode.Conflict)
+            {
+                Content = new StringContent(
+                    """{"error": {"code": "session_still_active", "message": "Still recording."}}""",
+                    System.Text.Encoding.UTF8,
+                    "application/json"),
+            });
+        var client = new EngineClient(handler.Client());
+
+        await client.DeleteSessionAsync("20261015_202358");
+        var error = await Assert.ThrowsAsync<EngineApiException>(() => client.DeleteSessionAsync("20261015_202358"));
+
+        Assert.Equal((HttpMethod.Delete, "/sessions/20261015_202358", (string?)null), handler.Requests[0]);
+        Assert.Equal("session_still_active", error.Code);
+        Assert.Equal("Still recording.", error.Message);
+    }
+
+    [Fact]
     public async Task Start_sends_the_translation_language_only_when_chosen()
     {
         var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);

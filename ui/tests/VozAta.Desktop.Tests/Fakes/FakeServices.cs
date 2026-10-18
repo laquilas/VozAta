@@ -58,9 +58,12 @@ internal sealed class FakeDialogs : IDialogService
 
     public List<string> Asked { get; } = [];
 
+    public List<string> Messages { get; } = [];
+
     public Task<bool> ConfirmAsync(string title, string message, string confirm, string cancel)
     {
         Asked.Add(title);
+        Messages.Add(message);
         return Task.FromResult(Answer);
     }
 }

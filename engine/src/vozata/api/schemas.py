@@ -38,8 +38,8 @@ class StorageStatus(BaseModel):
     backend: Literal["sqlite", "files"]
     database: str | None  # absolute path of the SQLite database
     warning: str | None
-    size_bytes: int | None = None
-    audio_cache_bytes: int | None = None
+    size_bytes: int | None = None  # the database with its WAL files (phase 38)
+    audio_cache_bytes: int = 0  # `OUTPUT_DIR/cache/` (phase 38)
 
 
 class Health(BaseModel):
@@ -86,6 +86,10 @@ class SessionSummary(BaseModel):
     language: str | None
     has_minutes: bool
     title: str | None = None  # phase 35; None = untitled
+    # phase 36 (meetings list): speakers found by diarization, any action item, minutes template
+    speaker_count: int = 0
+    has_action_items: bool = False
+    template: str | None = None
 
 
 class SessionDetail(SessionSummary):
@@ -107,6 +111,23 @@ class SessionDetail(SessionSummary):
 class SessionList(BaseModel):
     items: list[SessionSummary]
     total: int
+
+
+class SessionDay(BaseModel):
+    """One local day of `GET /sessions?from=&to=` (phase 36)."""
+
+    date: str  # YYYY-MM-DD, local time zone
+    total_seconds: float
+    items: list[SessionSummary]
+
+
+class SessionDays(BaseModel):
+    """Meetings of a date range grouped by local start day, newest first (phase 36)."""
+
+    days: list[SessionDay]
+    total_seconds: float
+    has_earlier: bool  # sessions started before `from` exist
+    storage: Literal["sqlite", "files"] = "files"  # what `DELETE /sessions/{id}` does
 
 
 class WordModel(BaseModel):
@@ -292,6 +313,7 @@ class SettingSchema(BaseModel):
     secret: bool
     group: str
     applies: str  # "next_session" | "restart"
+    options_source: str | None = None  # a `GET /settings/options` list (phase 38)
 
 
 class SettingsUpdate(BaseModel):
@@ -330,3 +352,31 @@ class AskQuestion(BaseModel):
 
 class AskAccepted(BaseModel):
     answer_id: str
+
+
+class SettingOptionItem(BaseModel):
+    """Phase 38: one entry of a `GET /settings/options` list."""
+
+    value: str
+    label: str
+    available: bool
+
+
+class SettingOptionsView(BaseModel):
+    """Phase 38: lists by `options_source`; `reachable` false: the service did not answer."""
+
+    options: dict[str, list[SettingOptionItem]]
+    reachable: dict[str, bool]
+
+
+class ConnectionTestResult(BaseModel):
+    """Phase 38: `POST /settings/test/{target}`; `message` is localized and never holds a secret."""
+
+    ok: bool
+    message: str
+
+
+class CacheCleared(BaseModel):
+    """Phase 38: `DELETE /storage/cache`."""
+
+    freed_bytes: int

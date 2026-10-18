@@ -34,6 +34,8 @@ class Field:
     secret: bool = False
     group: str = "general"  # settings page section, in GROUPS order
     applies: str = "next_session"  # or "restart": read once when the engine starts
+    # The `GET /settings/options` list the settings page offers for this key (phase 38).
+    options_source: str | None = None
 
 
 GROUPS = (
@@ -78,8 +80,22 @@ FIELDS: tuple[Field, ...] = (
     Field("PAUSE_GAP_SECONDS", "pause_gap_seconds", "number", group="transcription"),
     Field("MAX_CARRY_SECONDS", "max_carry_seconds", "number", group="transcription"),
     Field("SILENCE_RMS_THRESHOLD", "silence_rms_threshold", "number", group="transcription"),
-    Field("STT_PROVIDER", "stt_provider", "string", group="transcription", applies="restart"),
-    Field("WHISPER_MODEL", "whisper_model", "string", group="transcription", applies="restart"),
+    Field(
+        "STT_PROVIDER",
+        "stt_provider",
+        "string",
+        group="transcription",
+        applies="restart",
+        options_source="stt_providers",
+    ),
+    Field(
+        "WHISPER_MODEL",
+        "whisper_model",
+        "string",
+        group="transcription",
+        applies="restart",
+        options_source="whisper_models",
+    ),
     Field(
         "WHISPER_DEVICE",
         "whisper_device",
@@ -87,6 +103,7 @@ FIELDS: tuple[Field, ...] = (
         WhisperDevice,
         group="transcription",
         applies="restart",
+        options_source="devices",
     ),
     Field(
         "WHISPER_COMPUTE_TYPE",
@@ -94,9 +111,15 @@ FIELDS: tuple[Field, ...] = (
         "string",
         group="transcription",
         applies="restart",
+        options_source="compute_types",
     ),
     Field(
-        "WHISPER_CPU_MODEL", "whisper_cpu_model", "string", group="transcription", applies="restart"
+        "WHISPER_CPU_MODEL",
+        "whisper_cpu_model",
+        "string",
+        group="transcription",
+        applies="restart",
+        options_source="whisper_models",
     ),
     Field(
         "WHISPER_KEEP_LOADED",
@@ -111,8 +134,21 @@ FIELDS: tuple[Field, ...] = (
     Field("OPENAI_STT_MODEL", "openai_stt_model", "string", group="transcription"),
     # Speaker identification (phase 14)
     Field("DIARIZATION_ENABLED", "diarization_enabled", "bool", group="speakers"),
-    Field("DIARIZATION_PROVIDER", "diarization_provider", "string", group="speakers"),
-    Field("DIARIZATION_DEVICE", "diarization_device", "choice", WhisperDevice, group="speakers"),
+    Field(
+        "DIARIZATION_PROVIDER",
+        "diarization_provider",
+        "string",
+        group="speakers",
+        options_source="diarization_providers",
+    ),
+    Field(
+        "DIARIZATION_DEVICE",
+        "diarization_device",
+        "choice",
+        WhisperDevice,
+        group="speakers",
+        options_source="devices",
+    ),
     Field("HF_TOKEN", "hf_token", "string", secret=True, group="speakers"),
     Field("MIN_SPEAKERS", "min_speakers", "integer", group="speakers"),
     Field("MAX_SPEAKERS", "max_speakers", "integer", group="speakers"),
@@ -142,12 +178,22 @@ FIELDS: tuple[Field, ...] = (
     Field("LOW_CONFIDENCE_THRESHOLD", "low_confidence_threshold", "number", group="transcription"),
     # Live translation (phase 29)
     Field("TRANSLATE_TO", "translate_to", "choice", TranslationTarget, group="transcription"),
-    Field("TRANSLATION_PROVIDER", "translation_provider", "string", group="transcription"),
+    Field(
+        "TRANSLATION_PROVIDER",
+        "translation_provider",
+        "string",
+        group="transcription",
+        options_source="translation_providers",
+    ),
     Field("TRANSLATION_MODEL_DIR", "translation_model_dir", "path", group="transcription"),
     # Minutes (phase 04)
-    Field("LLM_PROVIDER", "llm_provider", "string", group="minutes"),
+    Field(
+        "LLM_PROVIDER", "llm_provider", "string", group="minutes", options_source="llm_providers"
+    ),
     Field("OLLAMA_URL", "ollama_url", "url", group="minutes"),
-    Field("OLLAMA_MODEL", "ollama_model", "string", group="minutes"),
+    Field(
+        "OLLAMA_MODEL", "ollama_model", "string", group="minutes", options_source="ollama_models"
+    ),
     Field("LLM_MAX_CHARS", "llm_max_chars", "integer", group="minutes"),
     # Minutes templates (phase 20)
     Field("MINUTES_TEMPLATE", "minutes_template", "choice", MinutesTemplateId, group="minutes"),

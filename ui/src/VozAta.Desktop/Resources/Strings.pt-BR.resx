@@ -942,6 +942,87 @@
   <data name="Untitled" xml:space="preserve">
     <value>Reunião sem título</value>
   </data>
+  <data name="MeetingsThisWeek" xml:space="preserve">
+    <value>Esta semana</value>
+  </data>
+  <data name="MeetingsLastWeek" xml:space="preserve">
+    <value>Semana passada</value>
+  </data>
+  <data name="MeetingsWeekRange" xml:space="preserve">
+    <value>{0} – {1}</value>
+  </data>
+  <data name="MeetingsToday" xml:space="preserve">
+    <value>Hoje</value>
+  </data>
+  <data name="MeetingsYesterday" xml:space="preserve">
+    <value>Ontem</value>
+  </data>
+  <data name="MeetingsPreviousWeek" xml:space="preserve">
+    <value>Semana anterior</value>
+  </data>
+  <data name="MeetingsNextWeek" xml:space="preserve">
+    <value>Próxima semana</value>
+  </data>
+  <data name="MeetingsLoadOlder" xml:space="preserve">
+    <value>Carregar reuniões anteriores</value>
+  </data>
+  <data name="MeetingsEmpty" xml:space="preserve">
+    <value>Nenhuma reunião nesta semana. Grave uma na página Gravador ou volte uma semana.</value>
+  </data>
+  <data name="MeetingsWeekTotal" xml:space="preserve">
+    <value>Total da semana</value>
+  </data>
+  <data name="MeetingSpeakers" xml:space="preserve">
+    <value>{0} participantes identificados</value>
+  </data>
+  <data name="MeetingPlay" xml:space="preserve">
+    <value>Ouvir a gravação</value>
+  </data>
+  <data name="MeetingExport" xml:space="preserve">
+    <value>Exportar</value>
+  </data>
+  <data name="MeetingRename" xml:space="preserve">
+    <value>Renomear</value>
+  </data>
+  <data name="MeetingDelete" xml:space="preserve">
+    <value>Excluir</value>
+  </data>
+  <data name="MeetingTitleEditor" xml:space="preserve">
+    <value>Título da reunião (Enter salva, Esc cancela)</value>
+  </data>
+  <data name="MeetingSaveTitle" xml:space="preserve">
+    <value>Salvar título</value>
+  </data>
+  <data name="MeetingCancelRename" xml:space="preserve">
+    <value>Cancelar renomeação</value>
+  </data>
+  <data name="MeetingDeleteTitle" xml:space="preserve">
+    <value>Excluir reunião?</value>
+  </data>
+  <data name="MeetingDeleteRecycle" xml:space="preserve">
+    <value>“{0}” será movida para a Lixeira com a transcrição, a ata e o áudio. Você pode desfazer por alguns segundos ou restaurá-la da Lixeira depois.</value>
+  </data>
+  <data name="MeetingDeletePermanent" xml:space="preserve">
+    <value>“{0}” será excluída permanentemente com a transcrição, a ata e o áudio. Não é possível desfazer.</value>
+  </data>
+  <data name="MeetingDeleteConfirm" xml:space="preserve">
+    <value>Excluir</value>
+  </data>
+  <data name="MeetingDeleteCancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="MeetingDeletedUndo" xml:space="preserve">
+    <value>“{0}” foi movida para a Lixeira.</value>
+  </data>
+  <data name="MeetingDeleted" xml:space="preserve">
+    <value>“{0}” foi excluída.</value>
+  </data>
+  <data name="MeetingUndo" xml:space="preserve">
+    <value>Desfazer</value>
+  </data>
+  <data name="MeetingNoAudio" xml:space="preserve">
+    <value>Esta reunião não tem gravação mixada para ouvir.</value>
+  </data>
   <data name="SidebarCollapse" xml:space="preserve">
     <value>Recolher a barra lateral</value>
   </data>
@@ -953,5 +1034,137 @@
   </data>
   <data name="GoToRecorder" xml:space="preserve">
     <value>Gravando {0} — abrir o gravador</value>
+  </data>
+  <data name="ConfigSection_desktop" xml:space="preserve">
+    <value>Aplicativo</value>
+  </data>
+  <data name="ConfigSection_vocabulary" xml:space="preserve">
+    <value>Vocabulário</value>
+  </data>
+  <data name="ConfigSection_storage" xml:space="preserve">
+    <value>Armazenamento</value>
+  </data>
+  <data name="ConfigSection_about" xml:space="preserve">
+    <value>Sobre</value>
+  </data>
+  <data name="ConfigSections" xml:space="preserve">
+    <value>Seções</value>
+  </data>
+  <data name="ConfigSearch" xml:space="preserve">
+    <value>Buscar configurações</value>
+  </data>
+  <data name="ConfigNoResults" xml:space="preserve">
+    <value>Nenhuma configuração corresponde à busca.</value>
+  </data>
+  <data name="ConfigUnsaved" xml:space="preserve">
+    <value>Há alterações não salvas.</value>
+  </data>
+  <data name="SettingChanged" xml:space="preserve">
+    <value>Alterado</value>
+  </data>
+  <data name="SettingNotInstalled" xml:space="preserve">
+    <value>Não instalado</value>
+  </data>
+  <data name="SettingOptionsUnreachable" xml:space="preserve">
+    <value>Não foi possível ler a lista: o serviço não respondeu.</value>
+  </data>
+  <data name="SettingInvalidUrl" xml:space="preserve">
+    <value>Informe um endereço completo que comece com http:// ou https://.</value>
+  </data>
+  <data name="SettingBrowse" xml:space="preserve">
+    <value>Procurar…</value>
+  </data>
+  <data name="SecretStored" xml:space="preserve">
+    <value>Salvo (oculto)</value>
+  </data>
+  <data name="SecretNotSet" xml:space="preserve">
+    <value>Não definido</value>
+  </data>
+  <data name="SecretWillBeRemoved" xml:space="preserve">
+    <value>Removido ao salvar</value>
+  </data>
+  <data name="SecretReplace" xml:space="preserve">
+    <value>Substituir</value>
+  </data>
+  <data name="SecretRemove" xml:space="preserve">
+    <value>Remover</value>
+  </data>
+  <data name="SecretKeep" xml:space="preserve">
+    <value>Manter o valor salvo</value>
+  </data>
+  <data name="ConnectionTest" xml:space="preserve">
+    <value>Testar</value>
+  </data>
+  <data name="ConnectionTesting" xml:space="preserve">
+    <value>Testando…</value>
+  </data>
+  <data name="ConnectionTestHint" xml:space="preserve">
+    <value>Verifica o serviço com as configurações salvas: salve suas alterações antes.</value>
+  </data>
+  <data name="StorageBackend" xml:space="preserve">
+    <value>Armazenamento</value>
+  </data>
+  <data name="StorageBackendSqlite" xml:space="preserve">
+    <value>Banco de dados SQLite (vozata.db)</value>
+  </data>
+  <data name="StorageBackendFiles" xml:space="preserve">
+    <value>Pastas (uma por reunião)</value>
+  </data>
+  <data name="StorageDatabase" xml:space="preserve">
+    <value>Banco de dados</value>
+  </data>
+  <data name="StorageDatabaseSize" xml:space="preserve">
+    <value>Tamanho do banco</value>
+  </data>
+  <data name="StorageNoDatabase" xml:space="preserve">
+    <value>Sem banco de dados</value>
+  </data>
+  <data name="StorageAudioCache" xml:space="preserve">
+    <value>Cache de áudio</value>
+  </data>
+  <data name="StorageAudioCacheHelp" xml:space="preserve">
+    <value>Arquivos WAV gerados a partir do banco para reprodução. São gerados de novo quando preciso.</value>
+  </data>
+  <data name="StorageClearCache" xml:space="preserve">
+    <value>Limpar cache</value>
+  </data>
+  <data name="StorageClearCacheTitle" xml:space="preserve">
+    <value>Limpar o cache de áudio?</value>
+  </data>
+  <data name="StorageClearCacheMessage" xml:space="preserve">
+    <value>Os arquivos WAV do cache são apagados. As gravações continuam no banco e voltam ao cache quando você as reproduz.</value>
+  </data>
+  <data name="StorageKeepCache" xml:space="preserve">
+    <value>Manter</value>
+  </data>
+  <data name="StorageCacheCleared" xml:space="preserve">
+    <value>{0} liberados.</value>
+  </data>
+  <data name="StorageOpenFolder" xml:space="preserve">
+    <value>Abrir pasta</value>
+  </data>
+  <data name="StorageRefresh" xml:space="preserve">
+    <value>Atualizar</value>
+  </data>
+  <data name="SizeBytes" xml:space="preserve">
+    <value>{0} B</value>
+  </data>
+  <data name="SizeKilobytes" xml:space="preserve">
+    <value>{0:0.#} KB</value>
+  </data>
+  <data name="SizeMegabytes" xml:space="preserve">
+    <value>{0:0.#} MB</value>
+  </data>
+  <data name="SizeGigabytes" xml:space="preserve">
+    <value>{0:0.##} GB</value>
+  </data>
+  <data name="AboutAppVersion" xml:space="preserve">
+    <value>Versão do aplicativo</value>
+  </data>
+  <data name="AboutEngineVersion" xml:space="preserve">
+    <value>Versão do motor</value>
+  </data>
+  <data name="AboutLicenses" xml:space="preserve">
+    <value>Licenças</value>
   </data>
 </root>

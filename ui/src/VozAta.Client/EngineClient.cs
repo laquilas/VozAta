@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -24,6 +25,12 @@ public interface IEngineClient
         int limit = 50, int offset = 0, CancellationToken cancellationToken = default);
 
     Task<SessionDetail> GetSessionAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /sessions?from=&amp;to=</c> (phase 36): the meetings of these local days (both included), grouped by day.</summary>
+    Task<SessionDays> ListSessionDaysAsync(DateOnly first, DateOnly last, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /sessions/{id}</c> (phase 36): permanent in the database, to the Recycle Bin for the file backend.</summary>
+    Task DeleteSessionAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary><c>PATCH /sessions/{id}</c> (phase 35): rename a meeting, also while recording; null clears the title.</summary>
     Task<SessionSummary> UpdateSessionTitleAsync(
@@ -97,6 +104,15 @@ public interface IEngineClient
     /// <summary><c>PUT /settings</c>: null clears a key; an invalid value throws with its <c>Key</c>.</summary>
     Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /settings/options</c> (phase 38): the lists the Config page offers.</summary>
+    Task<SettingOptions> GetSettingOptionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /settings/test/{target}</c> (phase 38): check a service with the saved settings.</summary>
+    Task<ConnectionTestResult> TestConnectionAsync(string target, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /storage/cache</c> (phase 38): empty the audio cache.</summary>
+    Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>The engine answered with the error envelope; <see cref="Exception.Message"/> is localized.</summary>
@@ -148,6 +164,19 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<SessionSummary> UpdateSessionTitleAsync(
         string id, string? title, CancellationToken cancellationToken = default) =>
         SendAsync<SessionSummary>(HttpMethod.Patch, $"sessions/{Escape(id)}", new { title }, cancellationToken);
+
+    public Task<SessionDays> ListSessionDaysAsync(
+        DateOnly first, DateOnly last, CancellationToken cancellationToken = default) =>
+        SendAsync<SessionDays>(
+            HttpMethod.Get,
+            $"sessions?from={first.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}&to={last.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}",
+            null,
+            cancellationToken);
+
+    public async Task DeleteSessionAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(HttpMethod.Delete, $"sessions/{Escape(id)}", null, cancellationToken);
+    }
 
     public Task<Transcript> GetTranscriptAsync(
         string id, CancellationToken cancellationToken = default) =>
@@ -258,6 +287,15 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>
         SendAsync<SettingsUpdateResult>(HttpMethod.Put, "settings", new { values }, cancellationToken);
+
+    public Task<SettingOptions> GetSettingOptionsAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<SettingOptions>(HttpMethod.Get, "settings/options", null, cancellationToken);
+
+    public Task<ConnectionTestResult> TestConnectionAsync(string target, CancellationToken cancellationToken = default) =>
+        SendAsync<ConnectionTestResult>(HttpMethod.Post, $"settings/test/{Escape(target)}", null, cancellationToken);
+
+    public Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<CacheCleared>(HttpMethod.Delete, "storage/cache", null, cancellationToken);
 
     private async Task<T> SendAsync<T>(
         HttpMethod method, string path, object? body, CancellationToken cancellationToken)

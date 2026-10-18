@@ -169,6 +169,25 @@ public sealed partial class HistoryViewModel(
         }
     }
 
+    /// <summary>Open a meeting picked on the Meetings page (phase 36) in <see cref="Detail"/>.</summary>
+    public void Show(SessionSummary summary) => Selected = ToRow(summary);
+
+    /// <summary>A meeting was deleted (phase 36): close its detail, dropping any unsaved edits.</summary>
+    public void Forget(string sessionId)
+    {
+        if (Detail?.Id == sessionId)
+        {
+            Selected = null;
+            Open(null);
+        }
+
+        if (Rows.FirstOrDefault(row => row.Id == sessionId) is { } row)
+        {
+            Rows.Remove(row);
+            Total = Math.Max(0, Total - 1);
+        }
+    }
+
     /// <summary>Rebuild the row texts after a UI language switch.</summary>
     public void RefreshTexts()
     {

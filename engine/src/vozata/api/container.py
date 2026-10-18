@@ -12,18 +12,21 @@ from vozata.api.system_info import GpuInfo
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.devices import DeviceInfo
 from vozata.config import Settings
+from vozata.connection_checks import CheckResult, CheckTarget
 from vozata.domain import StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.template_repository import TemplateRepository, bundled_templates
 from vozata.ports import (
-    AudioTracks,
+    AudioCache,
     DocumentExporter,
     Localizer,
+    SessionAudio,
     SessionRepository,
     TaskExporter,
     TranscriptSearch,
 )
 from vozata.settings_file import SettingsFile
+from vozata.settings_options import OptionLists
 
 
 class AskRunner(Protocol):
@@ -68,5 +71,13 @@ class ApiContainer:
     task_exporter: Callable[[str], TaskExporter | None] = lambda target: None
     # The storage backend (31): `GET /health` and the `storage` field of a session.
     storage: StorageInfo = StorageInfo(StorageBackend.FILES.value)
-    # The sessions' playable audio (32): `GET /sessions/{id}/audio/{track}`; None: no audio.
-    audio: AudioTracks | None = None
+    # The sessions' audio (32): `GET /sessions/{id}/audio/{track}`, dropped by
+    # `DELETE /sessions/{id}`; None: no audio. `audio_cache`: the WAVs built from the database
+    # (`GET /health`, `DELETE /storage/cache`, 38); None: no cache (file backend).
+    audio: SessionAudio | None = None
+    audio_cache: AudioCache | None = None
+    # Config page (38): `GET /settings/options` lists and `POST /settings/test/{target}` checks.
+    setting_options: Callable[[], OptionLists] = lambda: OptionLists({}, {})
+    connection_check: Callable[[CheckTarget, Settings], CheckResult] = lambda target, settings: (
+        CheckResult(False, "unavailable")
+    )

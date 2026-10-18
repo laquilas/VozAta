@@ -48,7 +48,18 @@ class WavCache:
 
     def size(self) -> int:
         """Bytes used by the cache."""
-        return sum(path.stat().st_size for path in self._files())
+        return sum(_size(path) for path in self._files())
+
+    def clear(self) -> int:
+        """Delete every cached file (`DELETE /storage/cache`, phase 38); a file in use (a player,
+        the diarizer) is kept and logged. Returns the bytes freed."""
+        freed = 0
+        for path in self._files():
+            size = _size(path)
+            if _remove(path, logging.WARNING):
+                freed += size
+        self._drop_empty_folders()
+        return freed
 
     def drop(self, session_id: str) -> None:
         """Remove every cached file of a session (it was deleted)."""
@@ -72,6 +83,9 @@ class WavCache:
             size = path.stat().st_size
             if _remove(path):
                 total -= size
+        self._drop_empty_folders()
+
+    def _drop_empty_folders(self) -> None:
         for folder in self._root.iterdir() if self._root.is_dir() else ():
             if folder.is_dir() and not any(folder.iterdir()):
                 folder.rmdir()
@@ -82,10 +96,17 @@ class WavCache:
         return [path for path in self._root.glob("*/*") if path.is_file()]
 
 
-def _remove(path: Path) -> bool:
+def _remove(path: Path, level: int = logging.DEBUG) -> bool:
     try:
         path.unlink()
     except OSError as error:
-        _log.debug("Keeping the cached %s: %s", path, error)
+        _log.log(level, "Keeping the cached %s: %s", path, error)
         return False
     return True
+
+
+def _size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:  # deleted meanwhile
+        return 0

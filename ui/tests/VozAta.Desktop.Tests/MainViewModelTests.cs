@@ -193,6 +193,33 @@ public sealed class MainViewModelTests
         await viewModel.HistoryRefresh;
 
         Assert.Equal(3, _client.ListRequests.Count);
+        Assert.Equal(3, _client.DayRequests.Count); // the Meetings page follows (phase 36)
+    }
+
+    [Fact]
+    public async Task The_meetings_page_reloads_on_events_follows_the_language_and_deletes_before_closing()
+    {
+        var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9)); // today, local time
+        _client.Sessions.Add(new SessionSummary("20261016_090000", "done", started, null, 60, "pt", true));
+        var viewModel = await ReadyAsync();
+        Assert.Same(viewModel.Meetings, viewModel.Shell.Pages.Single(page => page.Key == ShellViewModel.Meetings).Page);
+        Assert.Single(_client.DayRequests);
+
+        await SendAsync(viewModel, new MinutesReadyEvent("20261016_090000"));
+        await viewModel.HistoryRefresh;
+        await SendAsync(viewModel, new ActionItemsReadyEvent("20261016_090000", 2));
+        await viewModel.HistoryRefresh;
+        Assert.Equal(3, _client.DayRequests.Count);
+
+        _localization.SetLanguage("es");
+        Assert.Equal("Esta semana", viewModel.Meetings.WeekLabel);
+
+        var row = viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single();
+        await viewModel.Meetings.DeleteCommand.ExecuteAsync(row);
+        Assert.Empty(_client.Deleted); // waiting for "Undo"
+        await viewModel.ShutdownAsync(TimeSpan.FromMilliseconds(10));
+
+        Assert.Equal(["20261016_090000"], _client.Deleted);
     }
 
     [Fact]

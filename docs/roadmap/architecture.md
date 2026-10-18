@@ -200,11 +200,17 @@ class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessio
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
     def folder(self, session_id: str) -> Path | None: ...  # the session folder (files); sqlite: None (32)
     def files(self, session_id: str) -> list[str] | None: ...  # idem
+    def list_range(self, start: datetime, end: datetime) -> list[str]: ...  # (36) started in [start, end), newest first
+    def speaker_count(self, session_id: str) -> int: ...  # (36) system:<n> speakers found by diarization
+    def delete(self, session_id: str) -> None: ...  # (36) sqlite: permanent (audio chunks cascade); files: folder to the Recycle Bin
+class Recycler(Protocol):             # (36) Send2TrashRecycler; tests: FakeRecycler (never the real bin)
+    def recycle(self, path: Path) -> None: ...
 class AudioTrackWriter(AudioSink, Protocol):  # AlignedWavWriter / SqliteTrackWriter; gaps and pauses become silence
     paused: bool; samples_written: int
 class AudioStore(Protocol):           # FileAudioStore (30), SqliteAudioStore (32)
     def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter: ...
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None: ...  # files: mixed.wav; sqlite: nothing (mixed on read)
+    def delete(self, session_id: str) -> None: ...  # (32) after DELETE /sessions/{id}: sqlite drops cached WAVs, reclaims space; files: nothing
 class AudioReader(Protocol):          # int16 mono samples
     def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray: ...
     def length(self, session_id: str, channel: Channel) -> int: ...
@@ -215,6 +221,8 @@ class PcmTrack(Protocol):             # a playable track (32): ChannelTrack, Mix
     def read(self, start: int, count: int) -> bytes: ...  # interleaved little-endian int16 frames
 class AudioTracks(Protocol):          # GET /sessions/{id}/audio/{track} (32)
     def track(self, session_id: str, track: AudioTrack) -> PcmTrack | None: ...  # None: no such audio
+class AudioCache(Protocol):           # (32) WavCache, OUTPUT_DIR/cache: GET /health size, DELETE /storage/cache (38)
+    def size(self) -> int: ...; def clear(self) -> int: ...  # clear skips files in use, returns bytes freed
 class SessionAudio(AudioStore, AudioReader, AudioTracks, Protocol): ...  # what RecordingSession gets
 class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository] (sqlite: audio only)
     def repair(self, session_id: str) -> float | None: ...  # recorded seconds if it holds audio; StoreRepairError
@@ -662,6 +670,14 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /settings`
 (masked), and `.env` is git-ignored.
 
+Each key is a `settings_fields.Field` (type, group, `applies`). Phase 38 adds `options_source`:
+the Config page offers `GET /settings/options` lists for `STT_PROVIDER` (`stt_providers`),
+`WHISPER_MODEL` / `WHISPER_CPU_MODEL` (`whisper_models`), `WHISPER_COMPUTE_TYPE`
+(`compute_types`), `WHISPER_DEVICE` / `DIARIZATION_DEVICE` (`devices`), `DIARIZATION_PROVIDER`,
+`TRANSLATION_PROVIDER`, `LLM_PROVIDER` and `OLLAMA_MODEL` (`ollama_models`). A value outside the
+list is still accepted (the page keeps it and flags it "not installed"); `config.py` stays the
+only validator.
+
 ## 10. Internationalization
 
 - Supported app languages: `en` (default), `pt-BR`, `es`. Adding one = new locale files in the
@@ -821,7 +837,7 @@ graph LR
   SV --> R[Recorder: RecorderPageViewModel]
   SV --> M[Meetings: MeetingsPageViewModel → HistoryViewModel]
   SV --> A[Ask: AskPageViewModel → AskViewModel]
-  SV --> C[Config: ConfigPageViewModel → SettingsViewModel]
+  SV --> C[Config: ConfigPageViewModel → SettingsViewModel, StorageViewModel, AboutViewModel]
   R --> S[RecordingSessionService]
   SV --> S
   T[TrayViewModel] --> R
@@ -838,3 +854,12 @@ graph LR
 - Notifications are toasts over the page area; the recovery card and a "recording — open the
   recorder" banner sit on top of it.
 - `ui.json` also keeps `sidebar_collapsed`.
+- Config page (phase 38): a section list (the `GET /settings` groups, then Desktop app,
+  Vocabulary, Storage and About), a search box that filters keys by label, key name and help text
+  across sections, and one card per section. Editors stay generated from the schema: `choice` →
+  combo box, `options_source` → editable combo box fed by `GET /settings/options` (a value outside
+  the list is kept and flagged "not installed"), `path` → text + Browse (`IPathPicker`), `url` →
+  validated while typing (blocks Save), secrets → "Replace" / "Remove" (the stored value never
+  reaches the page). "Restart needed" and "Changed" badges, a sticky Save / Discard bar while
+  dirty, and "Test" buttons next to `OLLAMA_URL`, `OPENAI_STT_URL`, `HF_TOKEN`, `AZDO_PAT` and
+  `GITHUB_TOKEN` (`POST /settings/test/{target}`, saved settings, run only on click).

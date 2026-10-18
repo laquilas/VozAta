@@ -76,7 +76,7 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** ready for PR
-- **Updated:** 2026-10-17 23:30
+- **Updated:** 2026-10-18 00:30
 - **Next step:** open the PR; before merge the user runs parts B and C of the manual check
   recipe below on the reference machine (C last, then restart Windows Audio).
 
@@ -155,6 +155,29 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   constructor parameter of `SessionDetailViewModel` (default under `%TEMP%`), so
   `HistoryViewModel` (which phase 36 rewrites) is unchanged. "Open folder" stays hidden when
   `folder` is null (phase 31). `SessionDetail.Files` / `Folder` are nullable.
+- Merge of `origin/main` with phases 36 and 38 (after PR #49 was opened):
+  - Phase 38 had also added `storage.size_bytes` / `audio_cache_bytes` to `GET /health` and
+    `DELETE /storage/cache`. One implementation each is kept: `size_bytes` = phase 38's
+    `storage/usage.database_size` (database + `-wal` + `-shm`); the cache is the `WavCache` of
+    the SQLite audio store, exposed as `ApiContainer.audio_cache` (new `AudioCache` port:
+    `size()`, `clear()`), the same instance the store writes to. `audio_cache_bytes` is `0`
+    (not null) for the file backend, as phase 38 defined it. `DELETE /storage/cache` calls
+    `WavCache.clear()`: every cached WAV is deleted except files in use (skipped, logged, not
+    counted); `freed_bytes` counts only what was deleted; the file backend frees 0.
+    `usage.clear_directory` and `usage.AUDIO_CACHE_DIR` were removed, as was the phase 32
+    `StorageInfo.audio_cache` field.
+  - Phase 36's `DELETE /sessions/{id}`: the SQLite repository's `delete` no longer removes a
+    folder (there is none); the chunks cascade with the row. The route then calls the new
+    `AudioStore.delete(id)` port method: `SqliteAudioStore` drops the cached WAVs and reclaims
+    the space in the background; `FileAudioStore.delete` does nothing (the repository sends the
+    folder, WAVs included, to the Recycle Bin).
+  - Phase 36's Meetings row "Play" read `folder` / `files`; it now uses the same download as
+    the detail view (`Services/AudioPlayback.cs`, shared): enabled by `audio.mixed`, downloads
+    `GET /sessions/{id}/audio/mixed` to `%TEMP%\VozAta\audio` and opens it. The detail view
+    (now `Views/SessionDetailView.axaml`) keeps its Play buttons and hides "Open folder" when
+    `folder` is null.
+  - After the merge: engine 1642 passed (3 deselected), coverage 99.88 %, ruff clean; UI 634
+    passed, `dotnet format --verify-no-changes` clean.
 - Checks run in the phase session: full engine suite 1499 passed (3 deselected), coverage
   99.87 % (new modules 100 % of lines), `ruff check` / `ruff format --check` clean; UI suite
   526 passed (resource parity included), `dotnet format --verify-no-changes` clean.

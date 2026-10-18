@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import wave
+from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from tests.fakes import FakeAudioMixer, FakeLocalizer
+from tests.fakes import FakeAudioMixer, FakeLocalizer, FakeRecycler
 from tests.storage.audio_contract import RATE, AudioStoreContract
 from tests.storage.repository_contract import RAW, STARTED, RepositoryContract
 from vozata.domain import ActionItem, AudioTrack, Channel, Translation
@@ -24,12 +25,14 @@ from vozata.ports import (
 from vozata.storage import action_items
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.folder import open_session_folder
+from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
 
 
 def _repository(tmp_path: Path) -> FileSessionRepository:
-    return FileSessionRepository(SessionStore(tmp_path / "recordings"))
+    recycler = FakeRecycler(tmp_path / "recycle-bin")
+    return FileSessionRepository(SessionStore(tmp_path / "recordings"), recycler)
 
 
 class TestFileSessionRepository(RepositoryContract):
@@ -59,6 +62,16 @@ class TestFileAudioStore(AudioStoreContract):
         assert mixed_id == session_id
         assert destination == audio.materialize_wav(session_id, AudioTrack.MIXED)
         assert destination.name == "mixed.wav"
+
+    def test_delete_leaves_the_wavs_to_the_repository(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        wav = audio.materialize_wav(session_id, AudioTrack.MIC)
+        wav.write_bytes(b"RIFF")
+
+        audio.delete(session_id)
+
+        assert wav.exists()  # the folder goes to the Recycle Bin with the session (phase 36)
 
     def test_a_wav_that_is_not_16_bit_is_refused_as_a_track(
         self, audio: SessionAudio, session_id: str
@@ -233,3 +246,63 @@ def test_a_session_folder_on_the_command_line_opens_its_parent(tmp_path: Path) -
     assert folder.minutes_file == folder.path / "minutes.md"
     assert folder.diarized_file == folder.path / "transcript.diarized.jsonl"
     assert folder.audio.materialize_wav(session_id, Channel.MIC) == folder.path / "mic.wav"
+
+
+# Delete (phase 36): the folder goes to the Recycle Bin, never deleted permanently
+
+
+def test_delete_moves_the_session_folder_to_the_recycle_bin(tmp_path: Path) -> None:
+    recycler = FakeRecycler(tmp_path / "recycle-bin")
+    repository = FileSessionRepository(SessionStore(tmp_path / "recordings"), recycler)
+    session_id = repository.create(STARTED)
+    repository.write_meta(session_id, {"id": session_id, "status": "done"})
+    folder = repository.paths(session_id).root
+
+    repository.delete(session_id)
+
+    assert recycler.recycled == [folder]
+    assert not folder.exists()
+    assert (tmp_path / "recycle-bin" / f"0-{session_id}" / "session.json").is_file()
+
+
+def test_delete_without_a_recycle_bin_keeps_the_folder(tmp_path: Path) -> None:
+    repository = FileSessionRepository(SessionStore(tmp_path / "recordings"))
+    session_id = repository.create(STARTED)
+
+    with pytest.raises(RuntimeError, match="Recycle Bin"):
+        repository.delete(session_id)
+    assert repository.paths(session_id).root.is_dir()
+
+
+def test_a_recycle_bin_failure_keeps_the_folder(tmp_path: Path) -> None:
+    recycler = FakeRecycler(tmp_path / "recycle-bin")
+    recycler.error = PermissionError("in use")
+    repository = FileSessionRepository(SessionStore(tmp_path / "recordings"), recycler)
+    session_id = repository.create(STARTED)
+
+    with pytest.raises(PermissionError):
+        repository.delete(session_id)
+    assert repository.paths(session_id).root.is_dir()
+
+
+def test_list_range_skips_unreadable_metadata(tmp_path: Path) -> None:
+    repository = _repository(tmp_path)
+    broken = repository.create(STARTED)
+    repository.paths(broken).meta.write_text("{not json", encoding="utf-8")
+    good = repository.create(STARTED + timedelta(minutes=1))
+    repository.write_meta(good, {"id": good, "started_at": STARTED.isoformat()})
+
+    found = repository.list_range(STARTED - timedelta(days=1), STARTED + timedelta(days=1))
+
+    assert found == [good]
+
+
+def test_the_send2trash_recycler_sends_the_absolute_path(tmp_path: Path) -> None:
+    sent: list[str] = []
+    folder = tmp_path / "20261015_202358"
+    folder.mkdir()
+
+    Send2TrashRecycler(sent.append).recycle(folder)
+
+    assert sent == [str(folder.resolve())]
+    assert folder.is_dir()  # the fake did not move it: no real Recycle Bin in unit tests

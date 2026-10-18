@@ -85,9 +85,9 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | todo |
 | 34 | [UI design system](phases/34-ui-design-system.md) | 13 | done |
 | 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | done |
-| 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | todo |
+| 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | done |
 | 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | todo |
-| 38 | [Config page redesign](phases/38-config-page.md) | 35 | todo |
+| 38 | [Config page redesign](phases/38-config-page.md) | 35 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·

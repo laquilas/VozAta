@@ -1,0 +1,370 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             xmlns:views="using:VozAta.Desktop.Views"
+             x:Class="VozAta.Desktop.Views.MeetingsPage"
+             x:DataType="vm:MeetingsPageViewModel">
+
+  <!--
+    Meetings by day (phase 36), like Toggl Track's time entries: the week and its total on top,
+    day groups with their totals, compact rows with actions on hover. The detail of the open
+    meeting stays on the right until phase 37.
+  -->
+  <UserControl.Styles>
+    <Style Selector="Border.meeting-row">
+      <Setter Property="CornerRadius" Value="{StaticResource Radius.Small}" />
+      <Setter Property="Padding" Value="8,2" />
+    </Style>
+    <Style Selector="Border.meeting-row:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+    </Style>
+    <Style Selector="Border.meeting-row.selected">
+      <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+    </Style>
+    <!--
+      Row actions appear over the time and duration on hover, selection or keyboard focus (like
+      Toggl); faded out they take no clicks but stay in the UI Automation tree.
+    -->
+    <Style Selector="Border.meeting-row StackPanel.row-actions">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+      <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+    </Style>
+    <Style Selector="Border.meeting-row:pointerover StackPanel.row-actions, Border.meeting-row.selected StackPanel.row-actions, Border.meeting-row.export-open StackPanel.row-actions, Border.meeting-row:focus-within StackPanel.row-actions">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="IsHitTestVisible" Value="True" />
+    </Style>
+    <Style Selector="Border.meeting-row.selected StackPanel.row-actions">
+      <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+    </Style>
+    <Style Selector="Button.meeting-open">
+      <Setter Property="Padding" Value="4,6" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+    <Style Selector="Border.day-card">
+      <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{StaticResource Radius.Medium}" />
+      <Setter Property="Padding" Value="4,0,4,4" />
+      <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+    <!-- The live meeting's dot pulses -->
+    <Style Selector="Ellipse.pulse">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" IterationCount="INFINITE" PlaybackDirection="Alternate">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.25" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <!-- One meeting: title (or "Untitled meeting"), tags, actions, speakers, start–end, duration -->
+    <DataTemplate x:Key="MeetingRowTemplate" x:DataType="vm:MeetingRow">
+      <Border Classes="meeting-row" Classes.selected="{Binding IsSelected}" Classes.export-open="{Binding IsExportOpen}">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+          <Panel>
+            <Button Classes="ghost meeting-open" IsVisible="{Binding !IsEditing}"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).OpenCommand}"
+                    CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding AccessibleName}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Classes="state-dot small recording pulse" VerticalAlignment="Center"
+                         IsVisible="{Binding IsLive}" />
+                <TextBlock Text="{Binding DisplayTitle}" FontWeight="SemiBold" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" MaxWidth="360"
+                           Classes.secondary="{Binding IsUntitled}" />
+                <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="4" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <Border Classes="tag">
+                        <TextBlock Text="{Binding}" />
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Button>
+            <!-- Inline rename: Enter saves (PATCH), Esc cancels -->
+            <TextBox IsVisible="{Binding IsEditing}" Text="{Binding EditTitle}" Margin="0,2"
+                     PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Untitled]}"
+                     AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingTitleEditor]}">
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter"
+                            Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).SaveRenameCommand}"
+                            CommandParameter="{Binding}" />
+                <KeyBinding Gesture="Escape"
+                            Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).CancelRenameCommand}"
+                            CommandParameter="{Binding}" />
+              </TextBox.KeyBindings>
+            </TextBox>
+          </Panel>
+
+          <!-- Speakers found by diarization -->
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center"
+                      IsVisible="{Binding HasSpeakers}" Background="Transparent"
+                      ToolTip.Tip="{Binding SpeakersText}" AutomationProperties.Name="{Binding SpeakersText}">
+            <PathIcon Classes="inline" Data="{StaticResource Icon.People}" Width="14" Height="14" />
+            <TextBlock Text="{Binding SpeakerCount}" Classes="secondary tabular" />
+          </StackPanel>
+
+          <TextBlock Grid.Column="2" Text="{Binding TimeRange}" Classes="secondary tabular" VerticalAlignment="Center"
+                     TextAlignment="Right" Margin="12,0,0,0" />
+
+          <Panel Grid.Column="3" MinWidth="70" Margin="12,0,4,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Duration}" Classes="tabular" FontWeight="SemiBold" TextAlignment="Right"
+                       IsVisible="{Binding !IsLive}" />
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Session.Elapsed}"
+                       Classes="tabular" FontWeight="SemiBold" TextAlignment="Right" IsVisible="{Binding IsLive}" />
+          </Panel>
+
+          <!-- Rename: save / cancel, over the times -->
+          <StackPanel Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="2" Margin="6,0,0,0"
+                      HorizontalAlignment="Right" VerticalAlignment="Center"
+                      Background="{DynamicResource Brush.Surface}" IsVisible="{Binding IsEditing}">
+            <Button Classes="primary" Padding="10,4"
+                    Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingSaveTitle]}"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).SaveRenameCommand}"
+                    CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingSaveTitle]}" />
+            <Button Classes="icon"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).CancelRenameCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingCancelRename]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingCancelRename]}">
+              <PathIcon Data="{StaticResource Icon.Dismiss}" />
+            </Button>
+          </StackPanel>
+
+          <!-- Actions on hover, over the times: play (mixed), export, rename, delete -->
+          <StackPanel Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="2" Classes="row-actions"
+                      HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
+            <ItemsControl ItemsSource="{Binding Exports}" IsVisible="{Binding IsExportOpen}" VerticalAlignment="Center">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MeetingExport">
+                  <Button Padding="8,2" Content="{Binding Label}"
+                          Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).ExportCommand}"
+                          CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding Label}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Classes="icon"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).PlayCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingPlay]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingPlay]}">
+              <PathIcon Data="{StaticResource Icon.Play}" />
+            </Button>
+            <Button Classes="icon"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).ToggleExportCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingExport]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingExport]}">
+              <PathIcon Data="{StaticResource Icon.Export}" />
+            </Button>
+            <Button Classes="icon"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).BeginRenameCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingRename]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingRename]}">
+              <PathIcon Data="{StaticResource Icon.Edit}" />
+            </Button>
+            <Button Classes="icon" IsVisible="{Binding CanDelete}"
+                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).DeleteCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDelete]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDelete]}">
+              <PathIcon Data="{StaticResource Icon.Delete}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid ColumnDefinitions="*,Auto">
+    <DockPanel Margin="{StaticResource Inset.Page}">
+      <!-- Header: week navigation, week total, search -->
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,8,Auto" Margin="0,0,0,12">
+        <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+          <Button Classes="icon" Command="{Binding PreviousWeekCommand}"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsPreviousWeek]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsPreviousWeek]}">
+            <PathIcon Data="{StaticResource Icon.ChevronLeft}" />
+          </Button>
+          <Button Classes="icon" Command="{Binding NextWeekCommand}"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsNextWeek]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsNextWeek]}">
+            <PathIcon Data="{StaticResource Icon.ChevronRight}" />
+          </Button>
+          <TextBlock Text="{Binding WeekLabel}" Classes="subtitle" VerticalAlignment="Center" Margin="8,0,0,0" />
+          <TextBlock Text="{Binding WeekTotal}" Classes="subtitle tabular" VerticalAlignment="Center" Margin="12,0,0,0"
+                     ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsWeekTotal]}" />
+          <Button Classes="link" Margin="12,0,0,0" VerticalAlignment="Center" IsVisible="{Binding !IsThisWeek}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsThisWeek]}"
+                  Command="{Binding ThisWeekCommand}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsThisWeek]}" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+          <TextBox Width="220" Classes="clearButton" Text="{Binding Search.Query}"
+                   PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchPlaceholder]}"
+                   AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchPlaceholder]}" />
+          <Button Classes="icon" Command="{Binding RefreshCommand}"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}">
+            <PathIcon Data="{StaticResource Icon.Refresh}" />
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <!-- Undo toast (file backend) or the confirmation of a permanent delete -->
+      <Border DockPanel.Dock="Bottom" Classes="toast" HorizontalAlignment="Left" Margin="0,8,0,0" MaxWidth="520"
+              IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="icon" Margin="8,0,0,0"
+                  Command="{Binding DismissToastCommand}"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Dismiss]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Dismiss]}">
+            <PathIcon Data="{StaticResource Icon.Dismiss}" />
+          </Button>
+          <Button DockPanel.Dock="Right" Classes="link" Margin="12,0,0,0" IsVisible="{Binding CanUndo}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingUndo]}"
+                  Command="{Binding UndoCommand}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingUndo]}" />
+          <TextBlock Text="{Binding Toast}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </DockPanel>
+      </Border>
+
+      <StackPanel DockPanel.Dock="Top" Spacing="4">
+        <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap" Margin="0,0,0,8"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap" Margin="0,0,0,8"
+                   IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </StackPanel>
+
+      <Panel>
+        <!-- Search: the matching meetings with their matching lines -->
+        <DockPanel IsVisible="{Binding Search.IsActive}">
+          <TextBlock DockPanel.Dock="Top" Margin="8" Classes="hint"
+                     Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Searching]}"
+                     IsVisible="{Binding Search.IsSearching}" />
+          <TextBlock DockPanel.Dock="Top" Margin="8" Classes="error" TextWrapping="Wrap"
+                     Text="{Binding Search.Error}"
+                     IsVisible="{Binding Search.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <TextBlock DockPanel.Dock="Top" Margin="8" Classes="secondary" TextWrapping="Wrap"
+                     Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchNoResults]}"
+                     IsVisible="{Binding Search.NoResults}" />
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Matches}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MeetingMatch">
+                  <Border Classes="day-card" Padding="4">
+                    <StackPanel>
+                      <Button Classes="ghost meeting-open"
+                              Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).OpenMatchCommand}"
+                              CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding Title}">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Classes.secondary="{Binding IsUntitled}" />
+                          <TextBlock Text="{Binding Details}" Classes="secondary small tabular" />
+                        </StackPanel>
+                      </Button>
+                      <ItemsControl ItemsSource="{Binding Snippets}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:SearchResultRow">
+                            <Button Classes="ghost meeting-open" Margin="12,0,0,0"
+                                    Command="{Binding $parent[UserControl].((vm:MeetingsPageViewModel)DataContext).Search.OpenCommand}"
+                                    CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding AccessibleName}">
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Time}" Classes="secondary tabular" />
+                                <TextBlock Text="{Binding Label}" Classes="secondary" />
+                                <TextBlock TextWrapping="Wrap" views:SnippetText.Parts="{Binding Parts}" />
+                              </StackPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+
+        <!-- The weeks: live meeting pinned on top, then day groups; older weeks load near the end -->
+        <ScrollViewer IsVisible="{Binding !Search.IsActive}" views:InfiniteScroll.Command="{Binding LoadOlderCommand}">
+          <StackPanel>
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Loading]}" Classes="secondary"
+                       Margin="8" IsVisible="{Binding IsLoading}" />
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsEmpty]}"
+                       Classes="secondary" TextWrapping="Wrap" Margin="8" IsVisible="{Binding IsEmpty}" />
+
+            <Border Classes="day-card" Padding="4" IsVisible="{Binding Live, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <ContentControl Content="{Binding Live}" ContentTemplate="{StaticResource MeetingRowTemplate}" />
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Weeks}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MeetingWeek">
+                  <StackPanel>
+                    <Grid ColumnDefinitions="*,Auto" Margin="4,12,12,8" IsVisible="{Binding ShowsHeader}">
+                      <TextBlock Text="{Binding Label}" Classes="subtitle" />
+                      <TextBlock Grid.Column="1" Text="{Binding Total}" Classes="subtitle tabular" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Days}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MeetingDay">
+                          <Border Classes="day-card">
+                            <StackPanel>
+                              <Grid ColumnDefinitions="*,Auto" Margin="8,8,12,4">
+                                <TextBlock Text="{Binding Label}" Classes="secondary" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Text="{Binding Total}" Classes="secondary tabular" FontWeight="SemiBold" />
+                              </Grid>
+                              <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource MeetingRowTemplate}" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button HorizontalAlignment="Center" Margin="0,4,0,12" IsVisible="{Binding HasEarlier}"
+                    Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsLoadOlder]}"
+                    Command="{Binding LoadOlderCommand}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingsLoadOlder]}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Panel>
+    </DockPanel>
+
+    <!-- The open meeting (the history detail until phase 37) -->
+    <Border Grid.Column="1" Width="460" Padding="16" BorderThickness="1,0,0,0"
+            BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Surface}"
+            IsVisible="{Binding History.Detail, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <views:SessionDetailView DataContext="{Binding History.Detail}" />
+    </Border>
+  </Grid>
+</UserControl>

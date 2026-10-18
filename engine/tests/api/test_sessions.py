@@ -153,6 +153,9 @@ def test_list_sessions_newest_first_with_paging(api: Api) -> None:
         "language": "en",
         "has_minutes": False,
         "title": None,
+        "speaker_count": 0,
+        "has_action_items": False,
+        "template": None,
     }
 
 

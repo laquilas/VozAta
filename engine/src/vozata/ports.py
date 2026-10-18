@@ -398,6 +398,30 @@ class SessionRepository(Protocol):
         """Names of the files in the session folder, sorted; None without a folder."""
         ...
 
+    # Meetings page (phase 36)
+
+    def list_range(self, start: datetime, end: datetime) -> list[str]:
+        """Ids of the sessions with metadata that started in `[start, end)` (aware datetimes),
+        newest first; a session without `started_at` starts at the local time of its id."""
+        ...
+
+    def speaker_count(self, session_id: str) -> int:
+        """How many speakers diarization found (0 before diarization or without speakers)."""
+        ...
+
+    def delete(self, session_id: str) -> None:
+        """Delete a session and everything of it (phase 36): permanently in the database; the
+        file backend moves the session folder to the Recycle Bin. `SessionNotFoundError` when
+        there is no such session."""
+        ...
+
+
+@runtime_checkable
+class Recycler(Protocol):
+    """Moves a file or folder to the Recycle Bin (phase 36); never deletes it permanently."""
+
+    def recycle(self, path: Path) -> None: ...
+
 
 @runtime_checkable
 class AudioTrackWriter(AudioSink, Protocol):
@@ -417,6 +441,10 @@ class AudioStore(Protocol):
 
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None:
         """Mix the finished tracks with `mixer` and keep the result (stop step 3)."""
+        ...
+
+    def delete(self, session_id: str) -> None:
+        """Drop what this store keeps of a deleted session beyond the repository (phase 32)."""
         ...
 
 
@@ -458,6 +486,17 @@ class AudioTracks(Protocol):
 
     def track(self, session_id: str, track: AudioTrack) -> PcmTrack | None:
         """The track, or None when the session has no such audio."""
+        ...
+
+
+@runtime_checkable
+class AudioCache(Protocol):
+    """Files built from stored audio (phase 32): measured and cleared from Config → Storage."""
+
+    def size(self) -> int: ...
+
+    def clear(self) -> int:
+        """Delete what is not in use; returns the bytes freed."""
         ...
 
 

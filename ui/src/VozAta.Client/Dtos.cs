@@ -16,7 +16,8 @@ public sealed record EngineHealth(
     string Version,
     GpuStatus Gpu,
     SttStatus Stt,
-    LlmStatus Llm);
+    LlmStatus Llm,
+    StorageStatus? Storage = null);
 
 public sealed record AudioDevice(int Id, string Name, int SampleRate, int Channels)
 {
@@ -60,7 +61,10 @@ public sealed record SessionSummary(
     double? DurationSeconds,
     string? Language,
     bool HasMinutes,
-    string? Title = null);
+    string? Title = null,
+    int SpeakerCount = 0,
+    bool HasActionItems = false,
+    string? Template = null);
 
 public sealed record SessionPage(IReadOnlyList<SessionSummary> Items, int Total);
 
@@ -142,7 +146,8 @@ public sealed record SettingSchema(
     IReadOnlyList<string>? Choices,
     bool Secret,
     string Group = "general",
-    string Applies = "next_session")
+    string Applies = "next_session",
+    string? OptionsSource = null)
 {
     /// <summary>Read once when the engine starts: saving it needs an engine restart.</summary>
     public bool NeedsRestart => Applies == "restart";

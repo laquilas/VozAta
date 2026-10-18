@@ -308,10 +308,11 @@ def test_build_api_container_wires_real_providers(
     assert container.llm_reachable() is False
     assert container.store.list_sessions() == []
     assert isinstance(container.search_index, SqliteSearch)
-    assert container.storage == StorageInfo(
-        "sqlite", tmp_path / "recordings" / "vozata.db", None, tmp_path / "recordings" / "cache"
-    )
+    assert container.storage == StorageInfo("sqlite", tmp_path / "recordings" / "vozata.db")
     assert isinstance(container.audio, SqliteAudioStore)
+    assert (
+        container.audio_cache is container.audio.cache
+    )  # one cache: health, DELETE /storage/cache
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
     assert built == [
         {

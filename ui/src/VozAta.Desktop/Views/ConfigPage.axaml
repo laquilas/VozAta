@@ -1,0 +1,416 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             x:Class="VozAta.Desktop.Views.ConfigPage"
+             x:DataType="vm:ConfigPageViewModel">
+
+  <!-- Config page (phase 38): sections on the left, search on top, the section's cards on the right,
+       a sticky Save / Discard bar and the restart banner at the bottom. -->
+  <DockPanel Margin="{StaticResource Inset.Page}">
+    <!-- Title and search across every section -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,4,0,12">
+      <TextBox DockPanel.Dock="Right" Width="320" Text="{Binding SearchText}"
+               PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigSearch]}"
+               AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigSearch]}">
+        <TextBox.InnerLeftContent>
+          <PathIcon Data="{StaticResource Icon.Search}" Width="14" Height="14" Margin="8,0,0,0" />
+        </TextBox.InnerLeftContent>
+      </TextBox>
+      <TextBlock Classes="h2" VerticalAlignment="Center"
+                 Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NavConfig]}" />
+    </DockPanel>
+
+    <!-- Sticky Save / Discard bar (while something changed) and the restart banner -->
+    <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0"
+                DataContext="{Binding Settings}" x:DataType="vm:SettingsViewModel">
+      <Border Classes="card"
+              IsVisible="{Binding IsDirty}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+            <Button Command="{Binding DiscardCommand}"
+                    Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingsDiscard]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingsDiscard]}" />
+            <Button Classes="primary" Command="{Binding SaveCommand}"
+                    Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingsSave]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingsSave]}" />
+          </StackPanel>
+          <TextBlock VerticalAlignment="Center" FontWeight="SemiBold"
+                     Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigUnsaved]}" />
+        </DockPanel>
+      </Border>
+      <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
+                 IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                 IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <Border Classes="banner warning" IsVisible="{Binding !!RestartKeys.Count}">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center"
+                  Command="{Binding RestartEngineCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RestartEngine]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RestartEngine]}" />
+          <StackPanel>
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingsRestartRequired]}" />
+            <ItemsControl ItemsSource="{Binding RestartKeys}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding StringFormat='• {0}'}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="200,*">
+      <!-- Sections: the engine groups, then the app's own -->
+      <ListBox ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}" Background="Transparent"
+               Margin="0,0,16,0"
+               AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigSections]}">
+        <ListBox.Styles>
+          <Style Selector="ListBoxItem" x:DataType="vm:ConfigSection">
+            <Setter Property="IsVisible" Value="{Binding IsVisible}" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+            <Setter Property="Padding" Value="12,8" />
+          </Style>
+        </ListBox.Styles>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ConfigSection">
+            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <ScrollViewer Grid.Column="1">
+        <StackPanel Spacing="16" Margin="0,0,12,0">
+          <TextBlock Classes="secondary" IsVisible="{Binding HasNoResults}"
+                     Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigNoResults]}" />
+
+          <!-- Desktop app (stored by the app in ui.json; the language is also APP_LANGUAGE) -->
+          <Border Classes="card" IsVisible="{Binding ShowDesktop}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="subtitle"
+                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigSection_desktop]}" />
+              <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[InterfaceLanguage]}" />
+                <ComboBox Grid.Column="1" MinWidth="220"
+                          ItemsSource="{Binding $parent[Window].((vm:MainViewModel)DataContext).AppLanguages}"
+                          SelectedItem="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectedAppLanguage}"
+                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[InterfaceLanguage]}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChoiceOption">
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Grid.Row="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Theme]}" />
+                <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="220"
+                          ItemsSource="{Binding $parent[Window].((vm:MainViewModel)DataContext).Appearance.Themes}"
+                          SelectedItem="{Binding $parent[Window].((vm:MainViewModel)DataContext).Appearance.SelectedTheme}"
+                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Theme]}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChoiceOption">
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <CheckBox Grid.Row="2" Grid.Column="1"
+                          IsChecked="{Binding $parent[Window].((vm:MainViewModel)DataContext).Tray.MinimizeToTray}"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinimizeToTray]}" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- Vocabulary (phase 19): the glossary file, saved on every change -->
+          <Border Classes="card" IsVisible="{Binding ShowVocabulary}">
+            <StackPanel Spacing="8"
+                        DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Vocabulary}"
+                        x:DataType="vm:VocabularyViewModel">
+              <TextBlock Classes="subtitle"
+                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyTitle]}" />
+              <TextBlock Classes="caption" TextWrapping="Wrap"
+                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyHelp]}" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding AddCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyAdd]}" />
+                <TextBox Text="{Binding NewTerm}"
+                         PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyNewTerm]}"
+                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyNewTerm]}" />
+              </DockPanel>
+              <TextBlock Classes="secondary" IsVisible="{Binding IsEmpty}"
+                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyEmpty]}" />
+              <ItemsControl ItemsSource="{Binding Terms}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <Border Margin="0,0,6,6" Classes="tag term">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                        <Button Classes="icon small"
+                                Command="{Binding $parent[ItemsControl].((vm:VocabularyViewModel)DataContext).RemoveCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyRemove]}"
+                                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyRemove]}">
+                          <PathIcon Data="{StaticResource Icon.Dismiss}" />
+                        </Button>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding ImportCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyImport]}" />
+                <TextBox Text="{Binding ImportText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                         PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyImportHint]}"
+                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VocabularyImport]}" />
+              </DockPanel>
+              <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
+                         IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                         IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+          </Border>
+
+          <!-- Storage (phases 31, 32, 38) -->
+          <Border Classes="card" IsVisible="{Binding ShowStorage}">
+            <StackPanel Spacing="10" DataContext="{Binding Storage}" x:DataType="vm:StorageViewModel">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="ghost" Command="{Binding RefreshCommand}"
+                        ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageRefresh]}"
+                        AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageRefresh]}">
+                  <PathIcon Data="{StaticResource Icon.Refresh}" Width="14" Height="14" />
+                </Button>
+                <TextBlock Classes="subtitle"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigSection_storage]}" />
+              </DockPanel>
+              <Border Classes="banner warning" IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" />
+              </Border>
+              <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+                <TextBlock FontWeight="SemiBold" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageBackend]}" />
+                <TextBlock Grid.Column="1" Text="{Binding BackendText}" />
+
+                <TextBlock Grid.Row="1" FontWeight="SemiBold" VerticalAlignment="Center"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageDatabase]}" />
+                <DockPanel Grid.Row="1" Grid.Column="1">
+                  <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding OpenFolderCommand}"
+                          IsVisible="{Binding HasDatabase}"
+                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageOpenFolder]}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
+                      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageOpenFolder]}" />
+                    </StackPanel>
+                  </Button>
+                  <TextBlock Text="{Binding DatabasePath}" VerticalAlignment="Center" TextWrapping="Wrap" Classes="secondary"
+                             IsVisible="{Binding HasDatabase}" />
+                  <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageNoDatabase]}"
+                             VerticalAlignment="Center" Classes="secondary" IsVisible="{Binding !HasDatabase}" />
+                </DockPanel>
+
+                <TextBlock Grid.Row="2" FontWeight="SemiBold"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageDatabaseSize]}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DatabaseSizeText}" Classes="tabular" />
+
+                <StackPanel Grid.Row="3" Spacing="2" Margin="0,0,16,0">
+                  <TextBlock FontWeight="SemiBold" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageAudioCache]}" />
+                  <TextBlock Classes="caption" TextWrapping="Wrap"
+                             Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageAudioCacheHelp]}" />
+                </StackPanel>
+                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Top">
+                  <TextBlock Text="{Binding CacheSizeText}" Classes="tabular" VerticalAlignment="Center" />
+                  <Button Classes="danger" Command="{Binding ClearCacheCommand}"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageClearCache]}"
+                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[StorageClearCache]}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
+                         IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                         IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+          </Border>
+
+          <!-- About: versions, engine status (GPU, models) and licenses -->
+          <Border Classes="card" IsVisible="{Binding ShowAbout}">
+            <StackPanel Spacing="10" DataContext="{Binding About}" x:DataType="vm:AboutViewModel">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" VerticalAlignment="Top" Command="{Binding Health.CheckAgainCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[CheckAgain]}"
+                        AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[CheckAgain]}" />
+                <TextBlock Classes="subtitle"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConfigSection_about]}" />
+              </DockPanel>
+              <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <TextBlock FontWeight="SemiBold" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AboutAppVersion]}" />
+                <TextBlock Grid.Column="1" Text="{Binding AppVersion}" Classes="tabular" />
+                <TextBlock Grid.Row="1" FontWeight="SemiBold" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AboutEngineVersion]}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Health.EngineVersion}" Classes="tabular" />
+                <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HealthTitle]}" />
+                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="2">
+                  <TextBlock Text="{Binding Health.GpuText}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Health.SpeechText}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Health.MinutesText}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Health.Error}" Classes="error" TextWrapping="Wrap"
+                             IsVisible="{Binding Health.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock FontWeight="SemiBold" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AboutLicenses]}" />
+              <ItemsControl ItemsSource="{Binding Licenses}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LicenseLink">
+                    <Button Classes="link" Margin="0,0,16,4" Content="{Binding Name}"
+                            Command="{Binding $parent[ItemsControl].((vm:AboutViewModel)DataContext).OpenLinkCommand}"
+                            CommandParameter="{Binding}" ToolTip.Tip="{Binding Url}"
+                            AutomationProperties.Name="{Binding Name}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- Engine groups: the selected one, or every match while searching; one card each -->
+          <ItemsControl ItemsSource="{Binding VisibleGroups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SettingGroupViewModel">
+                <Border Classes="card" Margin="0,0,0,16">
+                  <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding Title}" Classes="subtitle" />
+                    <ItemsControl ItemsSource="{Binding Editors}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SettingEditorViewModel">
+                          <Grid ColumnDefinitions="260,*" Margin="0,0,0,14" IsVisible="{Binding IsVisible}">
+                            <StackPanel Spacing="4" Margin="0,0,16,0">
+                              <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Key}" Classes="tiny secondary" />
+                              <WrapPanel>
+                                <Border Classes="tag" Margin="0,0,4,4" IsVisible="{Binding NeedsRestart}">
+                                  <TextBlock Classes="warning"
+                                             Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingsNeedsRestart]}" />
+                                </Border>
+                                <Border Classes="tag term" Margin="0,0,4,4" IsVisible="{Binding IsDirty}">
+                                  <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingChanged]}" />
+                                </Border>
+                                <Border Classes="tag" Margin="0,0,4,4" IsVisible="{Binding IsNotInstalled}">
+                                  <TextBlock Classes="error"
+                                             Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingNotInstalled]}" />
+                                </Border>
+                              </WrapPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                              <TextBox Text="{Binding TextValue}" IsVisible="{Binding IsText}"
+                                       AutomationProperties.Name="{Binding Label}" />
+
+                              <!-- Secret: never shown; Replace opens an empty password box -->
+                              <StackPanel Spacing="6" IsVisible="{Binding IsSecret}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                  <TextBlock Text="{Binding SecretStatus}" VerticalAlignment="Center" Classes="secondary" />
+                                  <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SecretReplace]}"
+                                          Command="{Binding ReplaceSecretCommand}"
+                                          IsVisible="{Binding HasStoredSecret}"
+                                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SecretReplace]}" />
+                                  <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SecretRemove]}"
+                                          Command="{Binding RemoveSecretCommand}"
+                                          IsVisible="{Binding HasStoredSecret}"
+                                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SecretRemove]}" />
+                                  <Button Classes="link" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SecretKeep]}"
+                                          Command="{Binding KeepSecretCommand}"
+                                          IsVisible="{Binding IsDirty}"
+                                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SecretKeep]}" />
+                                </StackPanel>
+                                <TextBox Text="{Binding TextValue}" PasswordChar="•" RevealPassword="False"
+                                         IsVisible="{Binding IsEditingSecret}"
+                                         AutomationProperties.Name="{Binding Label}" />
+                              </StackPanel>
+
+                              <NumericUpDown Value="{Binding NumberValue}" FormatString="{Binding NumberFormat}"
+                                             IsVisible="{Binding IsNumeric}" HorizontalAlignment="Left" MinWidth="180"
+                                             AutomationProperties.Name="{Binding Label}" />
+                              <ToggleSwitch IsChecked="{Binding BoolValue}" IsVisible="{Binding IsToggle}"
+                                            AutomationProperties.Name="{Binding Label}" />
+                              <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedChoice}"
+                                        IsVisible="{Binding IsChoice}" MinWidth="220"
+                                        AutomationProperties.Name="{Binding Label}">
+                                <ComboBox.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:SettingChoice">
+                                    <TextBlock Text="{Binding Label}" Classes.secondary="{Binding !IsAvailable}" />
+                                  </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                              </ComboBox>
+
+                              <!-- A list from GET /settings/options; a typed value outside it is kept -->
+                              <ComboBox IsEditable="True" ItemsSource="{Binding Options}" Text="{Binding TextValue}"
+                                        IsVisible="{Binding IsOptions}" MinWidth="320" HorizontalAlignment="Left"
+                                        AutomationProperties.Name="{Binding Label}">
+                                <ComboBox.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:SettingChoice">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                      <TextBlock Text="{Binding Label}" />
+                                      <TextBlock Classes="tiny secondary" VerticalAlignment="Center" IsVisible="{Binding !IsAvailable}"
+                                                 Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingNotInstalled]}" />
+                                    </StackPanel>
+                                  </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                              </ComboBox>
+
+                              <!-- Path: text and a Browse button -->
+                              <DockPanel IsVisible="{Binding IsPath}">
+                                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding BrowseCommand}"
+                                        AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingBrowse]}">
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="{StaticResource Icon.Folder}" Width="14" Height="14" />
+                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingBrowse]}" />
+                                  </StackPanel>
+                                </Button>
+                                <TextBox Text="{Binding TextValue}" AutomationProperties.Name="{Binding Label}" />
+                              </DockPanel>
+
+                              <!-- Service check next to its key: ✓ or the engine's message -->
+                              <DockPanel IsVisible="{Binding HasTest}">
+                                <Button DockPanel.Dock="Left" Margin="0,0,10,0" VerticalAlignment="Top"
+                                        Command="{Binding Test.RunCommand}" Content="{Binding Test.ButtonText}"
+                                        ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ConnectionTestHint]}"
+                                        AutomationProperties.Name="{Binding Test.ButtonText}"
+                                        AutomationProperties.HelpText="{Binding Label}" />
+                                <ProgressBar DockPanel.Dock="Left" Margin="0,0,10,0" IsIndeterminate="True" Width="60"
+                                             VerticalAlignment="Center" Classes="slim" IsVisible="{Binding Test.IsRunning}" />
+                                <TextBlock DockPanel.Dock="Left" Margin="0,0,6,0" Classes="success" Text="✓" FontWeight="Bold"
+                                           VerticalAlignment="Center" IsVisible="{Binding Test.IsOk}" />
+                                <TextBlock Text="{Binding Test.Message}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                           Classes.success="{Binding Test.IsOk}" Classes.error="{Binding Test.IsFailed}"
+                                           IsVisible="{Binding Test.Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                              </DockPanel>
+
+                              <TextBlock Text="{Binding Help}" Classes="caption" TextWrapping="Wrap" />
+                              <TextBlock Classes="warning" TextWrapping="Wrap" IsVisible="{Binding OptionsUnreachable}"
+                                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingOptionsUnreachable]}" />
+                              <TextBlock Text="{Binding ValidationError}" Classes="error" TextWrapping="Wrap"
+                                         IsVisible="{Binding HasValidationError}" />
+                              <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                                         IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

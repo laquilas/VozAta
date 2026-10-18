@@ -11,6 +11,7 @@ import pytest
 from tests.fakes import FakeAudioReader
 from vozata.audio.pcm import ChannelTrack
 from vozata.domain import Channel
+from vozata.storage import audio_cache
 from vozata.storage.audio_cache import WavCache
 
 
@@ -92,3 +93,28 @@ def test_the_file_just_built_is_kept_even_over_the_limit(tmp_path: Path) -> None
     path = cache.wav("a", "mic", _track(10))
 
     assert path.exists()
+
+
+def test_clear_deletes_every_file_but_those_in_use(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = WavCache(tmp_path / "cache", 1 << 20)
+    playing = cache.wav("a", "mixed", _track(100))  # 244 bytes, held by a player
+    cache.wav("b", "mic", _track(10))  # 64 bytes
+    unlink = Path.unlink
+
+    def fake_unlink(self: Path, missing_ok: bool = False) -> None:
+        if self == playing:
+            raise PermissionError("in use")
+        unlink(self, missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", fake_unlink)
+
+    assert cache.clear() == 64
+    assert playing.exists()
+    assert not (cache.root / "b").exists()
+    assert cache.size() == 244
+
+
+def test_a_file_deleted_while_measuring_counts_as_empty(tmp_path: Path) -> None:
+    assert audio_cache._size(tmp_path / "gone.wav") == 0  # noqa: SLF001

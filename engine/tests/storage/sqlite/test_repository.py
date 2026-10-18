@@ -117,6 +117,36 @@ def test_discard_cascades_to_every_table(repo: SqliteSessionRepository, database
     assert repo.list_sessions() == [other]
 
 
+def test_delete_is_permanent_in_every_table_audio_included(
+    repo: SqliteSessionRepository, database: Database
+) -> None:
+    session_id = _full_session(repo)
+    other = _full_session(repo)
+    with database.write() as db:
+        db.execute("INSERT INTO audio_chunks VALUES (?, 'mic', 0, 0, 1, x'0000')", (session_id,))
+
+    repo.delete(session_id)
+
+    tables = ("segments", "translations", "speakers", "minutes", "action_items", "audio_chunks")
+    for table in tables:
+        rows = database.connection().execute(
+            f"SELECT COUNT(*) FROM {table} WHERE session_id = ?", (session_id,)
+        )
+        assert rows.fetchone()[0] == 0, table
+    assert _count(database, "sessions") == 1
+    assert _count(database, "segments_fts") == len(RAW)  # the search index follows
+    assert repo.list_sessions() == [other]
+
+
+def test_a_session_row_without_metadata_can_be_deleted(repo: SqliteSessionRepository) -> None:
+    session_id = repo.create(STARTED)  # a recording that never wrote its metadata
+
+    repo.delete(session_id)
+
+    with pytest.raises(SessionNotFoundError):
+        repo.delete(session_id)
+
+
 def test_metadata_fields_go_to_their_columns_and_the_rest_to_meta_json(
     repo: SqliteSessionRepository, database: Database
 ) -> None:

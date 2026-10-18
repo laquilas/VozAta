@@ -14,7 +14,8 @@ channel, click a transcript line to jump to it, and follow the current line whil
 - `ui/CLAUDE.md`
 - [phase 32](32-audio-in-sqlite.md) (`GET /sessions/{id}/audio/{channel}` with Range)
 - [phase 36](36-meetings-by-day.md) (navigation from the list)
-- `Views/HistoryView.axaml` (current detail), `ViewModels/SessionDetailViewModel.cs`
+- `Views/SessionDetailView.axaml` (current detail; phase 36 moved it out of the removed
+  `HistoryView`, it sits on the right of `Views/MeetingsPage.axaml`), `ViewModels/SessionDetailViewModel.cs`
 
 ## Scope
 

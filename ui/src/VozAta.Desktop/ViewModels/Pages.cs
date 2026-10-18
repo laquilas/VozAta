@@ -1,10 +1,6 @@
 namespace VozAta.Desktop.ViewModels;
 
-/// <summary>The Meetings page (phase 35): today the history list and detail, until phase 36 redesigns it.</summary>
-public sealed class MeetingsPageViewModel(HistoryViewModel history)
-{
-    public HistoryViewModel History { get; } = history;
-}
+// The Meetings page (phase 36) is MeetingsPageViewModel.cs.
 
 /// <summary>
 /// The Ask page (phase 35): questions about one meeting or all of them. A source opens its meeting
@@ -24,10 +20,4 @@ public sealed class AskPageViewModel
     }
 
     public AskViewModel Ask { get; }
-}
-
-/// <summary>The Config page (phase 35): today the settings page, until phase 38 redesigns it.</summary>
-public sealed class ConfigPageViewModel(SettingsViewModel settings)
-{
-    public SettingsViewModel Settings { get; } = settings;
 }

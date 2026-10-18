@@ -31,6 +31,10 @@ class FileAudioStore:
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None:
         mixer.mix(self, session_id, self._store.paths(session_id).mixed_wav)
 
+    def delete(self, session_id: str) -> None:
+        """Nothing to do: the WAVs are in the session folder, which the repository's `delete`
+        sends to the Recycle Bin (phase 36)."""
+
     def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray:
         with self._open(session_id, channel) as wav:
             wav.setpos(min(max(start, 0), wav.getnframes()))

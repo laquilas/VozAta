@@ -33,6 +33,9 @@ def session_summary(
         "language": meta.get("language"),
         "has_minutes": store.has_minutes(session_id),
         "title": stored_title(meta),  # phase 35
+        "speaker_count": store.speaker_count(session_id),  # phase 36
+        "has_action_items": bool(store.read_action_items(session_id)),
+        "template": meta.get("template") if isinstance(meta.get("template"), str) else None,
     }
 
 

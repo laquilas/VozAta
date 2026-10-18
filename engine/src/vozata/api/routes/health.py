@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -13,6 +11,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.schemas import GpuStatus, Health, LlmStatus, StorageStatus, SttStatus
 from vozata.config import Settings
+from vozata.storage.usage import database_size
 from vozata.transcription.openai_compatible import remote_host
 
 router = APIRouter(tags=["health"])
@@ -37,8 +36,8 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
 
 
 def _storage(c: ApiContainer) -> StorageStatus:
-    """The backend, the absolute database path, the OneDrive warning (phase 31) and the sizes
-    of the database and of the WAV cache (phase 32)."""
+    """The backend, the database path and size, the OneDrive warning (31), the size of the WAV
+    cache (32, 38)."""
     info = c.storage
     database = str(info.database.resolve()) if info.database is not None else None
     warning = None
@@ -48,23 +47,9 @@ def _storage(c: ApiContainer) -> StorageStatus:
         backend=info.backend,
         database=database,
         warning=warning,
-        size_bytes=_size(info.database, info.database.with_name(info.database.name + "-wal"))
-        if info.database is not None
-        else None,
-        audio_cache_bytes=_size(*info.audio_cache.glob("*/*"))
-        if info.audio_cache is not None
-        else None,
+        size_bytes=database_size(info.database) if info.database is not None else None,
+        audio_cache_bytes=c.audio_cache.size() if c.audio_cache is not None else 0,
     )
-
-
-def _size(*paths: Path) -> int:
-    """Total bytes of the files among `paths` (missing ones count 0)."""
-    total = 0
-    for path in paths:
-        with contextlib.suppress(OSError):
-            if path.is_file():
-                total += path.stat().st_size
-    return total
 
 
 def _stt(settings: Settings) -> SttStatus:
