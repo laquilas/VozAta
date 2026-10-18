@@ -60,7 +60,7 @@ def _full_session(repo: SqliteSessionRepository) -> str:
     return session_id
 
 
-def test_create_makes_the_audio_folder_and_skips_ids_taken_by_folders(
+def test_create_makes_no_folder_and_skips_ids_taken_by_folders(
     repo: SqliteSessionRepository, tmp_path: Path
 ) -> None:
     (tmp_path / "recordings" / "20261015_202358").mkdir(parents=True)  # a file-backend session
@@ -68,9 +68,9 @@ def test_create_makes_the_audio_folder_and_skips_ids_taken_by_folders(
     session_id = repo.create(STARTED)
 
     assert session_id == "20261015_202358_2"
-    assert repo.folder(session_id) == tmp_path / "recordings" / session_id
-    assert repo.folder(session_id).is_dir()
-    assert repo.files(session_id) == []
+    assert not (tmp_path / "recordings" / session_id).exists()
+    assert repo.folder(session_id) is None
+    assert repo.files(session_id) is None
 
 
 def test_create_skips_ids_taken_by_rows_without_a_folder(
@@ -85,55 +85,56 @@ def test_create_skips_ids_taken_by_rows_without_a_folder(
     assert _count(database, "sessions") == 2
 
 
-def test_only_audio_files_are_listed_and_no_json_or_markdown_is_written(
-    repo: SqliteSessionRepository,
+def test_nothing_is_written_to_the_output_folder(
+    repo: SqliteSessionRepository, tmp_path: Path
 ) -> None:
-    session_id = _full_session(repo)
-    folder = repo.folder(session_id)
-    assert folder is not None
-    (folder / "mic.wav").write_bytes(b"RIFF")
+    _full_session(repo)
 
-    assert repo.files(session_id) == ["mic.wav"]
+    assert not (tmp_path / "recordings").exists()
 
 
-def test_discard_cascades_to_every_table_and_removes_the_folder(
-    repo: SqliteSessionRepository, database: Database
-) -> None:
+def test_discard_cascades_to_every_table(repo: SqliteSessionRepository, database: Database) -> None:
     session_id = _full_session(repo)
     other = _full_session(repo)
-    folder = repo.folder(session_id)
+    with database.write() as db:
+        db.execute("INSERT INTO audio_chunks VALUES (?, 'mic', 0, 0, 1, x'0000')", (session_id,))
 
     repo.discard(session_id)
 
-    for table in ("segments", "translations", "speakers", "minutes", "action_items"):
+    for table in (
+        "segments",
+        "translations",
+        "speakers",
+        "minutes",
+        "action_items",
+        "audio_chunks",
+    ):
         rows = database.connection().execute(
             f"SELECT COUNT(*) FROM {table} WHERE session_id = ?", (session_id,)
         )
         assert rows.fetchone()[0] == 0, table
     assert _count(database, "segments_fts") == len(RAW)  # only the other session is indexed
-    assert folder is not None and not folder.exists()
     assert repo.list_sessions() == [other]
 
 
-def test_delete_is_permanent_in_every_table_and_removes_the_audio_folder(
+def test_delete_is_permanent_in_every_table_audio_included(
     repo: SqliteSessionRepository, database: Database
 ) -> None:
     session_id = _full_session(repo)
     other = _full_session(repo)
-    folder = repo.folder(session_id)
-    assert folder is not None
-    (folder / "mixed.wav").write_bytes(b"RIFF")
+    with database.write() as db:
+        db.execute("INSERT INTO audio_chunks VALUES (?, 'mic', 0, 0, 1, x'0000')", (session_id,))
 
     repo.delete(session_id)
 
-    for table in ("segments", "translations", "speakers", "minutes", "action_items"):
+    tables = ("segments", "translations", "speakers", "minutes", "action_items", "audio_chunks")
+    for table in tables:
         rows = database.connection().execute(
             f"SELECT COUNT(*) FROM {table} WHERE session_id = ?", (session_id,)
         )
         assert rows.fetchone()[0] == 0, table
     assert _count(database, "sessions") == 1
     assert _count(database, "segments_fts") == len(RAW)  # the search index follows
-    assert not folder.exists()
     assert repo.list_sessions() == [other]
 
 
@@ -270,13 +271,7 @@ def test_a_duplicate_segment_is_rejected_by_the_key(repo: SqliteSessionRepositor
     assert repo.load_transcript_with_source(session_id) == ("raw", [])  # rolled back
 
 
-def test_a_session_whose_folder_is_gone_has_no_files(
+def test_the_repository_exposes_its_database(
     repo: SqliteSessionRepository, database: Database
 ) -> None:
-    session_id = repo.create(STARTED)
-    folder = repo.folder(session_id)
-    assert folder is not None
-    folder.rmdir()
-
-    assert repo.files(session_id) == []
     assert repo.database is database

@@ -420,7 +420,7 @@ def test_stop_order_finalizes_wavs_then_mixes_then_frees_the_gpu_then_writes_min
     assert rig.observer.of("minutes_ready") == [(rig.session.id,)]
 
 
-def test_without_a_session_folder_the_retry_command_names_the_session(
+def test_without_a_session_folder_the_retry_command_names_its_place_in_output_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     rig = _Rig(tmp_path, results=[_words("Hi.")], llm_error=LanguageModelError("offline"))
@@ -431,7 +431,8 @@ def test_without_a_session_folder_the_retry_command_names_the_session(
     rig.session.stop()
 
     [(_, message)] = rig.observer.of("error")
-    assert f'python -m vozata minutes "{rig.session.id}"' in message
+    target = SETTINGS.output_dir / rig.session.id
+    assert f'python -m vozata minutes "{target}"' in message
     assert rig.session.folder is None
 
 

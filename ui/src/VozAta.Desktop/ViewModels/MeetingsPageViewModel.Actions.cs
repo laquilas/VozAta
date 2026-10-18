@@ -3,6 +3,7 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VozAta.Client;
+using VozAta.Desktop.Services;
 
 namespace VozAta.Desktop.ViewModels;
 
@@ -129,7 +130,13 @@ public sealed partial class MeetingsPageViewModel
         }
     }
 
-    /// <summary>Open the mixed recording in the default player.</summary>
+    /// <summary>Where "Play" downloads the recording (default <c>%TEMP%\VozAta\audio</c>).</summary>
+    public string AudioFolder { get; init; } = AudioPlayback.DefaultFolder;
+
+    /// <summary>
+    /// Open the mixed recording in the default player: downloaded from the engine (phase 32), so it
+    /// works for sqlite sessions, which have no folder.
+    /// </summary>
     [RelayCommand]
     private async Task PlayAsync(MeetingRow? row)
     {
@@ -141,19 +148,19 @@ public sealed partial class MeetingsPageViewModel
         try
         {
             var detail = await _client.GetSessionAsync(row.Id);
-            if (detail.Folder is { } folder && detail.Files is { } files && files.Contains("mixed.wav"))
+            if (detail.Audio is { } audio && audio.ContainsKey("mixed"))
             {
                 Error = null;
-                _shell.Open(Path.Combine(folder, "mixed.wav"));
+                await AudioPlayback.OpenAsync(_client, _shell, AudioFolder, row.Id, "mixed");
             }
             else
             {
                 Error = _localization["MeetingNoAudio"];
             }
         }
-        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        catch (Exception error) when (AudioPlayback.IsExpected(error))
         {
-            Error = ErrorText(error);
+            Error = error is IOException or UnauthorizedAccessException ? error.Message : ErrorText(error);
         }
     }
 

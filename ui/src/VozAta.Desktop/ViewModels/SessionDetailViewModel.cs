@@ -10,8 +10,10 @@ using VozAta.Desktop.Services;
 namespace VozAta.Desktop.ViewModels;
 
 /// <summary>
-/// One past (or live) session: transcript, minutes, minutes regeneration and its files. Audio is
-/// opened from the session folder, since the engine runs on this machine.
+/// One past (or live) session: transcript, minutes, minutes regeneration and its audio. A track
+/// is played by downloading it from the engine (phase 32) into <paramref name="audioFolder"/>
+/// (default: <c>%TEMP%\VozAta\audio</c>) and opening it in the default player, until the in-app
+/// player of phase 37.
 /// </summary>
 public sealed partial class SessionDetailViewModel(
     IEngineClient client,
@@ -20,7 +22,8 @@ public sealed partial class SessionDetailViewModel(
     IFileSaver saver,
     SessionSummary summary,
     MinutesTemplatesViewModel? templates = null,
-    IDialogService? dialogs = null) : ObservableObject
+    IDialogService? dialogs = null,
+    string? audioFolder = null) : ObservableObject
 {
     /// <summary>Export formats and the file-type name shown in the save dialog.</summary>
     private static readonly Dictionary<string, string> ExportTypes = new()
@@ -30,7 +33,9 @@ public sealed partial class SessionDetailViewModel(
         ["pdf"] = "FileTypePdf",
     };
 
-    private IReadOnlyList<string> _files = [];
+    private IReadOnlyDictionary<string, double> _audio = new Dictionary<string, double>();
+
+    private readonly string _audioFolder = audioFolder ?? AudioPlayback.DefaultFolder;
 
     public string Id => summary.Id;
 
@@ -98,7 +103,7 @@ public sealed partial class SessionDetailViewModel(
     public partial bool IsExporting { get; private set; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(OpenFolderCommand), nameof(OpenAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenFolderCommand))]
     public partial string? Folder { get; private set; }
 
     /// <summary>The open tab: <see cref="MinutesTab"/> or <see cref="TranscriptTab"/>.</summary>
@@ -133,7 +138,8 @@ public sealed partial class SessionDetailViewModel(
         try
         {
             var detail = await client.GetSessionAsync(Id, cancellationToken);
-            _files = detail.Files;
+            _audio = detail.Audio ?? new Dictionary<string, double>();
+            OpenAudioCommand.NotifyCanExecuteChanged();
             Folder = detail.Folder;
             RegenerateTemplate ??= templates?.Find(SessionTemplate(detail));
             await Editor.LoadThresholdAsync(cancellationToken);
@@ -263,11 +269,25 @@ public sealed partial class SessionDetailViewModel(
     [RelayCommand(CanExecute = nameof(HasFolder))]
     private void OpenFolder() => shell.Open(Folder!);
 
-    private bool HasAudio(string? track) => Folder is not null && track is not null && _files.Contains($"{track}.wav");
+    private bool HasAudio(string? track) => track is not null && _audio.ContainsKey(track);
 
-    /// <summary>Open <c>mic</c>, <c>system</c> or <c>mixed</c> <c>.wav</c> in the default player.</summary>
+    /// <summary>
+    /// Download <c>mic</c>, <c>system</c> or <c>mixed</c> as <c>&lt;id&gt;-&lt;track&gt;.wav</c> and open it in the
+    /// default player. A file the player still holds is opened again as it is.
+    /// </summary>
     [RelayCommand(CanExecute = nameof(HasAudio))]
-    private void OpenAudio(string? track) => shell.Open(Path.Combine(Folder!, $"{track}.wav"));
+    private async Task OpenAudioAsync(string? track)
+    {
+        Error = null;
+        try
+        {
+            await AudioPlayback.OpenAsync(client, shell, _audioFolder, Id, track!);
+        }
+        catch (Exception error) when (AudioPlayback.IsExpected(error))
+        {
+            Error = error is EngineUnavailableException ? localization["EngineUnavailable"] : error.Message;
+        }
+    }
 
     /// <summary>Load the best transcript into the read view (low-confidence words marked) and the editor.</summary>
     private async Task ShowTranscriptAsync(CancellationToken cancellationToken)

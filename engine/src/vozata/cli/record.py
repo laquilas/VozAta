@@ -98,7 +98,7 @@ def run_record(
     except SessionStartError as error:
         console.say(str(error))
         return 1
-    console.say(t("cli.recording", folder=session.folder))
+    console.say(t("cli.recording", folder=session.folder or session.id))
     console.say(t("cli.controls"))
     controls = _Controls(session)
     threading.Thread(target=controls.follow, args=(stdin,), name="controls", daemon=True).start()
@@ -109,7 +109,7 @@ def run_record(
         controls.stop()
     finally:
         signal.signal(signal.SIGINT, previous)
-    console.say(t("cli.saved", folder=session.folder))
+    console.say(t("cli.saved", folder=session.folder or session.id))
     return 0
 
 

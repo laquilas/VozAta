@@ -25,7 +25,7 @@ from vozata.api.schemas import (
 )
 from vozata.api.session_days import EPOCH, group_by_day, local_bounds
 from vozata.api.session_manager import StartOptions
-from vozata.domain import ConversationLanguage, TranslationTarget
+from vozata.domain import AudioTrack, ConversationLanguage, TranslationTarget
 from vozata.session_title import TitleTooLongError, normalize_title
 
 router = APIRouter(tags=["sessions"])
@@ -95,7 +95,18 @@ def session_detail(session_id: str, c: Container) -> dict[str, Any]:
     if folder is not None:  # file backend
         detail["files"] = c.store.files(session_id)
         detail["folder"] = str(folder.resolve())
+    detail["audio"] = _audio(c, session_id)
     return detail
+
+
+def _audio(c: ApiContainer, session_id: str) -> dict[str, float]:
+    """The duration in seconds of every playable track (phase 32)."""
+    durations = {}
+    for track in AudioTrack if c.audio is not None else ():
+        pcm = c.audio.track(session_id, track)
+        if pcm is not None:
+            durations[track.value] = round(pcm.frames / pcm.rate, 3)
+    return durations
 
 
 @router.patch("/sessions/{session_id}", response_model=SessionSummary)
@@ -112,6 +123,8 @@ def delete_session(session_id: str, c: Container) -> None:
         c.manager.delete(session_id)
     except OSError as error:  # e.g. a file of the session is open in another program
         raise ApiError(500, "session_delete_failed", id=session_id, reason=error) from None
+    if c.audio is not None:
+        c.audio.delete(session_id)  # sqlite: cached WAVs, space reclaimed in the background (32)
     if c.search_index is not None:
         c.search_index.index_session(session_id, [])
 

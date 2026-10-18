@@ -33,6 +33,15 @@ public sealed class MeetingsPageViewModelTests
     private readonly ManualDelay _searchDelay = new();
     private readonly LocalizationService _localization = new();
 
+    private MeetingsPageViewModel CreateWithAudioFolder(string folder)
+    {
+        var history = new HistoryViewModel(_client, _shell, _localization, _saver, searchDelay: _searchDelay.Wait, dialogs: _dialogs);
+        return new MeetingsPageViewModel(_client, history, _localization, _clock, _dialogs, _shell, _saver, delay: _undoDelay.Wait)
+        {
+            AudioFolder = folder,
+        };
+    }
+
     private MeetingsPageViewModel Create()
     {
         var history = new HistoryViewModel(_client, _shell, _localization, _saver, searchDelay: _searchDelay.Wait, dialogs: _dialogs);
@@ -473,21 +482,41 @@ public sealed class MeetingsPageViewModelTests
     // Play and export
 
     [Fact]
-    public async Task Play_opens_the_mixed_recording_or_says_there_is_none()
+    public async Task Play_downloads_the_mixed_recording_or_says_there_is_none()
     {
         var withAudio = Add(NoonClock.Local(2026, 10, 14, 9), 60);
         var without = Add(NoonClock.Local(2026, 10, 13, 9), 60);
-        _client.Details[withAudio.Id] = new SessionDetail(withAudio.Id, "done", null, null, 60, "en", false, ["mic.wav", "mixed.wav"], @"C:\rec\a");
-        _client.Details[without.Id] = new SessionDetail(without.Id, "done", null, null, 60, "en", false, ["mic.wav"], @"C:\rec\b");
-        var page = Create();
+        // a sqlite session: no folder or files, the audio comes from the engine (phase 32)
+        _client.Details[withAudio.Id] = new SessionDetail(withAudio.Id, "done", null, null, 60, "en", false, null, null, new Dictionary<string, double> { ["mic"] = 60, ["mixed"] = 60 });
+        _client.Details[without.Id] = new SessionDetail(without.Id, "done", null, null, 60, "en", false, ["mic.wav"], @"C:\rec\b", new Dictionary<string, double> { ["mic"] = 60 });
+        var folder = Path.Combine(Path.GetTempPath(), "VozAta.Tests", Guid.NewGuid().ToString("N"));
+        var page = CreateWithAudioFolder(folder);
         await page.LoadAsync();
 
-        await page.PlayCommand.ExecuteAsync(Rows(page).Single(row => row.Id == without.Id));
-        Assert.Equal(_localization["MeetingNoAudio"], page.Error);
+        try
+        {
+            await page.PlayCommand.ExecuteAsync(Rows(page).Single(row => row.Id == without.Id));
+            Assert.Equal(_localization["MeetingNoAudio"], page.Error);
 
-        await page.PlayCommand.ExecuteAsync(Rows(page).Single(row => row.Id == withAudio.Id));
-        Assert.Equal([Path.Combine(@"C:\rec\a", "mixed.wav")], _shell.Opened);
-        Assert.Null(page.Error);
+            await page.PlayCommand.ExecuteAsync(Rows(page).Single(row => row.Id == withAudio.Id));
+            var path = Path.Combine(folder, $"{withAudio.Id}-mixed.wav");
+            Assert.Equal([path], _shell.Opened);
+            Assert.Equal([(withAudio.Id, "mixed")], _client.AudioDownloads);
+            Assert.True(File.Exists(path));
+            Assert.Null(page.Error);
+
+            _client.AudioError = new IOException("disk full");
+            await page.PlayCommand.ExecuteAsync(Rows(page).Single(row => row.Id == withAudio.Id));
+            Assert.Equal("disk full", page.Error);
+            _client.AudioError = null;
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
 
         _client.DetailError = new EngineUnavailableException("refused", new HttpRequestException("refused"));
         await page.PlayCommand.ExecuteAsync(Rows(page).First());

@@ -143,7 +143,7 @@ def test_recover_command_targets_a_folder_or_every_session(
 
     def fake_run(session_dir: Path | None, build: Any, *args: Any) -> int:
         recovery = build(None)
-        root = recovery.store.folder("20261015_202358").parent
+        root = recovery.store.database.path.parent  # sqlite: OUTPUT_DIR/vozata.db
         received.append((session_dir, root, recovery._stale_after))
         return 0
 

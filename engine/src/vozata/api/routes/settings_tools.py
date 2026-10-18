@@ -15,7 +15,6 @@ from vozata.api.schemas import (
     SettingOptionsView,
 )
 from vozata.connection_checks import CheckTarget
-from vozata.storage.usage import AUDIO_CACHE_DIR, clear_directory
 
 router = APIRouter(tags=["settings"])
 
@@ -46,4 +45,5 @@ def test_connection(
 
 @router.delete("/storage/cache", response_model=CacheCleared)
 def clear_audio_cache(c: Annotated[ApiContainer, Depends(container)]) -> CacheCleared:
-    return CacheCleared(freed_bytes=clear_directory(c.settings.output_dir / AUDIO_CACHE_DIR))
+    """Empty the WAV cache (phase 32); files in use (a player, the diarizer) are kept."""
+    return CacheCleared(freed_bytes=c.audio_cache.clear() if c.audio_cache is not None else 0)

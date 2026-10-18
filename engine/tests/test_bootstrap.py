@@ -31,6 +31,7 @@ from vozata.llm.ollama import OllamaLanguageModel
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import UnknownTemplateError
 from vozata.session import SessionStartError
+from vozata.storage.sqlite.audio import SqliteAudioStore
 from vozata.storage.sqlite.repository import SqliteSessionRepository
 from vozata.storage.sqlite.search import SqliteSearch
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
@@ -308,6 +309,10 @@ def test_build_api_container_wires_real_providers(
     assert container.store.list_sessions() == []
     assert isinstance(container.search_index, SqliteSearch)
     assert container.storage == StorageInfo("sqlite", tmp_path / "recordings" / "vozata.db")
+    assert isinstance(container.audio, SqliteAudioStore)
+    assert (
+        container.audio_cache is container.audio.cache
+    )  # one cache: health, DELETE /storage/cache
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
     assert built == [
         {

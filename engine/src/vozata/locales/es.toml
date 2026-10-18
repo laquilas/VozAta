@@ -41,6 +41,7 @@ session_already_active = "Ya hay una grabación en curso o finalizándose. Deten
 no_active_session = "No hay ninguna grabación en curso."
 session_not_found = "No se encontró la sesión \"{id}\"."
 minutes_not_found = "La sesión \"{id}\" todavía no tiene acta."
+audio_not_found = "La sesión \"{id}\" no tiene el audio \"{track}\"."
 session_still_recording = "La sesión \"{id}\" sigue grabando; el acta se genera cuando se detenga."
 session_still_active = "La sesión \"{id}\" se está grabando, finalizando o recuperando; espera a que termine para eliminarla."
 session_delete_failed = "No se pudo eliminar la sesión \"{id}\" ({reason})."

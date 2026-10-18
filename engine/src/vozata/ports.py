@@ -17,6 +17,7 @@ import numpy as np
 from vozata.domain import (
     ActionItem,
     AudioChunk,
+    AudioTrack,
     Channel,
     ConversationLanguage,
     ExportDocument,
@@ -101,8 +102,14 @@ class SpeechDetector(Protocol):
 
 @runtime_checkable
 class AudioMixer(Protocol):
+    channels: int  # of the mixed track: 1 (mono sum) or 2 (mic left, system right)
+
     def mix(self, reader: AudioReader, session_id: str, destination: Path) -> None:
         """Write the mic and system tracks of `session_id`, read through `reader`, as one WAV."""
+        ...
+
+    def combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
+        """Mix equal-length int16 blocks into interleaved int16 samples (phase 32)."""
         ...
 
 
@@ -436,6 +443,10 @@ class AudioStore(Protocol):
         """Mix the finished tracks with `mixer` and keep the result (stop step 3)."""
         ...
 
+    def delete(self, session_id: str) -> None:
+        """Drop what this store keeps of a deleted session beyond the repository (phase 32)."""
+        ...
+
 
 @runtime_checkable
 class AudioReader(Protocol):
@@ -451,13 +462,46 @@ class AudioReader(Protocol):
 
     def sample_rate(self, session_id: str, channel: Channel) -> int: ...
 
-    def materialize_wav(self, session_id: str, channel: Channel) -> Path:
+    def materialize_wav(self, session_id: str, channel: Channel | AudioTrack) -> Path:
         """A WAV file of the track, for tools that need a file (the diarizer child process)."""
         ...
 
 
 @runtime_checkable
-class SessionAudio(AudioStore, AudioReader, Protocol):
+class PcmTrack(Protocol):
+    """A playable track as 16-bit PCM (phase 32): `frames` frames of `channels` samples."""
+
+    rate: int
+    channels: int
+    frames: int
+
+    def read(self, start: int, count: int) -> bytes:
+        """Up to `count` frames from frame `start`, interleaved little-endian int16."""
+        ...
+
+
+@runtime_checkable
+class AudioTracks(Protocol):
+    """The playable tracks of a session (`GET /sessions/{id}/audio/{track}`, phase 32)."""
+
+    def track(self, session_id: str, track: AudioTrack) -> PcmTrack | None:
+        """The track, or None when the session has no such audio."""
+        ...
+
+
+@runtime_checkable
+class AudioCache(Protocol):
+    """Files built from stored audio (phase 32): measured and cleared from Config → Storage."""
+
+    def size(self) -> int: ...
+
+    def clear(self) -> int:
+        """Delete what is not in use; returns the bytes freed."""
+        ...
+
+
+@runtime_checkable
+class SessionAudio(AudioStore, AudioReader, AudioTracks, Protocol):
     """Both sides of a storage backend's audio: what a recording session needs."""
 
 

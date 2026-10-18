@@ -41,6 +41,7 @@ session_already_active = "A recording is already in progress or still being fina
 no_active_session = "No recording is in progress."
 session_not_found = "Session \"{id}\" was not found."
 minutes_not_found = "Session \"{id}\" has no minutes yet."
+audio_not_found = "Session \"{id}\" has no \"{track}\" audio."
 session_still_recording = "Session \"{id}\" is still recording; minutes are generated when it stops."
 session_still_active = "Session \"{id}\" is being recorded, finalized or recovered; wait until it is done to delete it."
 session_delete_failed = "Session \"{id}\" could not be deleted ({reason})."

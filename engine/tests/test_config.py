@@ -459,6 +459,7 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "SAMPLE_RATE",
         "STORAGE_BACKEND",
         "DATABASE_PATH",
+        "AUDIO_CACHE_MB",
     }
 
 
@@ -670,6 +671,19 @@ def test_invalid_autosave_seconds_raise(value: str) -> None:
         load_settings(env={"AUTOSAVE_SECONDS": value})
 
     assert caught.value.key == "AUTOSAVE_SECONDS"
+
+
+def test_audio_cache_mb_defaults_to_2048_and_reads_the_environment() -> None:
+    assert load_settings(env={}).audio_cache_mb == 2048
+    assert load_settings(env={"AUDIO_CACHE_MB": "0"}).audio_cache_mb == 0
+
+
+@pytest.mark.parametrize("value", ["-1", "1.5", "big"])
+def test_invalid_audio_cache_mb_raises(value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={"AUDIO_CACHE_MB": value})
+
+    assert caught.value.key == "AUDIO_CACHE_MB"
 
 
 def test_live_translation_defaults_and_values(tmp_path: Path) -> None:

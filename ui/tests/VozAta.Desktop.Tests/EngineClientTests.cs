@@ -513,6 +513,32 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Audio_is_streamed_into_the_destination()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([0x52, 0x49, 0x46, 0x46]) });
+        using var destination = new MemoryStream();
+
+        await new EngineClient(handler.Client()).DownloadAudioAsync("20261015_202358", "mixed", destination);
+
+        Assert.Equal("/sessions/20261015_202358/audio/mixed", handler.Requests.Single().Path);
+        Assert.Equal([0x52, 0x49, 0x46, 0x46], destination.ToArray());
+    }
+
+    [Fact]
+    public async Task Missing_audio_raises_the_engine_error()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = new StringContent("{\"error\":{\"code\":\"audio_not_found\",\"message\":\"No audio.\"}}"),
+        });
+
+        var error = await Assert.ThrowsAsync<EngineApiException>(
+            () => new EngineClient(handler.Client()).DownloadAudioAsync("s1", "mic", Stream.Null));
+
+        Assert.Equal("audio_not_found", error.Code);
+    }
+
+    [Fact]
     public async Task An_export_without_a_file_name_gets_a_default_one()
     {
         var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1]) });

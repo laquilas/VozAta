@@ -41,6 +41,7 @@ session_already_active = "Já existe uma gravação em andamento ou sendo finali
 no_active_session = "Nenhuma gravação está em andamento."
 session_not_found = "A sessão \"{id}\" não foi encontrada."
 minutes_not_found = "A sessão \"{id}\" ainda não tem ata."
+audio_not_found = "A sessão \"{id}\" não tem o áudio \"{track}\"."
 session_still_recording = "A sessão \"{id}\" ainda está gravando; a ata é gerada quando ela parar."
 session_still_active = "A sessão \"{id}\" está sendo gravada, finalizada ou recuperada; aguarde o fim para excluí-la."
 session_delete_failed = "Não foi possível excluir a sessão \"{id}\" ({reason})."

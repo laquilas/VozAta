@@ -5,18 +5,21 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tests.fakes import FakeLocalizer, FakeSessionObserver
-from tests.test_session_recover import SEGMENTS, interrupted_meta, write_wav
+from tests.test_session_recover import SEGMENTS, interrupted_meta
 from vozata import bootstrap
 from vozata.config import Settings
 from vozata.domain import Channel, StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
+from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
+from vozata.storage.sqlite.audio import SqliteAudioStore
 from vozata.storage.sqlite.repository import SqliteSessionRepository
 from vozata.storage.sqlite.search import SqliteSearch
 
@@ -40,7 +43,11 @@ def test_sqlite_is_the_default_backend_with_the_database_in_the_output_dir(
 
     assert isinstance(store, SqliteSessionRepository)
     assert store.database.path == tmp_path / "recordings" / "vozata.db"
-    assert isinstance(bootstrap.build_audio_store(settings), FileAudioStore)  # until phase 32
+    audio = bootstrap.build_audio_store(settings)
+    assert isinstance(audio, SqliteAudioStore)  # phase 32
+    assert audio._db is store.database
+    assert audio.cache.root == tmp_path / "recordings" / "cache"
+    assert audio._mixer.channels == 1  # MIX_MODE=mono
     assert isinstance(bootstrap.build_search_index(settings), SqliteSearch)
     assert bootstrap.build_search_index(settings)._db is store.database  # one per file
 
@@ -53,7 +60,7 @@ def test_database_path_moves_the_database(tmp_path: Path) -> None:
 
     assert store.database.path == tmp_path / "local" / "v.db"
     assert (tmp_path / "local" / "v.db").is_file()
-    assert (tmp_path / "recordings" / session_id).is_dir()  # the audio folder
+    assert not (tmp_path / "recordings" / session_id).exists()  # the audio is in the database
 
 
 def test_the_files_backend_keeps_folders_and_index_db(tmp_path: Path) -> None:
@@ -62,6 +69,7 @@ def test_the_files_backend_keeps_folders_and_index_db(tmp_path: Path) -> None:
     store = bootstrap.build_store(settings)
     assert isinstance(store, FileSessionRepository)
     assert isinstance(store._recycler, Send2TrashRecycler)  # deletes go to the Recycle Bin (36)
+    assert isinstance(bootstrap.build_audio_store(settings), FileAudioStore)
     index = bootstrap.build_search_index(settings)
     assert isinstance(index, SearchIndex)
     assert index._path == tmp_path / "recordings" / "index.db"
@@ -77,6 +85,31 @@ def test_storage_info_names_the_database_and_its_onedrive_root(tmp_path: Path) -
         "sqlite", tmp_path / "recordings" / "vozata.db"
     )
     assert bootstrap.storage_info(synced) == StorageInfo("sqlite", root / "rec" / "vozata.db", root)
+
+
+def test_the_audio_cache_is_trimmed_at_engine_start(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, audio_cache_mb=0)
+    stale = tmp_path / "recordings" / "cache" / "20261015_202358" / "mic.wav"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"RIFF")
+
+    bootstrap.clean_audio_cache(settings)
+
+    assert not stale.exists()
+
+
+def test_cleaning_the_cache_only_logs_a_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def fail(self: object, keep: object = None) -> None:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(WavCache, "clean", fail)
+
+    bootstrap.clean_audio_cache(_settings(tmp_path))
+    bootstrap.clean_audio_cache(_settings(tmp_path, storage_backend=StorageBackend.FILES))
+
+    assert "Cleaning the audio cache failed" in caplog.text
 
 
 def test_opening_a_database_in_onedrive_logs_a_warning_once(
@@ -123,23 +156,24 @@ def test_a_session_folder_on_the_command_line_opens_the_storage_of_its_parent(
         assert folder.minutes_file == folder.path / "minutes.md"
 
 
-def test_sqlite_recovery_repairs_the_audio_and_finishes_the_session(tmp_path: Path) -> None:
-    """A crash with the SQLite backend: the row says `recording`, the WAVs have no length in
-    their headers yet; the committed segments are the transcript (phase 31)."""
+def test_sqlite_recovery_pads_the_audio_and_finishes_the_session(tmp_path: Path) -> None:
+    """A crash with the SQLite backend: the row says `recording`; the committed chunks are the
+    audio (phase 32) and the committed segments the transcript (phase 31)."""
     settings = _settings(tmp_path, generate_minutes=False)
     recovery = bootstrap.build_recovery(settings)
     store = recovery.store
     assert isinstance(store, SqliteSessionRepository)
-    assert [type(repair) for repair in recovery._repairs] == [FileAudioStore]
+    assert [type(repair) for repair in recovery._repairs] == [SqliteAudioStore]
     session_id = store.create()
     store.write_meta(session_id, interrupted_meta(session_id, "recording"))
     sink = store.open_transcript(session_id, SpeakerLabeler(FakeLocalizer()))
     for item in SEGMENTS:
         sink.emit(item)  # no close(): the process died
-    folder = store.folder(session_id)
-    assert folder is not None
-    write_wav(folder / f"{Channel.MIC.value}.wav", 1.0)
-    write_wav(folder / f"{Channel.SYSTEM.value}.wav", 0.5)
+    audio = recovery._repairs[0]
+    for channel, seconds in ((Channel.MIC, 1.0), (Channel.SYSTEM, 0.5)):
+        writer = audio.open_writer(session_id, channel)
+        writer.write(np.full(round(seconds * settings.sample_rate), 0.1, np.float32), 0.0)
+        writer.finalize(0)
 
     assert recovery.find_interrupted() == [session_id]
     assert recovery.recover(session_id, FakeSessionObserver()) is True
@@ -147,7 +181,8 @@ def test_sqlite_recovery_repairs_the_audio_and_finishes_the_session(tmp_path: Pa
     meta = store.read_meta(session_id)
     assert (meta["status"], meta["duration_seconds"]) == ("done", 1.0)
     assert store.load_transcript(session_id) == SEGMENTS
-    assert sorted(store.files(session_id) or []) == ["mic.wav", "mixed.wav", "system.wav"]
+    assert store.files(session_id) is None
+    assert audio.length(session_id, Channel.SYSTEM) == settings.sample_rate  # padded
     assert [hit.session_id for hit in bootstrap.build_search_index(settings).search("hello")] == [
         session_id
     ]

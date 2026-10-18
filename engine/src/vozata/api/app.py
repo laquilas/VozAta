@@ -13,6 +13,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.errors import install_error_handlers
 from vozata.api.routes import (
     action_items,
+    audio,
     branding,
     devices,
     export,
@@ -50,6 +51,7 @@ def create_app(container: ApiContainer) -> FastAPI:
         health,
         devices,
         sessions,
+        audio,
         speakers,
         transcript_edit,
         export,

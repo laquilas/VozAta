@@ -36,9 +36,9 @@ class _BlockMixer:
                 left = reader.frames(session_id, Channel.MIC, start, block)
                 right = reader.frames(session_id, Channel.SYSTEM, start, block)
                 length = max(len(left), len(right))
-                out.writeframes(self._combine(_pad(left, length), _pad(right, length)).tobytes())
+                out.writeframes(self.combine(_pad(left, length), _pad(right, length)).tobytes())
 
-    def _combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
+    def combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
         raise NotImplementedError  # pragma: no cover
 
 
@@ -51,7 +51,7 @@ class MonoMixer(_BlockMixer):
 
     channels = 1
 
-    def _combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
+    def combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
         total = mic.astype(np.int32) + system.astype(np.int32)
         return np.clip(total, -_PCM_LIMIT, _PCM_LIMIT).astype(np.int16)
 
@@ -61,5 +61,5 @@ class StereoMixer(_BlockMixer):
 
     channels = 2
 
-    def _combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
+    def combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:
         return np.column_stack((mic, system)).astype(np.int16).ravel()

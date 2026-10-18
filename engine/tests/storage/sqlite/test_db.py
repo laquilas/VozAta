@@ -18,7 +18,15 @@ from vozata.storage.sqlite.db import (
     statements,
 )
 
-TABLES = {"sessions", "segments", "translations", "speakers", "minutes", "action_items"}
+TABLES = {
+    "sessions",
+    "segments",
+    "translations",
+    "speakers",
+    "minutes",
+    "action_items",
+    "audio_chunks",
+}
 
 
 def _tables(db: sqlite3.Connection) -> set[str]:
@@ -88,6 +96,52 @@ def test_a_database_at_the_previous_version_is_migrated_and_keeps_its_data(
         assert hits.fetchall() == [("mic-000001",)]  # rows written before the FTS are indexed
     finally:
         database.close()
+
+
+def test_a_new_file_reclaims_free_pages_incrementally(database: Database) -> None:
+    db = database.connection()
+
+    assert db.execute("PRAGMA auto_vacuum").fetchone()[0] == 2  # INCREMENTAL
+
+
+def test_an_older_file_without_auto_vacuum_is_converted_once_and_keeps_its_data(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "vozata.db"
+    db = sqlite3.connect(path, isolation_level=None)
+    db.execute("PRAGMA journal_mode = WAL")
+    for migration in bundled_migrations()[:2]:  # a phase 31 database
+        for statement in statements(migration.script):
+            db.execute(statement)
+    db.execute("PRAGMA user_version = 2")
+    db.execute("INSERT INTO sessions (id, meta_json) VALUES ('20261015_202358', '{}')")
+    assert db.execute("PRAGMA auto_vacuum").fetchone()[0] == 0
+    db.close()
+
+    database = Database(path)
+    try:
+        db = database.connection()
+        assert db.execute("PRAGMA auto_vacuum").fetchone()[0] == 2
+        assert db.execute("SELECT id FROM sessions").fetchall() == [("20261015_202358",)]
+    finally:
+        database.close()
+
+
+def test_reclaim_gives_free_pages_back_to_the_file_system(database: Database) -> None:
+    with database.write() as db:
+        db.execute("INSERT INTO sessions (id) VALUES ('s')")
+        db.executemany(
+            "INSERT INTO audio_chunks VALUES ('s', 'mic', ?, ?, 4000, ?)",
+            [(seq, seq * 4000, bytes(8000)) for seq in range(200)],
+        )
+    with database.write() as db:
+        db.execute("DELETE FROM sessions")
+    db = database.connection()
+    assert db.execute("PRAGMA freelist_count").fetchone()[0] > 0
+
+    database.reclaim()
+
+    assert db.execute("PRAGMA freelist_count").fetchone()[0] == 0
 
 
 def test_opening_again_applies_nothing(tmp_path: Path) -> None:

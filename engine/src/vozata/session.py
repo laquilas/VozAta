@@ -402,9 +402,10 @@ class RecordingSession:
             self._error("index_failed", reason=str(error))
 
     def _command_target(self) -> str:
-        """What the CLI commands in error messages take: the session folder (file backend)."""
+        """What the CLI commands in error messages take: the session folder, or for a backend
+        without folders `OUTPUT_DIR/<id>` (the commands open the storage of its parent)."""
         folder = self.folder
-        return str(folder) if folder is not None else self.id
+        return str(folder if folder is not None else self._settings.output_dir / self.id)
 
     def _reason(self, error: Exception) -> str:
         return error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)

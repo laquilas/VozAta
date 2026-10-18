@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from pathlib import Path
+
+import pytest
 
 from tests.api.conftest import Api
 from vozata.api.system_info import GpuInfo
 from vozata.domain import StorageInfo
+from vozata.storage.audio_cache import WavCache
 
 
 def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
@@ -88,6 +92,12 @@ def test_health_without_gpu_or_llm(api: Api) -> None:
     assert body["engine"] == "ok"
 
 
+def _with_cache(api: Api) -> WavCache:
+    cache = WavCache(api.settings.output_dir / "cache", 1 << 30)
+    api.app.state.container = dataclasses.replace(api.app.state.container, audio_cache=cache)
+    return cache
+
+
 def test_health_reports_the_database_and_audio_cache_sizes(api: Api, tmp_path: Path) -> None:
     database = tmp_path / "vozata.db"
     database.write_bytes(b"x" * 4096)
@@ -95,6 +105,7 @@ def test_health_reports_the_database_and_audio_cache_sizes(api: Api, tmp_path: P
     cache = api.settings.output_dir / "cache" / "20261016_090000"
     cache.mkdir(parents=True)
     (cache / "mixed.wav").write_bytes(b"x" * 2048)
+    _with_cache(api)
     container = api.app.state.container
     api.app.state.container = dataclasses.replace(
         container, storage=StorageInfo("sqlite", database)
@@ -106,11 +117,25 @@ def test_health_reports_the_database_and_audio_cache_sizes(api: Api, tmp_path: P
     assert storage["audio_cache_bytes"] == 2048
 
 
+def test_a_missing_database_counts_zero_bytes(api: Api, tmp_path: Path) -> None:
+    container = api.app.state.container
+    api.app.state.container = dataclasses.replace(
+        container, storage=StorageInfo("sqlite", tmp_path / "none.db")
+    )
+    _with_cache(api)
+
+    storage = api.client.get("/health").json()["storage"]
+
+    assert (storage["size_bytes"], storage["audio_cache_bytes"]) == (0, 0)
+
+
 def test_clearing_the_audio_cache_frees_its_bytes(api: Api) -> None:
+    _with_cache(api)
     cache = api.settings.output_dir / "cache"
     (cache / "a").mkdir(parents=True)
     (cache / "a" / "mic.wav").write_bytes(b"x" * 300)
-    (cache / "loose.wav").write_bytes(b"x" * 200)
+    (cache / "b").mkdir()
+    (cache / "b" / "mixed.wav").write_bytes(b"x" * 200)
 
     response = api.client.delete("/storage/cache")
 
@@ -120,5 +145,40 @@ def test_clearing_the_audio_cache_frees_its_bytes(api: Api) -> None:
     assert api.client.get("/health").json()["storage"]["audio_cache_bytes"] == 0
 
 
+def test_a_cached_file_in_use_is_kept_and_not_counted(
+    api: Api, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    _with_cache(api)
+    cache = api.settings.output_dir / "cache" / "a"
+    cache.mkdir(parents=True)
+    (cache / "mixed.wav").write_bytes(b"x" * 400)  # being played
+    (cache / "mic.wav").write_bytes(b"x" * 100)
+    unlink = Path.unlink
+
+    def fake_unlink(self: Path, missing_ok: bool = False) -> None:
+        if self.name == "mixed.wav":
+            raise PermissionError("in use")
+        unlink(self, missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", fake_unlink)
+
+    with caplog.at_level(logging.WARNING):
+        response = api.client.delete("/storage/cache")
+
+    assert response.json() == {"freed_bytes": 100}
+    assert (cache / "mixed.wav").exists()
+    assert "mixed.wav" in caplog.text
+
+
+def test_without_a_cache_there_is_nothing_to_clear(api: Api) -> None:
+    (api.settings.output_dir / "cache" / "a").mkdir(parents=True)  # not ours: files backend
+    (api.settings.output_dir / "cache" / "a" / "mic.wav").write_bytes(b"x")
+
+    assert api.client.delete("/storage/cache").json() == {"freed_bytes": 0}
+    assert api.client.get("/health").json()["storage"]["audio_cache_bytes"] == 0
+
+
 def test_clearing_a_missing_audio_cache_frees_nothing(api: Api) -> None:
+    _with_cache(api)
+
     assert api.client.delete("/storage/cache").json() == {"freed_bytes": 0}

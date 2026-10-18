@@ -1,6 +1,7 @@
 """`FileAudioStore`: a session's audio as `mic.wav`, `system.wav` and `mixed.wav` (architecture §8).
 
-Implements `AudioStore` and `AudioReader` (`SessionAudio`) and `RecoverableStore` for the WAVs.
+Implements `AudioStore`, `AudioReader` and `AudioTracks` (`SessionAudio`) and `RecoverableStore`
+for the WAVs.
 """
 
 from __future__ import annotations
@@ -11,8 +12,8 @@ from pathlib import Path
 import numpy as np
 
 from vozata.audio.wav_writer import AlignedWavWriter
-from vozata.domain import Channel
-from vozata.ports import AudioMixer, AudioTrackWriter, StoreRepairError
+from vozata.domain import AudioTrack, Channel
+from vozata.ports import AudioMixer, AudioTrackWriter, PcmTrack, StoreRepairError
 from vozata.storage.session_store import SessionStore
 from vozata.storage.wav_repair import WavRepairError, pad_wav, repair_wav
 
@@ -30,6 +31,10 @@ class FileAudioStore:
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None:
         mixer.mix(self, session_id, self._store.paths(session_id).mixed_wav)
 
+    def delete(self, session_id: str) -> None:
+        """Nothing to do: the WAVs are in the session folder, which the repository's `delete`
+        sends to the Recycle Bin (phase 36)."""
+
     def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray:
         with self._open(session_id, channel) as wav:
             wav.setpos(min(max(start, 0), wav.getnframes()))
@@ -43,9 +48,14 @@ class FileAudioStore:
         with self._open(session_id, channel) as wav:
             return wav.getframerate()
 
-    def materialize_wav(self, session_id: str, channel: Channel) -> Path:
-        """The recorded WAV itself: nothing to build for the file backend."""
-        return self._wav(session_id, channel)
+    def materialize_wav(self, session_id: str, channel: Channel | AudioTrack) -> Path:
+        """The recorded WAV itself (`mixed.wav` for the mix): nothing to build."""
+        return self._store.paths(session_id).root / f"{AudioTrack(channel).value}.wav"
+
+    def track(self, session_id: str, track: AudioTrack) -> PcmTrack | None:
+        """`mic.wav`, `system.wav` or `mixed.wav` (written by `write_mix`); None when missing."""
+        path = self.materialize_wav(session_id, track)
+        return WavFileTrack(path) if path.is_file() else None
 
     def repair(self, session_id: str) -> float | None:
         """Repair both WAV headers and pad the tracks to the longest one (phase 17).
@@ -71,3 +81,23 @@ class FileAudioStore:
             wav.close()
             raise ValueError(f"{path} must be mono 16-bit PCM")
         return wav
+
+
+class WavFileTrack:
+    """A 16-bit PCM WAV file as a `PcmTrack` (mono or stereo)."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        with wave.open(str(path), "rb") as wav:
+            if wav.getsampwidth() != 2:
+                raise ValueError(f"{path} must be 16-bit PCM")
+            self.rate = wav.getframerate()
+            self.channels = wav.getnchannels()
+            self.frames = wav.getnframes()
+
+    def read(self, start: int, count: int) -> bytes:
+        if start < 0 or count <= 0 or start >= self.frames:
+            return b""
+        with wave.open(str(self._path), "rb") as wav:
+            wav.setpos(start)
+            return wav.readframes(count)

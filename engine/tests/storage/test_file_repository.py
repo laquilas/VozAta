@@ -10,10 +10,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.fakes import FakeLocalizer, FakeRecycler
+from tests.fakes import FakeAudioMixer, FakeLocalizer, FakeRecycler
 from tests.storage.audio_contract import RATE, AudioStoreContract
 from tests.storage.repository_contract import RAW, STARTED, RepositoryContract
-from vozata.domain import ActionItem, Channel, Translation
+from vozata.domain import ActionItem, AudioTrack, Channel, Translation
 from vozata.labels import SpeakerLabeler
 from vozata.ports import (
     RecoverableStore,
@@ -49,6 +49,42 @@ class TestFileAudioStore(AudioStoreContract):
     @pytest.fixture
     def session_id(self, tmp_path: Path) -> str:
         return _repository(tmp_path).create(STARTED)
+
+    def test_the_mix_is_written_by_the_mixer_to_mixed_wav(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        mixer = FakeAudioMixer()
+
+        audio.write_mix(session_id, mixer)
+
+        [(reader, mixed_id, destination)] = mixer.calls
+        assert reader is audio
+        assert mixed_id == session_id
+        assert destination == audio.materialize_wav(session_id, AudioTrack.MIXED)
+        assert destination.name == "mixed.wav"
+
+    def test_delete_leaves_the_wavs_to_the_repository(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        wav = audio.materialize_wav(session_id, AudioTrack.MIC)
+        wav.write_bytes(b"RIFF")
+
+        audio.delete(session_id)
+
+        assert wav.exists()  # the folder goes to the Recycle Bin with the session (phase 36)
+
+    def test_a_wav_that_is_not_16_bit_is_refused_as_a_track(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        path = audio.materialize_wav(session_id, AudioTrack.MIC)
+        with wave.open(str(path), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(1)
+            wav.setframerate(RATE)
+            wav.writeframes(bytes(4))
+
+        with pytest.raises(ValueError, match="16-bit"):
+            audio.track(session_id, AudioTrack.MIC)
 
 
 # FileSessionRepository: the files of architecture §8

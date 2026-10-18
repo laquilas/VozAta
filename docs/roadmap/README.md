@@ -81,7 +81,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 29 | [Live translation (optional)](phases/29-live-translation.md) | 06, 07 | done |
 | 30 | [Storage port](phases/30-storage-port.md) | 17, 23 | done |
 | 31 | [SQLite session database](phases/31-sqlite-database.md) | 30 | done |
-| 32 | [Audio in SQLite](phases/32-audio-in-sqlite.md) | 31 | todo |
+| 32 | [Audio in SQLite](phases/32-audio-in-sqlite.md) | 31 | done |
 | 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | todo |
 | 34 | [UI design system](phases/34-ui-design-system.md) | 13 | done |
 | 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | done |
