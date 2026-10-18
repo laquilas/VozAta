@@ -21,14 +21,13 @@ from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.rows import (
     META_COLUMNS,
     SEGMENT_COLUMNS,
+    SOURCE_RANK,
     check_id,
     meta_to_row,
     row_segment,
     row_to_meta,
 )
 from vozata.storage.sqlite.writers import SqliteTranscriptSink, insert_segments
-
-_RANK = "CASE source WHEN 'edited' THEN 3 WHEN 'diarized' THEN 2 ELSE 1 END"
 
 
 def _local_now() -> datetime:
@@ -121,7 +120,8 @@ class SqliteSessionRepository(SessionAnnotations):
         self._check(session_id)
         with self._db.read() as db:
             best = db.execute(
-                f"SELECT source FROM segments WHERE session_id = ? ORDER BY {_RANK} DESC LIMIT 1",
+                "SELECT source FROM segments WHERE session_id = ?"
+                f" ORDER BY {SOURCE_RANK} DESC LIMIT 1",
                 (session_id,),
             ).fetchone()
             if best is None:

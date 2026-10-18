@@ -24,6 +24,8 @@ TEXT_COLUMNS = (
 )
 META_COLUMNS = (*TEXT_COLUMNS, "duration_seconds")
 
+# The best transcript of a session is its highest-ranked source (as in `002_search.sql`).
+SOURCE_RANK = "CASE source WHEN 'edited' THEN 3 WHEN 'diarized' THEN 2 ELSE 1 END"
 SEGMENT_COLUMNS = 'segment_id, channel, speaker_id, start, "end", text, words_json, edited'
 ACTION_ITEM_COLUMNS = "item_id, description, owner, due, source_ids_json, exported_url"
 

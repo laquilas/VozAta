@@ -1,5 +1,7 @@
 """`OUTPUT_DIR/index.db`: SQLite FTS5 full-text index of every transcript (phase 22).
 
+Used by the file backend; the SQLite backend searches `segments_fts` in `vozata.db` instead
+(`storage/sqlite/search.py`, phase 31) and shares `fts_query` / `search_table`.
 Accent- and case-insensitive (`unicode61 remove_diacritics 2`), so `decisao` finds `decisão`.
 Each call opens its own connection, so the index is safe to use from any thread.
 """
@@ -46,6 +48,17 @@ def fts_query(text: str) -> str | None:
     return " ".join(terms)
 
 
+def search_table(db: sqlite3.Connection, table: str, match: str, limit: int) -> list[SearchHit]:
+    """Best matches of `match` (an `fts_query`) first, in an FTS5 `table` with the columns of
+    `segments` (the text is the 5th)."""
+    rows = db.execute(
+        f"SELECT session_id, segment_id, start, speaker_id, snippet({table}, 4, ?, ?, ?, ?)"
+        f" FROM {table} WHERE {table} MATCH ? ORDER BY rank LIMIT ?",
+        (SNIPPET_START, SNIPPET_END, _ELLIPSIS, SNIPPET_TOKENS, match, limit),
+    ).fetchall()
+    return [SearchHit(str(a), str(b), float(c), str(d), str(e)) for a, b, c, d, e in rows]
+
+
 class SearchIndex:
     """The `TranscriptSearch` port over an SQLite FTS5 table `segments`."""
 
@@ -64,13 +77,7 @@ class SearchIndex:
         if match is None:
             return []
         with self._connect() as db:
-            rows = db.execute(
-                "SELECT session_id, segment_id, start, speaker_id,"
-                " snippet(segments, 4, ?, ?, ?, ?)"
-                " FROM segments WHERE segments MATCH ? ORDER BY rank LIMIT ?",
-                (SNIPPET_START, SNIPPET_END, _ELLIPSIS, SNIPPET_TOKENS, match, limit),
-            ).fetchall()
-        return [SearchHit(str(a), str(b), float(c), str(d), str(e)) for a, b, c, d, e in rows]
+            return search_table(db, "segments", match, limit)
 
     def rebuild(self, store: SessionRepository) -> int:
         """Re-index every session from its best transcript; returns how many were indexed."""

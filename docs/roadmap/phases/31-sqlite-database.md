@@ -77,15 +77,16 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:30
-- **Next step:** search over `segments_fts` (`storage/sqlite/search.py`, `SqliteSearch`) with
-  `tests/storage/sqlite/test_fts.py` (sync on edit / revert / diarize, rebuild).
+- **Next step:** config keys `STORAGE_BACKEND` / `DATABASE_PATH` (`config.py`,
+  `settings_fields.py`, `.env.example`), then the `sqlite` entries of `REPOSITORIES` /
+  search in `bootstrap.py` (one shared `Database` per path).
 
 ### Steps
 
 - [x] Start the phase (status, Progress); phase 30 manual check part B recorded as done
 - [x] `Database` (WAL, foreign keys, per-thread connections, write lock) and migrations
 - [x] `SqliteSessionRepository` passing the phase 30 contract suite; cascade delete
-- [ ] FTS: `segments_fts` kept in sync by triggers on the best source; `SqliteSearch`
+- [x] FTS: `segments_fts` kept in sync by triggers on the best source; `SqliteSearch`
 - [ ] Config (`STORAGE_BACKEND`, `DATABASE_PATH`), bootstrap wiring, OneDrive warning in
       `GET /health`, `storage` field in `GET /sessions/{id}`, CLI session folders
 - [ ] Crash test: a writer subprocess killed mid-session
@@ -112,5 +113,10 @@ Audio in the database (32), importing old folders (33), settings in the database
   `folder` + `files`, and audio stays in files until phase 32. Phase 32 makes them null.
 - Minutes rows store the session's template and `generated_at`; translations upsert by
   `(session_id, segment_id)` (the last one wins); action items keep their order by `row_id`.
+- Search: `SqliteSearch` (`storage/sqlite/search.py`) queries `segments_fts`; its
+  `index_session` and `ensure` do nothing (the triggers index every write), `rebuild` refills
+  the table from the segment rows. `storage/search_index.py` (`index.db`) stays for the `files`
+  backend and shares `fts_query` / `search_table` with it, so with `sqlite` no `index.db` is
+  created. The FTS rowid is `segments.row_id`, so a trigger removes or re-adds rows by rowid.
 - The repository is not a `RecoverableStore`: every emitted segment is committed
   (`synchronous=FULL`) before `emit` returns, so there is nothing to repair.
