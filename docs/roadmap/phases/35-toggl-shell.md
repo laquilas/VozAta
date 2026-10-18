@@ -78,13 +78,13 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** engine — `PATCH /sessions/{id}` `{title}`: the live session renames through its
-  `SessionMeta`, a stored one through `read_meta` / `write_meta` (`tests/api/test_session_title.py`).
+- **Next step:** engine — title in the minutes prompt (`minutes.meeting_title` in the three
+  locales, `tests/minutes/test_prompt_title.py`) and as the export document title.
 
 ### Steps
 
-- [x] Engine: `title` on start, in `session.json` and `SessionSummary`; contract suite
-- [ ] Engine: `PATCH /sessions/{id}` `{title}` while recording and after
+- [x] Engine: `title` on start, in `session.json` and `SessionSummary`; contract suite — `9b1a671`
+- [x] Engine: `PATCH /sessions/{id}` `{title}` while recording and after
 - [ ] Engine: title in the minutes prompt (en / pt-BR / es) and as the export document title
 - [ ] Docs: api-contract, architecture §8
 - [ ] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync`
@@ -102,3 +102,8 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
   `session.json` field written through the phase 30 `SessionRepository` port
   (`read_meta` / `write_meta`), and the shared contract suite checks it round-trips, so the SQLite
   backend picks it up.
+- Titles are trimmed and whitespace runs (new lines too) collapse into one space; blank = untitled
+  (null). Longer than 200 characters → `422 title_too_long`.
+- `PATCH` of the session being recorded or finalized goes through its own `SessionMeta` (it keeps
+  rewriting `session.json` until done, so a direct write would be lost); any other session is
+  rewritten through the repository. A session being recovered → `409 session_being_recovered`.

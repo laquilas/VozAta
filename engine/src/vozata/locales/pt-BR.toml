@@ -60,6 +60,7 @@ action_items_unavailable = "A extração de itens de ação não está disponív
 session_not_interrupted = "A sessão \"{id}\" não foi interrompida, então não há nada a recuperar."
 recovery_failed = "A sessão \"{id}\" não pôde ser recuperada ({reason}). Os arquivos foram mantidos; o motivo está em session.json."
 title_too_long = "O título pode ter no máximo {max} caracteres."
+session_being_recovered = "A sessão \"{id}\" está sendo recuperada. Renomeie-a quando a recuperação terminar."
 
 [languages]
 en = "inglês"

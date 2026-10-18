@@ -783,6 +783,30 @@ def test_the_title_given_at_start_is_stored_in_session_json(tmp_path: Path) -> N
     assert rig.store.read_meta(rig.session.id)["title"] == "Weekly sync"
 
 
+def test_renaming_while_recording_survives_later_metadata_writes(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Draft")
+    rig.session.start()
+
+    rig.session.set_title("Final")
+    assert rig.store.read_meta(rig.session.id)["title"] == "Final"
+    rig.session.pause()
+    rig.session.resume()
+    rig.session.stop()
+
+    meta = rig.store.read_meta(rig.session.id)
+    assert (meta["title"], meta["status"]) == ("Final", "done")
+
+
+def test_clearing_the_title_while_recording_leaves_it_null(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Draft")
+    rig.session.start()
+
+    rig.session.set_title(None)
+    rig.session.stop()
+
+    assert rig.store.read_meta(rig.session.id)["title"] is None
+
+
 def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> None:
     rig = _Rig(tmp_path)
     rig.session.start()

@@ -162,6 +162,14 @@ class RegenerateMinutes(BaseModel):
     template: str | None = None  # phase 20
 
 
+class UpdateSession(BaseModel):
+    """`PATCH /sessions/{id}` (phase 35): the meeting title; null or blank clears it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None
+
+
 class ActionItemModel(BaseModel):
     """An action item (phase 23); `exported_url` is set once it was exported."""
 

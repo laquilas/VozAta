@@ -60,6 +60,7 @@ action_items_unavailable = "La extracción de tareas no está disponible en este
 session_not_interrupted = "La sesión \"{id}\" no se interrumpió, así que no hay nada que recuperar."
 recovery_failed = "La sesión \"{id}\" no se pudo recuperar ({reason}). Sus archivos se conservaron; el motivo está en session.json."
 title_too_long = "El título puede tener como máximo {max} caracteres."
+session_being_recovered = "La sesión \"{id}\" se está recuperando. Cámbiale el nombre cuando termine la recuperación."
 
 [languages]
 en = "inglés"

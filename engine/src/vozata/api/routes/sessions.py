@@ -19,6 +19,7 @@ from vozata.api.schemas import (
     SessionSummary,
     StartSession,
     Transcript,
+    UpdateSession,
 )
 from vozata.api.session_manager import StartOptions
 from vozata.domain import ConversationLanguage, TranslationTarget
@@ -86,6 +87,12 @@ def session_detail(session_id: str, c: Container) -> dict[str, Any]:
         detail["files"] = c.store.files(session_id)
         detail["folder"] = str(folder.resolve())
     return detail
+
+
+@router.patch("/sessions/{session_id}", response_model=SessionSummary)
+def update_session(session_id: str, body: UpdateSession, c: Container) -> dict[str, Any]:
+    """Rename a meeting (phase 35), also while it is being recorded."""
+    return c.manager.rename(session_id, _title(body.title))
 
 
 @router.get("/sessions/{session_id}/transcript", response_model=Transcript)

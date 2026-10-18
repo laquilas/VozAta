@@ -178,6 +178,10 @@ class RecordingSession:
         self._pipeline.set_paused(False)
         self._set_status(SessionStatus.RECORDING)
 
+    def set_title(self, title: str | None) -> None:
+        """Rename the meeting (phase 35), while recording or finalizing; None clears the title."""
+        self._meta.set_title(title)
+
     def stop(self) -> None:
         if self.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
             return

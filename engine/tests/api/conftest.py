@@ -90,6 +90,11 @@ class FakeSession:
         self.calls.append("resume")
         self._set(SessionStatus.RECORDING)
 
+    def set_title(self, title: str | None) -> None:
+        self.calls.append("set_title")
+        self.meta["title"] = title
+        self.store.write_meta(self.id, self.meta)
+
     def stop(self) -> None:
         self.calls.append("stop")
         self._set(SessionStatus.FINALIZING)
