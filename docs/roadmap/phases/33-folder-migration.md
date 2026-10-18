@@ -69,8 +69,8 @@ Exporting the database back to folders (backlog), deleting the folders.
 
 - **Branch:** `feature/33-folder-migration` (stacked on `feature/32-audio-in-sqlite`, PR #49)
 - **Status:** in progress
-- **Updated:** 2026-10-18 19:45
-- **Next step:** docs: architecture §8 (import, `imported_at`, `migration_errors`, backup advice) and api-contract (`GET /migration`, `migration_progress`, `migration_done`); then the offline manual check (copy of `engine/recordings` to a scratch `OUTPUT_DIR`, `migrate --dry-run`, `migrate`, API checks, folder hashes) and the recipe for the app part.
+- **Updated:** 2026-10-18 19:46
+- **Next step:** offline manual check: copy `engine/recordings` to a scratch `OUTPUT_DIR`, run `migrate --dry-run` and `migrate`, check the API (sessions, search, audio) and the folder hashes; write the manual recipe for the app part; then tick the criteria and finish the phase.
 
 ### Steps
 
