@@ -19,6 +19,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    StorageBackend,
     TranslationTarget,
     WhisperDevice,
     default_conversation_language,
@@ -33,6 +34,8 @@ KEYS = tuple(field.key for field in FIELDS)
 _TRUE = ("true", "1", "yes", "on")
 _FALSE = ("false", "0", "no", "off")
 SUPPORTED_SAMPLE_RATES = (16000,)  # Whisper requirement
+DATABASE_FILE = "vozata.db"  # in `OUTPUT_DIR` when `DATABASE_PATH` is empty (phase 31)
+_ONEDRIVE_VARIABLES = ("OneDrive", "OneDriveConsumer", "OneDriveCommercial")
 MAX_SPEAKERS_LIMIT = 20
 # Ollama `keep_alive`: whole seconds (`0`, `-1`, `300`) or a Go duration (`5m`, `1h30m`, `250ms`).
 _DURATION = re.compile(r"-?\d+|-?(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+")
@@ -138,6 +141,17 @@ class Settings:
     # API (phase 06)
     api_host: str = "127.0.0.1"
     api_port: int = 8765
+    # Storage (phase 31)
+    storage_backend: StorageBackend = StorageBackend.SQLITE
+    database_path: Path | None = None  # None: `OUTPUT_DIR/vozata.db`
+    # OneDrive roots of this user (`OneDrive*` environment variables, Windows): the database
+    # must not live under one while the engine runs.
+    onedrive_roots: tuple[Path, ...] = ()
+
+    @property
+    def database_file(self) -> Path:
+        """`DATABASE_PATH`, else `vozata.db` in `OUTPUT_DIR`."""
+        return self.database_path or self.output_dir / DATABASE_FILE
 
     @property
     def effective_echo_hold_seconds(self) -> float:
@@ -231,7 +245,22 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
+        storage_backend=_choice(raw, "STORAGE_BACKEND", StorageBackend, StorageBackend.SQLITE),
+        database_path=Path(raw["DATABASE_PATH"]) if "DATABASE_PATH" in raw else None,
+        onedrive_roots=onedrive_roots(os.environ if env is None else env),
     )
+
+
+def onedrive_roots(env: Mapping[str, str]) -> tuple[Path, ...]:
+    """The folders OneDrive syncs, from `OneDrive`, `OneDriveConsumer` and `OneDriveCommercial`
+    (any case; Windows sets them for the signed-in user). Empty values are skipped."""
+    names = {name.upper() for name in _ONEDRIVE_VARIABLES}
+    roots = dict.fromkeys(
+        Path(value.strip())
+        for key, value in env.items()
+        if key.upper() in names and value and value.strip()
+    )
+    return tuple(roots)
 
 
 def _read(env: Mapping[str, str] | None, env_file: Path | None) -> dict[str, str]:

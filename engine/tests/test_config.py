@@ -455,6 +455,8 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "WHISPER_KEEP_LOADED",
         "OUTPUT_DIR",
         "SAMPLE_RATE",
+        "STORAGE_BACKEND",
+        "DATABASE_PATH",
     }
 
 

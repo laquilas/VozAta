@@ -58,6 +58,13 @@ class MixMode(StrEnum):
     STEREO = "stereo"
 
 
+class StorageBackend(StrEnum):
+    """Where sessions are stored (phase 31): one SQLite database, or one folder per session."""
+
+    SQLITE = "sqlite"
+    FILES = "files"
+
+
 class WhisperDevice(StrEnum):
     AUTO = "auto"
     CUDA = "cuda"

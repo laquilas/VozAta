@@ -77,9 +77,8 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:30
-- **Next step:** config keys `STORAGE_BACKEND` / `DATABASE_PATH` (`config.py`,
-  `settings_fields.py`, `.env.example`), then the `sqlite` entries of `REPOSITORIES` /
-  search in `bootstrap.py` (one shared `Database` per path).
+- **Next step:** the `sqlite` entries of `REPOSITORIES` / search in `bootstrap.py` (one shared
+  `Database` per path, chosen by `STORAGE_BACKEND`), OneDrive warning, CLI session folders.
 
 ### Steps
 
@@ -87,8 +86,9 @@ Audio in the database (32), importing old folders (33), settings in the database
 - [x] `Database` (WAL, foreign keys, per-thread connections, write lock) and migrations
 - [x] `SqliteSessionRepository` passing the phase 30 contract suite; cascade delete
 - [x] FTS: `segments_fts` kept in sync by triggers on the best source; `SqliteSearch`
-- [ ] Config (`STORAGE_BACKEND`, `DATABASE_PATH`), bootstrap wiring, OneDrive warning in
-      `GET /health`, `storage` field in `GET /sessions/{id}`, CLI session folders
+- [x] Config (`STORAGE_BACKEND`, `DATABASE_PATH`, OneDrive roots from the environment)
+- [ ] Bootstrap wiring, OneDrive warning in `GET /health`, `storage` field in
+      `GET /sessions/{id}`, CLI session folders
 - [ ] Crash test: a writer subprocess killed mid-session
 - [ ] UI: hide "Open folder" without a folder; setting labels for the new keys
 - [ ] Docs (architecture §8/§9, api-contract), full suites, manual check recipe
