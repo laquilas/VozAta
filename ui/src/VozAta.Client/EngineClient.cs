@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -24,6 +25,12 @@ public interface IEngineClient
         int limit = 50, int offset = 0, CancellationToken cancellationToken = default);
 
     Task<SessionDetail> GetSessionAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /sessions?from=&amp;to=</c> (phase 36): the meetings of these local days (both included), grouped by day.</summary>
+    Task<SessionDays> ListSessionDaysAsync(DateOnly first, DateOnly last, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /sessions/{id}</c> (phase 36): permanent in the database, to the Recycle Bin for the file backend.</summary>
+    Task DeleteSessionAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary><c>PATCH /sessions/{id}</c> (phase 35): rename a meeting, also while recording; null clears the title.</summary>
     Task<SessionSummary> UpdateSessionTitleAsync(
@@ -142,6 +149,19 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<SessionSummary> UpdateSessionTitleAsync(
         string id, string? title, CancellationToken cancellationToken = default) =>
         SendAsync<SessionSummary>(HttpMethod.Patch, $"sessions/{Escape(id)}", new { title }, cancellationToken);
+
+    public Task<SessionDays> ListSessionDaysAsync(
+        DateOnly first, DateOnly last, CancellationToken cancellationToken = default) =>
+        SendAsync<SessionDays>(
+            HttpMethod.Get,
+            $"sessions?from={first.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}&to={last.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}",
+            null,
+            cancellationToken);
+
+    public async Task DeleteSessionAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(HttpMethod.Delete, $"sessions/{Escape(id)}", null, cancellationToken);
+    }
 
     public Task<Transcript> GetTranscriptAsync(
         string id, CancellationToken cancellationToken = default) =>

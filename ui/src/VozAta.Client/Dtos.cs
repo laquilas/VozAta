@@ -60,7 +60,10 @@ public sealed record SessionSummary(
     double? DurationSeconds,
     string? Language,
     bool HasMinutes,
-    string? Title = null);
+    string? Title = null,
+    int SpeakerCount = 0,
+    bool HasActionItems = false,
+    string? Template = null);
 
 public sealed record SessionPage(IReadOnlyList<SessionSummary> Items, int Total);
 

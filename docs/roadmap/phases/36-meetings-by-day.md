@@ -68,9 +68,9 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - **Branch:** `feature/36-meetings-by-day`
 - **Status:** in progress
 - **Updated:** 2026-10-17 22:40
-- **Next step:** UI client: `ListSessionRangeAsync(from, to)` and `DeleteSessionAsync(id)` in
-  `EngineClient.cs`, DTOs in a new `VozAta.Client/Meetings.cs`, fakes in
-  `Fakes/FakeEngineClient.Meetings.cs`.
+- **Next step:** `ViewModels/MeetingsPageViewModel.cs` (own file; drop the stub from `Pages.cs`):
+  weeks, day groups, totals, week navigation, infinite scroll, live row, with
+  `MeetingsPageViewModelTests.cs`.
 
 ### Steps
 
@@ -80,7 +80,8 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - [x] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
       `speaker_count`, `has_action_items`, `template`
 - [x] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
-- [ ] UI client: range and delete calls, new summary fields
+- [x] UI client: range and delete calls, new summary fields (`ListSessionDaysAsync`,
+      `DeleteSessionAsync`, `VozAta.Client/Meetings.cs`, `Fakes/FakeEngineClient.Meetings.cs`)
 - [ ] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
 - [ ] UI: inline rename, delete with confirmation and undo, search filtering, row actions
 - [ ] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots
