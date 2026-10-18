@@ -124,6 +124,16 @@ internal sealed class FakeThemeService : IThemeService
 {
     public List<string> Applied { get; } = [];
 
+    /// <summary>What "system" resolves to.</summary>
+    public bool SystemIsDark { get; set; }
+
+    public bool IsDark => Applied.LastOrDefault() switch
+    {
+        "dark" => true,
+        "light" => false,
+        _ => SystemIsDark,
+    };
+
     public void Apply(string theme) => Applied.Add(theme);
 }
 

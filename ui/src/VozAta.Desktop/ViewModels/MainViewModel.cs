@@ -62,6 +62,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
+        Shell = new ShellViewModel(
+            Recorder,
+            new MeetingsPageViewModel(History),
+            new AskPageViewModel(History.Ask, () => Shell?.NavigateCommand.Execute(ShellViewModel.Meetings)),
+            new ConfigPageViewModel(Settings),
+            Session,
+            localization,
+            preferences);
         Settings.Saved += OnSettingsSaved;
         Session.PropertyChanged += OnSessionChanged;
         var saved = preferences.Load();
@@ -86,6 +94,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>The Recorder page: Start / Stop, options, meters, live transcript.</summary>
     public RecorderPageViewModel Recorder { get; }
+
+    /// <summary>The sidebar and the current page (phase 35).</summary>
+    public ShellViewModel Shell { get; }
 
     public HistoryViewModel History { get; }
 
@@ -225,6 +236,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _localization.PropertyChanged -= OnLanguageChanged;
         Session.PropertyChanged -= OnSessionChanged;
         Recorder.Dispose();
+        Shell.Dispose();
         _stop.Dispose();
     }
 
@@ -381,6 +393,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         History.RefreshTexts();
         Settings.RefreshTexts();
         Tray.RefreshTexts();
+        Shell.RefreshTexts();
     }
 
     private void RefreshTexts()

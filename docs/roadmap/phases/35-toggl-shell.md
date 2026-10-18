@@ -78,9 +78,10 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** UI — `ShellViewModel` (Pages, CurrentPage, NavigateCommand, Ctrl+1…4, sidebar
-  collapse saved in `ui.json`, recording indicator) and the Meetings / Ask / Config page
-  ViewModels; `ShellViewModelTests.cs`.
+- **Next step:** UI views — `Views/ShellView.axaml` (sidebar, page DataTemplates, recording
+  banner, notifications as toasts, recovery banner) inside `MainWindow`, `Views/RecorderPage.axaml`
+  (timer bar with title, chips with flyouts, round start/stop, pause; meters in the device chips;
+  live transcript), `Views/AskPage.axaml`; Ctrl+1…4 key bindings on `MainWindow`.
 
 ### Steps
 
@@ -93,8 +94,8 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - [x] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel` —
       `068dd87`
 - [x] UI: meeting title on the recorder page (sent on start, patched while recording, Enter
-      starts), options locked while recording
-- [ ] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
+      starts), options locked while recording — `898f1e8`
+- [x] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
       Meetings / Ask / Config page ViewModels
 - [ ] UI: shell view (sidebar, toasts, recovery banner) and the recorder page timer bar; tray
       tooltip with the title; strings in en / pt-BR / es
@@ -121,5 +122,11 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
   cleared when the recording ends (the next meeting starts untitled; rename the old one later). A
   failed start keeps the typed title. Editable while idle, recording or paused (not while starting
   or finalizing).
+- Shell: `NavItem` per page (key, label, `Icon.*` resource, `Ctrl+N` gesture, page ViewModel);
+  `NavigateCommand` takes the page key. `IsRecordingElsewhere` drives a "Recording 00:12:03 —
+  open the recorder" banner over the other pages (on top of the sidebar dot and time). A source on
+  the Ask page switches to Meetings, then opens the meeting there. The sidebar theme button
+  (`AppearanceViewModel.ToggleCommand`) flips light ↔ dark from what is shown now
+  (`IThemeService.IsDark`). `ui.json` gains `sidebar_collapsed`.
 - The resx strings for the whole phase (nav labels, placeholder, untitled, sidebar, tray) were
   added in the title commit.
