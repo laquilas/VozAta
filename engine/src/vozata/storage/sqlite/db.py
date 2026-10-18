@@ -4,6 +4,9 @@ Every connection runs in WAL mode with `synchronous=NORMAL`, foreign keys on and
 Each thread gets its own connection (`threading.local`); writes are serialized by one lock and
 run in `BEGIN IMMEDIATE` transactions. The schema is migrated on open by `PRAGMA user_version`
 from the numbered scripts in `storage/sqlite/migrations/` (`NNN_name.sql`).
+
+The file uses `auto_vacuum=INCREMENTAL` (phase 32): deleted audio leaves free pages that
+`reclaim()` gives back to the file system. A file created before that is converted once on open.
 """
 
 from __future__ import annotations
@@ -96,6 +99,15 @@ def migrate(db: sqlite3.Connection, migrations: list[Migration] | None = None) -
     return schema_version(db)
 
 
+def _incremental_vacuum(db: sqlite3.Connection) -> None:
+    """Switch a file created without `auto_vacuum=INCREMENTAL` (phase 31) to it: one VACUUM."""
+    if db.execute("PRAGMA auto_vacuum").fetchone()[0] == 2:
+        return
+    _log.info("Converting the database to auto_vacuum=INCREMENTAL (one VACUUM)")
+    db.execute("PRAGMA auto_vacuum = INCREMENTAL")
+    db.execute("VACUUM")
+
+
 class Database:
     """`vozata.db`: per-thread connections, serialized writes, migrated on first use.
 
@@ -129,6 +141,7 @@ class Database:
             with self._write_lock:
                 if not self._migrated:
                     migrate(db, self._migrations)
+                    _incremental_vacuum(db)
                     self._migrated = True
         return db
 
@@ -163,6 +176,7 @@ class Database:
             check_same_thread=False,  # only `close()` touches it from another thread
         )
         try:
+            db.execute("PRAGMA auto_vacuum = INCREMENTAL")  # takes effect on a new file only
             db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS:d}")
             db.execute("PRAGMA journal_mode = WAL")
             db.execute("PRAGMA synchronous = NORMAL")
@@ -209,6 +223,11 @@ class Database:
             yield db
         finally:
             db.execute("COMMIT")
+
+    def reclaim(self) -> None:
+        """Give the free pages left by deleted rows back to the file system (`incremental_vacuum`)."""
+        with self._write_lock:
+            self.connection().execute("PRAGMA incremental_vacuum").fetchall()
 
     def close(self) -> None:
         """Close every thread's connection (the next use opens a new one)."""

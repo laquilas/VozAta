@@ -76,13 +76,13 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** in progress
 - **Updated:** 2026-10-17 23:30
-- **Next step:** add migration `003_audio.sql` (`audio_chunks`) and switch new databases to
-  `auto_vacuum=INCREMENTAL` in `storage/sqlite/db.py`.
+- **Next step:** write `storage/sqlite/audio.py` (`SqliteAudioStore`) against
+  `tests/storage/audio_contract.py` plus `tests/storage/sqlite/test_audio_store.py`.
 
 ### Steps
 
 - [x] Start the phase (status, Progress)
-- [ ] Schema: `audio_chunks` migration, `auto_vacuum=INCREMENTAL`
+- [x] Schema: `audio_chunks` migration, `auto_vacuum=INCREMENTAL`
 - [ ] `SqliteAudioStore`: buffered capture, writer thread (1 s batches, both channels per
       transaction), silence for gaps and pauses, equal-length finalize, repair; contract suite
 - [ ] Reader: chunk-range `frames`, on-the-fly mix, `materialize_wav` with the LRU cache
@@ -96,4 +96,8 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 
 ### Decisions and notes
 
-- (none yet)
+- Schema `003_audio.sql`: `audio_chunks` with an extra index on `(session_id, channel,
+  start_frame)` for range reads. `auto_vacuum=INCREMENTAL` is set on every new connection (it
+  only takes effect on a new file); a file created by phase 31 is converted once on open with
+  one `VACUUM` (it holds no audio yet, so it is quick). `Database.reclaim()` runs
+  `PRAGMA incremental_vacuum`.
