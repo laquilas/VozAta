@@ -61,3 +61,29 @@ Waveform rendering, audio editing/trimming, video.
 
 > Execute phase 37 of the roadmap (`docs/roadmap/phases/37-detail-and-player.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/37-detail-and-player` (stacked on `feature/33-folder-migration`, PR #51,
+  itself on `feature/32-audio-in-sqlite`, PR #49)
+- **Status:** in progress
+- **Updated:** 2026-10-18 20:00
+- **Next step:** add `IAudioPlayer` (port) and `FakeAudioPlayer`, then `PlayerBarViewModel`
+  test-first.
+
+### Steps
+
+- [x] Start the phase (status, Progress)
+- [ ] `IAudioPlayer` port, `FakeAudioPlayer`; `TranscriptLine` gets `Start` / `End` / `IsCurrent`
+- [ ] `PlayerBarViewModel`: play/pause, ±10 s, seek, speed, channel (keeps position), volume
+- [ ] `SessionPageViewModel` replaces `SessionDetailViewModel` (tests moved), title edit,
+      delete, Ask tab, segment click seeks, highlight follows position, live hides the player
+- [ ] Navigation: session page in the shell, back to Meetings; search hits / citations open it
+      and seek
+- [ ] Views: `SessionPage.axaml`, `PlayerBar.axaml`, strings
+- [ ] `LibVlcAudioPlayer` (LibVLCSharp) wired in `App.axaml.cs`; packaging + install test check
+- [ ] Docs, full suites, manual check recipe
+
+### Decisions and notes
+
+- Stacked on phase 33 (user's choice to stack on 32; 37's manual check needs a migrated meeting).
