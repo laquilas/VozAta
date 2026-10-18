@@ -5,36 +5,7 @@
              x:Class="VozAta.Desktop.Views.HistoryView"
              x:DataType="vm:HistoryViewModel">
 
-  <UserControl.Styles>
-    <Style Selector="SelectableTextBlock.h1">
-      <Setter Property="FontSize" Value="22" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0,8,0,4" />
-    </Style>
-    <Style Selector="SelectableTextBlock.h2">
-      <Setter Property="FontSize" Value="18" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0,10,0,4" />
-    </Style>
-    <Style Selector="SelectableTextBlock.h3">
-      <Setter Property="FontSize" Value="15" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0,8,0,2" />
-    </Style>
-    <Style Selector="SelectableTextBlock.item">
-      <Setter Property="Margin" Value="16,2,0,2" />
-    </Style>
-    <Style Selector="SelectableTextBlock.focused">
-      <Setter Property="Background" Value="#33FFD54F" />
-    </Style>
-    <Style Selector="Border.badge">
-      <Setter Property="CornerRadius" Value="3" />
-      <Setter Property="Padding" Value="6,1" />
-      <Setter Property="Margin" Value="6,0,0,0" />
-    </Style>
-  </UserControl.Styles>
-
-  <Grid ColumnDefinitions="340,12,*" Margin="16,8,16,16">
+  <Grid ColumnDefinitions="340,12,*" Margin="{StaticResource Inset.Page}">
     <!-- Session list -->
     <DockPanel>
       <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,0,0,6"
@@ -47,18 +18,18 @@
       <Button DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,6,0,0"
               Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryLoadMore]}"
               Command="{Binding LoadMoreCommand}" IsVisible="{Binding CanLoadMore}" />
-      <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+      <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
                  IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
       <!-- Search results (phase 22) replace the session list while there is a query -->
       <Panel>
       <DockPanel IsVisible="{Binding Search.IsActive}">
-        <TextBlock DockPanel.Dock="Top" Margin="8" Opacity="0.6" FontStyle="Italic"
+        <TextBlock DockPanel.Dock="Top" Margin="8" Classes="hint"
                    Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Searching]}"
                    IsVisible="{Binding Search.IsSearching}" />
-        <TextBlock DockPanel.Dock="Top" Margin="8" Foreground="#C62828" TextWrapping="Wrap"
+        <TextBlock DockPanel.Dock="Top" Margin="8" Classes="error" TextWrapping="Wrap"
                    Text="{Binding Search.Error}"
                    IsVisible="{Binding Search.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <TextBlock DockPanel.Dock="Top" Margin="8" Opacity="0.6" TextWrapping="Wrap"
+        <TextBlock DockPanel.Dock="Top" Margin="8" Classes="secondary" TextWrapping="Wrap"
                    Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchNoResults]}"
                    IsVisible="{Binding Search.NoResults}" />
         <ScrollViewer>
@@ -71,13 +42,13 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:SearchResultRow">
                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                Background="Transparent" Margin="0,1" Padding="6,4"
+                                Classes="ghost" Margin="0,1" Padding="6,4"
                                 Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).Search.OpenCommand}"
                                 CommandParameter="{Binding}">
                           <StackPanel Spacing="2">
-                            <StackPanel Orientation="Horizontal" Spacing="8" Opacity="0.75">
-                              <TextBlock Text="{Binding Time}" FontFamily="Consolas, monospace" />
-                              <TextBlock Text="{Binding Label}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                              <TextBlock Text="{Binding Time}" Classes="secondary tabular" />
+                              <TextBlock Text="{Binding Label}" Classes="secondary" />
                             </StackPanel>
                             <TextBlock TextWrapping="Wrap" views:SnippetText.Parts="{Binding Parts}" />
                           </StackPanel>
@@ -93,25 +64,25 @@
       </DockPanel>
       <Panel IsVisible="{Binding !Search.IsActive}">
         <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryEmpty]}"
-                   Opacity="0.6" TextWrapping="Wrap" Margin="8" IsVisible="{Binding IsEmpty}" />
+                   Classes="secondary" TextWrapping="Wrap" Margin="8" IsVisible="{Binding IsEmpty}" />
         <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:SessionRow">
               <StackPanel Spacing="2">
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Text="{Binding Date}" FontWeight="SemiBold" />
-                  <Border Classes="badge" Background="#E53935" IsVisible="{Binding IsLive}">
-                    <TextBlock Foreground="White" FontSize="11"
+                  <Border Classes="tag live" Margin="6,0,0,0" IsVisible="{Binding IsLive}">
+                    <TextBlock
                                Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[LiveBadge]}" />
                   </Border>
-                  <Border Classes="badge" Background="#E3F2FD" IsVisible="{Binding HasMinutes}">
-                    <TextBlock Foreground="#1565C0" FontSize="11"
+                  <Border Classes="tag" Margin="6,0,0,0" IsVisible="{Binding HasMinutes}">
+                    <TextBlock
                                Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesBadge]}" />
                   </Border>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="12" Opacity="0.75">
-                  <TextBlock Text="{Binding Duration}" FontFamily="Consolas, monospace" />
-                  <TextBlock Text="{Binding Language}" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="{Binding Duration}" Classes="secondary tabular" />
+                  <TextBlock Text="{Binding Language}" Classes="secondary" />
                 </StackPanel>
               </StackPanel>
             </DataTemplate>
@@ -125,7 +96,7 @@
     <DockPanel Grid.Column="2">
     <views:AskView DockPanel.Dock="Bottom" DataContext="{Binding Ask}" />
     <Panel>
-      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistorySelect]}" Opacity="0.6"
+      <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistorySelect]}" Classes="secondary"
                  Margin="8" TextWrapping="Wrap"
                  IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNull}}" />
       <ContentControl Content="{Binding Detail}">
@@ -133,7 +104,7 @@
           <DataTemplate x:DataType="vm:SessionDetailViewModel">
             <DockPanel>
               <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
-                <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Title}" Classes="title" />
                 <WrapPanel>
                   <ComboBox Margin="0,0,4,4" MinWidth="170"
                             ItemsSource="{Binding Templates}" SelectedItem="{Binding RegenerateTemplate}"
@@ -159,20 +130,20 @@
                   <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="pdf"
                           Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportPdf]}" />
                 </WrapPanel>
-                <TextBlock Text="{Binding Message}" Foreground="#2E7D32" TextWrapping="Wrap"
+                <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
                            IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Regenerating]}"
-                           FontStyle="Italic" Foreground="#E65100" IsVisible="{Binding IsBusy}" />
+                           Classes="hint warning" IsVisible="{Binding IsBusy}" />
                 <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Loading]}"
-                           Opacity="0.6" IsVisible="{Binding IsLoading}" />
-                <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                           Classes="secondary" IsVisible="{Binding IsLoading}" />
+                <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
                            IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
               </StackPanel>
               <TabControl SelectedIndex="{Binding SelectedTab}">
                 <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabMinutes]}">
                   <Panel>
                     <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoMinutes]}"
-                               Opacity="0.6" Margin="8" TextWrapping="Wrap"
+                               Classes="secondary" Margin="8" TextWrapping="Wrap"
                                IsVisible="{Binding !HasMinutes}" />
                     <ScrollViewer>
                       <ItemsControl ItemsSource="{Binding Blocks}" Margin="8">
@@ -195,7 +166,7 @@
                         <Button Margin="0,0,8,4" Command="{Binding Editor.EditCommand}"
                                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptEdit]}"
                                 IsVisible="{Binding !Editor.IsEditing}" />
-                        <Button Margin="0,0,8,4" Classes="accent" Command="{Binding Editor.SaveCommand}"
+                        <Button Margin="0,0,8,4" Classes="primary" Command="{Binding Editor.SaveCommand}"
                                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSave]}"
                                 IsVisible="{Binding Editor.IsEditing}" />
                         <Button Margin="0,0,8,4" Command="{Binding Editor.CancelEditCommand}"
@@ -206,32 +177,33 @@
                                 IsVisible="{Binding Editor.HasEdits}" />
                       </WrapPanel>
                       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSaving]}"
-                                 FontStyle="Italic" Opacity="0.7" IsVisible="{Binding Editor.IsSaving}" />
-                      <TextBlock Text="{Binding Editor.Error}" Foreground="#C62828" TextWrapping="Wrap"
+                                 Classes="hint" IsVisible="{Binding Editor.IsSaving}" />
+                      <TextBlock Text="{Binding Editor.Error}" Classes="error" TextWrapping="Wrap"
                                  IsVisible="{Binding Editor.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                       <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Editor.SuggestRegenerate}">
-                        <TextBlock VerticalAlignment="Center" Foreground="#2E7D32" TextWrapping="Wrap"
+                        <TextBlock VerticalAlignment="Center" Classes="success" TextWrapping="Wrap"
                                    Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSaved]}" />
                         <Button Command="{Binding RegenerateMinutesCommand}"
                                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}" />
                       </StackPanel>
-                      <TextBlock Opacity="0.6" FontStyle="Italic" TextWrapping="Wrap"
+                      <TextBlock Classes="hint" TextWrapping="Wrap"
                                  Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptHasEdits]}"
                                  IsVisible="{Binding Editor.HasEdits}" />
-                      <TextBlock Opacity="0.6" FontStyle="Italic" TextWrapping="Wrap"
+                      <TextBlock Classes="hint" TextWrapping="Wrap"
                                  Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptLowConfidenceHint]}"
                                  IsVisible="{Binding HasLowConfidence}" />
                     </StackPanel>
                     <Panel>
                       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoTranscript]}"
-                                 Opacity="0.6" Margin="8" IsVisible="{Binding !Lines.Count}" />
+                                 Classes="secondary" Margin="8" IsVisible="{Binding !Lines.Count}" />
                       <ScrollViewer IsVisible="{Binding !Editor.IsEditing}">
                         <ItemsControl ItemsSource="{Binding Lines}" Margin="8"
                                       views:ScrollToItem.Item="{Binding FocusedLine}">
                           <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TranscriptLine">
-                              <SelectableTextBlock views:ConfidenceText.Parts="{Binding DisplayParts}" Foreground="{Binding Color}"
-                                                   TextWrapping="Wrap" Margin="0,3" FontSize="15"
+                              <SelectableTextBlock views:ConfidenceText.Parts="{Binding DisplayParts}" Classes="channel reading"
+                                                   Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}"
+                                                   TextWrapping="Wrap" Margin="0,3"
                                                    Classes.focused="{Binding IsFocused}" />
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
@@ -243,8 +215,9 @@
                           <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:EditableSegment">
                               <StackPanel Margin="0,3" Spacing="2">
-                                <TextBlock Text="{Binding Header}" Foreground="{Binding Color}" FontSize="13" />
-                                <TextBox Text="{Binding Text}" TextWrapping="Wrap" FontSize="15"
+                                <TextBlock Text="{Binding Header}" Classes="channel small"
+                                           Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}" />
+                                <TextBox Text="{Binding Text}" TextWrapping="Wrap" FontSize="{StaticResource FontSize.Reading}"
                                          AutomationProperties.Name="{Binding Header}" />
                               </StackPanel>
                             </DataTemplate>

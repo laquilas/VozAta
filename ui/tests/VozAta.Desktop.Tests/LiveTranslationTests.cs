@@ -17,7 +17,7 @@ public sealed class LiveTranslationTests
     {
         var viewModel = new MainViewModel(
             _client, _events, new FakeEngineProcess(), new ImmediateDispatcher(), _localization, new FakeDialogs(),
-            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver());
+            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(), new FakeThemeService());
         await viewModel.InitializeAsync();
         await SendAsync(viewModel, new ConnectionChangedEvent(true));
         return viewModel;

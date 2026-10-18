@@ -16,7 +16,7 @@ public sealed class TrayViewModelTests
     {
         var main = new MainViewModel(
             _client, _events, new FakeEngineProcess(), new ImmediateDispatcher(), _localization, new FakeDialogs(),
-            _preferences, new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver());
+            _preferences, new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(), new FakeThemeService());
         await main.InitializeAsync();
         var before = main.HandledEvents;
         _events.Send(new ConnectionChangedEvent(true));

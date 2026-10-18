@@ -26,6 +26,12 @@
     <ProjectReference Include="..\VozAta.Client\VozAta.Client.csproj" />
   </ItemGroup>
 
+  <!-- The theme gallery (phase 34) is a design review tool: debug builds only -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <AvaloniaXaml Remove="Diagnostics\**" />
+    <Compile Remove="Diagnostics\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="VozAta.Desktop.Tests" />
   </ItemGroup>

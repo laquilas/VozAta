@@ -28,12 +28,12 @@
           <TextBlock Text="{Binding AskedQuestion}" FontWeight="SemiBold" TextWrapping="Wrap"
                      IsVisible="{Binding AskedQuestion, Converter={x:Static ObjectConverters.IsNotNull}}" />
           <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskThinking]}"
-                     FontStyle="Italic" Opacity="0.7" IsVisible="{Binding IsThinking}" />
-          <SelectableTextBlock Text="{Binding DisplayAnswer}" TextWrapping="Wrap" FontSize="15" />
-          <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+                     Classes="hint" IsVisible="{Binding IsThinking}" />
+          <SelectableTextBlock Text="{Binding DisplayAnswer}" TextWrapping="Wrap" Classes="reading" />
+          <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
                      IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
           <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[AskSources]}"
-                     Opacity="0.75" IsVisible="{Binding !!Citations.Count}" />
+                     Classes="secondary" IsVisible="{Binding !!Citations.Count}" />
           <ItemsControl ItemsSource="{Binding Citations}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
@@ -42,8 +42,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:CitationLink">
-                <Button Margin="0,0,6,4" Padding="6,2" Content="{Binding}"
-                        FontFamily="Consolas, monospace" Foreground="#1565C0"
+                <Button Margin="0,0,6,4" Padding="6,2" Content="{Binding}" Classes="link"
                         Command="{Binding $parent[UserControl].((vm:AskViewModel)DataContext).OpenCommand}"
                         CommandParameter="{Binding}" />
               </DataTemplate>

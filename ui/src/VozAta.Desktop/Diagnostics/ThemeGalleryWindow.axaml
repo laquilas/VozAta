@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:diag="using:VozAta.Desktop.Diagnostics"
+        x:Class="VozAta.Desktop.Diagnostics.ThemeGalleryWindow"
+        Title="VozAta theme gallery" Icon="/Assets/vozata.ico" Width="1500" Height="1000">
+  <!-- Debug builds only: start the app with the theme-gallery switch (see App.axaml.cs) to review the palette in both themes. -->
+  <ScrollViewer>
+    <Grid ColumnDefinitions="*,*">
+      <ThemeVariantScope RequestedThemeVariant="Light">
+        <Border Background="{DynamicResource Brush.Surface}" TextElement.Foreground="{DynamicResource Brush.TextPrimary}">
+          <diag:ThemeGalleryPanel />
+        </Border>
+      </ThemeVariantScope>
+      <ThemeVariantScope Grid.Column="1" RequestedThemeVariant="Dark">
+        <Border Background="{DynamicResource Brush.Surface}" TextElement.Foreground="{DynamicResource Brush.TextPrimary}">
+          <diag:ThemeGalleryPanel />
+        </Border>
+      </ThemeVariantScope>
+    </Grid>
+  </ScrollViewer>
+</Window>

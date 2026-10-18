@@ -308,7 +308,7 @@ public sealed class AskEventRoutingTests
 
     private MainViewModel Create() => new(
         _client, _events, new FakeEngineProcess(), new ImmediateDispatcher(), new LocalizationService(), new FakeDialogs(),
-        new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver());
+        new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(), new FakeThemeService());
 
     private async Task SendAsync(MainViewModel viewModel, EngineEvent engineEvent)
     {

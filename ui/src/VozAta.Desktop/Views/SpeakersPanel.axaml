@@ -6,26 +6,26 @@
   <DockPanel Margin="8">
     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersIntro]}"
-                 Opacity="0.75" TextWrapping="Wrap" IsVisible="{Binding HasRows}" />
+                 Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding HasRows}" />
       <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersEmpty]}"
-                 Opacity="0.6" TextWrapping="Wrap"
+                 Classes="secondary" TextWrapping="Wrap"
                  IsVisible="{Binding !HasRows}" />
-      <TextBlock Text="{Binding Error}" Foreground="#C62828" TextWrapping="Wrap"
+      <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
                  IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
     <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding HasRows}">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Command="{Binding SaveCommand}"
                 Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersSave]}" />
-        <TextBlock VerticalAlignment="Center" FontStyle="Italic" Opacity="0.7"
+        <TextBlock VerticalAlignment="Center" Classes="hint"
                    Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersSaving]}"
                    IsVisible="{Binding IsSaving}" />
-        <TextBlock VerticalAlignment="Center" Foreground="#2E7D32" Text="{Binding Message}"
+        <TextBlock VerticalAlignment="Center" Classes="success" Text="{Binding Message}"
                    IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
-      <Border Background="#FFF3E0" CornerRadius="4" Padding="10,8" IsVisible="{Binding OfferRegenerate}">
+      <Border Classes="banner warning" IsVisible="{Binding OfferRegenerate}">
         <WrapPanel>
-          <TextBlock VerticalAlignment="Center" Foreground="#E65100" TextWrapping="Wrap" Margin="0,0,12,4"
+          <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,4"
                      Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersRegeneratePrompt]}" />
           <Button Margin="0,0,8,4" Command="{Binding RegenerateCommand}"
                   Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersRegenerate]}" />
@@ -44,8 +44,8 @@
               <TextBox Grid.Column="1" Text="{Binding Name}" MaxLength="200"
                        PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SpeakersName]}"
                        AutomationProperties.Name="{Binding DefaultLabel}" />
-              <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.6"
-                         FontStyle="Italic" TextTrimming="CharacterEllipsis" Text="{Binding Hint}"
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0"
+                         Classes="hint" TextTrimming="CharacterEllipsis" Text="{Binding Hint}"
                          ToolTip.Tip="{Binding Hint}" />
             </Grid>
           </DataTemplate>

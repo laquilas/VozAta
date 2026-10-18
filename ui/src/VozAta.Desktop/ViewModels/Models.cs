@@ -44,14 +44,15 @@ public sealed record TranscriptLine(string Timestamp, string Label, string Text,
     public IReadOnlyList<TextPart> DisplayParts =>
         [new TextPart($"[{Timestamp}] {Label}: "), .. LowConfidenceParts ?? [new TextPart(Text)]];
 
-    public string Color => ColorOf(Channel);
+    /// <summary>Spoken into the microphone: the view colors it with <c>Brush.ChannelMic</c>.</summary>
+    public bool IsMic => IsMicChannel(Channel);
 
-    public static string ColorOf(string channel) => channel switch
-    {
-        "mic" => "#2E7D32",
-        "system" => "#1565C0",
-        _ => "#6A1B9A",
-    };
+    /// <summary>Heard on the system output: the view colors it with <c>Brush.ChannelSystem</c>.</summary>
+    public bool IsSystem => IsSystemChannel(Channel);
+
+    public static bool IsMicChannel(string channel) => channel == "mic";
+
+    public static bool IsSystemChannel(string channel) => channel == "system";
 
     public static string FormatTime(double seconds)
     {
