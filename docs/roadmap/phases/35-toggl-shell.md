@@ -72,3 +72,33 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 
 > Execute phase 35 of the roadmap (`docs/roadmap/phases/35-toggl-shell.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/35-toggl-shell`
+- **Status:** in progress
+- **Updated:** 2026-10-17 21:37
+- **Next step:** engine — optional `title` on `POST /sessions`, `SessionSummary.title`, title in
+  `session.json` and in the repository contract suite (`tests/api/test_session_title.py`).
+
+### Steps
+
+- [ ] Engine: `title` on start, in `session.json` and `SessionSummary`; contract suite
+- [ ] Engine: `PATCH /sessions/{id}` `{title}` while recording and after
+- [ ] Engine: title in the minutes prompt (en / pt-BR / es) and as the export document title
+- [ ] Docs: api-contract, architecture §8
+- [ ] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync`
+- [ ] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel`
+- [ ] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
+      Meetings / Ask / Config page ViewModels
+- [ ] UI: shell view (sidebar, toasts, recovery banner) and the recorder page timer bar; tray
+      tooltip with the title; strings in en / pt-BR / es
+- [ ] UI: headless renders of the new shell (idle and recording, light and dark)
+- [ ] Full suites, acceptance criteria, PR
+
+### Decisions and notes
+
+- Runs in parallel with phase 31 (SQLite backend): the engine part stays additive. The title is a
+  `session.json` field written through the phase 30 `SessionRepository` port
+  (`read_meta` / `write_meta`), and the shared contract suite checks it round-trips, so the SQLite
+  backend picks it up.
