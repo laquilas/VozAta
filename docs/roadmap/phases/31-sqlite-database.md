@@ -77,14 +77,14 @@ Audio in the database (32), importing old folders (33), settings in the database
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:30
-- **Next step:** make `SqliteSessionRepository` pass the phase 30 contract suite
-  (`tests/storage/sqlite/test_repository.py`).
+- **Next step:** search over `segments_fts` (`storage/sqlite/search.py`, `SqliteSearch`) with
+  `tests/storage/sqlite/test_fts.py` (sync on edit / revert / diarize, rebuild).
 
 ### Steps
 
 - [x] Start the phase (status, Progress); phase 30 manual check part B recorded as done
 - [x] `Database` (WAL, foreign keys, per-thread connections, write lock) and migrations
-- [ ] `SqliteSessionRepository` passing the phase 30 contract suite; cascade delete
+- [x] `SqliteSessionRepository` passing the phase 30 contract suite; cascade delete
 - [ ] FTS: `segments_fts` kept in sync by triggers on the best source; `SqliteSearch`
 - [ ] Config (`STORAGE_BACKEND`, `DATABASE_PATH`), bootstrap wiring, OneDrive warning in
       `GET /health`, `storage` field in `GET /sessions/{id}`, CLI session folders
@@ -94,4 +94,23 @@ Audio in the database (32), importing old folders (33), settings in the database
 
 ### Decisions and notes
 
-- (none yet)
+- Schema: two migrations, `001_schema.sql` (tables) and `002_search.sql` (`segments_fts` and
+  its triggers, filled from the rows already there), so "migrate from version N-1" is a real
+  test. `segments` and `action_items` have an `INTEGER PRIMARY KEY row_id` (written order, and
+  the FTS rowid, stable across VACUUM) plus `UNIQUE (session_id, source, segment_id)` for
+  segments instead of a composite primary key.
+- `meta_json` keeps every metadata key in order; a value stored in its column is `null` there,
+  so `read_meta` gives back exactly the keys written (e.g. `ended_at: null` vs. absent). Only
+  strings go to the text columns and floats to `duration_seconds`; any other type stays in
+  `meta_json` unchanged.
+- `write_meta` is one UPSERT of the session row (a heartbeat changes one row in place; no file
+  is rewritten). `create` inserts a row with `meta_json` NULL, which is not listed until the
+  first `write_meta`, and makes `OUTPUT_DIR/<id>/` for the WAVs, skipping ids taken by a row or
+  by a folder (old file-backend sessions).
+- **Deviation:** `folder()` / `files()` still return the audio folder and its files (only WAVs)
+  for the SQLite backend in this phase: the desktop app plays the WAVs and opens the folder from
+  `folder` + `files`, and audio stays in files until phase 32. Phase 32 makes them null.
+- Minutes rows store the session's template and `generated_at`; translations upsert by
+  `(session_id, segment_id)` (the last one wins); action items keep their order by `row_id`.
+- The repository is not a `RecoverableStore`: every emitted segment is committed
+  (`synchronous=FULL`) before `emit` returns, so there is nothing to repair.
