@@ -1188,4 +1188,40 @@
   <data name="MigrationKeepFolders" xml:space="preserve">
     <value>As pastas originais são mantidas: guarde um backup até conferir as reuniões importadas.</value>
   </data>
+  <data name="PlayerPlay" xml:space="preserve">
+    <value>Reproduzir</value>
+  </data>
+  <data name="PlayerPause" xml:space="preserve">
+    <value>Pausar</value>
+  </data>
+  <data name="PlayerBack" xml:space="preserve">
+    <value>Voltar 10 segundos</value>
+  </data>
+  <data name="PlayerForward" xml:space="preserve">
+    <value>Avançar 10 segundos</value>
+  </data>
+  <data name="PlayerPosition" xml:space="preserve">
+    <value>Posição</value>
+  </data>
+  <data name="PlayerSpeed" xml:space="preserve">
+    <value>Velocidade</value>
+  </data>
+  <data name="PlayerChannel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="PlayerVolume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="PlayerExternal" xml:space="preserve">
+    <value>Abrir no player externo</value>
+  </data>
+  <data name="TrackMixed" xml:space="preserve">
+    <value>Ambos</value>
+  </data>
+  <data name="TrackMic" xml:space="preserve">
+    <value>Microfone</value>
+  </data>
+  <data name="TrackSystem" xml:space="preserve">
+    <value>Áudio do sistema</value>
+  </data>
 </root>

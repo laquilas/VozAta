@@ -67,14 +67,14 @@ Waveform rendering, audio editing/trimming, video.
 - **Branch:** `feature/37-detail-and-player` (stacked on `feature/33-folder-migration`, PR #51,
   itself on `feature/32-audio-in-sqlite`, PR #49)
 - **Status:** in progress
-- **Updated:** 2026-10-18 19:53
-- **Next step:** add `IAudioPlayer` (port) and `FakeAudioPlayer`, then `PlayerBarViewModel` test-first.
+- **Updated:** 2026-10-18 19:56
+- **Next step:** add to `SessionPageViewModel`: `Player` (built from `audio` with an `IAudioPlayer` factory; null when live or no audio), `TranscriptLine.Start` / `IsCurrent`, segment click seeks, highlight follows `PositionMoved`, `SeekTo(seconds)`.
 
 ### Steps
 
 - [x] Start the phase (status, Progress)
-- [ ] `IAudioPlayer` port, `FakeAudioPlayer`; `TranscriptLine` gets `Start` / `End` / `IsCurrent`
-- [ ] `PlayerBarViewModel`: play/pause, ±10 s, seek, speed, channel (keeps position), volume
+- [x] `IAudioPlayer` port, `FakeAudioPlayer`; `TranscriptLine` gets `Start` / `End` / `IsCurrent`
+- [x] `PlayerBarViewModel`: play/pause, ±10 s, seek, speed, channel (keeps position), volume
 - [ ] `SessionPageViewModel` replaces `SessionDetailViewModel` (tests moved), title edit,
       delete, Ask tab, segment click seeks, highlight follows position, live hides the player
 - [ ] Navigation: session page in the shell, back to Meetings; search hits / citations open it
@@ -87,4 +87,6 @@ Waveform rendering, audio editing/trimming, video.
 
 - Stacked on phase 33 (user's choice to stack on 32; 37's manual check needs a migrated meeting).
 - `SessionDetailViewModel` was renamed to `SessionPageViewModel` (with its tests, `SessionPageViewModelTests.cs`) instead of rewritten: every tested behavior is kept and the page features are added to it.
+- `IAudioPlayer` (`Services/AudioPlayer.cs`): `OpenAsync(uri)` (paused), `Play`, `Pause`, `Seek`, `Rate`, `Volume` (0–100), `Position`, `Duration`, `IsPlaying`, `PositionChanged` / `StateChanged` (any thread; the ViewModel posts through `IUiDispatcher`). `PlayerBarViewModel`: tracks in the order mixed, mic, system, only those in the detail's `audio`; the stream is opened on the first play; a slider move seeks (player-driven moves do not seek back); ±10 s clamped to the duration (remembered before the first play); switching track reopens and seeks back, playing only if it was; speeds 0.75–2×; volume and speed reapplied to each new stream; an open failure shows `Error`. `PositionMoved` drives the line highlight. New strings `Player*`, `Track*`.
+
 
