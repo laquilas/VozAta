@@ -68,15 +68,15 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - **Branch:** `feature/36-meetings-by-day`
 - **Status:** in progress
 - **Updated:** 2026-10-17 22:40
-- **Next step:** `GET /sessions?from=&to=` grouped by local day in
-  `engine/src/vozata/api/routes/sessions.py` (`tests/api/test_sessions_range.py`).
+- **Next step:** `DELETE /sessions/{id}` through `SessionManager.delete` (409 while the session
+  is recorded, finalized or recovered) in `tests/api/test_session_delete.py`.
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
 - [x] Repository: `list_range`, `speaker_count`, `delete` (both backends, contract suite; files
       go to the Recycle Bin through a `Recycler` port)
-- [ ] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
+- [x] API: `GET /sessions?from=&to=` grouped by local day; `SessionSummary` gains
       `speaker_count`, `has_action_items`, `template`
 - [ ] API: `DELETE /sessions/{id}` (`204`, `409` while recording, search index cleared)
 - [ ] UI client: range and delete calls, new summary fields
@@ -94,3 +94,9 @@ Calendar/reports view, tags beyond template and language, bulk actions.
   `Send2TrashRecycler` (new dependency `Send2Trash`). Unit tests use `FakeRecycler`, which moves
   folders into a `tmp_path` "recycle bin" — never the real one.
 - SQLite `delete` is permanent: the rows (cascade, the FTS index follows) and the audio folder.
+- Range response extras (additive, in api-contract): `has_earlier` (stops infinite scroll without
+  probing empty weeks forever) and `storage` (the UI words the delete dialog and offers "Undo"
+  only for the file backend). Both dates are required (`422 invalid_date_range`). Days without
+  meetings are left out. `SessionSummary` also gains `template` (the template pill of a row).
+- Local days use the engine machine's time zone (`datetime.astimezone()`, DST aware); the UI and
+  engine run on the same machine.

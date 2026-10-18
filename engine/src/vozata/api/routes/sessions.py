@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -14,6 +15,7 @@ from vozata.api.routes.templates import check_template
 from vozata.api.schemas import (
     Minutes,
     RegenerateMinutes,
+    SessionDays,
     SessionDetail,
     SessionList,
     SessionSummary,
@@ -21,6 +23,7 @@ from vozata.api.schemas import (
     Transcript,
     UpdateSession,
 )
+from vozata.api.session_days import EPOCH, group_by_day, local_bounds
 from vozata.api.session_manager import StartOptions
 from vozata.domain import ConversationLanguage, TranslationTarget
 from vozata.session_title import TitleTooLongError, normalize_title
@@ -65,12 +68,18 @@ def stop_session(c: Container) -> dict[str, Any]:
     return c.manager.stop()
 
 
-@router.get("/sessions", response_model=SessionList)
+@router.get("/sessions", response_model=SessionList | SessionDays)
 def list_sessions(
     c: Container,
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    first: Annotated[date | None, Query(alias="from")] = None,
+    last: Annotated[date | None, Query(alias="to")] = None,
 ) -> dict[str, Any]:
+    """The paged list, or with `from` and `to` (local dates, both included) the meetings of
+    those days grouped by local start day (phase 36)."""
+    if first is not None or last is not None:
+        return _days(c, first, last)
     ids = c.store.list_sessions()
     return {
         "items": [_summary(c, session_id) for session_id in ids[offset : offset + limit]],
@@ -138,6 +147,18 @@ def _title(raw: str | None) -> str | None:
         return normalize_title(raw)
     except TitleTooLongError as error:
         raise ApiError(422, "title_too_long", max=error.max_length) from None
+
+
+def _days(c: ApiContainer, first: date | None, last: date | None) -> dict[str, Any]:
+    if first is None or last is None or first > last:
+        raise ApiError(422, "invalid_date_range")
+    start, end = local_bounds(first, last)
+    summaries = [_summary(c, session_id) for session_id in c.store.list_range(start, end)]
+    return {
+        **group_by_day(summaries),
+        "has_earlier": bool(c.store.list_range(EPOCH, start)),
+        "storage": c.storage.backend,
+    }
 
 
 def _summary(c: ApiContainer, session_id: str) -> dict[str, Any]:
