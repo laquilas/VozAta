@@ -76,17 +76,19 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
 - **Branch:** `feature/32-audio-in-sqlite`
 - **Status:** in progress
 - **Updated:** 2026-10-17 23:30
-- **Next step:** write `storage/sqlite/audio.py` (`SqliteAudioStore`) against
-  `tests/storage/audio_contract.py` plus `tests/storage/sqlite/test_audio_store.py`.
+- **Next step:** add `AUDIO_CACHE_MB` to `config.py` / `settings_fields.py` / `.env.example`,
+  then wire `SqliteAudioStore` in `bootstrap.AUDIO_STORES`.
 
 ### Steps
 
 - [x] Start the phase (status, Progress)
 - [x] Schema: `audio_chunks` migration, `auto_vacuum=INCREMENTAL`
-- [ ] `SqliteAudioStore`: buffered capture, writer thread (1 s batches, both channels per
+- [x] Playable tracks: `AudioTrack`, `PcmTrack` / `AudioTracks` ports, `audio/pcm.py`
+      (WAV header, channel and mixed tracks), file backend tracks
+- [x] `SqliteAudioStore`: buffered capture, writer thread (1 s batches, both channels per
       transaction), silence for gaps and pauses, equal-length finalize, repair; contract suite
-- [ ] Reader: chunk-range `frames`, on-the-fly mix, `materialize_wav` with the LRU cache
-      (`AUDIO_CACHE_MB`)
+- [x] Reader: chunk-range `frames`, on-the-fly mix, `materialize_wav` with the LRU cache
+- [ ] Config `AUDIO_CACHE_MB` (`config.py`, `settings_fields.py`, `.env.example`, locales)
 - [ ] API: `GET /sessions/{id}/audio/{track}` (Range), `audio` durations in the detail,
       `folder` / `files` null for sqlite, database and cache sizes in `GET /health`
 - [ ] Bootstrap wiring, recovery, delete helper (chunks + background `incremental_vacuum`)
@@ -101,3 +103,22 @@ Compression (FLAC/Opus), importing old WAVs (33), the in-app player (37).
   only takes effect on a new file); a file created by phase 31 is converted once on open with
   one `VACUUM` (it holds no audio yet, so it is quick). `Database.reclaim()` runs
   `PRAGMA incremental_vacuum`.
+- Ports: `domain.AudioTrack` (`mic`, `system`, `mixed`); `PcmTrack` (`rate`, `channels`,
+  `frames`, `read(start, count) -> bytes`) and `AudioTracks.track(id, track) -> PcmTrack | None`,
+  part of `SessionAudio`. `AudioMixer` gained `channels` and a public `combine(mic, system)` so
+  the mix can be computed per range. `materialize_wav` also takes `AudioTrack.MIXED`.
+- `SqliteAudioStore.write_mix` does nothing (the mix is never stored); the shared contract test
+  that checked the mixer call moved to the file backend tests, and the contract now checks that
+  the mixed track reads as the mono sum. The mix uses the current `MIX_MODE` mixer (an old
+  session recorded in stereo plays as mono after switching to mono).
+- Writer: `ChunkBatcher` per recording (one thread, `audio-chunks`) commits whole 1 s chunks of
+  every channel in one transaction per second; a finished channel's shorter last chunk goes in
+  with its `finalize`, and the last `finalize` stops the thread and commits the rest in the
+  caller (raises if that fails). A failed commit puts the audio back in the buffer (logged,
+  retried next second). More than 30 s buffered logs one warning; nothing is dropped. No chunk
+  is longer than `CHUNK_SECONDS` x rate, which bounds the range query on `start_frame`.
+- Cache: `WavCache` (`OUTPUT_DIR/cache/<id>/<track>.wav`), written to a temp file and
+  `os.replace`d; reused while its size matches the track (a growing or repaired track rebuilds
+  it); LRU by mtime (touched on use); a file in use is skipped; `.tmp` leftovers removed.
+- `SqliteAudioStore.delete(id)` drops the chunks and cached files, then runs
+  `Database.reclaim()` on a background thread. Phase 36 (`DELETE /sessions/{id}`) calls it.

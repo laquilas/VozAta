@@ -225,7 +225,7 @@ class Database:
             db.execute("COMMIT")
 
     def reclaim(self) -> None:
-        """Give the free pages left by deleted rows back to the file system (`incremental_vacuum`)."""
+        """Give the pages freed by deleted rows back to the file system (`incremental_vacuum`)."""
         with self._write_lock:
             self.connection().execute("PRAGMA incremental_vacuum").fetchall()
 
