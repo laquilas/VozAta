@@ -75,3 +75,27 @@ settings.
 
 > Execute phase 38 of the roadmap (`docs/roadmap/phases/38-config-page.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/38-config-page`
+- **Status:** in progress
+- **Updated:** 2026-10-17 10:00
+- **Next step:** engine — add `options_source` to `settings_fields.Field`, the `SettingsOptions`
+  catalog and `GET /settings/options` (tests in `tests/api/test_settings_options.py`).
+
+### Steps
+
+- [ ] Engine: `options_source` per field + `GET /settings/options` (registries, Whisper models + HF
+      cache, Ollama tags, compute types, devices)
+- [ ] Engine: `POST /settings/test/{target}` (ollama, stt_api, hf_token, azure_devops, github)
+- [ ] Engine: `GET /health` storage sizes + `DELETE /storage/cache`
+- [ ] UI client: DTOs and `IEngineClient` methods for options, tests, storage
+- [ ] UI: editor kinds (options combo, path + Browse, url validation, secret Replace/Remove, Changed badge)
+- [ ] UI: `ConfigPageViewModel` sections + search, test buttons, Storage and About sections
+- [ ] UI: `ConfigPage.axaml` (sections list, search, cards, sticky Save / Discard bar) + screenshots
+- [ ] Docs (api-contract, architecture §9), full suites, PR
+
+### Decisions and notes
+
+- (none yet)
