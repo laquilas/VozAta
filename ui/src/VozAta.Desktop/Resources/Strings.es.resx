@@ -948,4 +948,136 @@
   <data name="GoToRecorder" xml:space="preserve">
     <value>Grabando {0} — abrir la grabadora</value>
   </data>
+  <data name="ConfigSection_desktop" xml:space="preserve">
+    <value>Aplicación</value>
+  </data>
+  <data name="ConfigSection_vocabulary" xml:space="preserve">
+    <value>Vocabulario</value>
+  </data>
+  <data name="ConfigSection_storage" xml:space="preserve">
+    <value>Almacenamiento</value>
+  </data>
+  <data name="ConfigSection_about" xml:space="preserve">
+    <value>Acerca de</value>
+  </data>
+  <data name="ConfigSections" xml:space="preserve">
+    <value>Secciones</value>
+  </data>
+  <data name="ConfigSearch" xml:space="preserve">
+    <value>Buscar ajustes</value>
+  </data>
+  <data name="ConfigNoResults" xml:space="preserve">
+    <value>Ningún ajuste coincide con la búsqueda.</value>
+  </data>
+  <data name="ConfigUnsaved" xml:space="preserve">
+    <value>Hay cambios sin guardar.</value>
+  </data>
+  <data name="SettingChanged" xml:space="preserve">
+    <value>Modificado</value>
+  </data>
+  <data name="SettingNotInstalled" xml:space="preserve">
+    <value>No instalado</value>
+  </data>
+  <data name="SettingOptionsUnreachable" xml:space="preserve">
+    <value>No se pudo leer la lista: el servicio no respondió.</value>
+  </data>
+  <data name="SettingInvalidUrl" xml:space="preserve">
+    <value>Escribe una dirección completa que empiece por http:// o https://.</value>
+  </data>
+  <data name="SettingBrowse" xml:space="preserve">
+    <value>Examinar…</value>
+  </data>
+  <data name="SecretStored" xml:space="preserve">
+    <value>Guardado (oculto)</value>
+  </data>
+  <data name="SecretNotSet" xml:space="preserve">
+    <value>Sin definir</value>
+  </data>
+  <data name="SecretWillBeRemoved" xml:space="preserve">
+    <value>Se elimina al guardar</value>
+  </data>
+  <data name="SecretReplace" xml:space="preserve">
+    <value>Reemplazar</value>
+  </data>
+  <data name="SecretRemove" xml:space="preserve">
+    <value>Quitar</value>
+  </data>
+  <data name="SecretKeep" xml:space="preserve">
+    <value>Conservar el valor guardado</value>
+  </data>
+  <data name="ConnectionTest" xml:space="preserve">
+    <value>Probar</value>
+  </data>
+  <data name="ConnectionTesting" xml:space="preserve">
+    <value>Probando…</value>
+  </data>
+  <data name="ConnectionTestHint" xml:space="preserve">
+    <value>Comprueba el servicio con los ajustes guardados: guarda tus cambios antes.</value>
+  </data>
+  <data name="StorageBackend" xml:space="preserve">
+    <value>Almacenamiento</value>
+  </data>
+  <data name="StorageBackendSqlite" xml:space="preserve">
+    <value>Base de datos SQLite (vozata.db)</value>
+  </data>
+  <data name="StorageBackendFiles" xml:space="preserve">
+    <value>Carpetas (una por reunión)</value>
+  </data>
+  <data name="StorageDatabase" xml:space="preserve">
+    <value>Base de datos</value>
+  </data>
+  <data name="StorageDatabaseSize" xml:space="preserve">
+    <value>Tamaño de la base</value>
+  </data>
+  <data name="StorageNoDatabase" xml:space="preserve">
+    <value>Sin base de datos</value>
+  </data>
+  <data name="StorageAudioCache" xml:space="preserve">
+    <value>Caché de audio</value>
+  </data>
+  <data name="StorageAudioCacheHelp" xml:space="preserve">
+    <value>Archivos WAV generados desde la base para reproducirlos. Se generan de nuevo cuando hace falta.</value>
+  </data>
+  <data name="StorageClearCache" xml:space="preserve">
+    <value>Vaciar caché</value>
+  </data>
+  <data name="StorageClearCacheTitle" xml:space="preserve">
+    <value>¿Vaciar la caché de audio?</value>
+  </data>
+  <data name="StorageClearCacheMessage" xml:space="preserve">
+    <value>Se borran los archivos WAV de la caché. Las grabaciones siguen en la base y vuelven a la caché al reproducirlas.</value>
+  </data>
+  <data name="StorageKeepCache" xml:space="preserve">
+    <value>Conservar</value>
+  </data>
+  <data name="StorageCacheCleared" xml:space="preserve">
+    <value>Se liberaron {0}.</value>
+  </data>
+  <data name="StorageOpenFolder" xml:space="preserve">
+    <value>Abrir carpeta</value>
+  </data>
+  <data name="StorageRefresh" xml:space="preserve">
+    <value>Actualizar</value>
+  </data>
+  <data name="SizeBytes" xml:space="preserve">
+    <value>{0} B</value>
+  </data>
+  <data name="SizeKilobytes" xml:space="preserve">
+    <value>{0:0.#} KB</value>
+  </data>
+  <data name="SizeMegabytes" xml:space="preserve">
+    <value>{0:0.#} MB</value>
+  </data>
+  <data name="SizeGigabytes" xml:space="preserve">
+    <value>{0:0.##} GB</value>
+  </data>
+  <data name="AboutAppVersion" xml:space="preserve">
+    <value>Versión de la aplicación</value>
+  </data>
+  <data name="AboutEngineVersion" xml:space="preserve">
+    <value>Versión del motor</value>
+  </data>
+  <data name="AboutLicenses" xml:space="preserve">
+    <value>Licencias</value>
+  </data>
 </root>

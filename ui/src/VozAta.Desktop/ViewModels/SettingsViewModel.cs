@@ -18,6 +18,21 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
     [ObservableProperty]
     public partial string Title { get; private set; } = id;
 
+    /// <summary>Some editor matches the search box (phase 38).</summary>
+    [ObservableProperty]
+    public partial bool HasMatches { get; private set; } = true;
+
+    /// <summary>Show only the editors that match <paramref name="query"/> (all when it is blank).</summary>
+    public void Filter(string query)
+    {
+        foreach (var editor in Editors)
+        {
+            editor.IsVisible = editor.Matches(query);
+        }
+
+        HasMatches = Editors.Any(editor => editor.IsVisible);
+    }
+
     public void RefreshTexts(ILocalizationService localization)
     {
         Title = localization[$"SettingsGroup_{Id}"];
@@ -32,10 +47,23 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
 /// The engine settings page, generated from the <c>GET /settings</c> schema. Save sends only the
 /// changed keys; keys read at engine start-up end in a restart prompt.
 /// </summary>
-public sealed partial class SettingsViewModel(IEngineClient client, IEngineProcess process, ILocalizationService localization)
+public sealed partial class SettingsViewModel(
+    IEngineClient client, IEngineProcess process, ILocalizationService localization, IPathPicker? paths = null)
     : ObservableObject
 {
-    private static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "api"];
+    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "api"];
+
+    /// <summary>The key each service check sits next to (phase 38).</summary>
+    private static readonly Dictionary<string, string> TestAnchors = new()
+    {
+        ["OLLAMA_URL"] = ConnectionTargets.Ollama,
+        ["OPENAI_STT_URL"] = ConnectionTargets.SttApi,
+        ["HF_TOKEN"] = ConnectionTargets.HfToken,
+        ["AZDO_PAT"] = ConnectionTargets.AzureDevOps,
+        ["GITHUB_TOKEN"] = ConnectionTargets.GitHub,
+    };
+
+    private SettingOptions? _options;
 
     public ObservableCollection<SettingGroupViewModel> Groups { get; } = [];
 
@@ -59,7 +87,11 @@ public sealed partial class SettingsViewModel(IEngineClient client, IEngineProce
     /// <summary>Raised with the saved values as text (null = cleared) after a successful save.</summary>
     public event Action<IReadOnlyDictionary<string, string?>>? Saved;
 
-    private IEnumerable<SettingEditorViewModel> Editors => Groups.SelectMany(group => group.Editors);
+    /// <summary>Every editor of every group.</summary>
+    public IEnumerable<SettingEditorViewModel> Editors => Groups.SelectMany(group => group.Editors);
+
+    /// <summary>Some editor has a value that cannot be saved (an invalid address).</summary>
+    public bool HasValidationErrors => Editors.Any(editor => editor.HasValidationError);
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -71,11 +103,15 @@ public sealed partial class SettingsViewModel(IEngineClient client, IEngineProce
             foreach (var group in settings.Schema.GroupBy(item => item.Group).OrderBy(group => Order(group.Key)))
             {
                 var editors = group
-                    .Select(item => new SettingEditorViewModel(item, Value(settings.Values, item.Key), localization))
+                    .Select(item => new SettingEditorViewModel(item, Value(settings.Values, item.Key), localization, paths))
                     .ToList();
                 foreach (var editor in editors)
                 {
                     editor.PropertyChanged += OnEditorChanged;
+                    if (TestAnchors.TryGetValue(editor.Key, out var target))
+                    {
+                        editor.Test = new ConnectionTestViewModel(target, client, localization);
+                    }
                 }
 
                 var section = new SettingGroupViewModel(group.Key, editors);
@@ -83,11 +119,45 @@ public sealed partial class SettingsViewModel(IEngineClient client, IEngineProce
                 Groups.Add(section);
             }
 
+            if (_options is not null)
+            {
+                ApplyOptions(_options);
+            }
+
             UpdateDirty();
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
             Error = ErrorText(error);
+        }
+    }
+
+    /// <summary>
+    /// Read the <c>GET /settings/options</c> lists (phase 38) into the editors that use them. A
+    /// failure leaves the editors as free text.
+    /// </summary>
+    public async Task LoadOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _options = await client.GetSettingOptionsAsync(cancellationToken);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            return;
+        }
+
+        ApplyOptions(_options);
+    }
+
+    private void ApplyOptions(SettingOptions options)
+    {
+        foreach (var editor in Editors)
+        {
+            if (editor.OptionsSource is { } source && options.Options.TryGetValue(source, out var items))
+            {
+                editor.SetOptions(items, options.Reachable.GetValueOrDefault(source, true));
+            }
         }
     }
 
@@ -107,7 +177,7 @@ public sealed partial class SettingsViewModel(IEngineClient client, IEngineProce
         }
     }
 
-    private bool CanSave() => IsDirty && !IsBusy;
+    private bool CanSave() => IsDirty && !IsBusy && !HasValidationErrors;
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
@@ -204,6 +274,11 @@ public sealed partial class SettingsViewModel(IEngineClient client, IEngineProce
         if (args.PropertyName == nameof(SettingEditorViewModel.IsDirty))
         {
             UpdateDirty();
+        }
+        else if (args.PropertyName == nameof(SettingEditorViewModel.HasValidationError))
+        {
+            OnPropertyChanged(nameof(HasValidationErrors));
+            SaveCommand.NotifyCanExecuteChanged();
         }
     }
 

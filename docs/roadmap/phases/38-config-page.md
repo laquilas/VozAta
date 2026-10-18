@@ -80,8 +80,8 @@ settings.
 
 - **Branch:** `feature/38-config-page`
 - **Status:** in progress
-- **Updated:** 2026-10-17 12:00
-- **Next step:** UI: editor kinds in `SettingEditorViewModel` (options combo fed by `options_source`, path + Browse via a new `IFolderPicker`, url validation, secret Replace / Remove, Changed badge) with `SettingEditorViewModelTests.cs`.
+- **Updated:** 2026-10-17 14:30
+- **Next step:** Tick the acceptance criteria, set the README status to done, write the manual check recipe, run the full engine + UI suites, open the PR.
 
 ### Steps
 
@@ -89,9 +89,9 @@ settings.
 - [x] Engine: `POST /settings/test/{target}` (ollama, stt_api, hf_token, azure_devops, github)
 - [x] Engine: `GET /health` storage sizes + `DELETE /storage/cache`
 - [x] UI client: DTOs and `IEngineClient` methods for options, tests, storage
-- [ ] UI: editor kinds (options combo, path + Browse, url validation, secret Replace/Remove, Changed badge)
-- [ ] UI: `ConfigPageViewModel` sections + search, test buttons, Storage and About sections
-- [ ] UI: `ConfigPage.axaml` (sections list, search, cards, sticky Save / Discard bar) + screenshots
+- [x] UI: editor kinds (options combo, path + Browse, url validation, secret Replace/Remove, Changed badge)
+- [x] UI: `ConfigPageViewModel` sections + search, test buttons, Storage and About sections
+- [x] UI: `ConfigPage.axaml` (sections list, search, cards, sticky Save / Discard bar) + screenshots
 - [ ] Docs (api-contract, architecture §9), full suites, PR
 
 ### Decisions and notes
@@ -99,3 +99,8 @@ settings.
 - Options response shape: `{options: {source: [...]}, reachable: {source: bool}}` (the phase file's `{source: [...]}` plus `reachable: false`, folded into one typed object for the C# client).
 - `GET /health` keeps phase 31's `storage.database` (not `database_path`) and adds `size_bytes` and `audio_cache_bytes`; the audio cache is `OUTPUT_DIR/cache/` as phase 32 defines it. Clear cache is `DELETE /storage/cache`.
 - The phase file says `OLLAMA_HOST`; the key is `OLLAMA_URL`.
+- The Config page replaces `SettingsView` (`Views/ConfigPage.axaml`); `ConfigPageViewModel` moved out of `Pages.cs`. The engine status card moved into About (with Check again).
+- Secrets: Replace (empty password box) and Remove (clears the key on Save); the mask `********` never reaches a text box any more.
+- Browse: `*_DIR` keys pick a folder, `*_FILE` keys a file, `DATABASE_PATH` a folder (the file name is kept, default `vozata.db`).
+- Choice keys that also have an `options_source` (`WHISPER_DEVICE`, `DIARIZATION_DEVICE` → `devices`) keep their fixed list and only mark unavailable entries (cuda without a GPU).
+- Options and storage load with the page at start-up (`MainViewModel.InitializeAsync` → `ConfigPageViewModel.LoadAsync`); connection tests run only on click.

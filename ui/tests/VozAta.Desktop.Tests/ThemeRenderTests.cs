@@ -27,7 +27,7 @@ public static class HeadlessApp
 /// </summary>
 public sealed class ThemeRenderTests
 {
-    private static readonly Lazy<HeadlessUnitTestSession> Session =
+    internal static readonly Lazy<HeadlessUnitTestSession> Session =
         new(() => HeadlessUnitTestSession.StartNew(typeof(HeadlessApp)));
 
     [Theory]
@@ -46,7 +46,7 @@ public sealed class ThemeRenderTests
                 viewModel.History.Detail!.SelectedTab = 1;
                 Render<HistoryView>(viewModel, ShellViewModel.Meetings, $"meetings-transcript-{theme}.png");
                 Render<AskView>(viewModel, ShellViewModel.Ask, $"ask-{theme}.png");
-                Render<SettingsView>(viewModel, ShellViewModel.Config, $"config-{theme}.png");
+                Render<ConfigPage>(viewModel, ShellViewModel.Config, $"config-{theme}.png");
 
                 // Start goes to the fake engine only: no audio is captured.
                 viewModel.Recorder.Title = "Weekly design review";
@@ -94,7 +94,7 @@ public sealed class ThemeRenderTests
 #endif
 
     /// <summary>Show <paramref name="page"/> in a new main window, check its view is there, save the frame.</summary>
-    private static void Render<TView>(MainViewModel viewModel, string page, string name)
+    internal static void Render<TView>(MainViewModel viewModel, string page, string name)
         where TView : Control
     {
         viewModel.Shell.NavigateCommand.Execute(page);
@@ -125,7 +125,7 @@ public sealed class ThemeRenderTests
     }
 
     /// <summary>A main window with a bit of everything: transcript, notification, history detail, settings.</summary>
-    private static async Task<MainViewModel> SeededAsync(string theme)
+    internal static async Task<MainViewModel> SeededAsync(string theme, Action<FakeEngineClient>? seed = null)
     {
         var client = new FakeEngineClient
         {
@@ -148,6 +148,7 @@ public sealed class ThemeRenderTests
             new Segment("system-000001", "system", "system", "Others", 10, 14, "Yes, the dark theme looks good already.", false, []),
         ]);
 
+        seed?.Invoke(client); // more data for a page's own renders (phase 38: Config)
         var events = new FakeEngineEvents();
         var preferences = new FakePreferences { Data = new UiPreferencesData(Theme: theme) };
         var viewModel = new MainViewModel(
@@ -185,7 +186,7 @@ public sealed class ThemeRenderTests
         viewModel.Recorder.Partials.Add(new TranscriptLine("00:00:15", "Me", "Then the icons and the", "mic"));
     }
 
-    private static void AddSetting(
+    internal static void AddSetting(
         FakeEngineClient client, string key, string type, object? value, string group, string[]? choices = null, string applies = "next_session")
     {
         client.Schema.Add(new SettingSchema(key, type, JsonSerializer.SerializeToElement(value), choices, false, group, applies));

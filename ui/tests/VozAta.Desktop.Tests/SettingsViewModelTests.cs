@@ -67,7 +67,7 @@ public sealed class SettingsViewModelTests
             [
                 ("APP_LANGUAGE", SettingKind.Choice), ("MIC_LABEL", SettingKind.Text), ("GENERATE_MINUTES", SettingKind.Toggle),
                 ("MIX_MODE", SettingKind.Choice), ("CHUNK_SECONDS", SettingKind.Number), ("VAD_MIN_SILENCE_MS", SettingKind.WholeNumber),
-                ("WHISPER_MODEL", SettingKind.Text), ("HF_TOKEN", SettingKind.Secret), ("OLLAMA_URL", SettingKind.Text),
+                ("WHISPER_MODEL", SettingKind.Text), ("HF_TOKEN", SettingKind.Secret), ("OLLAMA_URL", SettingKind.Url),
             ],
             settings.Groups.SelectMany(group => group.Editors).Select(editor => (editor.Key, editor.Kind)));
         var chunk = Editor(settings, "CHUNK_SECONDS");
@@ -120,7 +120,8 @@ public sealed class SettingsViewModelTests
         var sent = _client.Updates.Single();
         Assert.Equal(["MIC_LABEL"], sent.Keys);
         Assert.Null(sent["MIC_LABEL"]);
-        Assert.Equal("********", Editor(settings, "HF_TOKEN").TextValue);
+        Assert.Equal("", Editor(settings, "HF_TOKEN").TextValue); // the mask never reaches the box
+        Assert.True(Editor(settings, "HF_TOKEN").HasStoredSecret);
     }
 
     [Fact]
