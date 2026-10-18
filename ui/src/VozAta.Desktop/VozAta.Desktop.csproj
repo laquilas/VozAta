@@ -17,10 +17,35 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <!-- The in-app player (phase 37): LibVLC plays the engine's audio stream (HTTP Range) -->
+    <PackageReference Include="LibVLCSharp" Version="3.10.2" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.13" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.13" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13" />
   </ItemGroup>
+
+  <!-- LibVLC for audio only (phase 37): x64, and only the plugins an HTTP WAV stream needs
+       (about 10 MB instead of 109 MB). -->
+  <PropertyGroup>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+    <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <VlcWindowsX64IncludeFiles Include="libvlc.dll;libvlccore.dll" />
+    <VlcWindowsX64IncludeFiles Include="plugins\access\libfilesystem_plugin.dll;plugins\access\libhttp_plugin.dll" />
+    <VlcWindowsX64IncludeFiles Include="plugins\demux\libwav_plugin.dll;plugins\demux\libes_plugin.dll;plugins\codec\libaraw_plugin.dll" />
+    <VlcWindowsX64IncludeFiles Include="plugins\audio_output\%2A;plugins\audio_filter\%2A;plugins\audio_mixer\%2A" />
+    <VlcWindowsX64IncludeFiles Include="plugins\packetizer\%2A;plugins\stream_filter\%2A;plugins\misc\%2A;plugins\logger\%2A" />
+  </ItemGroup>
+
+  <!-- Published next to the executable (LibVLC loads its plugins from libvlc/win-x64), never inside
+       the single-file bundle -->
+  <Target Name="KeepVlcOutsideSingleFile" AfterTargets="CollectVlcFilesToCopyWindows">
+    <ItemGroup>
+      <Content Update="@(VlcWindowsX64IncludeFilesFullPath)" ExcludeFromSingleFile="true" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\VozAta.Client\VozAta.Client.csproj" />
