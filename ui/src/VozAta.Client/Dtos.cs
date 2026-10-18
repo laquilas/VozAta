@@ -38,7 +38,9 @@ public sealed record StartSessionRequest(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyList<string>? Vocabulary = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    string? TranslateTo = null);
+    string? TranslateTo = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Title = null);
 
 /// <summary><c>GET|PUT /vocabulary</c> (phase 19): the glossary terms, one per entry.</summary>
 public sealed record VocabularyTerms(IReadOnlyList<string> Terms);
@@ -57,7 +59,8 @@ public sealed record SessionSummary(
     DateTimeOffset? EndedAt,
     double? DurationSeconds,
     string? Language,
-    bool HasMinutes);
+    bool HasMinutes,
+    string? Title = null);
 
 public sealed record SessionPage(IReadOnlyList<SessionSummary> Items, int Total);
 

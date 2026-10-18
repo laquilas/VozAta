@@ -23,12 +23,13 @@ own rows. Changing a row requires updating both sides.
 | GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable}, storage: {backend: "sqlite"\|"files", database, warning}}`; `storage` (31): `database` is the absolute path of `vozata.db` (null for `files`), `warning` a localized message when it is in a OneDrive-synced folder, else null |
 | GET | `/favicon.ico` | — | — | the VozAta logo (`image/x-icon`, package data copied from `assets/web/favicon.ico`); not in the OpenAPI schema |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
-| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es"}` | `201 SessionSummary`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none) |
+| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es", title?: str}` | `201 SessionSummary`; `title` (35): the meeting title, trimmed (whitespace runs, new lines too, become one space), at most 200 characters (`422 title_too_long`), blank = untitled, stored as `session.json.title`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none) |
 | POST | `/sessions/current/pause` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/resume` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
 | GET | `/sessions` | 06 | `?limit=&offset=` | `{items: [SessionSummary], total}` newest first |
 | GET | `/sessions/{id}` | 06 | — | `SessionDetail` |
+| PATCH | `/sessions/{id}` | 35 | `{title: str \| null}` (no other keys) | `SessionSummary`; renames the meeting, also while it is recording, paused or finalizing (the live session updates its own `session.json`); `null` or blank clears the title; same trimming and `422 title_too_long` as `POST /sessions`; `404 session_not_found`, `409 session_being_recovered` |
 | GET | `/sessions/{id}/transcript` | 06 | — | `{source: "raw"\|"diarized"\|"edited", segments: [Segment]}` (precedence rule in architecture §8); each `Segment` has `translation` (29) from `transcript.translated.jsonl`, `null` when the segment was not translated |
 | GET | `/sessions/{id}/minutes` | 06 | — | `{markdown}` or `404 minutes_not_found` |
 | POST | `/sessions/{id}/minutes` | 06 | `{template?}` | `202`; result via `minutes_ready`. `template` (20): omitted = the one in `session.json`, else `MINUTES_TEMPLATE`; the template used is saved to `session.json`; `422 unknown_template` |
@@ -55,7 +56,8 @@ own rows. Changing a row requires updating both sides.
 ```jsonc
 // SessionSummary
 {"id": "20261015_202358", "status": "recording", "started_at": "...", "ended_at": null,
- "duration_seconds": 83.4, "language": "pt", "has_minutes": false}
+ "duration_seconds": 83.4, "language": "pt", "has_minutes": false,
+ "title": "Weekly sync"}  // title (35): null = untitled
 // SessionDetail = SessionSummary + full session.json fields + files: ["mic.wav", ...]
 //   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
 //   files / folder: null for a backend without folders (30). With STORAGE_BACKEND=sqlite (31) they

@@ -8,6 +8,7 @@ from typing import Any
 from vozata.domain import TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionRepository
+from vozata.session_title import stored_title
 
 
 def segment_payload(segment: TranscriptSegment, labeler: SpeakerLabeler) -> dict[str, Any]:
@@ -31,6 +32,7 @@ def session_summary(
         "duration_seconds": (live_duration if live_duration is not None else _duration(meta)),
         "language": meta.get("language"),
         "has_minutes": store.has_minutes(session_id),
+        "title": stored_title(meta),  # phase 35
     }
 
 

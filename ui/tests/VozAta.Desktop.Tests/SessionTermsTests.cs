@@ -30,9 +30,9 @@ public sealed class SessionTermsTests
     public async Task The_meeting_terms_are_sent_on_start()
     {
         var viewModel = await ReadyAsync();
-        viewModel.SessionTerms = "Jéssica, N5 Sensors\nKubernetes\n jéssica ";
+        viewModel.Recorder.SessionTerms = "Jéssica, N5 Sensors\nKubernetes\n jéssica ";
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Equal(["Jéssica", "N5 Sensors", "Kubernetes"], _client.StartRequests.Single().Vocabulary);
     }
@@ -41,9 +41,9 @@ public sealed class SessionTermsTests
     public async Task Without_meeting_terms_no_vocabulary_is_sent()
     {
         var viewModel = await ReadyAsync();
-        viewModel.SessionTerms = " ,\n ";
+        viewModel.Recorder.SessionTerms = " ,\n ";
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Null(_client.StartRequests.Single().Vocabulary);
     }

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using VozAta.Desktop.Services;
 
 namespace VozAta.Desktop.ViewModels;
@@ -43,6 +44,14 @@ public sealed partial class AppearanceViewModel : ObservableObject
                 _preferences.Save(_preferences.Load() with { Theme = value.Value });
             }
         }
+    }
+
+    /// <summary>The sidebar's theme button (phase 35): light ↔ dark, starting from what is shown now.</summary>
+    [RelayCommand]
+    private void Toggle()
+    {
+        var target = _theme.IsDark ? "light" : "dark";
+        SelectedTheme = Themes.First(option => option.Value == target);
     }
 
     public void RefreshTexts()

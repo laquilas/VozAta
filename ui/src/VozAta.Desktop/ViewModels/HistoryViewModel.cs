@@ -13,11 +13,17 @@ public sealed record SessionRow(SessionSummary Summary, string Date, string Dura
 
     public bool HasMinutes => Summary.HasMinutes;
 
+    /// <summary>The meeting title (phase 35); null when untitled.</summary>
+    public string? Title => Summary.Title;
+
+    public bool HasTitle => Title is not null;
+
     /// <summary>The session being recorded (or finalized) right now.</summary>
     public bool IsLive => Summary.Status is "recording" or "paused" or "finalizing";
 
     /// <summary>What screen readers announce for the row.</summary>
-    public override string ToString() => $"{Date}, {Duration}, {Language}";
+    public override string ToString() =>
+        Title is null ? $"{Date}, {Duration}, {Language}" : $"{Title}, {Date}, {Duration}, {Language}";
 }
 
 /// <summary>Past sessions, newest first, a page at a time; the selected one opens in <see cref="Detail"/>.</summary>

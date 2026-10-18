@@ -59,6 +59,8 @@ unknown_task_target = "Export target \"{target}\" is not configured. Configured 
 action_items_unavailable = "Extracting action items is not available in this engine."
 session_not_interrupted = "Session \"{id}\" was not interrupted, so there is nothing to recover."
 recovery_failed = "Session \"{id}\" could not be recovered ({reason}). Its files were kept; the reason is saved in session.json."
+title_too_long = "The title can have at most {max} characters."
+session_being_recovered = "Session \"{id}\" is being recovered. Rename it when the recovery finishes."
 
 [languages]
 en = "English"
@@ -81,6 +83,7 @@ Write concise notes in {output_language} with what this part says for these head
 Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
 glossary = "Glossary: these names and terms may appear in the transcript, possibly misheard. Use exactly these spellings: {terms}"
+meeting_title = "The user titled this meeting \"{title}\". Use the title as context for the minutes, not as something that was said."
 transcript_label = "Transcript:"
 notes_label = "Notes:"
 
@@ -175,6 +178,7 @@ recover_all = "recover every interrupted session in OUTPUT_DIR"
 
 [export]
 title = "Meeting of {date}"
+date = "Date: {value}"
 duration = "Duration: {value}"
 language = "Language: {value}"
 minutes = "Minutes"

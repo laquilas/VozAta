@@ -23,6 +23,28 @@ def test_markdown_export_downloads_minutes_and_transcript(api: Api) -> None:
     assert text.index("Hello.") < text.index("Hi.")  # transcript in time order
 
 
+def test_a_renamed_meeting_exports_under_its_title(api: Api) -> None:
+    _recorded(api, minutes=True)
+    api.client.patch(f"/sessions/{SESSION}", json={"title": "Budget review"})
+
+    text = api.client.get(f"/sessions/{SESSION}/export", params={"format": "md"}).text
+
+    assert text.startswith("# Budget review\n")
+    assert "Date: 2026-10-15 20:23" in text
+
+
+def test_the_docx_export_carries_the_title(api: Api) -> None:
+    from docx import Document
+
+    _recorded(api, minutes=True)
+    api.client.patch(f"/sessions/{SESSION}", json={"title": "Budget review"})
+
+    response = api.client.get(f"/sessions/{SESSION}/export", params={"format": "docx"})
+
+    paragraphs = [paragraph.text for paragraph in Document(io.BytesIO(response.content)).paragraphs]
+    assert paragraphs[0] == "Budget review"
+
+
 @pytest.mark.parametrize(("export_format", "magic"), [("docx", b"PK"), ("pdf", b"%PDF")])
 def test_binary_formats_download_with_their_extension(
     api: Api, export_format: str, magic: bytes

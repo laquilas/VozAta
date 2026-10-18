@@ -18,6 +18,9 @@
       <!-- Sidebar (phase 35) -->
       <SolidColorBrush x:Key="Brush.Sidebar" Color="#2C1338" />
       <SolidColorBrush x:Key="Brush.SidebarText" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Brush.SidebarTextMuted" Color="#CDBBD8" />
+      <SolidColorBrush x:Key="Brush.SidebarHover" Color="#3F2150" />
+      <SolidColorBrush x:Key="Brush.SidebarSelected" Color="#56306A" />
       <!-- Accent: start button, selection, tags -->
       <SolidColorBrush x:Key="Brush.Accent" Color="#E57CD8" />
       <SolidColorBrush x:Key="Brush.AccentHover" Color="#D965CB" />
@@ -58,6 +61,9 @@
       <SolidColorBrush x:Key="Brush.TextSecondary" Color="#BBAFC3" />
       <SolidColorBrush x:Key="Brush.Sidebar" Color="#2C1338" />
       <SolidColorBrush x:Key="Brush.SidebarText" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Brush.SidebarTextMuted" Color="#CDBBD8" />
+      <SolidColorBrush x:Key="Brush.SidebarHover" Color="#3F2150" />
+      <SolidColorBrush x:Key="Brush.SidebarSelected" Color="#56306A" />
       <SolidColorBrush x:Key="Brush.Accent" Color="#E57CD8" />
       <SolidColorBrush x:Key="Brush.AccentHover" Color="#EC95E1" />
       <SolidColorBrush x:Key="Brush.AccentPressed" Color="#F2AEE9" />

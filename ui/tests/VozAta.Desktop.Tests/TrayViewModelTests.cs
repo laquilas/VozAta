@@ -25,7 +25,7 @@ public sealed class TrayViewModelTests
             await Task.Delay(5);
         }
 
-        return (main, new TrayViewModel(main, _localization, _preferences));
+        return (main, new TrayViewModel(main.Recorder, _localization, _preferences));
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class TrayViewModelTests
         Assert.Equal("Resume", tray.PauseResumeText);
         await tray.StopCommand.ExecuteAsync(null);
 
-        Assert.Equal(RecordingState.Finalizing, main.State);
+        Assert.Equal(RecordingState.Finalizing, main.Recorder.State);
         Assert.Equal(["start", "pause", "stop"], _client.Calls.Where(call => call is "start" or "pause" or "stop"));
     }
 
@@ -79,11 +79,28 @@ public sealed class TrayViewModelTests
     }
 
     [Fact]
+    public async Task The_tooltip_shows_the_meeting_title_while_recording()
+    {
+        var (main, tray) = await ReadyAsync();
+        var changed = new List<string?>();
+        tray.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        main.Recorder.Title = "Weekly sync";
+
+        await tray.StartCommand.ExecuteAsync(null);
+        Assert.Equal("VozAta — Recording: Weekly sync", tray.ToolTip);
+        main.Recorder.Title = "Budget review";
+        await main.Recorder.EnterCommand.ExecuteAsync(null);
+
+        Assert.Equal("VozAta — Recording: Budget review", tray.ToolTip);
+        Assert.Contains(nameof(TrayViewModel.ToolTip), changed);
+    }
+
+    [Fact]
     public async Task The_main_window_owns_a_tray_menu()
     {
         var (main, _) = await ReadyAsync();
 
-        Assert.Same(main.StartCommand, main.Tray.StartCommand);
+        Assert.Same(main.Recorder.StartCommand, main.Tray.StartCommand);
     }
 
     [Fact]

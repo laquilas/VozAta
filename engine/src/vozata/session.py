@@ -71,6 +71,7 @@ class SessionComponents:
     embedder_factory: Callable[[], SpeakerEmbedder] | None = None  # None: no live speakers
     translate_to: str | None = None  # live translation language (phase 29); None = off
     translator_factory: Callable[[], Translator] | None = None  # built on the translation thread
+    title: str | None = None  # meeting title at start (phase 35), normalized; None = untitled
 
 
 class SessionStartError(RuntimeError):
@@ -176,6 +177,10 @@ class RecordingSession:
         self._meta.pause_ended(self._c.clock.now())
         self._pipeline.set_paused(False)
         self._set_status(SessionStatus.RECORDING)
+
+    def set_title(self, title: str | None) -> None:
+        """Rename the meeting (phase 35), while recording or finalizing; None clears the title."""
+        self._meta.set_title(title)
 
     def stop(self) -> None:
         if self.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
@@ -361,7 +366,7 @@ class RecordingSession:
         try:
             labeler = self._c.labeler.with_names(self._store.speaker_names(self.id))
             minutes = self._c.minutes.generate(
-                segments, labeler, self._lock.language, self._c.vocabulary
+                segments, labeler, self._lock.language, self._c.vocabulary, title=self._meta.title
             )
         except Exception as error:
             _log.exception("Generating minutes for %s failed", self.id)

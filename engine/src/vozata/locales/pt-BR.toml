@@ -59,6 +59,8 @@ unknown_task_target = "O destino de exportação \"{target}\" não está configu
 action_items_unavailable = "A extração de itens de ação não está disponível neste motor."
 session_not_interrupted = "A sessão \"{id}\" não foi interrompida, então não há nada a recuperar."
 recovery_failed = "A sessão \"{id}\" não pôde ser recuperada ({reason}). Os arquivos foram mantidos; o motivo está em session.json."
+title_too_long = "O título pode ter no máximo {max} caracteres."
+session_being_recovered = "A sessão \"{id}\" está sendo recuperada. Renomeie-a quando a recuperação terminar."
 
 [languages]
 en = "inglês"
@@ -81,6 +83,7 @@ Escreva notas concisas em {output_language} com o que esta parte diz para estes 
 Use apenas fatos desta parte."""
 reduce_instructions = "Estas são notas de partes consecutivas de uma mesma reunião conduzida em {conversation_language}. Combine-as na ata da reunião."
 glossary = "Glossário: estes nomes e termos podem aparecer na transcrição, talvez reconhecidos de forma errada. Use exatamente esta grafia: {terms}"
+meeting_title = "O usuário deu a esta reunião o título \"{title}\". Use o título como contexto para a ata, não como algo que foi dito."
 transcript_label = "Transcrição:"
 notes_label = "Notas:"
 
@@ -175,6 +178,7 @@ recover_all = "recupera todas as sessões interrompidas em OUTPUT_DIR"
 
 [export]
 title = "Reunião de {date}"
+date = "Data: {value}"
 duration = "Duração: {value}"
 language = "Idioma: {value}"
 minutes = "Ata"

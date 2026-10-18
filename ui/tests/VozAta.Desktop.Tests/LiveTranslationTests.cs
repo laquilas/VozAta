@@ -48,11 +48,11 @@ public sealed class LiveTranslationTests
         await SendAsync(viewModel, new TranslationEvent("s", "system-000001", "pt", "Olá."));
         await SendAsync(viewModel, new TranslationEvent("s", "mic-999999", "pt", "unknown line"));
 
-        Assert.Null(viewModel.Segments[0].Translation);
-        Assert.False(viewModel.Segments[0].HasTranslation);
-        Assert.Equal("Olá.", viewModel.Segments[1].Translation);
-        Assert.True(viewModel.Segments[1].HasTranslation);
-        Assert.Equal("[00:00:02] Others: Hi there.", viewModel.Segments[1].Display);
+        Assert.Null(viewModel.Recorder.Segments[0].Translation);
+        Assert.False(viewModel.Recorder.Segments[0].HasTranslation);
+        Assert.Equal("Olá.", viewModel.Recorder.Segments[1].Translation);
+        Assert.True(viewModel.Recorder.Segments[1].HasTranslation);
+        Assert.Equal("[00:00:02] Others: Hi there.", viewModel.Recorder.Segments[1].Display);
     }
 
     [Fact]
@@ -68,10 +68,10 @@ public sealed class LiveTranslationTests
         await SendAsync(viewModel, new SpeakersRelabeledEvent("s"));
         await viewModel.HistoryRefresh;
 
-        Assert.Equal("User 1", viewModel.Segments.Single().Label);
-        Assert.Equal("Oi.", viewModel.Segments.Single().Translation);
+        Assert.Equal("User 1", viewModel.Recorder.Segments.Single().Label);
+        Assert.Equal("Oi.", viewModel.Recorder.Segments.Single().Translation);
         await SendAsync(viewModel, new TranslationEvent("s", "system-000001", "pt", "Olá."));
-        Assert.Equal("Olá.", viewModel.Segments.Single().Translation); // the line index was rebuilt
+        Assert.Equal("Olá.", viewModel.Recorder.Segments.Single().Translation); // the line index was rebuilt
     }
 
     [Fact]
@@ -80,10 +80,10 @@ public sealed class LiveTranslationTests
         var viewModel = await ReadyAsync();
         await SendAsync(viewModel, Segment("mic-000001", "mic", 1, "Old."));
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new TranslationEvent("s", "mic-000001", "pt", "Velho."));
 
-        Assert.Empty(viewModel.Segments);
+        Assert.Empty(viewModel.Recorder.Segments);
     }
 
     [Fact]
@@ -92,14 +92,14 @@ public sealed class LiveTranslationTests
         _client.SettingValues["TRANSLATE_TO"] = "pt";
         var viewModel = await ReadyAsync();
 
-        Assert.Equal("pt", viewModel.SelectedTranslation.Value);
-        Assert.Equal(["Off", "English", "Portuguese", "Spanish"], viewModel.TranslationLanguages.Select(o => o.Label));
-        await viewModel.StartCommand.ExecuteAsync(null);
+        Assert.Equal("pt", viewModel.Recorder.SelectedTranslation.Value);
+        Assert.Equal(["Off", "English", "Portuguese", "Spanish"], viewModel.Recorder.TranslationLanguages.Select(o => o.Label));
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         Assert.Null(_client.StartRequests.Single().TranslateTo); // the engine applies TRANSLATE_TO
 
         await SendAsync(viewModel, new StatusEvent("s", "done", 3));
-        viewModel.SelectedTranslation = viewModel.TranslationLanguages[0];
-        await viewModel.StartCommand.ExecuteAsync(null);
+        viewModel.Recorder.SelectedTranslation = viewModel.Recorder.TranslationLanguages[0];
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         Assert.Equal("off", _client.StartRequests[1].TranslateTo);
     }
 
@@ -108,9 +108,9 @@ public sealed class LiveTranslationTests
     {
         var viewModel = await ReadyAsync();
 
-        Assert.Equal("off", viewModel.SelectedTranslation.Value);
+        Assert.Equal("off", viewModel.Recorder.SelectedTranslation.Value);
         _localization.SetLanguage("pt-BR");
-        Assert.Equal("Desligado", viewModel.TranslationLanguages[0].Label);
+        Assert.Equal("Desligado", viewModel.Recorder.TranslationLanguages[0].Label);
     }
 
     [Fact]
@@ -125,6 +125,6 @@ public sealed class LiveTranslationTests
 
         await viewModel.Settings.SaveCommand.ExecuteAsync(null);
 
-        Assert.Equal("es", viewModel.SelectedTranslation.Value);
+        Assert.Equal("es", viewModel.Recorder.SelectedTranslation.Value);
     }
 }

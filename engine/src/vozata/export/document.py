@@ -11,6 +11,7 @@ from vozata.domain import Block, ExportDocument, Row, TranscriptSegment
 from vozata.formatting import format_timestamp
 from vozata.labels import SpeakerLabeler
 from vozata.ports import Localizer
+from vozata.session_title import stored_title
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET = re.compile(r"^[-*+]\s+(.+)$")
@@ -38,6 +39,9 @@ def build_document(
         else str(summary["id"])
     )
     details = []
+    title = stored_title(summary)  # phase 35: a titled meeting keeps its date in the details
+    if title is not None:
+        details.append(t("export.date", value=date))
     if summary.get("duration_seconds") is not None:
         duration = format_timestamp(float(summary["duration_seconds"]))
         details.append(t("export.duration", value=duration))
@@ -47,7 +51,7 @@ def build_document(
     minutes = minutes_markdown.strip() if minutes_markdown and minutes_markdown.strip() else None
     ordered = sorted(segments, key=lambda segment: segment.start)
     return ExportDocument(
-        title=t("export.title", date=date),
+        title=title if title is not None else t("export.title", date=date),
         details=details,
         minutes_title=t("export.minutes"),
         minutes_markdown=minutes,

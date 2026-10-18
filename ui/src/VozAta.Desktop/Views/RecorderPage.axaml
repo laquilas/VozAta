@@ -1,0 +1,234 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             xmlns:views="using:VozAta.Desktop.Views"
+             xmlns:client="using:VozAta.Client"
+             x:Class="VozAta.Desktop.Views.RecorderPage"
+             x:DataType="vm:RecorderPageViewModel">
+
+  <DockPanel Margin="16,12,16,16">
+    <!-- Timer bar (Toggl style): title, timer, pause, round start / stop -->
+    <Border DockPanel.Dock="Top" Classes="timerbar">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+        <TextBox Classes="title-input" Text="{Binding Title}"
+                 MaxLength="{x:Static vm:RecorderPageViewModel.MaxTitleLength}"
+                 IsEnabled="{Binding CanEditTitle}"
+                 PlaceholderText="{Binding L[TitlePlaceholder]}"
+                 AutomationProperties.Name="{Binding L[MeetingTitle]}">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding EnterCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <TextBlock Grid.Column="1" Classes="timer large" Margin="16,0" VerticalAlignment="Center"
+                   Text="{Binding Elapsed}" />
+        <Button Grid.Column="2" Classes="icon" Margin="0,0,8,0" Padding="10"
+                Command="{Binding PauseResumeCommand}" IsVisible="{Binding IsRecording}"
+                ToolTip.Tip="{Binding PauseResumeText}" AutomationProperties.Name="{Binding PauseResumeText}">
+          <Panel>
+            <PathIcon Data="{StaticResource Icon.Pause}" IsVisible="{Binding IsActivelyRecording}" />
+            <PathIcon Data="{StaticResource Icon.Play}" IsVisible="{Binding IsPaused}" />
+          </Panel>
+        </Button>
+        <Panel Grid.Column="3">
+          <Button Classes="round-start" Command="{Binding StartCommand}" IsVisible="{Binding !IsRecording}"
+                  ToolTip.Tip="{Binding L[Start]}"
+                  AutomationProperties.Name="{Binding L[Start]}">
+            <PathIcon Data="{StaticResource Icon.Play}" />
+          </Button>
+          <Button Classes="round-stop" Command="{Binding StopCommand}" IsVisible="{Binding IsRecording}"
+                  ToolTip.Tip="{Binding L[Stop]}"
+                  AutomationProperties.Name="{Binding L[Stop]}">
+            <PathIcon Data="{StaticResource Icon.Stop}" />
+          </Button>
+        </Panel>
+      </Grid>
+    </Border>
+
+    <!-- Options of the recording: chips that open small flyouts; locked while recording -->
+    <WrapPanel DockPanel.Dock="Top" Margin="0,10,0,0" ItemSpacing="8" LineSpacing="8">
+      <!-- Microphone, with its level meter inside the chip -->
+      <Panel>
+        <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+                ToolTip.Tip="{Binding L[Microphone]}"
+                AutomationProperties.Name="{Binding L[Microphone]}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="{Binding MicMeter.Label}" Classes="caption" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Devices.SelectedMic.Name}" MaxWidth="220" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <StackPanel Spacing="6" MinWidth="280">
+                <TextBlock Text="{Binding L[Microphone]}" Classes="subtitle" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Devices.Inputs}" SelectedItem="{Binding Devices.SelectedMic}"
+                          DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
+                <Button Command="{Binding Devices.RefreshCommand}" HorizontalAlignment="Left"
+                        AutomationProperties.Name="{Binding L[RefreshDevices]}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Classes="inline" Data="{StaticResource Icon.Refresh}" />
+                    <TextBlock Text="{Binding L[RefreshDevices]}" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <Panel Height="4" Margin="14,0,14,3" VerticalAlignment="Bottom" IsHitTestVisible="False"
+               IsVisible="{Binding IsRecording}">
+          <ProgressBar Classes="slim meter-mic-peak" Minimum="0" Maximum="1" Value="{Binding MicMeter.Peak}" />
+          <ProgressBar Classes="slim meter-mic" Minimum="0" Maximum="1" Value="{Binding MicMeter.Level}" />
+        </Panel>
+      </Panel>
+
+      <!-- System audio (loopback), with its level meter -->
+      <Panel>
+        <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+                ToolTip.Tip="{Binding L[SystemOutput]}"
+                AutomationProperties.Name="{Binding L[SystemOutput]}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Speaker}" />
+            <TextBlock Text="{Binding Devices.SelectedLoopback.Name}" MaxWidth="220" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <StackPanel Spacing="6" MinWidth="280">
+                <TextBlock Text="{Binding L[SystemOutput]}" Classes="subtitle" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Devices.Loopbacks}" SelectedItem="{Binding Devices.SelectedLoopback}"
+                          DisplayMemberBinding="{Binding Name, x:DataType=client:AudioDevice}" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <Panel Height="4" Margin="14,0,14,3" VerticalAlignment="Bottom" IsHitTestVisible="False"
+               IsVisible="{Binding IsRecording}">
+          <ProgressBar Classes="slim meter-system-peak" Minimum="0" Maximum="1" Value="{Binding SystemMeter.Peak}" />
+          <ProgressBar Classes="slim meter-system" Minimum="0" Maximum="1" Value="{Binding SystemMeter.Level}" />
+        </Panel>
+      </Panel>
+
+      <!-- Conversation language -->
+      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+              ToolTip.Tip="{Binding L[ConversationLanguage]}"
+              AutomationProperties.Name="{Binding L[ConversationLanguage]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource Icon.Chat}" />
+          <TextBlock Text="{Binding SelectedLanguage.Label}" />
+        </StackPanel>
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <StackPanel Spacing="6" MinWidth="220">
+              <TextBlock Text="{Binding L[ConversationLanguage]}" Classes="subtitle" />
+              <ListBox ItemsSource="{Binding ConversationLanguages}" SelectedItem="{Binding SelectedLanguage}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ChoiceOption">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+
+      <!-- Live translation (phase 29) -->
+      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+              ToolTip.Tip="{Binding L[TranslateTo]}"
+              AutomationProperties.Name="{Binding L[TranslateTo]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="{Binding L[TranslateTo]}" Classes="caption"
+                     VerticalAlignment="Center" />
+          <TextBlock Text="{Binding SelectedTranslation.Label}" />
+        </StackPanel>
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <ListBox MinWidth="200" ItemsSource="{Binding TranslationLanguages}" SelectedItem="{Binding SelectedTranslation}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ChoiceOption">
+                  <TextBlock Text="{Binding Label}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+
+      <!-- Minutes template (phase 20) -->
+      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+              ToolTip.Tip="{Binding L[MinutesTemplate]}"
+              AutomationProperties.Name="{Binding L[MinutesTemplate]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="{Binding L[MinutesTemplate]}" Classes="caption"
+                     VerticalAlignment="Center" />
+          <TextBlock Text="{Binding SelectedTemplate.Name}" />
+        </StackPanel>
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <ListBox MinWidth="220" ItemsSource="{Binding Templates.Items}" SelectedItem="{Binding SelectedTemplate}"
+                     DisplayMemberBinding="{Binding Name, x:DataType=vm:TemplateOption}" />
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+
+      <!-- Terms for this meeting (phase 19): sent with Start, merged with the glossary -->
+      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+              Content="{Binding L[SessionTerms]}">
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <TextBox Text="{Binding SessionTerms}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Width="320"
+                     PlaceholderText="{Binding L[SessionTermsHint]}"
+                     AutomationProperties.Name="{Binding L[SessionTerms]}" />
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+    </WrapPanel>
+
+    <!-- State line: recording / paused / finishing, model loading, detected language, silent output -->
+    <StackPanel DockPanel.Dock="Top" Margin="2,10,0,0" Spacing="4">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Ellipse Classes="state-dot small recording" IsVisible="{Binding IsActivelyRecording}" />
+        <Ellipse Classes="state-dot small paused" IsVisible="{Binding IsPaused}" />
+        <TextBlock Text="{Binding StatusText}" Classes="secondary" />
+        <TextBlock Text="{Binding DetectedLanguage}" Classes="secondary" FontStyle="Italic"
+                   IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </StackPanel>
+      <TextBlock Text="{Binding L[ModelLoading]}" Classes="hint warning"
+                 IsVisible="{Binding IsModelLoading}" />
+      <TextBlock Text="{Binding L[NoSystemSignal]}" Classes="warning"
+                 TextWrapping="Wrap" IsVisible="{Binding SystemMeter.NoSignal}" />
+    </StackPanel>
+
+    <!-- Live transcript -->
+    <Border Margin="0,10,0,0" Classes="outline">
+      <Panel>
+        <TextBlock Text="{Binding L[TranscriptEmpty]}" Classes="secondary"
+                   Margin="16" TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
+        <ScrollViewer views:AutoScroll.IsEnabled="True">
+          <StackPanel Margin="12">
+            <ItemsControl ItemsSource="{Binding Segments}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TranscriptLine">
+                  <StackPanel Margin="0,3">
+                    <SelectableTextBlock Text="{Binding Display}" Classes="channel reading"
+                                         Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}"
+                                         TextWrapping="Wrap" />
+                    <!-- Live translation (phase 29): smaller and muted, under its line -->
+                    <SelectableTextBlock Text="{Binding Translation}" Classes="translation"
+                                         TextWrapping="Wrap" Margin="16,1,0,0"
+                                         IsVisible="{Binding HasTranslation}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- Interim text (phase 28): grey italic, replaced in place, removed by the segment -->
+            <ItemsControl ItemsSource="{Binding Partials}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TranscriptLine">
+                  <TextBlock Text="{Binding Display}" Classes="partial" TextWrapping="Wrap" Margin="0,3" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Panel>
+    </Border>
+  </DockPanel>
+</UserControl>

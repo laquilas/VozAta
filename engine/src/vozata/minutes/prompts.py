@@ -2,7 +2,8 @@
 
 The frame (languages, Markdown, "—" for empty sections) comes from the locale files; what kind of
 meeting it is and which sections the minutes have come from the template. A glossary (the
-session vocabulary, phase 19) adds a "use these spellings" block to every prompt.
+session vocabulary, phase 19) adds a "use these spellings" block to every prompt, and the meeting
+title (phase 35), when set, a line of context.
 """
 
 from __future__ import annotations
@@ -37,18 +38,25 @@ def _glossary(localizer: Localizer, glossary: Sequence[str]) -> list[str]:
     return [localizer.t("minutes.glossary", terms=", ".join(glossary))] if glossary else []
 
 
+def _title(localizer: Localizer, title: str | None) -> list[str]:
+    """The meeting title as context (phase 35), or nothing for an untitled meeting."""
+    return [localizer.t("minutes.meeting_title", title=title)] if title else []
+
+
 def minutes_prompt(
     localizer: Localizer,
     template: LocalizedTemplate,
     transcript: str,
     conversation_language: ConversationLanguage,
     glossary: Sequence[str] = (),
+    title: str | None = None,
 ) -> Prompt:
     """Minutes straight from a transcript that fits in one request."""
     params = _params(localizer, template, conversation_language)
     user = "\n\n".join(
         (
             localizer.t("minutes.instructions", **params),
+            *_title(localizer, title),
             *_glossary(localizer, glossary),
             f"{localizer.t('minutes.transcript_label')}\n{transcript}",
         )
@@ -64,12 +72,14 @@ def map_prompt(
     total: int,
     conversation_language: ConversationLanguage,
     glossary: Sequence[str] = (),
+    title: str | None = None,
 ) -> Prompt:
     """Notes for one part of a long transcript (map step), aimed at the template's sections."""
     params = _params(localizer, template, conversation_language)
     user = "\n\n".join(
         (
             localizer.t("minutes.map_instructions", part=part, total=total, **params),
+            *_title(localizer, title),
             *_glossary(localizer, glossary),
             f"{localizer.t('minutes.transcript_label')}\n{transcript_part}",
         )
@@ -83,6 +93,7 @@ def reduce_prompt(
     notes: Sequence[str],
     conversation_language: ConversationLanguage,
     glossary: Sequence[str] = (),
+    title: str | None = None,
 ) -> Prompt:
     """Minutes from the notes of every part (reduce step)."""
     params = _params(localizer, template, conversation_language)
@@ -90,6 +101,7 @@ def reduce_prompt(
         (
             localizer.t("minutes.reduce_instructions", **params),
             localizer.t("minutes.instructions", **params),
+            *_title(localizer, title),
             *_glossary(localizer, glossary),
             f"{localizer.t('minutes.notes_label')}\n{_NOTES_SEPARATOR.join(notes)}",
         )

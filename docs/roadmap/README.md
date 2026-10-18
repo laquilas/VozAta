@@ -84,7 +84,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 32 | [Audio in SQLite](phases/32-audio-in-sqlite.md) | 31 | todo |
 | 33 | [Folder to database migration](phases/33-folder-migration.md) | 31, 32 | todo |
 | 34 | [UI design system](phases/34-ui-design-system.md) | 13 | done |
-| 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | todo |
+| 35 | [Toggl-style shell and timer bar](phases/35-toggl-shell.md) | 34 | done |
 | 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | todo |
 | 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | todo |
 | 38 | [Config page redesign](phases/38-config-page.md) | 35 | todo |

@@ -1,0 +1,167 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             xmlns:views="using:VozAta.Desktop.Views"
+             x:Class="VozAta.Desktop.Views.ShellView"
+             x:DataType="vm:MainViewModel">
+
+  <!-- Toggl-style shell (phase 35): sidebar on the left, the current page on the right -->
+  <Grid ColumnDefinitions="Auto,*">
+    <Border Classes="sidebar" Classes.collapsed="{Binding Shell.IsCollapsed}">
+      <DockPanel>
+        <!-- Logo and the collapse button -->
+        <DockPanel DockPanel.Dock="Top" Margin="4,0,0,16">
+          <Button DockPanel.Dock="Right" Classes="nav" HorizontalAlignment="Right" Padding="6"
+                  Command="{Binding Shell.ToggleSidebarCommand}"
+                  ToolTip.Tip="{Binding Shell.ToggleSidebarText}"
+                  AutomationProperties.Name="{Binding Shell.ToggleSidebarText}">
+            <Panel>
+              <PathIcon Data="{StaticResource Icon.ChevronLeft}" IsVisible="{Binding Shell.IsExpanded}" />
+              <PathIcon Data="{StaticResource Icon.ChevronRight}" IsVisible="{Binding Shell.IsCollapsed}" />
+            </Panel>
+          </Button>
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                      IsVisible="{Binding Shell.IsExpanded}">
+            <Image Source="/Assets/vozata-64.png" Width="24" Height="24" />
+            <TextBlock Text="{Binding L[AppTitle]}" Classes="brand" VerticalAlignment="Center" />
+          </StackPanel>
+        </DockPanel>
+
+        <!-- Bottom: engine status and theme -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="4">
+          <Border Padding="12,6" ToolTip.Tip="{Binding Health.SpeechText}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Ellipse Classes="state-dot small engine"
+                       Classes.connected="{Binding IsEngineConnected}" Classes.down="{Binding IsEngineDown}" />
+              <TextBlock Text="{Binding EngineText}" Classes="muted" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding Shell.IsExpanded}" />
+            </StackPanel>
+          </Border>
+          <Button Classes="nav" Command="{Binding Appearance.ToggleCommand}"
+                  ToolTip.Tip="{Binding L[ThemeToggle]}" AutomationProperties.Name="{Binding L[ThemeToggle]}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource Icon.Moon}" />
+              <TextBlock Text="{Binding L[Theme]}" IsVisible="{Binding Shell.IsExpanded}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <!-- Pages: icon + label, icons only when collapsed -->
+          <ItemsControl ItemsSource="{Binding Shell.Pages}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:NavItem">
+                <Button Classes="nav" Classes.current="{Binding IsCurrent}" Margin="0,2"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Shell.NavigateCommand}"
+                        CommandParameter="{Binding Key}"
+                        ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}">
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <PathIcon Data="{Binding Icon, Converter={x:Static views:IconConverter.Instance}}" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Shell.IsExpanded}" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Recording indicator on every page: red (amber when paused) dot and the elapsed time -->
+          <Button Classes="nav" Margin="0,12,0,0" IsVisible="{Binding Session.IsRecording}"
+                  Command="{Binding Shell.NavigateCommand}" CommandParameter="recorder"
+                  ToolTip.Tip="{Binding Recorder.StatusText}" AutomationProperties.Name="{Binding Recorder.StatusText}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Panel Width="18">
+                <Ellipse Classes="state-dot small recording" IsVisible="{Binding Session.IsActivelyRecording}" />
+                <Ellipse Classes="state-dot small paused" IsVisible="{Binding Session.IsPaused}" />
+              </Panel>
+              <TextBlock Text="{Binding Session.Elapsed}" Classes="tabular" VerticalAlignment="Center"
+                         IsVisible="{Binding Shell.IsExpanded}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- Page area: banners on top, the page, notifications as toasts over it -->
+    <Panel Grid.Column="1">
+      <DockPanel>
+        <!-- A recording runs while another page is shown -->
+        <Border DockPanel.Dock="Top" Margin="16,12,16,0" Classes="banner error"
+                IsVisible="{Binding Shell.IsRecordingElsewhere}">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="link" Padding="4,0"
+                    Command="{Binding Shell.NavigateCommand}" CommandParameter="recorder"
+                    Content="{Binding L[NavRecorder]}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse Classes="state-dot small recording" IsVisible="{Binding Session.IsActivelyRecording}" />
+              <Ellipse Classes="state-dot small paused" IsVisible="{Binding Session.IsPaused}" />
+              <TextBlock Text="{Binding Shell.RecordingBannerText}" VerticalAlignment="Center" Classes="tabular" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- Crash recovery (phase 17): interrupted sessions with Recover / Later -->
+        <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
+                IsVisible="{Binding Recovery.IsOpen}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding L[RecoveryTitle]}" Classes="subtitle" />
+            <TextBlock Text="{Binding L[RecoveryMessage]}" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding Recovery.Sessions}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RecoverySession">
+                  <Grid ColumnDefinitions="Auto,Auto" Margin="0,2">
+                    <TextBlock Text="{Binding Started}" FontWeight="SemiBold" Margin="0,0,16,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Duration}" Classes="secondary tabular" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+              <Button Content="{Binding L[RecoveryLater]}" Command="{Binding Recovery.LaterCommand}" />
+              <Button Classes="primary" Content="{Binding L[RecoveryRecover]}"
+                      Command="{Binding Recovery.RecoverCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <ContentControl Content="{Binding Shell.CurrentPage}">
+          <ContentControl.DataTemplates>
+            <DataTemplate DataType="vm:RecorderPageViewModel">
+              <views:RecorderPage />
+            </DataTemplate>
+            <DataTemplate DataType="vm:MeetingsPageViewModel">
+              <views:HistoryView DataContext="{Binding History}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:AskPageViewModel">
+              <views:AskView DataContext="{Binding Ask}" Margin="{StaticResource Inset.Page}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ConfigPageViewModel">
+              <views:SettingsView DataContext="{Binding Settings}" />
+            </DataTemplate>
+          </ContentControl.DataTemplates>
+        </ContentControl>
+      </DockPanel>
+
+      <!-- Notifications (engine errors, minutes ready): dismissable toasts -->
+      <ItemsControl ItemsSource="{Binding Notifications}" MaxWidth="440" Margin="16"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <Border Classes="toast" Margin="0,6,0,0">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="icon" Margin="8,0,0,0" VerticalAlignment="Top"
+                        ToolTip.Tip="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).L[Dismiss]}"
+                        AutomationProperties.Name="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).L[Dismiss]}"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DismissNotificationCommand}"
+                        CommandParameter="{Binding}">
+                  <PathIcon Data="{StaticResource Icon.Dismiss}" />
+                </Button>
+                <TextBlock Text="{Binding}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </DockPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Panel>
+  </Grid>
+</UserControl>

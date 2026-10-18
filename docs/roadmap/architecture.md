@@ -488,6 +488,7 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "language": "pt", "language_source": "selected",
   "app_language": "en",
   "template": "general",
+  "title": "Weekly sync",
   "vocabulary": ["Avalonia", "N5 Sensors"],
   "devices": {"mic": "Headset Microphone", "system": "Headphones [Loopback]"},
   "pauses": [{"start": 120.5, "end": 180.0}],
@@ -535,6 +536,13 @@ regeneration.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (step 2); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
+`title` (35) is the meeting title (`session_title.py`: trimmed, one line, at most 200 characters):
+written at start when given, changed by `PATCH /sessions/{id}` (through the live session's
+`SessionMeta` while it is active, else `read_meta` / `write_meta` of the `SessionRepository`);
+absent or `null` = untitled. It is given to the minutes prompt as context
+(`minutes.meeting_title`) and is the export document title (the date then moves to the details).
+The SQLite backend (31) keeps it in `sessions.title`; the repository contract suite checks that it
+round-trips.
 
 `speaker_id` is `mic` for the microphone and `system` until diarization assigns `system:<n>`.
 With live speakers (15) `transcript.jsonl` already holds best-effort `system:<n>` ids; the
@@ -759,7 +767,7 @@ The desktop look comes from three resource files in `ui/src/VozAta.Desktop/Theme
 |------|---------|
 | `Tokens.axaml` | `ThemeDictionaries` `Light` / `Dark`: `Brush.*` (surfaces, text, sidebar, accent, status fills / text / surfaces, transcript channels, meters); `Space.1`–`Space.6`, `Inset.*`, `Radius.Small/Medium/Pill`, `FontSize.*` |
 | `Icons.axaml` | `Icon.*` `StreamGeometry` from Fluent UI System Icons (MIT, `Assets/licenses/`) |
-| `Controls.axaml` | style classes: `Button.primary/danger/large/round-start/round-stop/ghost/icon/link`, `Border.card/outline/divider/statusbar/tag/banner`, `TextBlock.caption/secondary/hint/title/subtitle/timer/tabular/error/warning/success/channel` |
+| `Controls.axaml` | style classes: `Button.primary/danger/large/round-start/round-stop/ghost/icon/link/nav/chip`, `Border.card/outline/divider/statusbar/tag/banner/sidebar/timerbar/toast`, `TextBox.title-input`, `TextBlock.caption/secondary/hint/title/subtitle/timer/tabular/error/warning/success/channel`, `Ellipse.state-dot` (`recording`, `paused`, `engine`), `ProgressBar.slim` |
 
 - Text on the pink accent uses the dark purple `Brush.OnAccent`; status colors have separate fill,
   text and surface tokens. Every text/background pair is ≥ 4.5:1 in both themes (`ThemeContrastTests`);
@@ -768,3 +776,29 @@ The desktop look comes from three resource files in `ui/src/VozAta.Desktop/Theme
   `system` (default) | `light` | `dark`, chosen in Settings → Desktop app and applied at once through
   `IThemeService`.
 - Debug builds open `ThemeGalleryWindow` with `--theme-gallery` (every token and style in both themes).
+
+## 16. Desktop shell (phase 35)
+
+```mermaid
+graph LR
+  MW[MainWindow + MainViewModel] --> SV[ShellView + ShellViewModel]
+  SV --> R[Recorder: RecorderPageViewModel]
+  SV --> M[Meetings: MeetingsPageViewModel → HistoryViewModel]
+  SV --> A[Ask: AskPageViewModel → AskViewModel]
+  SV --> C[Config: ConfigPageViewModel → SettingsViewModel]
+  R --> S[RecordingSessionService]
+  SV --> S
+  T[TrayViewModel] --> R
+```
+
+- `MainWindow` stays the window class (tray, single instance, close guard); its DataContext stays
+  `MainViewModel` (engine connection and events, notifications, recovery, tray, interface
+  language, window size). Its content is `ShellView`: a collapsible sidebar (`Brush.Sidebar`; pages
+  with icon and label, the recording dot and elapsed time, engine status, theme button) and the
+  current page through a `DataTemplate` per page ViewModel. Ctrl+1…4 switch pages.
+- `RecordingSessionService` holds the state every page shows: recording state, elapsed time,
+  session id and title. `RecorderPageViewModel` drives it (Start / Pause / Stop, the timer bar
+  with the meeting title, option chips with flyouts, meters, live transcript).
+- Notifications are toasts over the page area; the recovery card and a "recording — open the
+  recorder" banner sit on top of it.
+- `ui.json` also keeps `sidebar_collapsed`.

@@ -126,12 +126,6 @@
   <data name="NoSystemSignal" xml:space="preserve">
     <value>No sound from the system audio for 30 s. Check the Windows default output device and your headphones.</value>
   </data>
-  <data name="TabRecording" xml:space="preserve">
-    <value>Recording</value>
-  </data>
-  <data name="TabHistory" xml:space="preserve">
-    <value>History</value>
-  </data>
   <data name="HistoryRefresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
@@ -212,9 +206,6 @@
   </data>
   <data name="Loading" xml:space="preserve">
     <value>Loading…</value>
-  </data>
-  <data name="TabSettings" xml:space="preserve">
-    <value>Settings</value>
   </data>
   <data name="SettingsGroup_general" xml:space="preserve">
     <value>General</value>
@@ -920,5 +911,41 @@
   </data>
   <data name="SessionRecovered" xml:space="preserve">
     <value>The session of {0} was recovered.</value>
+  </data>
+  <data name="TrayToolTipTitled" xml:space="preserve">
+    <value>VozAta — {0}: {1}</value>
+  </data>
+  <data name="NavRecorder" xml:space="preserve">
+    <value>Recorder</value>
+  </data>
+  <data name="NavMeetings" xml:space="preserve">
+    <value>Meetings</value>
+  </data>
+  <data name="NavAsk" xml:space="preserve">
+    <value>Ask</value>
+  </data>
+  <data name="NavConfig" xml:space="preserve">
+    <value>Config</value>
+  </data>
+  <data name="TitlePlaceholder" xml:space="preserve">
+    <value>What is this meeting about?</value>
+  </data>
+  <data name="MeetingTitle" xml:space="preserve">
+    <value>Meeting title</value>
+  </data>
+  <data name="Untitled" xml:space="preserve">
+    <value>Untitled meeting</value>
+  </data>
+  <data name="SidebarCollapse" xml:space="preserve">
+    <value>Collapse the sidebar</value>
+  </data>
+  <data name="SidebarExpand" xml:space="preserve">
+    <value>Expand the sidebar</value>
+  </data>
+  <data name="ThemeToggle" xml:space="preserve">
+    <value>Switch between light and dark</value>
+  </data>
+  <data name="GoToRecorder" xml:space="preserve">
+    <value>Recording {0} — open the recorder</value>
   </data>
 </root>

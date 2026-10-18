@@ -237,6 +237,31 @@ class RepositoryContract:
 
         assert repository.read_action_items(session_id) == []
 
+    # meeting title (phase 35): a metadata field every backend keeps
+
+    @pytest.mark.parametrize("title", ["Weekly sync", "Reunião — planejamento 2027", None])
+    def test_the_title_round_trips_in_the_metadata(
+        self, repository: SessionRepository, title: str | None
+    ) -> None:
+        session_id = self._session(repository)
+        meta = {**repository.read_meta(session_id), "title": title}
+
+        repository.write_meta(session_id, meta)
+
+        assert repository.read_meta(session_id)["title"] == title
+
+    def test_a_title_can_change_after_the_session_ended(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        repository.write_meta(session_id, {"id": session_id, "status": "done", "title": "Draft"})
+
+        renamed = {**repository.read_meta(session_id), "title": "Final"}
+        repository.write_meta(session_id, renamed)
+
+        assert repository.read_meta(session_id) == renamed
+        assert repository.list_sessions() == [session_id]
+
     # file backend extras (optional in the contract)
 
     def test_folder_and_files_are_both_present_or_both_absent(

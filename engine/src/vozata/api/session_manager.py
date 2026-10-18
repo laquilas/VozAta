@@ -39,6 +39,10 @@ class SessionNotInterruptedError(RuntimeError):
     """`POST /sessions/{id}/recover` on a session that is not `interrupted` (phase 17)."""
 
 
+class SessionBeingRecoveredError(RuntimeError):
+    """The session is being recovered right now (`409 session_being_recovered`, phase 35)."""
+
+
 class Recovery(Protocol):
     """Crash recovery (`storage.recovery.SessionRecovery`, phase 17)."""
 
@@ -66,6 +70,8 @@ class Session(Protocol):
 
     def stop(self) -> None: ...
 
+    def set_title(self, title: str | None) -> None: ...
+
 
 @dataclass(frozen=True)
 class StartOptions:
@@ -77,6 +83,7 @@ class StartOptions:
     translate_to: TranslationTarget | None = (
         None  # live translation (phase 29); None = TRANSLATE_TO
     )
+    title: str | None = None  # meeting title (phase 35), already normalized; None = untitled
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]
@@ -217,6 +224,24 @@ class SessionManager:
         # Not a daemon: the process waits for the WAVs, transcript and minutes to be written.
         threading.Thread(target=self._finalize, args=(session,), name="finalize").start()
         return {**summary, "status": SessionStatus.FINALIZING.value}
+
+    def rename(self, session_id: str, title: str | None) -> dict[str, Any]:
+        """Set the meeting title (normalized; None clears it) and return the summary (phase 35).
+
+        The session being recorded or finalized renames itself, because it rewrites its metadata
+        until it is done; any other session is rewritten through the repository. A session being
+        recovered raises `SessionBeingRecoveredError`; an unknown one `SessionNotFoundError`.
+        """
+        with self._lock:
+            session = self._session
+            if session is not None and _started_id([session]) == session_id:
+                session.set_title(title)
+                return self.summary(session)
+            if self._recovering == session_id:
+                raise SessionBeingRecoveredError(session_id)
+            meta = self._store.read_meta(session_id)
+            self._store.write_meta(session_id, {**meta, "title": title})
+        return session_summary(self._store, session_id)
 
     def recover(self, session_id: str) -> None:
         """Finish an `interrupted` session on a background thread (phase 17).

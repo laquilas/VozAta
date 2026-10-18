@@ -80,6 +80,55 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Start_sends_the_title_only_when_set_and_reads_it_back()
+    {
+        var handler = FakeHttpHandler.Json(
+            """{"id": "20261015_202358", "status": "recording", "started_at": null, "ended_at": null, "duration_seconds": 0, "language": "en", "has_minutes": false, "title": "Weekly sync"}""",
+            HttpStatusCode.Created);
+        var client = new EngineClient(handler.Client());
+
+        var summary = await client.StartSessionAsync(new StartSessionRequest(Language: "en", Title: "Weekly sync"));
+        await client.StartSessionAsync(new StartSessionRequest(Language: "en"));
+
+        Assert.Equal(
+            [
+                """{"mic_device_id":null,"system_device_id":null,"language":"en","template":null,"title":"Weekly sync"}""",
+                """{"mic_device_id":null,"system_device_id":null,"language":"en","template":null}""",
+            ],
+            handler.Requests.Select(request => request.Body));
+        Assert.Equal("Weekly sync", summary.Title);
+    }
+
+    [Fact]
+    public async Task A_summary_without_a_title_is_untitled()
+    {
+        var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);
+
+        var summary = await new EngineClient(handler.Client()).StartSessionAsync(new StartSessionRequest());
+
+        Assert.Null(summary.Title);
+    }
+
+    [Fact]
+    public async Task The_title_is_patched_and_null_clears_it()
+    {
+        var handler = FakeHttpHandler.Json(
+            """{"id": "20261015_202358", "status": "done", "started_at": null, "ended_at": null, "duration_seconds": 3, "language": "en", "has_minutes": true, "title": null}""");
+        var client = new EngineClient(handler.Client());
+
+        await client.UpdateSessionTitleAsync("20261015_202358", "Retro");
+        var summary = await client.UpdateSessionTitleAsync("20261015_202358", null);
+
+        Assert.Equal(
+            [
+                (HttpMethod.Patch, "/sessions/20261015_202358", (string?)"""{"title":"Retro"}"""),
+                (HttpMethod.Patch, "/sessions/20261015_202358", (string?)"""{"title":null}"""),
+            ],
+            handler.Requests);
+        Assert.Null(summary.Title);
+    }
+
+    [Fact]
     public async Task Start_sends_the_translation_language_only_when_chosen()
     {
         var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);

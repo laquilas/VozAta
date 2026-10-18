@@ -50,8 +50,8 @@ public sealed class TemplateSelectionTests
 
         var viewModel = await ReadyAsync();
 
-        Assert.Equal(["general", "daily", "client"], viewModel.Templates.Items.Select(item => item.Id));
-        Assert.Equal("Daily stand-up", viewModel.SelectedTemplate!.Name);
+        Assert.Equal(["general", "daily", "client"], viewModel.Recorder.Templates.Items.Select(item => item.Id));
+        Assert.Equal("Daily stand-up", viewModel.Recorder.SelectedTemplate!.Name);
         Assert.Contains("templates", _client.Calls);
     }
 
@@ -62,16 +62,16 @@ public sealed class TemplateSelectionTests
 
         var viewModel = await ReadyAsync();
 
-        Assert.Equal("general", viewModel.SelectedTemplate!.Id);
+        Assert.Equal("general", viewModel.Recorder.SelectedTemplate!.Id);
     }
 
     [Fact]
     public async Task The_selected_template_is_sent_on_start()
     {
         var viewModel = await ReadyAsync();
-        viewModel.SelectedTemplate = viewModel.Templates.Find("client");
+        viewModel.Recorder.SelectedTemplate = viewModel.Recorder.Templates.Find("client");
 
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Equal("client", _client.StartRequests.Single().Template);
     }
@@ -82,10 +82,10 @@ public sealed class TemplateSelectionTests
         _client.TemplatesError = FakeEngineClient.ApiError("internal_error", "Templates unavailable.");
 
         var viewModel = await ReadyAsync();
-        await viewModel.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
         Assert.Contains("Templates unavailable.", viewModel.Notifications);
-        Assert.Null(viewModel.SelectedTemplate);
+        Assert.Null(viewModel.Recorder.SelectedTemplate);
         Assert.Null(_client.StartRequests.Single().Template);
     }
 
@@ -93,14 +93,14 @@ public sealed class TemplateSelectionTests
     public async Task A_language_change_renames_the_templates_and_keeps_the_selection()
     {
         var viewModel = await ReadyAsync();
-        var selected = viewModel.Templates.Find("client");
-        viewModel.SelectedTemplate = selected;
+        var selected = viewModel.Recorder.Templates.Find("client");
+        viewModel.Recorder.SelectedTemplate = selected;
         _client.Templates[2] = new MinutesTemplate("client", "Reunião com cliente");
 
         viewModel.SelectedAppLanguage = viewModel.AppLanguages.Single(option => option.Value == "pt-BR");
         await viewModel.LanguageSave;
 
-        Assert.Same(selected, viewModel.SelectedTemplate);
+        Assert.Same(selected, viewModel.Recorder.SelectedTemplate);
         Assert.Equal("Reunião com cliente", selected!.Name);
     }
 
@@ -117,10 +117,10 @@ public sealed class TemplateSelectionTests
         _client.Templates[1] = new MinutesTemplate("daily", "Daily");
 
         await viewModel.Settings.SaveCommand.ExecuteAsync(null);
-        await viewModel.TemplatesRefresh;
+        await viewModel.Recorder.TemplatesRefresh;
 
-        Assert.Equal("daily", viewModel.SelectedTemplate!.Id);
-        Assert.Equal("Daily", viewModel.SelectedTemplate.Name);
+        Assert.Equal("daily", viewModel.Recorder.SelectedTemplate!.Id);
+        Assert.Equal("Daily", viewModel.Recorder.SelectedTemplate.Name);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public sealed class TemplateSelectionTests
         Assert.Equal(["general", "daily", "client"], detail.Templates.Select(item => item.Id));
         Assert.Equal("daily", detail.RegenerateTemplate!.Id);
         await detail.RegenerateMinutesCommand.ExecuteAsync(null);
-        detail.RegenerateTemplate = viewModel.Templates.Find("client");
+        detail.RegenerateTemplate = viewModel.Recorder.Templates.Find("client");
         await detail.RegenerateMinutesCommand.ExecuteAsync(null);
 
         Assert.Equal(["daily", "client"], _client.RegeneratedTemplates);

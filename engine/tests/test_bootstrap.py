@@ -319,6 +319,7 @@ def test_build_api_container_wires_real_providers(
             "env_file": Path(".env"),
             "shared": None,
             "translate_to": None,
+            "title": None,
         }
     ]
     generator = container.regenerate_minutes._build_generator()

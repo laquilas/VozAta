@@ -131,6 +131,7 @@ class _Rig:
         search_index: TranscriptSearch | None = None,
         vocabulary: tuple[str, ...] = (),
         embedder_factory: Callable[[], SpeakerEmbedder] | None = None,
+        title: str | None = None,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -170,6 +171,7 @@ class _Rig:
                 search_index=search_index,
                 vocabulary=vocabulary,
                 embedder_factory=embedder_factory,
+                title=title,
             ),
             self.observer,
             language,
@@ -771,3 +773,55 @@ def test_session_json_gets_a_heartbeat_with_the_length_so_far(tmp_path: Path) ->
 
     rig.session.stop()
     assert rig.store.read_meta(rig.session.id)["status"] == "done"
+
+
+def test_the_title_given_at_start_is_stored_in_session_json(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Weekly sync")
+    rig.session.start()
+    rig.session.stop()
+
+    assert rig.store.read_meta(rig.session.id)["title"] == "Weekly sync"
+
+
+def test_renaming_while_recording_survives_later_metadata_writes(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Draft")
+    rig.session.start()
+
+    rig.session.set_title("Final")
+    assert rig.store.read_meta(rig.session.id)["title"] == "Final"
+    rig.session.pause()
+    rig.session.resume()
+    rig.session.stop()
+
+    meta = rig.store.read_meta(rig.session.id)
+    assert (meta["title"], meta["status"]) == ("Final", "done")
+
+
+def test_the_minutes_at_stop_get_the_latest_title(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")], title="Draft")
+    rig.session.start()
+    rig.session.set_title("Budget review")
+
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    rig.session.stop()
+
+    assert "minutes.meeting_title(title=Budget review)" in rig.llm.prompts[0][1]
+
+
+def test_clearing_the_title_while_recording_leaves_it_null(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Draft")
+    rig.session.start()
+
+    rig.session.set_title(None)
+    rig.session.stop()
+
+    assert rig.store.read_meta(rig.session.id)["title"] is None
+
+
+def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+    rig.session.stop()
+
+    assert "title" not in rig.store.read_meta(rig.session.id)

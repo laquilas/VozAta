@@ -19,9 +19,11 @@ from vozata.api.schemas import (
     SessionSummary,
     StartSession,
     Transcript,
+    UpdateSession,
 )
 from vozata.api.session_manager import StartOptions
 from vozata.domain import ConversationLanguage, TranslationTarget
+from vozata.session_title import TitleTooLongError, normalize_title
 
 router = APIRouter(tags=["sessions"])
 Container = Annotated[ApiContainer, Depends(container)]
@@ -30,6 +32,7 @@ Container = Annotated[ApiContainer, Depends(container)]
 @router.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=SessionSummary)
 def start_session(body: StartSession, c: Container) -> dict[str, Any]:
     check_template(c, body.template)
+    title = _title(body.title)
     options = StartOptions(
         language=ConversationLanguage(body.language) if body.language else None,
         mic_device=body.mic_device_id,
@@ -37,6 +40,7 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
         template=body.template,
         vocabulary=tuple(body.vocabulary or ()),
         translate_to=TranslationTarget(body.translate_to) if body.translate_to else None,
+        title=title,
     )
     try:
         return c.manager.start(options)
@@ -85,6 +89,12 @@ def session_detail(session_id: str, c: Container) -> dict[str, Any]:
     return detail
 
 
+@router.patch("/sessions/{session_id}", response_model=SessionSummary)
+def update_session(session_id: str, body: UpdateSession, c: Container) -> dict[str, Any]:
+    """Rename a meeting (phase 35), also while it is being recorded."""
+    return c.manager.rename(session_id, _title(body.title))
+
+
 @router.get("/sessions/{session_id}/transcript", response_model=Transcript)
 def transcript(session_id: str, c: Container) -> dict[str, Any]:
     source, segments = c.store.load_transcript_with_source(session_id)
@@ -120,6 +130,14 @@ def regenerate_minutes(
     if current is not None and current.status is not None and current.id == session_id:
         raise ApiError(409, "session_still_recording", id=session_id)
     c.regenerate_minutes(session_id, template)
+
+
+def _title(raw: str | None) -> str | None:
+    """The normalized title (phase 35); `422 title_too_long` past the limit."""
+    try:
+        return normalize_title(raw)
+    except TitleTooLongError as error:
+        raise ApiError(422, "title_too_long", max=error.max_length) from None
 
 
 def _summary(c: ApiContainer, session_id: str) -> dict[str, Any]:
