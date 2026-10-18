@@ -100,6 +100,21 @@ def test_a_reply_that_is_not_json_is_an_invalid_response() -> None:
     assert result == CheckResult(False, "invalid_response")
 
 
+def test_an_error_without_a_request_names_no_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    from vozata import connection_checks
+
+    def fail(client: httpx.Client, settings: Settings) -> CheckResult:
+        raise httpx.TransportError("socket closed")  # raised outside a request: no `.request`
+
+    checks = ConnectionChecks(HF_MODELS)
+    monkeypatch.setitem(checks._checks, CheckTarget.OLLAMA, fail)  # noqa: SLF001
+
+    assert checks.run(CheckTarget.OLLAMA, _settings()) == CheckResult(
+        False, "unreachable", {"host": "?"}
+    )
+    assert connection_checks._has_request(httpx.TransportError("x")) is False  # noqa: SLF001
+
+
 # Speech-to-text API
 
 
