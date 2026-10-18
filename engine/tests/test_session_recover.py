@@ -114,9 +114,9 @@ def test_recover_writes_the_minutes_in_the_stored_language(
     assert minutes is not None
     original = minutes.generate
 
-    def spy(segments, labeler, language, vocabulary=()):  # type: ignore[no-untyped-def]
+    def spy(segments, labeler, language, vocabulary=(), title=None):  # type: ignore[no-untyped-def]
         languages.append(language)
-        return original(segments, labeler, language, vocabulary)
+        return original(segments, labeler, language, vocabulary, title=title)
 
     monkeypatch.setattr(minutes, "generate", spy)
 

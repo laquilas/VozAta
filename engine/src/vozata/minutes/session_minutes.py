@@ -41,7 +41,7 @@ def write_session_minutes(
     named = labeler.with_names(store.speaker_names(session_id))
     generator = build_generator(template or stored_template(meta))
     minutes = generator.generate(
-        segments, named, language, stored_vocabulary(meta), stored_title(meta)
+        segments, named, language, stored_vocabulary(meta), title=stored_title(meta)
     )
     store.write_minutes(session_id, minutes + "\n")
     if meta.get("template") != generator.template_id:

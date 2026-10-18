@@ -366,7 +366,7 @@ class RecordingSession:
         try:
             labeler = self._c.labeler.with_names(self._store.speaker_names(self.id))
             minutes = self._c.minutes.generate(
-                segments, labeler, self._lock.language, self._c.vocabulary, self._meta.title
+                segments, labeler, self._lock.language, self._c.vocabulary, title=self._meta.title
             )
         except Exception as error:
             _log.exception("Generating minutes for %s failed", self.id)
