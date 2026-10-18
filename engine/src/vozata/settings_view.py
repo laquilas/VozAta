@@ -21,7 +21,7 @@ def _plain(value: object) -> object:
 
 
 def settings_schema() -> list[dict[str, object]]:
-    """`GET /settings` schema: key, type, default, choices, secret, page group, when it applies."""
+    """`GET /settings` schema: key, type, default, choices, secret, group, applies, options."""
     defaults = Settings()
     return [
         {
@@ -34,6 +34,7 @@ def settings_schema() -> list[dict[str, object]]:
             "secret": field.secret,
             "group": field.group,
             "applies": field.applies,
+            "options_source": field.options_source,
         }
         for field in FIELDS
     ]

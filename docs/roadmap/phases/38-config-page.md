@@ -80,16 +80,14 @@ settings.
 
 - **Branch:** `feature/38-config-page`
 - **Status:** in progress
-- **Updated:** 2026-10-17 10:00
-- **Next step:** engine — add `options_source` to `settings_fields.Field`, the `SettingsOptions`
-  catalog and `GET /settings/options` (tests in `tests/api/test_settings_options.py`).
+- **Updated:** 2026-10-17 11:30
+- **Next step:** UI client: DTOs (`VozAta.Client/Config.cs`) and `IEngineClient` methods for options, connection tests and the audio cache; fake client partial `FakeEngineClient.Config.cs`.
 
 ### Steps
 
-- [ ] Engine: `options_source` per field + `GET /settings/options` (registries, Whisper models + HF
-      cache, Ollama tags, compute types, devices)
-- [ ] Engine: `POST /settings/test/{target}` (ollama, stt_api, hf_token, azure_devops, github)
-- [ ] Engine: `GET /health` storage sizes + `DELETE /storage/cache`
+- [x] Engine: `options_source` per field + `GET /settings/options` (registries, Whisper models + HF cache, Ollama tags, compute types, devices)
+- [x] Engine: `POST /settings/test/{target}` (ollama, stt_api, hf_token, azure_devops, github)
+- [x] Engine: `GET /health` storage sizes + `DELETE /storage/cache`
 - [ ] UI client: DTOs and `IEngineClient` methods for options, tests, storage
 - [ ] UI: editor kinds (options combo, path + Browse, url validation, secret Replace/Remove, Changed badge)
 - [ ] UI: `ConfigPageViewModel` sections + search, test buttons, Storage and About sections
@@ -98,4 +96,6 @@ settings.
 
 ### Decisions and notes
 
-- (none yet)
+- Options response shape: `{options: {source: [...]}, reachable: {source: bool}}` (the phase file's `{source: [...]}` plus `reachable: false`, folded into one typed object for the C# client).
+- `GET /health` keeps phase 31's `storage.database` (not `database_path`) and adds `size_bytes` and `audio_cache_bytes`; the audio cache is `OUTPUT_DIR/cache/` as phase 32 defines it. Clear cache is `DELETE /storage/cache`.
+- The phase file says `OLLAMA_HOST`; the key is `OLLAMA_URL`.

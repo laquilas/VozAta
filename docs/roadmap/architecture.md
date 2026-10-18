@@ -626,6 +626,14 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 Secrets (`*_KEY`, `*_TOKEN`, `*_PAT`) are never logged, never returned by `GET /settings`
 (masked), and `.env` is git-ignored.
 
+Each key is a `settings_fields.Field` (type, group, `applies`). Phase 38 adds `options_source`:
+the Config page offers `GET /settings/options` lists for `STT_PROVIDER` (`stt_providers`),
+`WHISPER_MODEL` / `WHISPER_CPU_MODEL` (`whisper_models`), `WHISPER_COMPUTE_TYPE`
+(`compute_types`), `WHISPER_DEVICE` / `DIARIZATION_DEVICE` (`devices`), `DIARIZATION_PROVIDER`,
+`TRANSLATION_PROVIDER`, `LLM_PROVIDER` and `OLLAMA_MODEL` (`ollama_models`). A value outside the
+list is still accepted (the page keeps it and flags it "not installed"); `config.py` stays the
+only validator.
+
 ## 10. Internationalization
 
 - Supported app languages: `en` (default), `pt-BR`, `es`. Adding one = new locale files in the
