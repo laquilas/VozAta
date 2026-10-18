@@ -25,6 +25,10 @@ public interface IEngineClient
 
     Task<SessionDetail> GetSessionAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary><c>PATCH /sessions/{id}</c> (phase 35): rename a meeting, also while recording; null clears the title.</summary>
+    Task<SessionSummary> UpdateSessionTitleAsync(
+        string id, string? title, CancellationToken cancellationToken = default);
+
     Task<Transcript> GetTranscriptAsync(string id, CancellationToken cancellationToken = default);
 
     Task<Minutes> GetMinutesAsync(string id, CancellationToken cancellationToken = default);
@@ -134,6 +138,10 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
     public Task<SessionDetail> GetSessionAsync(
         string id, CancellationToken cancellationToken = default) =>
         SendAsync<SessionDetail>(HttpMethod.Get, $"sessions/{Escape(id)}", null, cancellationToken);
+
+    public Task<SessionSummary> UpdateSessionTitleAsync(
+        string id, string? title, CancellationToken cancellationToken = default) =>
+        SendAsync<SessionSummary>(HttpMethod.Patch, $"sessions/{Escape(id)}", new { title }, cancellationToken);
 
     public Task<Transcript> GetTranscriptAsync(
         string id, CancellationToken cancellationToken = default) =>

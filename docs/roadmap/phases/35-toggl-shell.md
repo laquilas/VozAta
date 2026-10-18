@@ -78,9 +78,9 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - **Branch:** `feature/35-toggl-shell`
 - **Status:** in progress
 - **Updated:** 2026-10-17 21:37
-- **Next step:** UI client — `Title` on `StartSessionRequest` and `SessionSummary`,
-  `UpdateSessionTitleAsync` (`PATCH /sessions/{id}`) in `IEngineClient`, `EngineClient`,
-  `FakeEngineClient`, with `EngineClientTests`.
+- **Next step:** UI — `RecordingSessionService` (shared state) and `RecorderPageViewModel` split
+  out of `MainViewModel` (title, Enter starts, chips locked while recording);
+  `RecorderPageViewModelTests.cs`.
 
 ### Steps
 
@@ -89,7 +89,8 @@ Meetings list redesign (36), detail page and player (37), Config redesign (38).
 - [x] Engine: title in the minutes prompt (en / pt-BR / es) and as the export document title —
       `2956745`, `dd74ba4`
 - [x] Docs: api-contract, architecture §8
-- [ ] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync`
+- [x] Docs — `3ee4679`
+- [x] UI client: `Title` on start and in `SessionSummary`, `UpdateSessionTitleAsync`
 - [ ] UI: `RecordingSessionService` + `RecorderPageViewModel` split out of `MainViewModel`
 - [ ] UI: `ShellViewModel` (pages, navigation, Ctrl+1…4, sidebar collapse in `ui.json`) and the
       Meetings / Ask / Config page ViewModels
