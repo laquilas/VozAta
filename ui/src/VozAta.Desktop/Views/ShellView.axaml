@@ -177,6 +177,9 @@
             <DataTemplate DataType="vm:ConfigPageViewModel">
               <views:ConfigPage />
             </DataTemplate>
+            <DataTemplate DataType="vm:SessionPageViewModel">
+              <views:SessionPage />
+            </DataTemplate>
           </ContentControl.DataTemplates>
         </ContentControl>
       </DockPanel>

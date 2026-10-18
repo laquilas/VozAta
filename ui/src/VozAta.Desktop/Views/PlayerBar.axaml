@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             x:Class="VozAta.Desktop.Views.PlayerBar"
+             x:DataType="vm:PlayerBarViewModel">
+
+  <!-- The in-app player of a meeting (phase 37) -->
+  <StackPanel Spacing="4">
+    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto">
+      <Button Grid.Column="0" Classes="icon" Command="{Binding BackCommand}" Margin="0,0,4,0"
+              ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerBack]}"
+              AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerBack]}">
+        <TextBlock Text="−10" Classes="tabular" />
+      </Button>
+      <Button Grid.Column="1" Classes="primary" Command="{Binding PlayPauseCommand}" Margin="0,0,4,0"
+              ToolTip.Tip="{Binding PlayPauseText}" AutomationProperties.Name="{Binding PlayPauseText}">
+        <Panel>
+          <PathIcon Data="{StaticResource Icon.Play}" IsVisible="{Binding !IsPlaying}" />
+          <PathIcon Data="{StaticResource Icon.Pause}" IsVisible="{Binding IsPlaying}" />
+        </Panel>
+      </Button>
+      <Button Grid.Column="2" Classes="icon" Command="{Binding ForwardCommand}" Margin="0,0,12,0"
+              ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerForward]}"
+              AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerForward]}">
+        <TextBlock Text="+10" Classes="tabular" />
+      </Button>
+      <TextBlock Grid.Column="3" Text="{Binding PositionText}" Classes="tabular" VerticalAlignment="Center" Margin="0,0,8,0" />
+      <Slider Grid.Column="4" Minimum="0" Maximum="{Binding Duration}" Value="{Binding Position}"
+              VerticalAlignment="Center"
+              AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerPosition]}" />
+      <TextBlock Grid.Column="5" Text="{Binding DurationText}" Classes="tabular secondary" VerticalAlignment="Center" Margin="8,0,12,0" />
+      <ComboBox Grid.Column="6" Margin="0,0,8,0" MinWidth="130" VerticalAlignment="Center"
+                ItemsSource="{Binding Tracks}" SelectedItem="{Binding SelectedTrack}"
+                DisplayMemberBinding="{Binding Label, x:DataType=vm:ChoiceOption}"
+                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerChannel]}"
+                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerChannel]}" />
+      <ComboBox Grid.Column="7" Margin="0,0,8,0" MinWidth="80" VerticalAlignment="Center"
+                ItemsSource="{x:Static vm:PlayerBarViewModel.Rates}" SelectedItem="{Binding SelectedRate}"
+                DisplayMemberBinding="{Binding Label, x:DataType=vm:PlaybackRate}"
+                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerSpeed]}"
+                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerSpeed]}" />
+      <PathIcon Grid.Column="8" Data="{StaticResource Icon.Speaker}" VerticalAlignment="Center" Margin="0,0,4,0" />
+      <Slider Grid.Column="9" Width="90" Minimum="0" Maximum="100" Value="{Binding Volume}" VerticalAlignment="Center"
+              AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerVolume]}" />
+    </Grid>
+    <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+               IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+  </StackPanel>
+</UserControl>

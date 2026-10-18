@@ -42,10 +42,14 @@ public sealed class ThemeRenderTests
                 var (viewModel, client) = await SeededAsync(theme);
                 Assert.Equal(theme == "dark" ? "Dark" : "Light", Application.Current!.ActualThemeVariant.ToString());
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-idle-{theme}.png");
-                Render<SessionDetailView>(viewModel, ShellViewModel.Meetings, $"meetings-minutes-{theme}.png");
+                viewModel.History.Selected = viewModel.History.Rows[0]; // the recorder closed it: open it again
+                await viewModel.History.DetailLoading;
+                Render<Views.SessionPage>(viewModel, null, $"session-minutes-{theme}.png"); // the meeting page (phase 37)
                 viewModel.History.Detail!.SelectedTab = 1;
-                Render<SessionDetailView>(viewModel, ShellViewModel.Meetings, $"meetings-transcript-{theme}.png");
-                viewModel.History.Selected = null; // the list alone, as on opening the page (phase 36)
+                await viewModel.History.Detail.PlayLineCommand.ExecuteAsync(viewModel.History.Detail.Lines[1]);
+                Render<Views.SessionPage>(viewModel, null, $"session-transcript-playing-{theme}.png");
+                Assert.NotNull(viewModel.History.Detail.Player);
+                await viewModel.History.CloseAsync(); // the list alone, as on opening the page (phase 36)
                 await viewModel.Meetings.LoadOlderCommand.ExecuteAsync(null);
                 Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-week-{theme}.png");
                 var row = viewModel.Meetings.Weeks[0].Days[1].Rows[0];
@@ -116,10 +120,14 @@ public sealed class ThemeRenderTests
 #endif
 
     /// <summary>Show <paramref name="page"/> in a new main window, check its view is there, save the frame.</summary>
-    internal static void Render<TView>(MainViewModel viewModel, string page, string name)
+    internal static void Render<TView>(MainViewModel viewModel, string? page, string name)
         where TView : Control
     {
-        viewModel.Shell.NavigateCommand.Execute(page);
+        if (page is not null) // null: the page shown now (a meeting page, phase 37)
+        {
+            viewModel.Shell.NavigateCommand.Execute(page);
+        }
+
         var window = new MainWindow { DataContext = viewModel, Width = 1280, Height = 860 };
         window.Show();
         try
@@ -167,7 +175,8 @@ public sealed class ThemeRenderTests
         client.Sessions.Add(new SessionSummary("20261015_140000", "done", started.AddDays(-1).AddHours(5), null, 1800, "pt", false));
         client.SearchHits.Add(new SearchHit("20261014_160000", "mic-000003", 312, "mic", "Me", "the design \u0002tokens\u0003 are ready for review"));
         client.SearchHits.Add(new SearchHit("20261016_090000", "mic-000001", 5, "mic", "Me", "shall we start with the design \u0002tokens\u0003?"));
-        client.Details["20261016_090000"] = new SessionDetail("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, [], @"C:\recordings\20261016_090000");
+        client.Details["20261016_090000"] = new SessionDetail("20261016_090000", "done", started, started.AddMinutes(42), 2520, "en", true, null, null,
+            new Dictionary<string, double> { ["mic"] = 2520, ["system"] = 2520, ["mixed"] = 2520 });
         client.MinutesText["20261016_090000"] = "# Weekly sync\n\n## Decisions\n\n- Ship the design system first.\n- Keep the layout until phase 35.";
         client.Transcripts["20261016_090000"] = new Transcript("raw", [
             new Segment("mic-000001", "mic", "mic", "Me", 5, 9, "Good morning, shall we start with the design tokens?", false, []),
@@ -180,7 +189,7 @@ public sealed class ThemeRenderTests
         var viewModel = new MainViewModel(
             client, events, new FakeEngineProcess(), new ImmediateDispatcher(), new LocalizationService(),
             new FakeDialogs(), preferences, new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(),
-            new AvaloniaThemeService());
+            new AvaloniaThemeService(), players: () => new FakeAudioPlayer { Duration = 2520 });
         await viewModel.InitializeAsync();
         events.Send(new ConnectionChangedEvent(true));
         for (var i = 0; i < 200 && viewModel.HandledEvents == 0; i++)

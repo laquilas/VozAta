@@ -78,7 +78,16 @@ public sealed partial class SessionPageViewModel(
 
     /// <summary>The line the player is playing.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScrollTarget))]
     public partial TranscriptLine? CurrentLine { get; private set; }
+
+    /// <summary>The transcript scrolls to the line being played (the user can turn it off to read elsewhere).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScrollTarget))]
+    public partial bool FollowPlayback { get; set; } = true;
+
+    /// <summary>The line the transcript scrolls to: the played one while following, else a search hit.</summary>
+    public TranscriptLine? ScrollTarget => FollowPlayback && CurrentLine is not null ? CurrentLine : FocusedLine;
 
     [ObservableProperty]
     public partial bool IsEditingTitle { get; private set; }
@@ -164,6 +173,7 @@ public sealed partial class SessionPageViewModel(
 
     /// <summary>The transcript line a search result opened; the view scrolls to it.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScrollTarget))]
     public partial TranscriptLine? FocusedLine { get; private set; }
 
     public const int MinutesTab = 0;

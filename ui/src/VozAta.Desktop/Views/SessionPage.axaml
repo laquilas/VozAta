@@ -1,0 +1,216 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             xmlns:views="using:VozAta.Desktop.Views"
+             x:Class="VozAta.Desktop.Views.SessionPage"
+             x:DataType="vm:SessionPageViewModel">
+
+  <!-- One meeting as its own page (phase 37): header, tabs, the player docked at the bottom -->
+  <DockPanel>
+    <!-- In-app player (none while live or without audio) -->
+    <Border DockPanel.Dock="Bottom" Padding="16,10" BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Surface}"
+            IsVisible="{Binding Player, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <views:PlayerBar DataContext="{Binding Player}" />
+    </Border>
+
+    <DockPanel Margin="{StaticResource Inset.Page}">
+      <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+        <!-- Back, title (click the pencil to rename), date and duration -->
+        <DockPanel>
+          <Button DockPanel.Dock="Left" Classes="icon" Margin="0,0,8,0" VerticalAlignment="Center"
+                  Command="{Binding BackCommand}"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SessionBack]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SessionBack]}">
+            <PathIcon Data="{StaticResource Icon.ChevronLeft}" />
+          </Button>
+          <Button DockPanel.Dock="Right" Classes="icon" Margin="8,0,0,0" VerticalAlignment="Center"
+                  Command="{Binding DeleteCommand}" IsVisible="{Binding !IsLive}"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDelete]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDelete]}">
+            <PathIcon Data="{StaticResource Icon.Delete}" />
+          </Button>
+          <Panel>
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsEditingTitle}">
+              <TextBlock Text="{Binding Title}" Classes="title" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <Button Classes="icon" VerticalAlignment="Center" Command="{Binding BeginRenameCommand}"
+                      ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingRename]}"
+                      AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingRename]}">
+                <PathIcon Data="{StaticResource Icon.Edit}" />
+              </Button>
+            </StackPanel>
+            <DockPanel IsVisible="{Binding IsEditingTitle}">
+              <Button DockPanel.Dock="Right" Margin="4,0,0,0" Command="{Binding CancelRenameCommand}"
+                      Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingCancelRename]}" />
+              <Button DockPanel.Dock="Right" Margin="8,0,0,0" Classes="primary" Command="{Binding SaveRenameCommand}"
+                      Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingSaveTitle]}" />
+              <TextBox Text="{Binding TitleDraft}" MaxLength="200"
+                       PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TitlePlaceholder]}"
+                       AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingTitleEditor]}">
+                <TextBox.KeyBindings>
+                  <KeyBinding Gesture="Enter" Command="{Binding SaveRenameCommand}" />
+                  <KeyBinding Gesture="Escape" Command="{Binding CancelRenameCommand}" />
+                </TextBox.KeyBindings>
+              </TextBox>
+            </DockPanel>
+          </Panel>
+        </DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="{Binding Date}" Classes="secondary" />
+          <TextBlock Text="·" Classes="secondary" />
+          <TextBlock Text="{Binding Duration}" Classes="secondary tabular" />
+        </StackPanel>
+
+        <!-- Actions: regenerate (template), external player, export -->
+        <WrapPanel>
+          <ComboBox Margin="0,0,4,4" MinWidth="170"
+                    ItemsSource="{Binding Templates}" SelectedItem="{Binding RegenerateTemplate}"
+                    IsVisible="{Binding !IsLive}"
+                    PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
+                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
+                    DisplayMemberBinding="{Binding Name, x:DataType=vm:TemplateOption}" />
+          <Button Margin="0,0,8,4" Command="{Binding RegenerateMinutesCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}"
+                  IsVisible="{Binding !IsLive}" />
+          <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="md"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportMarkdown]}" />
+          <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="docx"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportWord]}" />
+          <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="pdf"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportPdf]}" />
+          <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="mixed"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerExternal]}" />
+          <Button Margin="0,0,8,4" Command="{Binding OpenFolderCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}"
+                  IsVisible="{Binding Folder, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </WrapPanel>
+        <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
+                   IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Regenerating]}"
+                   Classes="hint warning" IsVisible="{Binding IsBusy}" />
+        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Loading]}"
+                   Classes="secondary" IsVisible="{Binding IsLoading}" />
+        <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </StackPanel>
+
+      <TabControl SelectedIndex="{Binding SelectedTab}">
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabMinutes]}">
+          <Panel>
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoMinutes]}"
+                       Classes="secondary" Margin="8" TextWrapping="Wrap"
+                       IsVisible="{Binding !HasMinutes}" />
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding Blocks}" Margin="8">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:MarkdownBlock">
+                    <SelectableTextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,2"
+                                         Classes.h1="{Binding IsHeading1}" Classes.h2="{Binding IsHeading2}"
+                                         Classes.h3="{Binding IsHeading3}" Classes.item="{Binding IsItem}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Panel>
+        </TabItem>
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabTranscript]}">
+          <DockPanel>
+            <!-- Edit mode toolbar (phase 21) and "follow playback" (phase 37) -->
+            <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="8,8,8,0" IsVisible="{Binding !IsLive}">
+              <WrapPanel>
+                <Button Margin="0,0,8,4" Command="{Binding Editor.EditCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptEdit]}"
+                        IsVisible="{Binding !Editor.IsEditing}" />
+                <Button Margin="0,0,8,4" Classes="primary" Command="{Binding Editor.SaveCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSave]}"
+                        IsVisible="{Binding Editor.IsEditing}" />
+                <Button Margin="0,0,8,4" Command="{Binding Editor.CancelEditCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptCancelEdit]}"
+                        IsVisible="{Binding Editor.IsEditing}" />
+                <Button Margin="0,0,8,4" Command="{Binding Editor.RevertCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptRevert]}"
+                        IsVisible="{Binding Editor.HasEdits}" />
+                <CheckBox Margin="8,0,8,4" IsChecked="{Binding FollowPlayback}"
+                          Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[FollowPlayback]}"
+                          IsVisible="{Binding Player, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSaving]}"
+                         Classes="hint" IsVisible="{Binding Editor.IsSaving}" />
+              <TextBlock Text="{Binding Editor.Error}" Classes="error" TextWrapping="Wrap"
+                         IsVisible="{Binding Editor.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Editor.SuggestRegenerate}">
+                <TextBlock VerticalAlignment="Center" Classes="success" TextWrapping="Wrap"
+                           Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptSaved]}" />
+                <Button Command="{Binding RegenerateMinutesCommand}"
+                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}" />
+              </StackPanel>
+              <TextBlock Classes="hint" TextWrapping="Wrap"
+                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptHasEdits]}"
+                         IsVisible="{Binding Editor.HasEdits}" />
+              <TextBlock Classes="hint" TextWrapping="Wrap"
+                         Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TranscriptLowConfidenceHint]}"
+                         IsVisible="{Binding HasLowConfidence}" />
+            </StackPanel>
+            <Panel>
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoTranscript]}"
+                         Classes="secondary" Margin="8" IsVisible="{Binding !Lines.Count}" />
+              <ScrollViewer IsVisible="{Binding !Editor.IsEditing}">
+                <ItemsControl ItemsSource="{Binding Lines}" Margin="8"
+                              views:ScrollToItem.Item="{Binding ScrollTarget}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TranscriptLine">
+                      <DockPanel Margin="0,3">
+                        <!-- Play from this line (phase 37) -->
+                        <Button DockPanel.Dock="Left" Classes="icon" Padding="4" Margin="0,0,6,0" VerticalAlignment="Top"
+                                Command="{Binding $parent[UserControl].((vm:SessionPageViewModel)DataContext).PlayLineCommand}"
+                                CommandParameter="{Binding}"
+                                IsVisible="{Binding $parent[UserControl].((vm:SessionPageViewModel)DataContext).Player, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayLine]}"
+                                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayLine]}">
+                          <PathIcon Data="{StaticResource Icon.Play}" Width="12" Height="12" />
+                        </Button>
+                        <SelectableTextBlock views:ConfidenceText.Parts="{Binding DisplayParts}" Classes="channel reading"
+                                             Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}"
+                                             TextWrapping="Wrap"
+                                             Classes.focused="{Binding IsFocused}" Classes.current="{Binding IsCurrent}" />
+                      </DockPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+              <!-- Edit mode: one text box per segment -->
+              <ScrollViewer IsVisible="{Binding Editor.IsEditing}">
+                <ItemsControl ItemsSource="{Binding Editor.Segments}" Margin="8">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EditableSegment">
+                      <StackPanel Margin="0,3" Spacing="2">
+                        <TextBlock Text="{Binding Header}" Classes="channel small"
+                                   Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}" />
+                        <TextBox Text="{Binding Text}" TextWrapping="Wrap" FontSize="{StaticResource FontSize.Reading}"
+                                 AutomationProperties.Name="{Binding Header}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Panel>
+          </DockPanel>
+        </TabItem>
+        <!-- Speaker rename (phase 16) -->
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabSpeakers]}"
+                 IsVisible="{Binding !IsLive}">
+          <views:SpeakersPanel DataContext="{Binding Speakers}" />
+        </TabItem>
+        <!-- Action items export (phase 23) -->
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabActionItems]}"
+                 IsVisible="{Binding !IsLive}">
+          <views:ActionItemsPanel DataContext="{Binding ActionItems}" />
+        </TabItem>
+        <!-- Questions about this meeting (phase 24, scoped here in phase 37) -->
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabAsk]}">
+          <views:AskView DataContext="{Binding Ask}" Margin="8" />
+        </TabItem>
+      </TabControl>
+    </DockPanel>
+  </DockPanel>
+</UserControl>

@@ -360,11 +360,5 @@
       </Panel>
     </DockPanel>
 
-    <!-- The open meeting (the history detail until phase 37) -->
-    <Border Grid.Column="1" Width="460" Padding="16" BorderThickness="1,0,0,0"
-            BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Surface}"
-            IsVisible="{Binding History.Detail, Converter={x:Static ObjectConverters.IsNotNull}}">
-      <views:SessionDetailView DataContext="{Binding History.Detail}" />
-    </Border>
   </Grid>
 </UserControl>

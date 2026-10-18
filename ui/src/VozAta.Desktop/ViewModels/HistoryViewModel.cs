@@ -52,7 +52,7 @@ public sealed partial class HistoryViewModel(
     public AskViewModel Ask =>
         _ask ??= new AskViewModel(client, localization)
         {
-            OpenCitation = citation => OpenSegmentAsync(citation.SessionId, citation.SegmentId),
+            OpenCitation = citation => OpenSegmentAsync(citation.SessionId, citation.SegmentId, citation.Start),
             SelectedSessionId = Selected?.Id,
         };
 
@@ -84,6 +84,15 @@ public sealed partial class HistoryViewModel(
 
     [ObservableProperty]
     public partial SessionPageViewModel? Detail { get; private set; }
+
+    /// <summary>Builds the in-app player of an opened meeting (phase 37); null: none.</summary>
+    public Func<string, IReadOnlyDictionary<string, double>, PlayerBarViewModel?>? Players { get; set; }
+
+    /// <summary>An opened meeting was renamed on its page.</summary>
+    public Func<SessionSummary, Task>? Renamed { get; set; }
+
+    /// <summary>Delete an opened meeting (the Meetings page asks and offers Undo).</summary>
+    public Func<SessionSummary, Task>? DeleteMeeting { get; set; }
 
     /// <summary>The load started by the last selection (tests await it).</summary>
     public Task DetailLoading { get; private set; } = Task.CompletedTask;
@@ -144,10 +153,13 @@ public sealed partial class HistoryViewModel(
         Detail?.ActionItems.OnReadyAsync(sessionId) ?? Task.CompletedTask;
 
     /// <summary>Open a search hit: select its session (loading older pages if needed) at the segment.</summary>
-    public Task OpenHitAsync(SearchHit hit) => OpenSegmentAsync(hit.SessionId, hit.SegmentId);
+    public Task OpenHitAsync(SearchHit hit) => OpenSegmentAsync(hit.SessionId, hit.SegmentId, hit.Start);
 
-    /// <summary>Select a session (loading older pages if needed) and focus one of its segments.</summary>
-    public async Task OpenSegmentAsync(string sessionId, string segmentId)
+    /// <summary>
+    /// Select a session (loading older pages if needed), focus one of its segments and show
+    /// <paramref name="start"/> in its player.
+    /// </summary>
+    public async Task OpenSegmentAsync(string sessionId, string segmentId, double? start = null)
     {
         var row = Rows.FirstOrDefault(item => item.Id == sessionId);
         while (row is null && CanLoadMore && Error is null)
@@ -166,11 +178,33 @@ public sealed partial class HistoryViewModel(
         if (Detail?.Id == row.Id)
         {
             Detail.FocusSegment(segmentId);
+            if (start is { } seconds)
+            {
+                Detail.CueAt(seconds);
+            }
         }
     }
 
     /// <summary>Open a meeting picked on the Meetings page (phase 36) in <see cref="Detail"/>.</summary>
     public void Show(SessionSummary summary) => Selected = ToRow(summary);
+
+    /// <summary>Close the open meeting (back to the list); false when the user keeps unsaved edits.</summary>
+    public async Task<bool> CloseAsync()
+    {
+        if (Detail is null)
+        {
+            return true;
+        }
+
+        if (!await ConfirmLeaveAsync())
+        {
+            return false;
+        }
+
+        Selected = null;
+        Open(null);
+        return true;
+    }
 
     /// <summary>A meeting was deleted (phase 36): close its detail, dropping any unsaved edits.</summary>
     public void Forget(string sessionId)
@@ -250,7 +284,14 @@ public sealed partial class HistoryViewModel(
 
     private void Open(SessionRow? row)
     {
-        Detail = row is null ? null : new SessionPageViewModel(client, shell, localization, saver, row.Summary, templates, dialogs);
+        Detail?.Dispose();
+        Detail = row is null ? null : new SessionPageViewModel(client, shell, localization, saver, row.Summary, templates, dialogs)
+        {
+            Players = Players,
+            Renamed = Renamed,
+            DeleteMeeting = DeleteMeeting,
+            GoBack = CloseAsync,
+        };
         DetailLoading = Detail?.LoadAsync() ?? Task.CompletedTask;
     }
 
