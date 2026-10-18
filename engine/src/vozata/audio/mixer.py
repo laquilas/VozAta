@@ -1,25 +1,19 @@
-"""Mix the mic and system tracks into `mixed.wav`, streaming in blocks (`AudioMixer`)."""
+"""Mix the mic and system tracks into one WAV, streaming in blocks (`AudioMixer`).
+
+The tracks are read through an `AudioReader`, so the mixer works on any storage backend.
+"""
 
 from __future__ import annotations
 
 import wave
-from contextlib import ExitStack
 from pathlib import Path
 
 import numpy as np
 
+from vozata.domain import Channel
+from vozata.ports import AudioReader
+
 _PCM_LIMIT = 32767
-
-
-def _open_input(stack: ExitStack, path: Path) -> wave.Wave_read:
-    wav = stack.enter_context(wave.open(str(path), "rb"))  # noqa: SIM115 (ExitStack closes it)
-    if wav.getnchannels() != 1 or wav.getsampwidth() != 2:
-        raise ValueError(f"{path} must be mono 16-bit PCM")
-    return wav
-
-
-def _read_block(wav: wave.Wave_read, frames: int) -> np.ndarray:
-    return np.frombuffer(wav.readframes(frames), dtype=np.int16)
 
 
 class _BlockMixer:
@@ -28,24 +22,20 @@ class _BlockMixer:
     def __init__(self, block_seconds: float = 60) -> None:
         self._block_seconds = block_seconds
 
-    def mix(self, mic: Path, system: Path, destination: Path) -> None:
-        with ExitStack() as stack:
-            mic_wav = _open_input(stack, mic)
-            system_wav = _open_input(stack, system)
-            rate = mic_wav.getframerate()
-            if system_wav.getframerate() != rate:
-                raise ValueError("mic and system tracks must share one sample rate")
-            out = stack.enter_context(wave.open(str(destination), "wb"))
+    def mix(self, reader: AudioReader, session_id: str, destination: Path) -> None:
+        rate = reader.sample_rate(session_id, Channel.MIC)
+        if reader.sample_rate(session_id, Channel.SYSTEM) != rate:
+            raise ValueError("mic and system tracks must share one sample rate")
+        total = max(reader.length(session_id, channel) for channel in (Channel.MIC, Channel.SYSTEM))
+        block = max(1, round(self._block_seconds * rate))
+        with wave.open(str(destination), "wb") as out:
             out.setnchannels(self.channels)
             out.setsampwidth(2)
             out.setframerate(rate)
-            block = max(1, round(self._block_seconds * rate))
-            while True:
-                left = _read_block(mic_wav, block)
-                right = _read_block(system_wav, block)
+            for start in range(0, total, block):
+                left = reader.frames(session_id, Channel.MIC, start, block)
+                right = reader.frames(session_id, Channel.SYSTEM, start, block)
                 length = max(len(left), len(right))
-                if length == 0:
-                    break
                 out.writeframes(self._combine(_pad(left, length), _pad(right, length)).tobytes())
 
     def _combine(self, mic: np.ndarray, system: np.ndarray) -> np.ndarray:

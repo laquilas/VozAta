@@ -6,11 +6,11 @@ from collections.abc import Callable
 from pathlib import Path
 
 from vozata.cli.console import ConsoleObserver
-from vozata.ports import Localizer
+from vozata.ports import Localizer, SessionNotFoundError
 from vozata.storage.recovery import RecoveryError, SessionRecovery
-from vozata.storage.session_store import SessionNotFoundError, SessionStore
 
-RecoveryFactory = Callable[[SessionStore | None], SessionRecovery]  # None: OUTPUT_DIR
+# The folder holding the sessions (a session folder's parent); None: OUTPUT_DIR.
+RecoveryFactory = Callable[[Path | None], SessionRecovery]
 
 
 def run_recover(
@@ -32,7 +32,7 @@ def run_recover(
             return 0
     else:
         folder = session_dir.resolve()
-        recovery = build_recovery(SessionStore(folder.parent))
+        recovery = build_recovery(folder.parent)
         try:
             recovery.store.read_meta(folder.name)
         except SessionNotFoundError:
@@ -51,5 +51,5 @@ def run_recover(
             console.say(t("cli.recover_failed", id=session_id, reason=error))
             failed += 1
             continue
-        console.say(t("cli.recovered", folder=recovery.store.paths(session_id).root))
+        console.say(t("cli.recovered", folder=recovery.store.folder(session_id) or session_id))
     return 1 if failed else 0

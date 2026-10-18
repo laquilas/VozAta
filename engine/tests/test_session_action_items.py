@@ -67,7 +67,7 @@ def test_a_failed_extraction_is_reported_and_the_session_still_finishes(tmp_path
     assert code == "action_items_failed"
     assert "valid action items" in message
     assert rig.observer.of("action_items_ready") == []
-    assert rig.session.paths.minutes_md.is_file()
+    assert rig.paths.minutes_md.is_file()
     assert rig.session.status is SessionStatus.DONE
 
 

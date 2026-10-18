@@ -1,16 +1,15 @@
-"""(Re)generate a stored session's `minutes.md` (CLI `minutes` command, `POST .../minutes`)."""
+"""(Re)generate a stored session's minutes (CLI `minutes` command, `POST .../minutes`)."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 from vozata.domain import ConversationLanguage
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.template_repository import bundled_templates
-from vozata.storage.session_store import SessionStore
+from vozata.ports import SessionRepository
 
 GeneratorFactory = Callable[[str | None], MinutesGenerator]  # template id; None = the default
 
@@ -20,17 +19,17 @@ class EmptyTranscriptError(ValueError):
 
 
 def write_session_minutes(
-    store: SessionStore,
+    store: SessionRepository,
     session_id: str,
     build_generator: GeneratorFactory,
     labeler: SpeakerLabeler,
     template: str | None = None,
-) -> Path:
+) -> None:
     """Minutes from the best transcript, in the language stored in `session.json` (else `auto`).
 
     The glossary is the `vocabulary` stored in `session.json` (phase 19). The template is
-    `template`, else the one stored in `session.json` (when still bundled), else
-    the default; the one used is saved back to `session.json`. Raises `SessionNotFoundError`,
+    `template`, else the one stored in the metadata (when still bundled), else the default;
+    the one used is saved back to the metadata. Raises `SessionNotFoundError`,
     `EmptyTranscriptError` or `LanguageModelError`; on failure nothing is written.
     """
     meta = store.read_meta(session_id)
@@ -41,12 +40,10 @@ def write_session_minutes(
     named = labeler.with_names(store.speaker_names(session_id))
     generator = build_generator(template or stored_template(meta))
     minutes = generator.generate(segments, named, language, stored_vocabulary(meta))
-    path = store.paths(session_id).minutes_md
-    path.write_text(minutes + "\n", encoding="utf-8", newline="\n")
+    store.write_minutes(session_id, minutes + "\n")
     if meta.get("template") != generator.template_id:
         latest = store.read_meta(session_id)
         store.write_meta(session_id, {**latest, "template": generator.template_id})
-    return path
 
 
 def stored_vocabulary(meta: dict[str, Any]) -> list[str]:

@@ -16,7 +16,7 @@ from vozata.api.session_manager import (
 from vozata.domain import Channel, ConversationLanguage, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.session import SessionStartError
-from vozata.storage.session_store import SessionStore
+from vozata.storage.files.repository import FileSessionRepository
 
 OPTIONS = StartOptions(language=ConversationLanguage.PT, mic_device=9)
 
@@ -64,7 +64,7 @@ def test_a_second_start_conflicts_until_finalization_ends(
 
 
 def test_pause_resume_and_stop_drive_the_session(
-    manager: SessionManager, factory: SessionFactory, store: SessionStore
+    manager: SessionManager, factory: SessionFactory, store: FileSessionRepository
 ) -> None:
     manager.start(OPTIONS)
 
@@ -130,7 +130,7 @@ def test_observer_events_become_contract_envelopes(
 
 
 def test_level_events_are_throttled_per_channel(
-    factory: SessionFactory, store: SessionStore, broadcaster: RecordingBroadcaster
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
     now = [0.0]
     manager = SessionManager(
@@ -203,7 +203,7 @@ def test_a_failing_finalization_still_frees_the_manager(
 
 
 def test_events_before_the_session_folder_exists_have_no_session_id(
-    factory: SessionFactory, store: SessionStore, broadcaster: RecordingBroadcaster
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
     def early_factory(observer, options):  # type: ignore[no-untyped-def]
         observer.on_level(Channel.MIC, -40.0)  # before start(): id not known yet
@@ -234,7 +234,7 @@ def test_heartbeat_stops_once_finalization_starts(
 
 
 def test_events_while_the_session_id_is_not_readable_have_no_session_id(
-    factory: SessionFactory, store: SessionStore, broadcaster: RecordingBroadcaster
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
     def factory_with_early_event(observer, options):  # type: ignore[no-untyped-def]
         session = factory(observer, options)

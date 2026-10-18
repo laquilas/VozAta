@@ -19,8 +19,7 @@ from vozata.domain import (
     TranslationTarget,
 )
 from vozata.labels import SpeakerLabeler
-from vozata.ports import Localizer, SessionObserver
-from vozata.storage.session_store import SessionStore
+from vozata.ports import Localizer, SessionObserver, SessionRepository
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
@@ -160,7 +159,7 @@ class SessionManager:
     def __init__(
         self,
         factory: SessionFactory,
-        store: SessionStore,
+        store: SessionRepository,
         broadcaster: EventBroadcaster,
         labeler: SpeakerLabeler,
         clock: Callable[[], float] = time.monotonic,

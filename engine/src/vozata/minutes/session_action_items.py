@@ -1,4 +1,4 @@
-"""(Re)extract a stored session's action items into `action_items.json` (stop step, API job)."""
+"""(Re)extract and store a session's action items (stop step, API job)."""
 
 from __future__ import annotations
 
@@ -8,12 +8,7 @@ from typing import Any, Protocol
 from vozata.domain import ActionItem, ConversationLanguage, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.session_minutes import EmptyTranscriptError, stored_vocabulary
-from vozata.storage.action_items import (
-    action_items_lock,
-    read_action_items,
-    write_action_items,
-)
-from vozata.storage.session_store import SessionStore
+from vozata.ports import SessionRepository
 
 
 class Extractor(Protocol):
@@ -30,7 +25,7 @@ class Extractor(Protocol):
 
 
 def write_session_action_items(
-    store: SessionStore, session_id: str, extractor: Extractor, labeler: SpeakerLabeler
+    store: SessionRepository, session_id: str, extractor: Extractor, labeler: SpeakerLabeler
 ) -> list[ActionItem]:
     """Extract from the best transcript and save; returns every stored item.
 
@@ -48,11 +43,10 @@ def write_session_action_items(
     fresh = extractor.extract(
         segments, named, language, stored_vocabulary(meta), _meeting_date(meta)
     )
-    paths = store.paths(session_id)
-    with action_items_lock:
-        kept = [item for item in read_action_items(paths) if item.exported_url]
+    with store.action_items_lock():
+        kept = [item for item in store.read_action_items(session_id) if item.exported_url]
         items = kept + _renumber(fresh, {item.id for item in kept})
-        write_action_items(paths, items)
+        store.write_action_items(session_id, items)
     return items
 
 

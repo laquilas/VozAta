@@ -5,6 +5,7 @@ New providers are added to a registry here; orchestrators never change.
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 import logging
 import threading
@@ -59,7 +60,10 @@ from vozata.ports import (
     DocumentExporter,
     LanguageModel,
     Localizer,
+    RecoverableStore,
+    SessionAudio,
     SessionObserver,
+    SessionRepository,
     SpeakerEmbedder,
     TaskExporter,
     Transcriber,
@@ -70,6 +74,8 @@ from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.settings_file import SettingsFile
+from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_store import SessionStore
@@ -150,6 +156,17 @@ TASK_EXPORTERS: dict[str, TaskTarget] = {
         lambda s: GitHubIssuesExporter(s.github_repo or "", s.github_token or ""),
     ),
 }
+# Storage backends (phase 30): the only place that builds them. The `STORAGE_BACKEND` key comes
+# with the SQLite backend (phase 31); until then the file backend is the only one.
+STORAGE_BACKEND = "files"
+REPOSITORIES: dict[str, Callable[[Settings], SessionRepository]] = {
+    "files": lambda settings: FileSessionRepository(SessionStore(settings.output_dir)),
+}
+AUDIO_STORES: dict[str, Callable[[Settings], SessionAudio]] = {
+    "files": lambda settings: FileAudioStore(
+        SessionStore(settings.output_dir), settings.sample_rate
+    ),
+}
 MIXERS: dict[MixMode, Callable[[], AudioMixer]] = {
     MixMode.MONO: MonoMixer,
     MixMode.STEREO: StereoMixer,
@@ -172,8 +189,18 @@ def build_labeler(settings: Settings, localizer: Localizer) -> SpeakerLabeler:
     return SpeakerLabeler(localizer, settings.mic_label, settings.system_label)
 
 
-def build_store(settings: Settings) -> SessionStore:
-    return SessionStore(settings.output_dir)
+def _at(settings: Settings, output_dir: Path | None) -> Settings:
+    return settings if output_dir is None else dataclasses.replace(settings, output_dir=output_dir)
+
+
+def build_store(settings: Settings, output_dir: Path | None = None) -> SessionRepository:
+    """The session repository of `OUTPUT_DIR` (or of `output_dir`, for a CLI session folder)."""
+    return REPOSITORIES[STORAGE_BACKEND](_at(settings, output_dir))
+
+
+def build_audio_store(settings: Settings, output_dir: Path | None = None) -> SessionAudio:
+    """The audio store matching `build_store` (same `output_dir`)."""
+    return AUDIO_STORES[STORAGE_BACKEND](_at(settings, output_dir))
 
 
 def build_search_index(settings: Settings) -> SearchIndex:
@@ -223,7 +250,7 @@ def build_action_item_extractor(
 
 
 def build_answerer(
-    settings: Settings, store: SessionStore, search_index: TranscriptSearch | None
+    settings: Settings, store: SessionRepository, search_index: TranscriptSearch | None
 ) -> MeetingAnswerer:
     """Answers about the meetings (phase 24) in `APP_LANGUAGE`, within `LLM_MAX_CHARS`."""
     llm = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
@@ -362,6 +389,7 @@ def build_session(
     return RecordingSession(
         settings,
         build_store(settings),
+        build_audio_store(settings),
         components,
         observer,
         language or settings.transcription_language,
@@ -383,13 +411,17 @@ def _no_transcriber() -> Transcriber:
 
 
 def build_recovery_session(
-    settings: Settings, store: SessionStore, observer: SessionObserver, session_id: str
+    settings: Settings,
+    store: SessionRepository,
+    audio: SessionAudio,
+    observer: SessionObserver,
+    session_id: str,
 ) -> RecordingSession:
     """A `RecordingSession` that finishes an interrupted session (phase 17).
 
     Nothing is captured or transcribed; the minutes template, glossary and mix mode come from the
-    session's `session.json`, so the result matches what its own stop would have produced. The
-    search index is the one of `OUTPUT_DIR`, used only when the session lives there.
+    session's metadata, so the result matches what its own stop would have produced. The search
+    index is the one of `OUTPUT_DIR`, used only when the session lives there.
     """
     meta = store.read_meta(session_id)
     localizer = build_localizer(settings)
@@ -402,7 +434,8 @@ def build_recovery_session(
     recorded = meta.get("settings")
     mix_value = recorded.get("MIX_MODE") if isinstance(recorded, dict) else None
     mix_mode = MixMode(mix_value) if mix_value in set(MixMode) else settings.mix_mode
-    in_output_dir = store.paths(session_id).root.parent.resolve() == settings.output_dir.resolve()
+    folder = store.folder(session_id)
+    in_output_dir = folder is None or folder.parent.resolve() == settings.output_dir.resolve()
     components = SessionComponents(
         sources={},
         device_names={},
@@ -420,31 +453,37 @@ def build_recovery_session(
         if minutes is not None and settings.extract_action_items
         else None,
     )
-    return RecordingSession(settings, store, components, observer, settings.transcription_language)
+    return RecordingSession(
+        settings, store, audio, components, observer, settings.transcription_language
+    )
 
 
 def build_recovery(
     settings: Settings,
-    store: SessionStore | None = None,
+    output_dir: Path | None = None,
     *,
+    store: SessionRepository | None = None,
+    audio: SessionAudio | None = None,
     stale_after: float = 0.0,
     current: Callable[[], Settings] | None = None,
     before_finish: Callable[[], None] = lambda: None,
 ) -> SessionRecovery:
-    """Crash recovery over `store` (default: `OUTPUT_DIR`).
+    """Crash recovery over `store` / `audio` (default: those of `output_dir`, else `OUTPUT_DIR`).
 
     `current` gives the settings each recovery uses (`serve`: the ones saved through
     `PUT /settings`); `before_finish` runs before the stop steps (`serve`: unload a kept Whisper,
     VRAM rule). `stale_after` > 0 leaves alone sessions with a recent heartbeat (CLI).
     """
-    store = store or build_store(settings)
+    store = store or build_store(settings, output_dir)
+    audio = audio or build_audio_store(settings, output_dir)
     settings_now = current or (lambda: settings)
 
     def session(session_id: str, observer: SessionObserver) -> RecordingSession:
         before_finish()
-        return build_recovery_session(settings_now(), store, observer, session_id)
+        return build_recovery_session(settings_now(), store, audio, observer, session_id)
 
-    return SessionRecovery(store, settings.sample_rate, session, stale_after)
+    repairs = [part for part in (audio, store) if isinstance(part, RecoverableStore)]
+    return SessionRecovery(store, repairs, session, stale_after)
 
 
 def cli_stale_after(settings: Settings) -> float:
@@ -474,6 +513,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     localizer = build_localizer(settings)
     labeler = build_labeler(settings, localizer)
     store = build_store(settings)
+    audio = build_audio_store(settings)
     broadcaster = EventBroadcaster()
     env_file = env_file or Path(".env")
     settings_file = SettingsFile(env_file, settings)
@@ -515,7 +555,8 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     search_index = build_search_index(settings)
     recovery = build_recovery(  # phase 17: only sessions not live in this process
         settings,
-        store,
+        store=store,
+        audio=audio,
         current=lambda: settings_file.current,
         before_finish=shared.release if shared is not None else lambda: None,
     )

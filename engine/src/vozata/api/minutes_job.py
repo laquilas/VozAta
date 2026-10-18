@@ -12,8 +12,7 @@ from vozata.minutes.session_minutes import (
     GeneratorFactory,
     write_session_minutes,
 )
-from vozata.ports import LanguageModelError, Localizer
-from vozata.storage.session_store import SessionStore
+from vozata.ports import LanguageModelError, Localizer, SessionRepository
 
 _log = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class MinutesJob:
 
     def __init__(
         self,
-        store: SessionStore,
+        store: SessionRepository,
         build_generator: GeneratorFactory,
         labeler: SpeakerLabeler,
         broadcaster: EventBroadcaster,

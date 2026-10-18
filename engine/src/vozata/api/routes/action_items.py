@@ -13,7 +13,6 @@ from vozata.api.errors import ApiError
 from vozata.api.schemas import ActionItems, EditActionItems, ExportActionItems, ExportedActionItems
 from vozata.domain import ActionItem, optional_text
 from vozata.export.tasks.session_export import export_action_items
-from vozata.storage.action_items import action_items_lock, read_action_items, write_action_items
 
 router = APIRouter(tags=["action-items"])
 Container = Annotated[ApiContainer, Depends(container)]
@@ -32,16 +31,15 @@ def extract(session_id: str, c: Container) -> None:
 @router.get("/sessions/{session_id}/action-items", response_model=ActionItems)
 def list_items(session_id: str, c: Container) -> dict[str, Any]:
     c.store.read_meta(session_id)
-    return _view(c, read_action_items(c.store.paths(session_id)))
+    return _view(c, c.store.read_action_items(session_id))
 
 
 @router.put("/sessions/{session_id}/action-items", response_model=ActionItems)
 def edit_items(session_id: str, body: EditActionItems, c: Container) -> dict[str, Any]:
     """Save edited description / owner / due; exported items stay as they were exported."""
     c.store.read_meta(session_id)
-    paths = c.store.paths(session_id)
-    with action_items_lock:
-        items = {item.id: item for item in read_action_items(paths)}
+    with c.store.action_items_lock():
+        items = {item.id: item for item in c.store.read_action_items(session_id)}
         for edit in body.items:
             item = items.get(edit.id)
             if item is None:
@@ -58,7 +56,7 @@ def edit_items(session_id: str, body: EditActionItems, c: Container) -> dict[str
                 due=optional_text(edit.due),
             )
         saved = list(items.values())
-        write_action_items(paths, saved)
+        c.store.write_action_items(session_id, saved)
     return _view(c, saved)
 
 

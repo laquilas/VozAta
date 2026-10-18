@@ -16,6 +16,7 @@ from vozata.domain import ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver
 from vozata.session import SessionStartError
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
 
 BRT = timezone(timedelta(hours=-3))
@@ -39,7 +40,7 @@ class FakeSession:
 
     def __init__(
         self,
-        store: SessionStore,
+        store: FileSessionRepository,
         observer: SessionObserver,
         options: StartOptions,
         *,
@@ -68,7 +69,7 @@ class FakeSession:
         self.calls.append("start")
         if self.start_error is not None:
             raise self.start_error
-        self._id = self.store.create(self.moment).id
+        self._id = self.store.create(self.moment)
         language = (self.options.language or ConversationLanguage.EN).value
         self.meta = {
             "id": self._id,
@@ -103,7 +104,7 @@ class FakeSession:
 
 
 class SessionFactory:
-    def __init__(self, store: SessionStore) -> None:
+    def __init__(self, store: FileSessionRepository) -> None:
         self.store = store
         self.sessions: list[FakeSession] = []
         self.stop_gate: threading.Event | None = None
@@ -122,12 +123,12 @@ class SessionFactory:
 
 
 @pytest.fixture
-def store(tmp_path: Path) -> SessionStore:
-    return SessionStore(tmp_path / "recordings")
+def store(tmp_path: Path) -> FileSessionRepository:
+    return FileSessionRepository(SessionStore(tmp_path / "recordings"))
 
 
 @pytest.fixture
-def factory(store: SessionStore) -> SessionFactory:
+def factory(store: FileSessionRepository) -> SessionFactory:
     return SessionFactory(store)
 
 
@@ -138,7 +139,7 @@ def broadcaster() -> RecordingBroadcaster:
 
 @pytest.fixture
 def manager(
-    factory: SessionFactory, store: SessionStore, broadcaster: RecordingBroadcaster
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> SessionManager:
     labeler = SpeakerLabeler(FakeLocalizer())
     return SessionManager(factory, store, broadcaster, labeler, status_interval=0.02)
@@ -180,7 +181,7 @@ class Api:
         from vozata.config import Settings
 
         self.settings = settings or Settings(output_dir=tmp_path / "recordings")
-        self.store = SessionStore(self.settings.output_dir)
+        self.store = FileSessionRepository(SessionStore(self.settings.output_dir))
         self.factory = SessionFactory(self.store)
         self.broadcaster = RecordingBroadcaster()
         self.labeler = SpeakerLabeler(FakeLocalizer())

@@ -15,14 +15,17 @@ from vozata.api.session_manager import SessionManager
 from vozata.domain import Channel, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver
+from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.recovery import SessionRecovery
-from vozata.storage.session_store import SessionStore
 
 
 class _FinishingSession:
     """Stands in for `RecordingSession.recover`: status events, an optional gate, `done`."""
 
-    def __init__(self, store: SessionStore, observer: SessionObserver, gate: threading.Event):
+    def __init__(
+        self, store: FileSessionRepository, observer: SessionObserver, gate: threading.Event
+    ):
         self.store = store
         self.observer = observer
         self.gate = gate
@@ -40,11 +43,11 @@ class _Rig:
         self.gate.set()
         self.api = Api(tmp_path, recovery=self._recovery)
 
-    def _recovery(self, store: SessionStore) -> SessionRecovery:
+    def _recovery(self, store: FileSessionRepository) -> SessionRecovery:
         def build(session_id: str, observer: SessionObserver) -> _FinishingSession:
             return _FinishingSession(store, observer, self.gate)
 
-        return SessionRecovery(store, 16000, build)
+        return SessionRecovery(store, [FileAudioStore(store.store, 16000), store], build)
 
 
 @pytest.fixture
@@ -195,7 +198,7 @@ class _BrokenRecovery:
 
 
 def test_manager_failures_are_logged_and_reported_without_a_localizer(
-    store: SessionStore, broadcaster: RecordingBroadcaster
+    store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
     manager = SessionManager(
         lambda observer, options: None,  # type: ignore[arg-type, return-value]

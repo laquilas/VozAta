@@ -1,4 +1,4 @@
-"""The live part of a session: WAV writers, chunkers, the transcription worker and sinks."""
+"""The live part of a session: audio writers, chunkers, the transcription worker and sinks."""
 
 from __future__ import annotations
 
@@ -11,21 +11,19 @@ import numpy as np
 
 from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.levels import rms_db
-from vozata.audio.wav_writer import AlignedWavWriter
 from vozata.config import Settings
 from vozata.diarization.live import LiveSpeakerTagger
 from vozata.diarization.live_sink import AudioHistory, LiveSpeakerSink
 from vozata.domain import AudioChunk, Channel, TranscriptionResult, TranscriptSegment
-from vozata.labels import SpeakerLabeler
-from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
+from vozata.output.sinks import CompositeSink
 from vozata.ports import (
+    AudioTrackWriter,
     Chunker,
     SessionObserver,
     SpeakerEmbedder,
     Transcriber,
     TranscriptSink,
 )
-from vozata.storage.session_store import SessionPaths
 from vozata.transcription.context import RollingContext
 from vozata.transcription.echo import EchoFilter
 from vozata.transcription.language_lock import LanguageLock
@@ -131,15 +129,17 @@ class _ObserverSink:
 class _Track:
     """One channel's writer and chunker; the lock serializes capture writes and pause toggles."""
 
-    def __init__(self, writer: AlignedWavWriter, chunker: Chunker) -> None:
+    def __init__(self, writer: AudioTrackWriter, chunker: Chunker) -> None:
         self.writer = writer
         self.chunker = chunker
         self.lock = threading.Lock()
 
 
 class CapturePipeline:
-    """Route captured samples to WAVs and transcription; segments go to files and the observer.
+    """Route captured samples to the audio writers and transcription; segments go to the
+    stored `transcript` and the observer.
 
+    `open_writer(channel)` gives each channel's `AudioTrackWriter` (`AudioStore.open_writer`).
     `receiver(channel)` is the callback for that channel's source. Samples arriving after
     `stop_capture()` (or before `accept()`) are ignored. `start_transcription()` loads the
     transcriber on the worker thread; chunks captured meanwhile wait in the queue. A failed load
@@ -156,11 +156,11 @@ class CapturePipeline:
     def __init__(
         self,
         channels: Iterable[Channel],
-        paths: SessionPaths,
+        open_writer: Callable[[Channel], AudioTrackWriter],
+        transcript: TranscriptSink,
         settings: Settings,
         transcriber_factory: Callable[[], Transcriber],
         language: LanguageLock,
-        labeler: SpeakerLabeler,
         observer: SessionObserver,
         chunker_factory: ChunkerFactory | None = None,
         on_load_failed: Callable[[Exception], None] = lambda error: None,
@@ -177,15 +177,14 @@ class CapturePipeline:
         self._live: LiveSpeakerSink | None = None
         self._tracks = {
             channel: _Track(
-                AlignedWavWriter(paths.wav(channel), self._rate),
+                open_writer(channel),
                 new_chunker(channel, self._queue(chunks)),
             )
             for channel in channels
         }
         sinks = CompositeSink(
             [
-                JsonlSink(paths.transcript_jsonl),
-                MarkdownSink(paths.transcript_md, labeler),
+                transcript,
                 _ObserverSink(observer),
                 *extra_sinks,
             ]

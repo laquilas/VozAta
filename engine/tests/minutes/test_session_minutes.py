@@ -11,8 +11,9 @@ from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import EmptyTranscriptError, write_session_minutes
-from vozata.ports import LanguageModelError
-from vozata.storage.session_store import SessionNotFoundError, SessionStore
+from vozata.ports import LanguageModelError, SessionNotFoundError
+from vozata.storage.files.repository import FileSessionRepository
+from vozata.storage.session_store import SessionStore
 
 
 class _Failing(FakeLanguageModel):
@@ -47,7 +48,11 @@ def test_the_requested_template_wins_and_is_stored(tmp_path: Path) -> None:
     llm = FakeLanguageModel(["# Client"])
 
     write_session_minutes(
-        store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()), "client"
+        FileSessionRepository(store),
+        session_id,
+        _generator(llm),
+        SpeakerLabeler(FakeLocalizer()),
+        "client",
     )
 
     assert "## Client needs" in llm.prompts[0][1]
@@ -59,7 +64,9 @@ def test_the_stored_template_is_used_when_none_is_requested(tmp_path: Path) -> N
     session_id = _session(store, {"template": "daily"})
     build = _generator(FakeLanguageModel(["# Daily"]))
 
-    write_session_minutes(store, session_id, build, SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(
+        FileSessionRepository(store), session_id, build, SpeakerLabeler(FakeLocalizer())
+    )
 
     assert build.built == ["daily"]  # type: ignore[attr-defined]
     assert store.read_meta(session_id) == {"template": "daily"}
@@ -73,8 +80,12 @@ def test_a_stored_template_that_is_no_longer_bundled_falls_back_to_the_default(
     missing = _session(store, {})
     build = _generator(FakeLanguageModel(["# A", "# B"]))
 
-    write_session_minutes(store, removed, build, SpeakerLabeler(FakeLocalizer()))
-    write_session_minutes(store, missing, build, SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(
+        FileSessionRepository(store), removed, build, SpeakerLabeler(FakeLocalizer())
+    )
+    write_session_minutes(
+        FileSessionRepository(store), missing, build, SpeakerLabeler(FakeLocalizer())
+    )
 
     assert build.built == [None, None]  # type: ignore[attr-defined]
     assert store.read_meta(removed)["template"] == "general"
@@ -86,12 +97,11 @@ def test_writes_minutes_in_the_stored_language(tmp_path: Path) -> None:
     session_id = _session(store, {"language": "pt"})
     llm = FakeLanguageModel(["# Ata"])
 
-    path = write_session_minutes(
-        store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer())
+    write_session_minutes(
+        FileSessionRepository(store), session_id, _generator(llm), SpeakerLabeler(FakeLocalizer())
     )
 
-    assert path == store.paths(session_id).minutes_md
-    assert path.read_text(encoding="utf-8") == "# Ata\n"
+    assert store.paths(session_id).minutes_md.read_text(encoding="utf-8") == "# Ata\n"
     assert "languages.pt" in llm.prompts[0][1]
 
 
@@ -100,7 +110,9 @@ def test_without_a_stored_language_auto_is_used(tmp_path: Path) -> None:
     session_id = _session(store, {})
     llm = FakeLanguageModel(["# Minutes"])
 
-    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(
+        FileSessionRepository(store), session_id, _generator(llm), SpeakerLabeler(FakeLocalizer())
+    )
 
     assert "languages.auto" in llm.prompts[0][1]
 
@@ -112,11 +124,20 @@ def test_errors_propagate_and_nothing_is_written(tmp_path: Path) -> None:
     failing = _session(store, {})
 
     with pytest.raises(EmptyTranscriptError):
-        write_session_minutes(store, empty, _generator(FakeLanguageModel()), labeler)
+        write_session_minutes(
+            FileSessionRepository(store), empty, _generator(FakeLanguageModel()), labeler
+        )
     with pytest.raises(LanguageModelError):
-        write_session_minutes(store, failing, _generator(_Failing()), labeler)
+        write_session_minutes(
+            FileSessionRepository(store), failing, _generator(_Failing()), labeler
+        )
     with pytest.raises(SessionNotFoundError):
-        write_session_minutes(store, "20991231_000000", _generator(FakeLanguageModel()), labeler)
+        write_session_minutes(
+            FileSessionRepository(store),
+            "20991231_000000",
+            _generator(FakeLanguageModel()),
+            labeler,
+        )
 
     assert not store.paths(failing).minutes_md.exists()
 
@@ -130,7 +151,9 @@ def test_diarized_speakers_appear_with_their_stored_names(tmp_path: Path) -> Non
     paths.speakers_json.write_text(json.dumps({"system:1": {"name": "Ana"}}), encoding="utf-8")
     llm = FakeLanguageModel(["# Minutes"])
 
-    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(
+        FileSessionRepository(store), session_id, _generator(llm), SpeakerLabeler(FakeLocalizer())
+    )
 
     assert "Ana: Hi." in llm.prompts[0][1]
 
@@ -140,7 +163,9 @@ def test_the_stored_vocabulary_is_the_glossary_of_a_regeneration(tmp_path: Path)
     session_id = _session(store, {"vocabulary": ["Jéssica", 3, " ", "N5 Sensors"]})
     llm = FakeLanguageModel(["# M"])
 
-    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(
+        FileSessionRepository(store), session_id, _generator(llm), SpeakerLabeler(FakeLocalizer())
+    )
 
     assert "minutes.glossary(terms=Jéssica, N5 Sensors)" in llm.prompts[0][1]
 
@@ -154,6 +179,8 @@ def test_a_missing_or_malformed_vocabulary_gives_no_glossary(
     session_id = _session(store, meta)
     llm = FakeLanguageModel(["# M"])
 
-    write_session_minutes(store, session_id, _generator(llm), SpeakerLabeler(FakeLocalizer()))
+    write_session_minutes(
+        FileSessionRepository(store), session_id, _generator(llm), SpeakerLabeler(FakeLocalizer())
+    )
 
     assert "minutes.glossary" not in llm.prompts[0][1]

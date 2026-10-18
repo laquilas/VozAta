@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from vozata.domain import Translation
-from vozata.translation.translations_file import TranslationsFile, read_translations
+from vozata.storage.files.translations import TranslationsFile, read_translations
 
 
 def test_no_translation_creates_no_file(tmp_path: Path) -> None:

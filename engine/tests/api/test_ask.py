@@ -229,7 +229,7 @@ def test_post_ask_without_an_answerer_is_503(api: Api) -> None:
 def test_end_to_end_with_the_real_answerer_and_index(tmp_path: Path) -> None:
     api = Api(tmp_path)
     index = SearchIndex(tmp_path / "recordings" / "index.db")
-    paths = api.store.create(datetime(2026, 10, 15, 20, 23, 58))
+    paths = api.store.paths(api.store.create(datetime(2026, 10, 15, 20, 23, 58)))
     api.store.write_meta(SESSION, {"id": SESSION, "status": "done"})
     segment = TranscriptSegment("mic-000001", Channel.MIC, "mic", 83.4, 88.0, "Alice owns it", ())
     paths.transcript_jsonl.write_text(json.dumps(segment.to_dict()) + "\n", encoding="utf-8")

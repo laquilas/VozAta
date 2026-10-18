@@ -1,4 +1,4 @@
-"""Diarize a stored session: `system.wav` → `transcript.diarized.jsonl` + `speakers.json`."""
+"""Diarize a stored session: the system track → a speaker-labelled transcript + speakers."""
 
 from __future__ import annotations
 
@@ -7,14 +7,14 @@ from collections.abc import Callable
 
 from vozata.diarization.assign import assign_speakers
 from vozata.domain import Channel
-from vozata.ports import Diarizer
-from vozata.storage.session_store import SessionStore
+from vozata.ports import AudioReader, Diarizer, SessionRepository
 
 _log = logging.getLogger(__name__)
 
 
 def diarize_session(
-    store: SessionStore,
+    store: SessionRepository,
+    audio: AudioReader,
     session_id: str,
     diarizer_factory: Callable[[], Diarizer],
     min_speakers: int | None,
@@ -24,7 +24,8 @@ def diarize_session(
 
     Returns how many remote speakers were found, or None when the transcript has no system
     segment (the diarizer is then never built). The diarizer is always closed before returning,
-    so its GPU memory is free for the minutes. Raw files are never rewritten; errors propagate.
+    so its GPU memory is free for the minutes. The raw transcript is never rewritten; errors
+    propagate. The diarizer gets the system track as a WAV file (`AudioReader.materialize_wav`).
     """
     segments = store.load_raw_transcript(session_id)
     if not any(segment.channel is Channel.SYSTEM for segment in segments):
@@ -32,7 +33,7 @@ def diarize_session(
         return None
     diarizer = diarizer_factory()
     try:
-        wav = store.paths(session_id).wav(Channel.SYSTEM)
+        wav = audio.materialize_wav(session_id, Channel.SYSTEM)
         turns = diarizer.diarize(wav, min_speakers, max_speakers)
     finally:
         _close(diarizer)

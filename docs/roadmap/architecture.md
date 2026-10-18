@@ -54,10 +54,11 @@ engine/
     llm/                    ollama.py
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py
-    storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py
+    storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py,
+                            files/{repository,audio,layout,repair,translations,folder}.py (file backend, 30)
     export/                 markdown.py, docx.py, pdf.py, fonts/, tasks/{azure_devops,github,http,session_export}.py
     qa/                     retriever.py, citations.py, answerer.py
-    translation/            worker.py, opus_mt.py, translations_file.py, live.py (29)
+    translation/            worker.py, opus_mt.py, live.py (29)
     api/                    app.py, schemas.py, ws.py, session_manager.py, system_info.py, routes/*.py
   tests/                    mirrors src/
 ui/
@@ -126,8 +127,8 @@ class Transcriber(Protocol):
 class TranscriptSink(Protocol):
     def emit(self, segment: TranscriptSegment) -> None: ...
     def close(self) -> None: ...
-class AudioMixer(Protocol):
-    def mix(self, mic: Path, system: Path, destination: Path) -> None: ...
+class AudioMixer(Protocol):           # MIXERS[MIX_MODE]; reads the tracks through an AudioReader (30)
+    def mix(self, reader: AudioReader, session_id: str, destination: Path) -> None: ...
 class Chunker(Protocol):             # FixedWindowChunker (01), VadChunker (27)
     paused: bool
     def feed(self, samples: np.ndarray, at: float) -> None: ...
@@ -172,6 +173,41 @@ class Translator(Protocol):           # OpusMtTranslator (29), CPU; built on the
 class TranscriptSearch(Protocol):     # SearchIndex (22); reused by 21 (re-index edits) and 24 (retrieval)
     def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace
     def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
+
+# Storage (30): every read and write of session data. REPOSITORIES / AUDIO_STORES in bootstrap.py
+# (one entry, "files", until STORAGE_BACKEND arrives in 31). Shared contract suites:
+# tests/storage/repository_contract.py and tests/storage/audio_contract.py.
+class SessionRepository(Protocol):    # FileSessionRepository (30); raises SessionNotFoundError
+    def now(self) -> datetime: ...
+    def create(self, started_at: datetime | None = None) -> str: ...  # id YYYYMMDD_HHMMSS[_n]
+    def discard(self, session_id: str) -> None: ...
+    def read_meta(self, session_id: str) -> dict: ...; def write_meta(self, session_id: str, meta: dict) -> None: ...  # atomic
+    def list_sessions(self) -> list[str]: ...  # with metadata, newest first
+    def open_transcript(self, session_id: str, labeler: SpeakerLabeler) -> TranscriptSink: ...  # durable per segment
+    def load_transcript(self, session_id: str) -> list[TranscriptSegment]: ...  # edited > diarized > raw
+    def load_transcript_with_source(self, session_id: str) -> tuple[str, list[TranscriptSegment]]: ...
+    def load_raw_transcript(self, session_id: str) -> list[TranscriptSegment]: ...
+    def write_diarized(...) / write_edited(...) / delete_edited(session_id) -> bool
+    def open_translations(self, session_id: str) -> TranslationWriter: ...  # append(Translation), close()
+    def load_translations(self, session_id: str) -> dict[str, Translation]: ...  # last one wins
+    def speaker_names(...) / write_speakers(session_id, ids) / rename_speakers(session_id, names)
+    def read_minutes(self, session_id: str) -> str | None: ...; write_minutes(session_id, markdown); has_minutes(session_id)
+    def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
+    def folder(self, session_id: str) -> Path | None: ...  # file backend only (None otherwise)
+    def files(self, session_id: str) -> list[str] | None: ...  # idem
+class AudioTrackWriter(AudioSink, Protocol):  # AlignedWavWriter; gaps and pauses become silence
+    paused: bool; samples_written: int
+class AudioStore(Protocol):           # FileAudioStore (30)
+    def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter: ...
+    def write_mix(self, session_id: str, mixer: AudioMixer) -> None: ...  # file backend: mixed.wav
+class AudioReader(Protocol):          # int16 mono samples
+    def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray: ...
+    def length(self, session_id: str, channel: Channel) -> int: ...
+    def sample_rate(self, session_id: str, channel: Channel) -> int: ...
+    def materialize_wav(self, session_id: str, channel: Channel) -> Path: ...  # file backend: the WAV itself
+class SessionAudio(AudioStore, AudioReader, Protocol): ...  # what RecordingSession gets
+class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository]
+    def repair(self, session_id: str) -> float | None: ...  # recorded seconds if it holds audio; StoreRepairError
 ```
 
 Ports are added by the phase that first needs them; the list above is the target.
@@ -361,16 +397,19 @@ not carried and re-transcribed as a fragment (found by the phase 03 GPU smoke te
 
 ## 8. Data model and session folder
 
-> **Planned (M6, phases 30–33):** sessions, transcripts, speakers, translations, minutes, action
+> **Planned (M6, phases 31–33):** sessions, transcripts, speakers, translations, minutes, action
 > items, the search index and the audio (≈1 s PCM chunks) move into one SQLite database,
-> `vozata.db` (`DATABASE_PATH`, default `OUTPUT_DIR/vozata.db`), behind a `SessionRepository` /
-> `AudioStore` port; existing folders are imported automatically and kept. The folder layout below
+> `vozata.db` (`DATABASE_PATH`, default `OUTPUT_DIR/vozata.db`), behind the `SessionRepository` /
+> `AudioStore` ports that phase 30 introduced (§5); existing folders are imported automatically
+> and kept. The folder layout below
 > stays as the `STORAGE_BACKEND=files` backend. Schema and guarantees are defined in
 > [phase 31](phases/31-sqlite-database.md) and [phase 32](phases/32-audio-in-sqlite.md) and land
 > here when implemented. The desktop UI moves to a Toggl Track–style shell (sidebar, timer bar,
 > pages) with theme tokens in phases 34–38.
 
-`OUTPUT_DIR/YYYYMMDD_HHMMSS/` (the folder name is the session id):
+`OUTPUT_DIR/YYYYMMDD_HHMMSS/` (the folder name is the session id). Since phase 30 only
+`storage/` (the file backend `storage/files/`) and `bootstrap.py` know these names; everything
+else goes through the storage ports (§5):
 
 | File | Written by | Notes |
 |------|-----------|-------|

@@ -58,6 +58,7 @@ own rows. Changing a row requires updating both sides.
  "duration_seconds": 83.4, "language": "pt", "has_minutes": false}
 // SessionDetail = SessionSummary + full session.json fields + files: ["mic.wav", ...]
 //   + folder: absolute path of the session folder (the UI opens WAVs/folder locally — engine is local)
+//   files / folder come from the file backend; null for a backend without folders (30, used from 31)
 // Segment (labels resolved for display; raw files store only speaker_id; `edited` from phase 21:
 //   true when the user changed the text, then `words` is empty)
 //   `translation` from phase 29: {language, text} in GET /sessions/{id}/transcript, null when

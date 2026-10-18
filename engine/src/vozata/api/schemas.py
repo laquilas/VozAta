@@ -72,12 +72,15 @@ class SessionSummary(BaseModel):
 
 
 class SessionDetail(SessionSummary):
-    """`SessionSummary` + every `session.json` field + files + absolute folder."""
+    """`SessionSummary` + every `session.json` field + files + absolute folder.
+
+    `files` and `folder` come from the file backend; a backend without folders leaves them null.
+    """
 
     model_config = ConfigDict(extra="allow")
 
-    files: list[str]
-    folder: str
+    files: list[str] | None = None
+    folder: str | None = None
 
 
 class SessionList(BaseModel):

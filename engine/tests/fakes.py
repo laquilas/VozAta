@@ -95,10 +95,34 @@ class FakeTranscriptSink:
 
 class FakeAudioMixer:
     def __init__(self) -> None:
-        self.calls: list[tuple[Path, Path, Path]] = []
+        self.calls: list[tuple[object, str, Path]] = []
 
-    def mix(self, mic: Path, system: Path, destination: Path) -> None:
-        self.calls.append((mic, system, destination))
+    def mix(self, reader: object, session_id: str, destination: Path) -> None:
+        self.calls.append((reader, session_id, destination))
+
+
+class FakeAudioReader:
+    """`AudioReader` over int16 arrays per channel (any session id); one rate per channel."""
+
+    def __init__(
+        self, tracks: dict[Channel, np.ndarray], rates: dict[Channel, int] | None = None
+    ) -> None:
+        self.tracks = {channel: np.asarray(t, dtype=np.int16) for channel, t in tracks.items()}
+        self.rates = rates or {}
+        self.reads: list[tuple[Channel, int, int]] = []
+
+    def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray:
+        self.reads.append((channel, start, count))
+        return self.tracks[channel][start : start + count]
+
+    def length(self, session_id: str, channel: Channel) -> int:
+        return len(self.tracks[channel])
+
+    def sample_rate(self, session_id: str, channel: Channel) -> int:
+        return self.rates.get(channel, 100)
+
+    def materialize_wav(self, session_id: str, channel: Channel) -> Path:
+        return Path(f"{session_id}/{channel.value}.wav")
 
 
 class FakeLanguageModel:

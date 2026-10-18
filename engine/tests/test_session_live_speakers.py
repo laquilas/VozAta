@@ -45,7 +45,7 @@ def test_system_lines_get_live_speakers_and_the_embedder_is_released_at_stop(
 
     [(segment,)] = rig.observer.of("segment")
     assert (segment.channel, segment.speaker_id) == (Channel.SYSTEM, "system:1")
-    line = json.loads(rig.session.paths.transcript_jsonl.read_text(encoding="utf-8"))
+    line = json.loads(rig.paths.transcript_jsonl.read_text(encoding="utf-8"))
     assert line["speaker_id"] == "system:1"
     [clip] = embedder.calls
     assert len(clip) == round(1.6 * 16000)  # the segment's audio, 0.2 s to 1.8 s

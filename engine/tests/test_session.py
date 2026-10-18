@@ -33,9 +33,18 @@ from vozata.domain import (
 )
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
-from vozata.ports import Diarizer, LanguageModelError, SpeakerEmbedder, TranscriptSearch
+from vozata.ports import (
+    AudioReader,
+    Diarizer,
+    LanguageModelError,
+    SpeakerEmbedder,
+    TranscriptSearch,
+)
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
+from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.layout import SessionPaths
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
 
 RATE = 16000
@@ -80,9 +89,11 @@ class _CheckingMixer:
         self._log = log
         self.lengths: tuple[int, int] | None = None
 
-    def mix(self, mic: Path, system: Path, destination: Path) -> None:
-        with wave.open(str(mic), "rb") as a, wave.open(str(system), "rb") as b:
-            self.lengths = (a.getnframes(), b.getnframes())
+    def mix(self, reader: AudioReader, session_id: str, destination: Path) -> None:
+        self.lengths = (
+            reader.length(session_id, Channel.MIC),
+            reader.length(session_id, Channel.SYSTEM),
+        )
         destination.write_bytes(b"mixed")
         self._log.entries.append("mix")
 
@@ -124,9 +135,11 @@ class _Rig:
         self._load_gate = load_gate
         self._load_error = load_error
         moments = [STARTED, ENDED]
-        self.store = SessionStore(
+        folders = SessionStore(
             tmp_path / "recordings", now=lambda: moments.pop(0) if len(moments) > 1 else moments[0]
         )
+        self.store = FileSessionRepository(folders)
+        self.audio = FileAudioStore(folders, settings.sample_rate)
         self.log = _Log()
         self.clock = FakeClock()
         self.mic = mic or FakeAudioSource()
@@ -139,6 +152,7 @@ class _Rig:
         self.session = RecordingSession(
             settings,
             self.store,
+            self.audio,
             SessionComponents(
                 sources={Channel.MIC: self.mic, Channel.SYSTEM: self.system},
                 device_names={Channel.MIC: "Headset Mic", Channel.SYSTEM: "Speakers [Loopback]"},
@@ -170,14 +184,18 @@ class _Rig:
             raise self._load_error
         return self.transcriber
 
+    @property
+    def paths(self) -> SessionPaths:
+        return self.store.paths(self.session.id)
+
     def paths_text(self) -> str:
-        paths = self.session.paths
+        paths = self.paths
         return paths.transcript_jsonl.read_text(encoding="utf-8") + paths.transcript_md.read_text(
             encoding="utf-8"
         )
 
     def wav(self, channel: Channel) -> np.ndarray:
-        with wave.open(str(self.session.paths.wav(channel)), "rb") as wav:
+        with wave.open(str(self.paths.wav(channel)), "rb") as wav:
             return np.frombuffer(wav.readframes(wav.getnframes()), dtype=np.int16)
 
 
@@ -191,7 +209,7 @@ def test_segments_reach_the_observer_and_the_transcript_files(tmp_path: Path) ->
 
     [(segment,)] = rig.observer.of("segment")
     assert (segment.segment_id, segment.text) == ("mic-000001", "Hello world.")
-    paths = rig.session.paths
+    paths = rig.paths
     assert '"segment_id": "mic-000001"' in paths.transcript_jsonl.read_text(encoding="utf-8")
     assert (
         paths.transcript_md.read_text(encoding="utf-8") == "[00:00:00] labels.mic: Hello world.\n"
@@ -396,8 +414,23 @@ def test_stop_order_finalizes_wavs_then_mixes_then_frees_the_gpu_then_writes_min
     finalization = [entry for entry in rig.log.entries if entry != "transcriber.load"]
     assert finalization == ["release", "mix", "transcriber.close", "llm.generate"]
     assert rig.mixer.lengths == (int(2.5 * RATE), int(2.5 * RATE))  # padded to the longest
-    assert rig.session.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
+    assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     assert rig.observer.of("minutes_ready") == [(rig.session.id,)]
+
+
+def test_without_a_session_folder_the_retry_command_names_the_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hi.")], llm_error=LanguageModelError("offline"))
+    monkeypatch.setattr(rig.store, "folder", lambda session_id: None)  # e.g. a database backend
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+
+    rig.session.stop()
+
+    [(_, message)] = rig.observer.of("error")
+    assert f'python -m vozata minutes "{rig.session.id}"' in message
+    assert rig.session.folder is None
 
 
 def test_minutes_failure_keeps_status_done_and_reports_an_error(tmp_path: Path) -> None:
@@ -413,8 +446,8 @@ def test_minutes_failure_keeps_status_done_and_reports_an_error(tmp_path: Path) 
     assert code == "minutes_failed"
     assert message.startswith("errors.session.minutes_failed(")
     assert "python -m vozata minutes" in message and "offline" in message
-    assert not rig.session.paths.minutes_md.exists()
-    assert rig.session.paths.transcript_jsonl.exists()
+    assert not rig.paths.minutes_md.exists()
+    assert rig.paths.transcript_jsonl.exists()
 
 
 def test_minutes_are_skipped_when_disabled_or_nothing_was_said(tmp_path: Path) -> None:
@@ -428,7 +461,7 @@ def test_minutes_are_skipped_when_disabled_or_nothing_was_said(tmp_path: Path) -
 
     for rig in (disabled, silent):
         assert "llm.generate" not in rig.log.entries
-        assert not rig.session.paths.minutes_md.exists()
+        assert not rig.paths.minutes_md.exists()
         assert rig.observer.of("error") == []
         assert rig.session.status is SessionStatus.DONE
 
@@ -448,7 +481,7 @@ def test_mixer_failure_is_reported_and_finalization_continues(tmp_path: Path) ->
     [(code, message)] = rig.observer.of("error")
     assert code == "mix_failed" and "disk full" in message
     assert rig.transcriber.closed
-    assert rig.session.paths.minutes_md.exists()
+    assert rig.paths.minutes_md.exists()
     assert rig.session.status is SessionStatus.DONE
 
 
@@ -494,7 +527,7 @@ def test_a_mic_echo_of_the_system_audio_is_dropped_and_counted(tmp_path: Path) -
     rig.clock.time = 1.0
     rig.session.stop()
 
-    md = rig.session.paths.transcript_md.read_text(encoding="utf-8")
+    md = rig.paths.transcript_md.read_text(encoding="utf-8")
     assert md == "[00:00:00] labels.system: Ship it Friday.\n"
     assert [segment.channel for (segment,) in rig.observer.of("segment")] == [Channel.SYSTEM]
     assert rig.store.read_meta(rig.session.id)["echo_dropped"] == 1
@@ -556,7 +589,9 @@ def test_paths_and_id_before_start_raise(tmp_path: Path) -> None:
     rig = _Rig(tmp_path)
 
     with pytest.raises(RuntimeError):
-        _ = rig.session.paths
+        _ = rig.session.id
+    with pytest.raises(RuntimeError):
+        _ = rig.session.folder
 
 
 class _HangingSource(FakeAudioSource):
@@ -629,7 +664,7 @@ def test_a_failing_transcriber_close_does_not_stop_finalization(tmp_path: Path) 
 
     rig.session.stop()
 
-    assert rig.session.paths.minutes_md.exists()
+    assert rig.paths.minutes_md.exists()
     assert rig.session.status is SessionStatus.DONE
 
 

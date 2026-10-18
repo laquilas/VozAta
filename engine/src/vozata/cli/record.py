@@ -6,7 +6,8 @@ import contextlib
 import signal
 import threading
 from collections.abc import Callable, Iterable
-from typing import Any, Protocol, TextIO
+from pathlib import Path
+from typing import Protocol, TextIO
 
 from vozata.audio.devices import DeviceInfo
 from vozata.cli.console import ConsoleObserver
@@ -23,7 +24,7 @@ class Session(Protocol):
     status: SessionStatus | None
 
     @property
-    def paths(self) -> Any: ...
+    def folder(self) -> Path | None: ...
 
     def start(self) -> None: ...
 
@@ -97,7 +98,7 @@ def run_record(
     except SessionStartError as error:
         console.say(str(error))
         return 1
-    console.say(t("cli.recording", folder=session.paths.root))
+    console.say(t("cli.recording", folder=session.folder))
     console.say(t("cli.controls"))
     controls = _Controls(session)
     threading.Thread(target=controls.follow, args=(stdin,), name="controls", daemon=True).start()
@@ -108,7 +109,7 @@ def run_record(
         controls.stop()
     finally:
         signal.signal(signal.SIGINT, previous)
-    console.say(t("cli.saved", folder=session.paths.root))
+    console.say(t("cli.saved", folder=session.folder))
     return 0
 
 

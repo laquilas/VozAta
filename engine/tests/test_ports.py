@@ -7,6 +7,7 @@ import pytest
 
 from tests.fakes import (
     FakeAudioMixer,
+    FakeAudioReader,
     FakeAudioSink,
     FakeAudioSource,
     FakeDiarizer,
@@ -29,6 +30,7 @@ from vozata.domain import Channel, SpeakerTurn, TranscriptionResult, TranscriptS
         (FakeTranscriber(), ports.Transcriber),
         (FakeTranscriptSink(), ports.TranscriptSink),
         (FakeAudioMixer(), ports.AudioMixer),
+        (FakeAudioReader({}), ports.AudioReader),
         (FakeLanguageModel(), ports.LanguageModel),
         (FakeLocalizer(), ports.Localizer),
         (FakeSessionObserver(), ports.SessionObserver),
@@ -94,11 +96,11 @@ def test_fake_sinks_and_mixer_record_calls() -> None:
 
     sink.emit(segment)
     sink.close()
-    mixer.mix(Path("m.wav"), Path("s.wav"), Path("x.wav"))
+    mixer.mix("reader", "20261015_202358", Path("x.wav"))
 
     assert sink.segments == [segment]
     assert sink.closed
-    assert mixer.calls == [(Path("m.wav"), Path("s.wav"), Path("x.wav"))]
+    assert mixer.calls == [("reader", "20261015_202358", Path("x.wav"))]
 
 
 def test_fake_language_model_replies_streams_and_reports_availability() -> None:

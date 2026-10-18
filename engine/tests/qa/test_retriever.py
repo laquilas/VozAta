@@ -9,9 +9,11 @@ import pytest
 from vozata.domain import Channel, TranscriptSegment
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
+from vozata.ports import SessionNotFoundError
 from vozata.qa.retriever import Retriever, keywords, session_date
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
-from vozata.storage.session_store import SessionNotFoundError, SessionStore
+from vozata.storage.session_store import SessionStore
 
 FIRST = "20261015_202358"
 SECOND = "20261016_090000"
@@ -47,7 +49,9 @@ def index(tmp_path: Path) -> SearchIndex:
 
 def retriever(store: SessionStore, index: SearchIndex | None, max_chars: int = 12000) -> Retriever:
     localizer = TomlLocalizer("en")
-    return Retriever(store, index, SpeakerLabeler(localizer), localizer, max_chars)
+    return Retriever(
+        FileSessionRepository(store), index, SpeakerLabeler(localizer), localizer, max_chars
+    )
 
 
 FILLER = [segment(n, f"filler sentence number {n} about nothing in particular") for n in range(20)]

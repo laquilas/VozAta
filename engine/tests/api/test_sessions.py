@@ -168,6 +168,18 @@ def test_detail_adds_metadata_files_and_folder(api: Api) -> None:
     assert body["folder"] == str(root.resolve())
 
 
+def test_detail_without_a_session_folder_has_no_files_or_folder(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _recorded(api, minutes=True)
+    monkeypatch.setattr(api.store, "folder", lambda session_id: None)  # e.g. a database backend
+
+    body = api.client.get(f"/sessions/{SESSION}").json()
+
+    assert body["has_minutes"] is True
+    assert (body["files"], body["folder"]) == (None, None)
+
+
 def test_detail_of_the_current_session_uses_the_live_duration(api: Api) -> None:
     _start(api)
     api.factory.sessions[0].duration_seconds = 42.0

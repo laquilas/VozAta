@@ -14,8 +14,8 @@ from tests.fakes import FakeDiarizer
 from tests.test_session import RATE, STARTED, _Rig
 from vozata.domain import Channel, ConversationLanguage, SessionStatus, SpeakerTurn, Word
 from vozata.domain import TranscriptSegment as Segment
+from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
-from vozata.storage.session_store import SessionStore
 
 
 def segment(segment_id: str, channel: Channel, start: float, text: str) -> Segment:
@@ -57,7 +57,7 @@ def interrupted_meta(session_id: str, status: str = "interrupted", **extra: Any)
 
 
 def make_session_folder(
-    store: SessionStore,
+    store: FileSessionRepository,
     *,
     status: str = "interrupted",
     mic_seconds: float = 1.0,
@@ -66,7 +66,7 @@ def make_session_folder(
     **meta: Any,
 ) -> str:
     """A session folder as a crash leaves it (WAVs here are already valid)."""
-    paths = store.create(STARTED)
+    paths = store.paths(store.create(STARTED))
     store.write_meta(paths.id, interrupted_meta(paths.id, status, **meta))
     write_wav(paths.wav(Channel.MIC), mic_seconds)
     write_wav(paths.wav(Channel.SYSTEM), system_seconds)
@@ -90,7 +90,7 @@ def test_recover_runs_the_stop_steps_from_the_mix_and_ends_done(tmp_path: Path) 
     assert rig.session.status is SessionStatus.DONE
     assert rig.session.id == session_id
     assert rig.session.duration_seconds == 1.0
-    assert rig.session.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
+    assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     meta = rig.store.read_meta(session_id)
     assert (meta["status"], meta["ended_at"], meta["duration_seconds"]) == (
         "done",
@@ -141,7 +141,7 @@ def test_recover_identifies_speakers_and_indexes_the_transcript(tmp_path: Path) 
 def test_recover_with_auto_language_never_locked_uses_auto(tmp_path: Path) -> None:
     rig = _Rig(tmp_path)
     rig.store.now()
-    paths = rig.store.create(STARTED)
+    paths = rig.store.paths(rig.store.create(STARTED))
     meta = interrupted_meta(paths.id)
     del meta["language"], meta["language_source"]
     rig.store.write_meta(paths.id, meta)

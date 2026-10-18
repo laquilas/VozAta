@@ -1,21 +1,19 @@
-"""A recording session's live translation: worker → `transcript.translated.jsonl` + events."""
+"""A recording session's live translation: worker → stored translations + events."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 
 from vozata.domain import Translation
-from vozata.ports import SessionObserver, Translator
-from vozata.translation.translations_file import TranslationsFile
+from vozata.ports import SessionObserver, TranslationWriter, Translator
 from vozata.translation.worker import TranslationWorker
 
 
 class _SessionOutput:
-    """Write each translation to the session file, then send it as a `translation` event."""
+    """Store each translation, then send it as a `translation` event."""
 
-    def __init__(self, path: Path, observer: SessionObserver) -> None:
-        self._file = TranslationsFile(path)
+    def __init__(self, writer: TranslationWriter, observer: SessionObserver) -> None:
+        self._file = writer
         self._observer = observer
 
     def emit(self, translation: Translation) -> None:
@@ -31,10 +29,10 @@ class _SessionOutput:
 def live_translation(
     target: str,
     load: Callable[[], Translator],
-    path: Path,
+    writer: TranslationWriter,
     source: Callable[[], str | None],
     observer: SessionObserver,
     on_failed: Callable[[Exception], None],
 ) -> TranslationWorker:
     """A translation worker for one session; the caller starts it and the pipeline closes it."""
-    return TranslationWorker(load, target, source, _SessionOutput(path, observer), on_failed)
+    return TranslationWorker(load, target, source, _SessionOutput(writer, observer), on_failed)
