@@ -254,7 +254,7 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
             var start = StartOfWeek(day.Date);
             if (Weeks.LastOrDefault() is not { } week || week.Start != start)
             {
-                week = new MeetingWeek(start, WeekLabelFor(start));
+                week = new MeetingWeek(start, WeekLabelFor(start), showsHeader: start != WeekStart);
                 Weeks.Add(week);
             }
 

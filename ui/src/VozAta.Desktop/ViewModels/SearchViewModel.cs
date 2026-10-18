@@ -49,6 +49,9 @@ public sealed record SearchResultRow(SearchHit Hit, string Time, IReadOnlyList<S
 {
     public string Label => Hit.Label;
 
+    /// <summary>The result's UI Automation name (phase 36).</summary>
+    public string AccessibleName => ToString();
+
     /// <summary>What screen readers announce for the result.</summary>
     public override string ToString() => $"{Time} {Label}: {string.Concat(Parts.Select(part => part.Text))}";
 }

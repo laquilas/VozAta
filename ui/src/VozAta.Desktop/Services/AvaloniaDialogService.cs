@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
@@ -22,6 +23,11 @@ public sealed class AvaloniaDialogService(IClassicDesktopStyleApplicationLifetim
         };
         var yes = new Button { Content = confirm, Classes = { "accent" } };
         var no = new Button { Content = cancel, IsDefault = true, IsCancel = true };
+        // Named for UI Automation (phase 36: the delete confirmation is driven by UIA checks).
+        AutomationProperties.SetName(yes, confirm);
+        AutomationProperties.SetAutomationId(yes, "ConfirmYes");
+        AutomationProperties.SetName(no, cancel);
+        AutomationProperties.SetAutomationId(no, "ConfirmNo");
         yes.Click += (_, _) => dialog.Close(true);
         no.Click += (_, _) => dialog.Close(false);
         dialog.Content = new StackPanel

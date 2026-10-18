@@ -83,6 +83,9 @@ public sealed partial class MeetingRow : ObservableObject
     [ObservableProperty]
     public partial bool IsExportOpen { get; set; }
 
+    /// <summary>The row's UI Automation name: title, time and duration.</summary>
+    public string AccessibleName => ToString();
+
     /// <summary>What screen readers announce for the row.</summary>
     public override string ToString() => string.Join(", ", new[] { DisplayTitle, TimeRange, Duration }.Where(text => text.Length > 0));
 }
@@ -104,11 +107,14 @@ public sealed class MeetingDay(DateOnly date, string label, IReadOnlyList<Meetin
 }
 
 /// <summary>A week of day groups (Monday first): "This week", "Last week" or "6 – 12 Oct".</summary>
-public sealed class MeetingWeek(DateOnly start, string label)
+public sealed class MeetingWeek(DateOnly start, string label, bool showsHeader)
 {
     public DateOnly Start { get; } = start;
 
     public string Label { get; } = label;
+
+    /// <summary>Older weeks show their label and total; the first one is in the page header.</summary>
+    public bool ShowsHeader { get; } = showsHeader;
 
     public ObservableCollection<MeetingDay> Days { get; } = [];
 

@@ -4,9 +4,9 @@ using Avalonia.Controls;
 namespace VozAta.Desktop.Views;
 
 [ExcludeFromCodeCoverage(Justification = "View; covered by the manual check.")]
-public partial class HistoryView : UserControl
+public partial class SessionDetailView : UserControl
 {
-    public HistoryView()
+    public SessionDetailView()
     {
         InitializeComponent();
     }

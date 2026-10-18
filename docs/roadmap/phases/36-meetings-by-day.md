@@ -68,10 +68,8 @@ Calendar/reports view, tags beyond template and language, bulk actions.
 - **Branch:** `feature/36-meetings-by-day`
 - **Status:** in progress
 - **Updated:** 2026-10-17 22:40
-- **Next step:** `Views/MeetingsPage.axaml` bound to `MeetingsPageViewModel` (header, weeks, day
-  groups, rows with hover actions, inline rename, export strip, undo toast, search matches; the
-  history detail on the right via a `SessionDetailView` extracted from `HistoryView`), an
-  infinite-scroll attached behavior, then headless screenshots in `ThemeRenderTests`.
+- **Next step:** run the full engine and UI suites, `ruff`, `dotnet format`; tick the acceptance
+  criteria, set the README status to `done`, write the manual check recipe, open the PR.
 
 ### Steps
 
@@ -85,7 +83,7 @@ Calendar/reports view, tags beyond template and language, bulk actions.
       `DeleteSessionAsync`, `VozAta.Client/Meetings.cs`, `Fakes/FakeEngineClient.Meetings.cs`)
 - [x] UI: `MeetingsPageViewModel` (weeks, day groups, totals, navigation, infinite scroll, live row)
 - [x] UI: inline rename, delete with confirmation and undo, search filtering, row actions
-- [ ] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots
+- [x] UI: `MeetingsPage.axaml`, strings in en / pt-BR / es, headless screenshots
 - [ ] Full suites, acceptance criteria, PR
 
 ### Decisions and notes
@@ -114,5 +112,13 @@ Calendar/reports view, tags beyond template and language, bulk actions.
   of meetings outside the loaded weeks are completed with `GET /sessions/{id}`.
 - Row actions: play (mixed WAV via `GET /sessions/{id}` folder + files), export (an inline strip
   with Markdown / Word / PDF — no flyout, so UI Automation reaches it), rename, delete.
+- View: `Views/MeetingsPage.axaml` replaces `HistoryView` (removed); the detail moved unchanged
+  into `Views/SessionDetailView.axaml`, shown in a 460 px column on the right only while a
+  meeting is open (the list uses the full width otherwise). Row actions fade in over the times on
+  hover, selection or keyboard focus (`Opacity` + `IsHitTestVisible`, so UI Automation still
+  sees them); every button, the title box, the export formats, the undo toast and the confirm
+  dialog buttons (`ConfirmYes` / `ConfirmNo` automation ids) have `AutomationProperties.Name`.
+  Older weeks load through `Views/InfiniteScroll.cs` (attached to the `ScrollViewer`) and a
+  "Load older meetings" button. New icons `Icon.Edit`, `Icon.People` (Fluent, MIT).
 - Local days use the engine machine's time zone (`datetime.astimezone()`, DST aware); the UI and
   engine run on the same machine.
