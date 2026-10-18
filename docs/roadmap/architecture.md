@@ -411,7 +411,9 @@ phases 34–38.
 `bootstrap.py` are the only modules that know it. **Keep it out of OneDrive-synced folders**:
 OneDrive locks the file while uploading and syncs it without its `-wal` file, which can corrupt
 a database in use. The engine logs a warning when it opens a database under a OneDrive root
-(`OneDrive` / `OneDriveConsumer` / `OneDriveCommercial` environment variables) and
+(`OneDrive` / `OneDriveConsumer` / `OneDriveCommercial` environment variables, plus the
+`UserFolder` of every account under `HKCU\Software\Microsoft\OneDrive\Accounts` on Windows: the
+variables can miss a personal OneDrive next to a business one) and
 `GET /health` shows it as `storage.warning`; it does not refuse to start.
 
 - **Connections** (`storage/sqlite/db.py`, `Database`): one per thread (`threading.local`),

@@ -78,9 +78,9 @@ Audio in the database (32), importing old folders (33), settings in the database
 
 - **Branch:** `feature/31-sqlite-database`
 - **Status:** ready for PR
-- **Updated:** 2026-10-17 22:10
-- **Next step:** PR #46 is open (CI green); before merge run part B of the manual check recipe
-  below on the reference machine (audio hardware, one phase at a time), then part C last.
+- **Updated:** 2026-10-17 22:40
+- **Next step:** PR #46 is open; re-run step 2 of recipe part B (the OneDrive warning with
+  `DATABASE_PATH` empty) after the registry fix, then the rest of part B, then part C last.
 
 ### Steps
 
@@ -127,7 +127,12 @@ Audio in the database (32), importing old folders (33), settings in the database
   `tests/conftest.py`). `Database` touches the disk only on its first connection, so building
   a session still creates nothing before `start()`.
 - OneDrive: `config.py` reads the roots from `OneDrive` / `OneDriveConsumer` /
-  `OneDriveCommercial` (`Settings.onedrive_roots`); `open_database` logs a warning once per
+  `OneDriveCommercial` plus, on Windows, the `UserFolder` of every subkey of
+  `HKCU\Software\Microsoft\OneDrive\Accounts` (`onedrive_registry_roots`, failures ignored;
+  only when settings come from the process environment) into `Settings.onedrive_roots`. Fix
+  from the manual check: on the reference machine the variables name only the business folder,
+  while the repository is in the personal one (`E:\OneDrive`), so no warning was shown. Tests
+  never read the real registry (autouse fixture; a fake `winreg` for the function's tests); `open_database` logs a warning once per
   file, `GET /health` has `storage: {backend, database, warning}` with the localized
   `storage.onedrive_warning`. The warning does not block the engine.
 - CLI `minutes <dir>` / `diarize <dir>` open the folder through `bootstrap.open_session_folder`:

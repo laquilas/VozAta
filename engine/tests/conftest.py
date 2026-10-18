@@ -7,6 +7,14 @@ from collections.abc import Iterator
 
 import pytest
 
+from vozata import config
+
+
+@pytest.fixture(autouse=True)
+def _no_onedrive_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never read the real Windows registry (OneDrive accounts, phase 31)."""
+    monkeypatch.setattr(config, "onedrive_registry_roots", lambda registry=None: ())
+
 
 @pytest.fixture(autouse=True)
 def _close_databases() -> Iterator[None]:
