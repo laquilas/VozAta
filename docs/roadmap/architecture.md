@@ -195,6 +195,11 @@ class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessio
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
     def folder(self, session_id: str) -> Path | None: ...  # the session folder; sqlite: the audio folder until 32 (None after)
     def files(self, session_id: str) -> list[str] | None: ...  # idem (sqlite: only the WAVs)
+    def list_range(self, start: datetime, end: datetime) -> list[str]: ...  # (36) started in [start, end), newest first
+    def speaker_count(self, session_id: str) -> int: ...  # (36) system:<n> speakers found by diarization
+    def delete(self, session_id: str) -> None: ...  # (36) sqlite: permanent; files: folder to the Recycle Bin
+class Recycler(Protocol):             # (36) Send2TrashRecycler; tests: FakeRecycler (never the real bin)
+    def recycle(self, path: Path) -> None: ...
 class AudioTrackWriter(AudioSink, Protocol):  # AlignedWavWriter; gaps and pauses become silence
     paused: bool; samples_written: int
 class AudioStore(Protocol):           # FileAudioStore (30)
