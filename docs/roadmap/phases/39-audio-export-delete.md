@@ -91,7 +91,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** `POST /sessions/import`: stream the body to a temp file, safe extraction (`storage/bundle_import.py`), then `FolderImporter` rooted at the extraction folder (full import, audio-only restore, 409 `session_exists`).
+- **Next step:** document `DELETE /sessions/{id}/audio`, `GET /sessions/{id}/bundle` and `POST /sessions/import` in `api-contract.md`, and `AudioStore.discard`, `BundleImporter`, `load_source` / `speaker_ids` in `architecture.md`.
 
 ### Steps
 
@@ -99,7 +99,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - [x] `AudioStore.discard` (sqlite + files) + contract tests
 - [x] `DELETE /sessions/{id}/audio`
 - [x] Session folder writer + `GET /sessions/{id}/bundle`
-- [ ] `POST /sessions/import` (safe extraction + `FolderImporter`)
+- [x] `POST /sessions/import` (safe extraction + `FolderImporter`)
 - [ ] API contract and architecture docs
 - [ ] UI client methods
 - [ ] Meeting page: export ZIP and delete audio
@@ -115,3 +115,8 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - The port gained `SessionRepository.load_source` and `speaker_ids` so the writer keeps every
   transcript source (the diarized one under an edit too) and unnamed speakers. The minutes'
   `generated_at` is not carried: the import takes the file time, i.e. the export time.
+- `POST /sessions/import` takes the raw ZIP as the request body (no multipart dependency), streams
+  it to a temporary file with an 8 GiB cap (`storage.bundle_import.MAX_BUNDLE_BYTES`) and
+  unpacks it with the same cap on the uncompressed size. Errors: 409 `session_exists`, 413
+  `bundle_too_large`, 422 `bundle_invalid`, 503 `import_unavailable`, 507 `not_enough_space`.
+- `FolderImporter(record_errors=False)` keeps a failed ZIP out of the phase 33 error list.

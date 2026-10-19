@@ -16,10 +16,12 @@ from vozata.domain import Channel, StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
 from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.bundle_import import FileBundleImporter
 from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.sqlite.audio import SqliteAudioStore
+from vozata.storage.sqlite.bundle_import import SqliteBundleImporter
 from vozata.storage.sqlite.repository import SqliteSessionRepository
 from vozata.storage.sqlite.search import SqliteSearch
 
@@ -210,6 +212,27 @@ def test_the_files_backend_has_no_folder_import(tmp_path: Path) -> None:
 
     assert bootstrap.build_folder_importer(settings) is None
     assert bootstrap.build_migration_job(settings, None, None, FakeLocalizer()) is None  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("backend", "kind"),
+    [(StorageBackend.SQLITE, SqliteBundleImporter), (StorageBackend.FILES, FileBundleImporter)],
+)
+def test_the_meeting_import_matches_the_storage_backend(
+    tmp_path: Path, backend: StorageBackend, kind: type
+) -> None:
+    settings = _settings(tmp_path, storage_backend=backend)
+
+    assert isinstance(bootstrap.build_bundle_importer(settings), kind)
+
+
+def test_a_store_without_a_meeting_import_is_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(bootstrap, "build_store", lambda settings: object())
+
+    with pytest.raises(TypeError):
+        bootstrap.build_bundle_importer(_settings(tmp_path))
 
 
 class _Manager:
