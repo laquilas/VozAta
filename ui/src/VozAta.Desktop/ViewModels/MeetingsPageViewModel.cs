@@ -28,7 +28,7 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
     };
 
     private static readonly (string Format, string LabelKey)[] ExportFormats =
-        [("md", "ExportMarkdown"), ("docx", "ExportWord"), ("pdf", "ExportPdf")];
+        [("md", "ExportMarkdown"), ("docx", "ExportWord"), ("pdf", "ExportPdf"), ("zip", "ExportBundle")];
 
     private readonly IEngineClient _client;
     private readonly ILocalizationService _localization;

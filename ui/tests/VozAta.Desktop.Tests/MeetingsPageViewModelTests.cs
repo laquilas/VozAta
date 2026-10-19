@@ -91,11 +91,12 @@ public sealed class MeetingsPageViewModelTests
         Assert.Equal(["daily", "English"], titled.Tags);
         Assert.Equal((3, true, "3 speakers identified"), (titled.SpeakerCount, titled.HasSpeakers, titled.SpeakersText));
         Assert.Equal($"{Time(weekly.StartedAt!.Value)} – {Time(weekly.EndedAt!.Value)}", titled.TimeRange);
-        Assert.Equal(["Markdown", "Word", "PDF"], titled.Exports.Select(export => export.Format switch
+        Assert.Equal(["Markdown", "Word", "PDF", "ZIP"], titled.Exports.Select(export => export.Format switch
         {
             "md" => "Markdown",
             "docx" => "Word",
-            _ => "PDF",
+            "pdf" => "PDF",
+            _ => "ZIP",
         }));
 
         var untitled = Rows(page).Single(row => row.Id == afternoon.Id);
@@ -670,4 +671,101 @@ public sealed class MeetingsPageViewModelTests
         Assert.Equal("Wed, 14 Oct, 0:10:00", page.Weeks[0].Days[0].ToString());
         Assert.Equal("This week, 0:10:00", page.Weeks[0].ToString());
     }
+
+    // Meeting ZIPs (phase 39)
+
+    [Fact]
+    public async Task A_row_exports_the_recording_as_a_zip()
+    {
+        var meeting = Add(NoonClock.Local(2026, 10, 14, 9), 60);
+        _saver.Path = @"C:\Users\me\meeting.zip";
+        var page = Create();
+        await page.LoadAsync();
+        var row = Rows(page).Single();
+        var zip = row.Exports.Single(export => export.Format == "zip");
+
+        await page.ExportCommand.ExecuteAsync(zip);
+
+        Assert.Equal("Export recording (.zip)", zip.Label);
+        Assert.Equal([meeting.Id], _client.BundleDownloads);
+        var save = Assert.Single(_saver.StreamSaves);
+        Assert.Equal(($"{meeting.Id}.zip", "ZIP archive", "zip"), (save.Name, save.TypeName, save.Extension));
+        Assert.Empty(_saver.Saves);
+        Assert.Equal(_localization.Format("ExportSaved", _saver.Path), page.Message);
+    }
+
+    [Fact]
+    public async Task Importing_a_zip_refreshes_the_list_and_opens_the_meeting()
+    {
+        var meeting = Add(NoonClock.Local(2026, 10, 14, 9), 60, "Retro");
+        _client.Details[meeting.Id] = Detail(meeting.Id, "Retro");
+        _client.ImportResult = new ImportedSession(meeting.Id, "imported");
+        var page = Create();
+
+        await page.ImportCommand.ExecuteAsync(null);
+        await page.History.DetailLoading;
+
+        Assert.Equal(("Import a meeting exported by VozAta (.zip)", "ZIP archive", "zip"), _saver.Opens.Single());
+        Assert.Equal("PK"u8.ToArray(), _client.Imported.Single());
+        Assert.Equal("Meeting imported: Retro.", page.Message);
+        Assert.Single(Rows(page));
+        Assert.Equal(meeting.Id, page.History.Detail?.Id);
+        Assert.False(page.IsImporting);
+    }
+
+    [Fact]
+    public async Task A_zip_that_brings_the_audio_back_says_so()
+    {
+        var meeting = Add(NoonClock.Local(2026, 10, 14, 9), 60, "Retro");
+        _client.Details[meeting.Id] = Detail(meeting.Id, "Retro");
+        _client.ImportResult = new ImportedSession(meeting.Id, "audio_restored");
+        var page = Create();
+
+        await page.ImportCommand.ExecuteAsync(null);
+
+        Assert.Equal("Audio restored: Retro.", page.Message);
+    }
+
+    [Fact]
+    public async Task A_cancelled_import_does_nothing()
+    {
+        _saver.OpenContent = null;
+        var page = Create();
+
+        await page.ImportCommand.ExecuteAsync(null);
+
+        Assert.Empty(_client.Imported);
+        Assert.Null(page.Message);
+    }
+
+    [Fact]
+    public async Task A_refused_import_shows_the_engine_message()
+    {
+        _client.ImportError = new EngineApiException(HttpStatusCode.Conflict, "session_exists", "Already there.");
+        var page = Create();
+
+        await page.ImportCommand.ExecuteAsync(null);
+
+        Assert.Equal("Already there.", page.Error);
+        Assert.Null(page.Message);
+        Assert.False(page.IsImporting);
+    }
+
+    [Fact]
+    public async Task An_imported_meeting_that_cannot_be_read_back_still_says_it_was_imported()
+    {
+        _client.ImportResult = new ImportedSession("20261014_090000", "imported");
+        var page = Create();
+
+        await page.ImportCommand.ExecuteAsync(null);
+
+        Assert.Equal("Meeting imported: 20261014_090000.", page.Message);
+        Assert.Null(page.History.Detail);
+    }
+
+    private static SessionDetail Detail(string id, string title) =>
+        new(id, "done", NoonClock.Local(2026, 10, 14, 9), null, 60, "en", false, null, null)
+        {
+            Metadata = new Dictionary<string, JsonElement> { ["title"] = JsonSerializer.SerializeToElement(title) },
+        };
 }

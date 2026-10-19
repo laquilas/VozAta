@@ -91,7 +91,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** Meetings page: "Import meeting" button (`IFileSaver.OpenAsync` → `ImportBundleAsync`, toast, refresh, open the meeting) and a ZIP entry in the row export menu.
+- **Next step:** full engine + UI suites, then the manual check (export the 17:14 meeting, delete its audio, import the ZIP back; import into a scratch `OUTPUT_DIR`).
 
 ### Steps
 
@@ -103,7 +103,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - [x] API contract and architecture docs
 - [x] UI client methods
 - [x] Meeting page: export ZIP and delete audio
-- [ ] Meetings page: import and ZIP export entry
+- [x] Meetings page: import and ZIP export entry
 - [ ] Full suites, manual check
 
 ### Decisions and notes
