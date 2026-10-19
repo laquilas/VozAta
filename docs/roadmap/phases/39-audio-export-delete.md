@@ -91,7 +91,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** full engine + UI suites, then the manual check (export the 17:14 meeting, delete its audio, import the ZIP back; import into a scratch `OUTPUT_DIR`).
+- **Next step:** manual UI check in the rebuilt app (meeting page: Export recording, Delete audio; Meetings: Import meeting), then tick the acceptance criteria and open the PR.
 
 ### Steps
 
@@ -120,3 +120,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
   unpacks it with the same cap on the uncompressed size. Errors: 409 `session_exists`, 413
   `bundle_too_large`, 422 `bundle_invalid`, 503 `import_unavailable`, 507 `not_enough_space`.
 - `FolderImporter(record_errors=False)` keeps a failed ZIP out of the phase 33 error list.
+- API round trip on a scratch engine (2026-10-19, the 9-min meeting `20261016_095109`): bundle
+  35 MB; delete audio took the database from 77.5 MB to 41.3 MB and `mixed` to 404; importing
+  the ZIP answered `audio_restored` with the same three track lengths; a second import gave 409
+  `session_exists`, a non-ZIP 422. Engine suite: 1,760+ tests, 99 % coverage; UI suite: 709.
