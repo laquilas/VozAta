@@ -21,6 +21,7 @@ from vozata.domain import (
     Channel,
     ConversationLanguage,
     ExportDocument,
+    ImportedSession,
     SearchHit,
     SessionStatus,
     SpeakerTurn,
@@ -457,6 +458,17 @@ class AudioStore(Protocol):
 
     def discard(self, session_id: str) -> None:
         """Remove the audio of a session that is kept: its transcript and minutes stay (39)."""
+        ...
+
+
+class BundleImporter(Protocol):
+    """Reads an unpacked meeting ZIP into the storage backend (phase 39)."""
+
+    def import_folder(self, folder: Path) -> ImportedSession:
+        """Import the session folder `<dir>/<id>/`: a new session, or only its audio into a kept
+        session that has none. Raises `storage.bundle_import.BundleError` for a folder that
+        cannot be read and `SessionExistsError` when the session is there with its audio;
+        nothing is changed then."""
         ...
 
 

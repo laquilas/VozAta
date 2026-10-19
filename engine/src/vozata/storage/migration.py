@@ -69,7 +69,10 @@ class FolderImporter:
         sample_rate: int,
         free_space: Callable[[Path], int] = _free_space,
         now: Callable[[], datetime] = _local_now,
+        record_errors: bool = True,
     ) -> None:
+        """`record_errors=False` returns a failed folder without adding it to
+        `migration_errors` (the meeting ZIP import of phase 39 reports it to the caller)."""
         self._root = output_dir
         self._files = files
         self._file_audio = file_audio
@@ -79,6 +82,7 @@ class FolderImporter:
         self._rate = sample_rate
         self._free_space = free_space
         self._now = now
+        self._record_errors = record_errors
 
     def pending(self) -> list[str]:
         """Folders still to import, oldest first."""
@@ -203,6 +207,8 @@ class FolderImporter:
 
     def _record(self, paths: SessionPaths, reason: str, detail: str) -> MigrationError:
         error = MigrationError(str(paths.root), reason, detail)
+        if not self._record_errors:
+            return error
         with self._db.write() as db:
             db.execute(
                 "INSERT OR REPLACE INTO migration_errors (folder, reason, detail, at)"
