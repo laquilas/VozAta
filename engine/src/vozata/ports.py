@@ -447,6 +447,10 @@ class AudioStore(Protocol):
         """Drop what this store keeps of a deleted session beyond the repository (phase 32)."""
         ...
 
+    def discard(self, session_id: str) -> None:
+        """Remove the audio of a session that is kept: its transcript and minutes stay (39)."""
+        ...
+
 
 @runtime_checkable
 class AudioReader(Protocol):

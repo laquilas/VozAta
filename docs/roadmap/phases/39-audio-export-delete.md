@@ -91,12 +91,12 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** add `AudioStore.discard` with contract tests (sqlite + files).
+- **Next step:** add `DELETE /sessions/{id}/audio` in `api/routes/audio.py` (204, 404, 409 live).
 
 ### Steps
 
 - [x] Phase file and roadmap row
-- [ ] `AudioStore.discard` (sqlite + files) + contract tests
+- [x] `AudioStore.discard` (sqlite + files) + contract tests
 - [ ] `DELETE /sessions/{id}/audio`
 - [ ] Session folder writer + `GET /sessions/{id}/bundle`
 - [ ] `POST /sessions/import` (safe extraction + `FolderImporter`)

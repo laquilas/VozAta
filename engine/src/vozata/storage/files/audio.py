@@ -13,7 +13,7 @@ import numpy as np
 
 from vozata.audio.wav_writer import AlignedWavWriter
 from vozata.domain import AudioTrack, Channel
-from vozata.ports import AudioMixer, AudioTrackWriter, PcmTrack, StoreRepairError
+from vozata.ports import AudioMixer, AudioTrackWriter, PcmTrack, Recycler, StoreRepairError
 from vozata.storage.session_store import SessionStore
 from vozata.storage.wav_repair import WavRepairError, pad_wav, repair_wav
 
@@ -21,9 +21,13 @@ from vozata.storage.wav_repair import WavRepairError, pad_wav, repair_wav
 class FileAudioStore:
     """One mono 16-bit WAV per channel in the session folder; the mix goes to `mixed.wav`."""
 
-    def __init__(self, store: SessionStore, sample_rate: int) -> None:
+    def __init__(
+        self, store: SessionStore, sample_rate: int, recycler: Recycler | None = None
+    ) -> None:
+        """`recycler` takes the WAVs of `discard` (phase 39); without one, `discard` fails."""
         self._store = store
         self._rate = sample_rate
+        self._recycler = recycler
 
     def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter:
         return AlignedWavWriter(self._wav(session_id, channel), self._rate)
@@ -34,6 +38,15 @@ class FileAudioStore:
     def delete(self, session_id: str) -> None:
         """Nothing to do: the WAVs are in the session folder, which the repository's `delete`
         sends to the Recycle Bin (phase 36)."""
+
+    def discard(self, session_id: str) -> None:
+        """Move the session's WAVs to the Recycle Bin; the folder and its texts stay (phase 39)."""
+        paths = self._store.paths(session_id)
+        wavs = [paths.wav(Channel.MIC), paths.wav(Channel.SYSTEM), paths.mixed_wav]
+        for path in (path for path in wavs if path.is_file()):
+            if self._recycler is None:
+                raise RuntimeError("no Recycle Bin to move discarded audio to")
+            self._recycler.recycle(path)
 
     def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray:
         with self._open(session_id, channel) as wav:

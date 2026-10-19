@@ -194,7 +194,9 @@ AUDIO_STORES: dict[StorageBackend, Callable[[Settings], SessionAudio]] = {
         audio_cache(settings),
     ),
     StorageBackend.FILES: lambda settings: FileAudioStore(
-        SessionStore(settings.output_dir), settings.sample_rate
+        SessionStore(settings.output_dir),
+        settings.sample_rate,
+        Send2TrashRecycler(),  # discarded audio (phase 39)
     ),
 }
 SEARCHES: dict[StorageBackend, Callable[[Settings], SqliteSearch | SearchIndex]] = {

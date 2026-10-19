@@ -172,6 +172,10 @@ class SqliteAudioStore:
                 self._pad(db, session_id, channel, end, total)
         return round(total / self._rate, 3)
 
+    def discard(self, session_id: str) -> None:
+        """The same as `delete`: the session row stays, without audio chunks (phase 39)."""
+        self.delete(session_id)
+
     def delete(self, session_id: str) -> None:
         """Drop a session's audio and cached files, then give the space back to the file
         system in the background (`incremental_vacuum`)."""
