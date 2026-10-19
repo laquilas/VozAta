@@ -1215,6 +1215,36 @@
   <data name="PlayerExternal" xml:space="preserve">
     <value>Abrir en el reproductor externo</value>
   </data>
+  <data name="ExportBundle" xml:space="preserve">
+    <value>Exportar grabación (.zip)</value>
+  </data>
+  <data name="FileTypeZip" xml:space="preserve">
+    <value>Archivo ZIP</value>
+  </data>
+  <data name="MeetingDeleteAudio" xml:space="preserve">
+    <value>Eliminar audio</value>
+  </data>
+  <data name="MeetingDeleteAudioTitle" xml:space="preserve">
+    <value>¿Eliminar el audio?</value>
+  </data>
+  <data name="MeetingDeleteAudioMessage" xml:space="preserve">
+    <value>El audio de “{0}” se eliminará de forma permanente para liberar espacio en disco. Se conservan la transcripción, el acta y las tareas. Exporta la grabación antes si quieres volver a escucharla.</value>
+  </data>
+  <data name="MeetingAudioDeleted" xml:space="preserve">
+    <value>Audio eliminado. Se conservaron la transcripción y el acta.</value>
+  </data>
+  <data name="MeetingImport" xml:space="preserve">
+    <value>Importar reunión</value>
+  </data>
+  <data name="MeetingImportTitle" xml:space="preserve">
+    <value>Importar una reunión exportada por VozAta (.zip)</value>
+  </data>
+  <data name="MeetingImported" xml:space="preserve">
+    <value>Reunión importada: {0}.</value>
+  </data>
+  <data name="MeetingAudioRestored" xml:space="preserve">
+    <value>Audio restaurado: {0}.</value>
+  </data>
   <data name="TrackMixed" xml:space="preserve">
     <value>Ambos</value>
   </data>
