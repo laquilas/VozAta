@@ -258,12 +258,22 @@ class SessionManager:
         recorded, finalized or recovered raises `SessionStillActiveError`; held under the lock,
         so it cannot start being recovered meanwhile."""
         with self._lock:
-            session = self._session
-            if session is not None and _started_id([session]) == session_id:
-                raise SessionStillActiveError(session_id)
-            if self._recovering == session_id:
-                raise SessionStillActiveError(session_id)
+            self._check_not_live(session_id)
             self._store.delete(session_id)
+
+    def _check_not_live(self, session_id: str) -> None:
+        session = self._session
+        live = session is not None and _started_id([session]) == session_id
+        if live or self._recovering == session_id:
+            raise SessionStillActiveError(session_id)
+
+    def discard_audio(self, session_id: str, discard: Callable[[str], None]) -> None:
+        """Remove a finished session's audio with `discard` (phase 39), under the same rule and
+        lock as `delete`: the session being recorded, finalized or recovered raises
+        `SessionStillActiveError`."""
+        with self._lock:
+            self._check_not_live(session_id)
+            discard(session_id)
 
     def recover(self, session_id: str) -> None:
         """Finish an `interrupted` session on a background thread (phase 17).

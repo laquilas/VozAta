@@ -182,3 +182,54 @@ def test_deleting_a_session_drops_its_audio_and_cached_wavs(
     assert not cached.exists()
     assert reclaimed.wait(5)
     assert api.client.get(f"/sessions/{recorded}/audio/mic").status_code == 404
+
+
+def test_deleting_the_audio_keeps_the_session_and_reclaims_the_space(
+    api: Api, recorded: str, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cached = api.app.state.container.audio.materialize_wav(recorded, Channel.MIC)
+    reclaimed = threading.Event()
+    monkeypatch.setattr(database, "reclaim", reclaimed.set)
+    monkeypatch.setattr(api.manager, "_store", api.app.state.container.store)
+
+    response = api.client.delete(f"/sessions/{recorded}/audio")
+
+    assert response.status_code == 204
+    assert database.connection().execute("SELECT COUNT(*) FROM audio_chunks").fetchone() == (0,)
+    assert not cached.exists()
+    assert reclaimed.wait(5)
+    detail = api.client.get(f"/sessions/{recorded}").json()
+    assert (detail["status"], detail["audio"]) == ("done", {})
+    assert api.client.get(f"/sessions/{recorded}/audio/mixed").status_code == 404
+
+
+def test_deleting_the_audio_of_an_unknown_session_is_404(api: Api, recorded: str) -> None:
+    response = api.client.delete("/sessions/20991231_000000/audio")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "session_not_found"
+
+
+def test_deleting_audio_that_is_not_there_is_404(api: Api, store_session: str) -> None:
+    response = api.client.delete(f"/sessions/{store_session}/audio")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "no_audio"
+
+
+def test_deleting_the_audio_of_the_session_being_recorded_is_409(api: Api) -> None:
+    session_id = api.client.post("/sessions", json={}).json()["id"]
+
+    response = api.client.delete(f"/sessions/{session_id}/audio")
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "session_still_active"
+
+
+def test_deleting_the_audio_of_the_session_being_recovered_is_409(api: Api, recorded: str) -> None:
+    api.manager._recovering = recorded
+
+    response = api.client.delete(f"/sessions/{recorded}/audio")
+
+    api.manager._recovering = None
+    assert response.status_code == 409

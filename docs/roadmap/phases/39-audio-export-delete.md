@@ -91,13 +91,13 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** add `DELETE /sessions/{id}/audio` in `api/routes/audio.py` (204, 404, 409 live).
+- **Next step:** write `storage/folder_writer.py` (a stored session as a session folder, reverse of `folder_reader.py`) and `GET /sessions/{id}/bundle`.
 
 ### Steps
 
 - [x] Phase file and roadmap row
 - [x] `AudioStore.discard` (sqlite + files) + contract tests
-- [ ] `DELETE /sessions/{id}/audio`
+- [x] `DELETE /sessions/{id}/audio`
 - [ ] Session folder writer + `GET /sessions/{id}/bundle`
 - [ ] `POST /sessions/import` (safe extraction + `FolderImporter`)
 - [ ] API contract and architecture docs
@@ -110,3 +110,5 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 
 - Requested during the manual checks of phases 32/33/37: the user chose "delete audio only" and
   a ZIP that can be imported back, without `mixed.wav`.
+- `DELETE /sessions/{id}/audio` without audio is `404 no_audio` (new error key); the live check
+  runs first, under the manager lock shared with `DELETE /sessions/{id}`.
