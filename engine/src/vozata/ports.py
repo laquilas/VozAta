@@ -338,6 +338,10 @@ class SessionRepository(Protocol):
         """The transcript as captured (empty when there is none)."""
         ...
 
+    def load_source(self, session_id: str, source: str) -> list[TranscriptSegment]:
+        """One transcript: `raw`, `diarized` or `edited` (empty when there is none; phase 39)."""
+        ...
+
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
         """Replace the speaker-labelled transcript (phase 14)."""
         ...
@@ -364,6 +368,10 @@ class SessionRepository(Protocol):
 
     def write_speakers(self, session_id: str, speaker_ids: Sequence[str]) -> None:
         """Replace the speakers with these ids, without names (phase 14)."""
+        ...
+
+    def speaker_ids(self, session_id: str) -> list[str]:
+        """Every speaker id, named or not, in the order they were added (phase 39)."""
         ...
 
     def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:

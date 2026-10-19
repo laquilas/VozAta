@@ -86,6 +86,9 @@ class FileSessionRepository:
     def load_raw_transcript(self, session_id: str) -> list[TranscriptSegment]:
         return self._store.load_raw_transcript(session_id)
 
+    def load_source(self, session_id: str, source: str) -> list[TranscriptSegment]:
+        return self._store.load_source(session_id, source)
+
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
         self._store.write_diarized(session_id, segments)
 
@@ -106,6 +109,9 @@ class FileSessionRepository:
 
     def write_speakers(self, session_id: str, speaker_ids: Sequence[str]) -> None:
         self._store.write_speakers(session_id, speaker_ids)
+
+    def speaker_ids(self, session_id: str) -> list[str]:
+        return self._store.speaker_ids(session_id)
 
     def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:
         self._store.rename_speakers(session_id, names)

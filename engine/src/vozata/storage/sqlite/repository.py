@@ -145,6 +145,10 @@ class SqliteSessionRepository(SessionAnnotations):
         self._check(session_id)
         return self._segments(session_id, "raw")
 
+    def load_source(self, session_id: str, source: str) -> list[TranscriptSegment]:
+        self._check(session_id)
+        return self._segments(session_id, source)
+
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
         self.replace_segments(session_id, "diarized", segments)
 

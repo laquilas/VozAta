@@ -158,6 +158,25 @@ class RepositoryContract:
         assert repository.load_transcript_with_source(session_id) == ("diarized", diarized)
         assert repository.load_raw_transcript(session_id) == RAW  # never rewritten
 
+    def test_each_transcript_source_is_readable_on_its_own(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        sink = repository.open_transcript(session_id, SpeakerLabeler(FakeLocalizer()))
+        for raw in RAW:
+            sink.emit(raw)
+        sink.close()
+        diarized = [RAW[0], segment("system-000002", 0.6, "Hi.", "system:1")]
+        repository.write_diarized(session_id, diarized)
+        repository.write_edited(session_id, [RAW[0]])
+
+        assert repository.load_source(session_id, "raw") == RAW
+        assert repository.load_source(session_id, "diarized") == diarized  # under the edited one
+        assert repository.load_source(session_id, "edited") == [RAW[0]]
+        assert repository.load_source(self._session(repository, STARTED + timedelta(1)), "raw") == []
+        with pytest.raises(SessionNotFoundError):
+            repository.load_source("not-an-id", "raw")
+
     # translations
 
     def test_translations_are_stored_by_segment_and_the_last_one_wins(
@@ -197,12 +216,14 @@ class RepositoryContract:
 
         repository.write_speakers(session_id, ["system:1", "system:2"])
         assert repository.speaker_names(session_id) == {}
+        assert repository.speaker_ids(session_id) == ["system:1", "system:2"]
 
         repository.rename_speakers(session_id, {"system:1": "  Ana ", "mic": "Me"})
         assert repository.speaker_names(session_id) == {"system:1": "Ana", "mic": "Me"}
 
         repository.rename_speakers(session_id, {"system:1": "  ", "mic": None})
         assert repository.speaker_names(session_id) == {}
+        assert repository.speaker_ids(session_id) == ["system:1", "system:2", "mic"]
 
     def test_the_speaker_count_is_the_speakers_found_by_diarization(
         self, repository: SessionRepository
