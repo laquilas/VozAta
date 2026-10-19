@@ -91,7 +91,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** UI client: `DeleteSessionAudioAsync`, `DownloadBundleAsync(id, Stream)`, `ImportBundleAsync(Stream)` in `VozAta.Client/EngineClient.cs` + `FakeEngineClient` + `EngineClientTests`.
+- **Next step:** meeting page (`SessionPageViewModel` / `SessionPage.axaml`): "Export recording (.zip)" through a streaming `IFileSaver` overload, and "Delete audio" with confirmation, then reload the detail.
 
 ### Steps
 
@@ -101,7 +101,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - [x] Session folder writer + `GET /sessions/{id}/bundle`
 - [x] `POST /sessions/import` (safe extraction + `FolderImporter`)
 - [x] API contract and architecture docs
-- [ ] UI client methods
+- [x] UI client methods
 - [ ] Meeting page: export ZIP and delete audio
 - [ ] Meetings page: import and ZIP export entry
 - [ ] Full suites, manual check

@@ -2,6 +2,15 @@ namespace VozAta.Client;
 
 // Meetings by day (api-contract rows tagged 36): `GET /sessions?from=&to=` and `DELETE /sessions/{id}`.
 
+/// <summary>
+/// A meeting ZIP read back (phase 39): <see cref="Mode"/> is <c>imported</c> (a new meeting) or
+/// <c>audio_restored</c> (the meeting was there without audio).
+/// </summary>
+public sealed record ImportedSession(string Id, string Mode)
+{
+    public bool AudioRestored => Mode == "audio_restored";
+}
+
 /// <summary>One local day: its meetings, newest first, and their total duration.</summary>
 public sealed record SessionDay(DateOnly Date, double TotalSeconds, IReadOnlyList<SessionSummary> Items);
 

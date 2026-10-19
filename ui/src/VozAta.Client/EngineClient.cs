@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -71,6 +72,15 @@ public interface IEngineClient
     /// streamed into <paramref name="destination"/>.
     /// </summary>
     Task DownloadAudioAsync(string id, string track, Stream destination, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /sessions/{id}/audio</c> (phase 39): remove a meeting's audio and keep its transcript and minutes.</summary>
+    Task DeleteSessionAudioAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /sessions/{id}/bundle</c> (phase 39): the meeting as a ZIP, streamed into <paramref name="destination"/>.</summary>
+    Task DownloadBundleAsync(string id, Stream destination, CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /sessions/import</c> (phase 39): read a meeting ZIP back (a new meeting, or the audio of a kept one).</summary>
+    Task<ImportedSession> ImportBundleAsync(Stream bundle, CancellationToken cancellationToken = default);
 
     /// <summary><c>GET /search</c> (phase 22): best matches first across every transcript.</summary>
     Task<SearchResults> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
@@ -287,6 +297,28 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         await response.Content.CopyToAsync(destination, cancellationToken);
     }
 
+    public async Task DeleteSessionAudioAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(HttpMethod.Delete, $"sessions/{Escape(id)}/audio", null, cancellationToken);
+    }
+
+    public async Task DownloadBundleAsync(string id, Stream destination, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Get, $"sessions/{Escape(id)}/bundle", null, cancellationToken,
+            HttpCompletionOption.ResponseHeadersRead);
+        await response.Content.CopyToAsync(destination, cancellationToken);
+    }
+
+    public async Task<ImportedSession> ImportBundleAsync(Stream bundle, CancellationToken cancellationToken = default)
+    {
+        var content = new StreamContent(bundle);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
+        using var response = await SendRawAsync(HttpMethod.Post, "sessions/import", content, cancellationToken);
+        var value = await response.Content.ReadFromJsonAsync<ImportedSession>(EngineJson.Options, cancellationToken);
+        return value ?? throw new JsonException("Empty response from sessions/import");
+    }
+
     public Task<SettingsUpdateResult> UpdateSettingsAsync(
         IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>
         SendAsync<SettingsUpdateResult>(HttpMethod.Put, "settings", new { values }, cancellationToken);
@@ -321,7 +353,7 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         using var request = new HttpRequestMessage(method, path);
         if (body is not null)
         {
-            request.Content = JsonContent.Create(body, options: EngineJson.Options);
+            request.Content = body as HttpContent ?? JsonContent.Create(body, options: EngineJson.Options);
         }
 
         HttpResponseMessage response;

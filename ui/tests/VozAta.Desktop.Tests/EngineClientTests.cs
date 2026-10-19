@@ -525,6 +525,66 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Deleting_the_audio_sends_a_delete_to_the_audio_path()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        await new EngineClient(handler.Client()).DeleteSessionAudioAsync("20261015_202358");
+
+        Assert.Equal((HttpMethod.Delete, "/sessions/20261015_202358/audio"), (handler.Requests.Single().Method, handler.Requests.Single().Path));
+    }
+
+    [Fact]
+    public async Task The_bundle_is_streamed_into_the_destination()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([0x50, 0x4B]) });
+        using var destination = new MemoryStream();
+
+        await new EngineClient(handler.Client()).DownloadBundleAsync("20261015_202358", destination);
+
+        Assert.Equal("/sessions/20261015_202358/bundle", handler.Requests.Single().Path);
+        Assert.Equal([0x50, 0x4B], destination.ToArray());
+    }
+
+    [Fact]
+    public async Task A_bundle_is_posted_as_a_zip_body_and_the_result_read()
+    {
+        string? contentType = null;
+        var handler = new FakeHttpHandler(request =>
+        {
+            contentType = request.Content?.Headers.ContentType?.MediaType;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id": "20261015_202358", "mode": "audio_restored"}""", System.Text.Encoding.UTF8, "application/json"),
+            };
+        });
+        using var bundle = new MemoryStream("PK"u8.ToArray());
+
+        var result = await new EngineClient(handler.Client()).ImportBundleAsync(bundle);
+
+        Assert.Equal((HttpMethod.Post, "/sessions/import", "PK"), handler.Requests.Single());
+        Assert.Equal("application/zip", contentType);
+        Assert.Equal(new ImportedSession("20261015_202358", "audio_restored"), result);
+        Assert.True(result.AudioRestored);
+        Assert.False(new ImportedSession("x", "imported").AudioRestored);
+    }
+
+    [Fact]
+    public async Task A_refused_bundle_raises_the_engine_error()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = new StringContent("{\"error\":{\"code\":\"session_exists\",\"message\":\"Already there.\"}}"),
+        });
+        using var bundle = new MemoryStream("PK"u8.ToArray());
+
+        var error = await Assert.ThrowsAsync<EngineApiException>(
+            () => new EngineClient(handler.Client()).ImportBundleAsync(bundle));
+
+        Assert.Equal(("session_exists", "Already there."), (error.Code, error.Message));
+    }
+
+    [Fact]
     public async Task Missing_audio_raises_the_engine_error()
     {
         var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)
