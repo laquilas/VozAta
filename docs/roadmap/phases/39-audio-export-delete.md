@@ -91,7 +91,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** document `DELETE /sessions/{id}/audio`, `GET /sessions/{id}/bundle` and `POST /sessions/import` in `api-contract.md`, and `AudioStore.discard`, `BundleImporter`, `load_source` / `speaker_ids` in `architecture.md`.
+- **Next step:** UI client: `DeleteSessionAudioAsync`, `DownloadBundleAsync(id, Stream)`, `ImportBundleAsync(Stream)` in `VozAta.Client/EngineClient.cs` + `FakeEngineClient` + `EngineClientTests`.
 
 ### Steps
 
@@ -100,7 +100,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - [x] `DELETE /sessions/{id}/audio`
 - [x] Session folder writer + `GET /sessions/{id}/bundle`
 - [x] `POST /sessions/import` (safe extraction + `FolderImporter`)
-- [ ] API contract and architecture docs
+- [x] API contract and architecture docs
 - [ ] UI client methods
 - [ ] Meeting page: export ZIP and delete audio
 - [ ] Meetings page: import and ZIP export entry
