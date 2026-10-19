@@ -261,6 +261,11 @@ class SessionManager:
             self._check_not_live(session_id)
             self._store.delete(session_id)
 
+    def check_finished(self, session_id: str) -> None:
+        """`SessionStillActiveError` for the session being recorded, finalized or recovered."""
+        with self._lock:
+            self._check_not_live(session_id)
+
     def _check_not_live(self, session_id: str) -> None:
         session = self._session
         live = session is not None and _started_id([session]) == session_id

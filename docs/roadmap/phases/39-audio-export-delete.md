@@ -91,14 +91,14 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - **Branch:** `feature/39-audio-export-delete`
 - **Status:** in progress
 - **Updated:** 2026-10-19 17:45
-- **Next step:** write `storage/folder_writer.py` (a stored session as a session folder, reverse of `folder_reader.py`) and `GET /sessions/{id}/bundle`.
+- **Next step:** `POST /sessions/import`: stream the body to a temp file, safe extraction (`storage/bundle_import.py`), then `FolderImporter` rooted at the extraction folder (full import, audio-only restore, 409 `session_exists`).
 
 ### Steps
 
 - [x] Phase file and roadmap row
 - [x] `AudioStore.discard` (sqlite + files) + contract tests
 - [x] `DELETE /sessions/{id}/audio`
-- [ ] Session folder writer + `GET /sessions/{id}/bundle`
+- [x] Session folder writer + `GET /sessions/{id}/bundle`
 - [ ] `POST /sessions/import` (safe extraction + `FolderImporter`)
 - [ ] API contract and architecture docs
 - [ ] UI client methods
@@ -112,3 +112,6 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
   a ZIP that can be imported back, without `mixed.wav`.
 - `DELETE /sessions/{id}/audio` without audio is `404 no_audio` (new error key); the live check
   runs first, under the manager lock shared with `DELETE /sessions/{id}`.
+- The port gained `SessionRepository.load_source` and `speaker_ids` so the writer keeps every
+  transcript source (the diarized one under an edit too) and unnamed speakers. The minutes'
+  `generated_at` is not carried: the import takes the file time, i.e. the export time.
