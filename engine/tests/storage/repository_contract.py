@@ -173,7 +173,8 @@ class RepositoryContract:
         assert repository.load_source(session_id, "raw") == RAW
         assert repository.load_source(session_id, "diarized") == diarized  # under the edited one
         assert repository.load_source(session_id, "edited") == [RAW[0]]
-        assert repository.load_source(self._session(repository, STARTED + timedelta(1)), "raw") == []
+        empty = self._session(repository, STARTED + timedelta(days=1))
+        assert repository.load_source(empty, "raw") == []
         with pytest.raises(SessionNotFoundError):
             repository.load_source("not-an-id", "raw")
 
