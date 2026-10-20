@@ -133,7 +133,9 @@ def test_offline_feeds_channels_in_lockstep(tmp_path: Path) -> None:
 
     rig.run()
 
-    assert rig.audio.reads == [
+    probes, feeds = rig.audio.reads[:2], rig.audio.reads[2:]
+    assert probes == [(Channel.MIC, 12000, 301), (Channel.SYSTEM, 3000, 301)]  # silent tails
+    assert feeds == [
         (Channel.MIC, 12000, 1000),  # mic waits until the shared timeline reaches 12 s
         (Channel.SYSTEM, 3000, 10000),
         (Channel.MIC, 13000, 10000),
@@ -314,3 +316,46 @@ def test_offline_flushes_the_carried_tail_at_the_end(tmp_path: Path) -> None:
 
     assert [(s.segment_id, s.text) for s in rig.stored()] == [("mic-000001", "Hello there friend.")]
     assert rig.progress == [1.0]
+
+
+@pytest.mark.parametrize(
+    ("voiced_until", "resume"),
+    [(None, 10.0), (10.2, 10.2), (12.0, 10.3)],  # silent, a voiced tail, capped at 0.3 s
+)
+def test_offline_resumes_after_the_voiced_tail_the_live_stitcher_dropped(
+    tmp_path: Path, voiced_until: float | None, resume: float
+) -> None:
+    speech = [(9.0, voiced_until)] if voiced_until else [(9.0, 10.0)]
+    old = [_row("mic-000001", 9.0, 10.0)]
+    rig = _Rig(
+        tmp_path, {Channel.MIC: _track(30, *speech), Channel.SYSTEM: _track(30)}, existing=old
+    )
+
+    assert rig.offline.remaining_seconds(rig.session_id) == pytest.approx(30 - resume + 30)
+    rig.run()
+
+    mic_feeds = [r for r in rig.audio.reads if r[0] is Channel.MIC and r[2] != 301]  # no probes
+    first_mic_feed = mic_feeds[0]
+    assert first_mic_feed[1] == round(resume * RATE)
+
+
+def test_offline_echo_memory_follows_the_timeline_when_the_mic_resumes_far_behind(
+    tmp_path: Path,
+) -> None:
+    # the user was silent while the remote speaker talked: live dropped every mic echo, so the
+    # mic resumes at 0 while the system resumes at 50 s, more than SYSTEM_MEMORY_SECONDS later
+    old = [
+        _row("system-000001", 5.0, 6.0, ECHO),
+        _row("system-000002", 20.0, 22.0, "Next item."),
+        _row("system-000003", 48.0, 50.0, "That is all."),
+    ]
+    rig = _Rig(
+        tmp_path,
+        {Channel.MIC: _track(60, (5.0, 6.0)), Channel.SYSTEM: _track(60)},
+        [_said(ECHO, 0.0, 1.0)],  # the mic window [5, 10)
+        existing=old,
+    )
+
+    rig.run()
+
+    assert rig.stored() == old

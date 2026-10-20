@@ -271,7 +271,6 @@ def test_from_settings_uses_the_echo_settings_and_the_given_clock() -> None:
     echo.tick()
 
     assert [segment.text for segment in sink.segments] == ["Monday works better."]
-    assert echo._threshold == 0.6
-    echo.emit(_system(20.0, ECHO))
-    echo.emit(_mic(20.0, ECHO))
-    assert [segment.text for segment in dropped] == [ECHO]
+    echo.emit(_system(20.0, "we will ship the beta"))
+    echo.emit(_mic(20.0, "we will ship it today"))  # 3 of 5 words: 0.6, below the default 0.85
+    assert [segment.text for segment in dropped] == ["we will ship it today"]

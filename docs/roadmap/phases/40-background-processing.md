@@ -204,7 +204,7 @@ close-with-pending message; locale parity.
 - [x] Cancel token and GPU gate
 - [x] Cancellable LLM and diarizer (fix round 1: release after cancel, cancel before spawn)
 - [x] Session finisher steps (0f2a1ad)
-- [x] Offline transcription of the rest of a meeting (this commit)
+- [x] Offline transcription of the rest of a meeting (17ceaad; fix round 1: this commit)
 - [ ] Processing job and queue
 - [ ] Stop frees the recorder
 - [ ] Restart and recovery through the queue
@@ -221,4 +221,7 @@ close-with-pending message; locale parity.
   resumes after the app is closed. The implementation plan is `plans/40-background-processing.md`.
 - Offline transcription (`transcription/offline.py`) seeds each channel's rolling context with its
   written text and the echo filter with the written system segments, so the appended rows match
-  what the live pipeline would have produced; echo holds run on audio time.
+  what the live pipeline would have produced; echo holds run on audio time. Fix round 1: each
+  channel resumes after the voiced tail (≤ 0.3 s) the live stitcher cut away after its last
+  segment, the stored system segments reach the echo filter as the timeline advances (its 30 s
+  memory follows the audio fed), and the lockstep feed lives in `transcription/offline_feed.py`.

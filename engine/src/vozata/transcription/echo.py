@@ -21,6 +21,7 @@ from vozata.domain import Channel, TranscriptSegment
 from vozata.ports import TranscriptSink
 
 SYSTEM_MEMORY_SECONDS = 30.0
+MATCH_TOLERANCE_SECONDS = 1.0  # system words this far around a mic segment are compared
 _PUNCTUATION = re.compile(r"[^\w\s]")
 
 
@@ -63,7 +64,7 @@ class EchoFilter:
         downstream: TranscriptSink,
         similarity_threshold: float,
         hold_seconds: float,
-        tolerance: float = 1.0,
+        tolerance: float = MATCH_TOLERANCE_SECONDS,
         clock: Callable[[], float] = time.monotonic,
         on_dropped: Callable[[TranscriptSegment], None] = lambda segment: None,
     ) -> None:

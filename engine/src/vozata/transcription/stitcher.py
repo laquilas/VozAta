@@ -97,7 +97,12 @@ class CarryOverStitcher:
         if next_word is not None:
             cut_time = (cut_word.end + next_word.start) / 2
         else:
-            cut_time = self._voiced_end(audio, cut_word.end, duration)
+            cut_time = voiced_end(
+                audio,
+                cut_word.end,
+                self._settings.sample_rate,
+                self._settings.silence_rms_threshold,
+            )
         self._pending = audio[round(cut_time * self._settings.sample_rate) :]
         self._pending_start = audio_start + cut_time
         return [self._segment(words[: cut + 1], audio_start)]
@@ -164,19 +169,6 @@ class CarryOverStitcher:
         rms = np.sqrt(np.mean(np.square(frames), axis=1))
         return float(np.count_nonzero(rms >= self._settings.silence_rms_threshold)) * _FRAME_SECONDS
 
-    def _voiced_end(self, audio: np.ndarray, start: float, duration: float) -> float:
-        """Extend `start` through still-voiced 10 ms frames, at most `MAX_WORD_TAIL_SECONDS`."""
-        rate = self._settings.sample_rate
-        frame = round(_FRAME_SECONDS * rate)
-        end = start
-        limit = min(duration, start + MAX_WORD_TAIL_SECONDS)
-        while end + _FRAME_SECONDS <= limit + 1e-9:
-            first = round(end * rate)
-            if _rms(audio[first : first + frame]) < self._settings.silence_rms_threshold:
-                break
-            end += _FRAME_SECONDS
-        return end
-
     def _segment(self, words: Sequence[Word], offset: float) -> TranscriptSegment:
         absolute = tuple(
             Word(word.text.strip(), offset + word.start, offset + word.end, word.probability)
@@ -197,6 +189,24 @@ class CarryOverStitcher:
     def _clear(self) -> None:
         self._pending = np.zeros(0, dtype=np.float32)
         self._pending_start = 0.0
+
+
+def voiced_end(audio: np.ndarray, start: float, rate: int, threshold: float) -> float:
+    """Extend `start` (seconds into `audio`) through still-voiced 10 ms frames (RMS at or above
+    `threshold`), at most `MAX_WORD_TAIL_SECONDS` and never past the end of `audio`.
+
+    The stitcher cuts after a window's last committed word there, so the word's tail is dropped
+    with it rather than carried (architecture §7); resuming a transcript skips it the same way.
+    """
+    frame = round(_FRAME_SECONDS * rate)
+    end = start
+    limit = min(len(audio) / rate, start + MAX_WORD_TAIL_SECONDS)
+    while end + _FRAME_SECONDS <= limit + 1e-9:
+        first = round(end * rate)
+        if _rms(audio[first : first + frame]) < threshold:
+            break
+        end += _FRAME_SECONDS
+    return end
 
 
 def _rms(samples: np.ndarray) -> float:

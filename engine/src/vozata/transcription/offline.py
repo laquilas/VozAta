@@ -2,17 +2,16 @@
 
 After Stop the live transcription ends without draining its backlog; this transcribes, from the
 stored tracks, whatever the raw transcript does not cover yet (each channel from its
-`ResumePoint`). The output matches the live transcript: the same chunkers, carry-over stitching,
-rolling context, echo dedupe, segment ids and session-clock timestamps; it is appended to the raw
-transcript. Live partials, live speakers, translation and observer events are not part of it.
+`ResumePoint`, after the voiced tail the live stitcher dropped). The output matches the live
+transcript: the same chunkers, carry-over stitching, rolling context, echo dedupe, segment ids and
+session-clock timestamps; it is appended to the raw transcript. Live partials, live speakers,
+translation and observer events are not part of it.
 """
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, replace
-
-import numpy as np
 
 from vozata.audio.chunker import ChunkerFactory, fixed_windows
 from vozata.config import Settings
@@ -21,45 +20,50 @@ from vozata.labels import SpeakerLabeler
 from vozata.ports import AudioReader, SessionRepository, Transcriber, TranscriptSink
 from vozata.processing.cancel import CancelToken
 from vozata.transcription.context import RollingContext
-from vozata.transcription.echo import EchoFilter
+from vozata.transcription.echo import MATCH_TOLERANCE_SECONDS, EchoFilter
 from vozata.transcription.language_lock import LanguageLock
+from vozata.transcription.offline_feed import (
+    CHANNELS,
+    ShiftedChunker,
+    Span,
+    feed_in_lockstep,
+    track_spans,
+)
 from vozata.transcription.resume import ResumePoint, resume_points
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 
-CHANNELS = (Channel.MIC, Channel.SYSTEM)
-_INT16_SCALE = 32768.0
 
+class _Output:
+    """The transcript sink behind echo dedupe (when enabled), whose holds run on audio time.
 
-@dataclass(frozen=True)
-class _Span:
-    """The frames of one track still to transcribe: `start` (resume point) to `end`."""
-
-    start: int
-    end: int
-    rate: int
-
-
-class _ShiftedChunker:
-    """A chunker whose own timeline starts at the resume point `offset` (so it does not pad the
-    audio before it with silence); it is fed and emits session time."""
+    The stored system segments are remembered as the timeline reaches them, so the filter's
+    `SYSTEM_MEMORY_SECONDS` memory follows the audio being fed even when the mic resumes long
+    before the system (live dropped every mic echo there, so none was written).
+    """
 
     def __init__(
-        self,
-        factory: ChunkerFactory,
-        channel: Channel,
-        offset: float,
-        on_chunk: Callable[[AudioChunk], None],
+        self, settings: Settings, sink: TranscriptSink, existing: Sequence[TranscriptSegment]
     ) -> None:
-        self._offset = offset
-        self._chunker = factory(
-            channel, lambda chunk: on_chunk(replace(chunk, start=chunk.start + offset))
-        )
+        self._now = 0.0
+        self._echo: EchoFilter | None = None
+        self.sink = sink
+        stored = [segment for segment in existing if segment.channel is Channel.SYSTEM]
+        self._stored = deque(sorted(stored, key=lambda segment: segment.start))
+        if settings.echo_dedupe_enabled:
+            self._echo = EchoFilter.from_settings(settings, sink, clock=lambda: self._now)
+            self.sink = self._echo
 
-    def feed(self, samples: np.ndarray, at: float) -> None:
-        self._chunker.feed(samples, at - self._offset)
+    def before_block(self, end: float) -> None:
+        """Audio up to `end` (session seconds) is about to be fed."""
+        self._now = end
+        if self._echo is None:
+            return
+        while self._stored and self._stored[0].start <= end + MATCH_TOLERANCE_SECONDS:
+            self._echo.remember(self._stored.popleft())
 
-    def flush(self) -> None:
-        self._chunker.flush()
+    def tick(self) -> None:
+        if self._echo is not None:
+            self._echo.tick()
 
 
 class OfflineTranscription:
@@ -88,12 +92,11 @@ class OfflineTranscription:
         self._hints = hints
         self._chunker_factory = chunker_factory or fixed_windows(settings)
         self._block_seconds = block_seconds
-        self._now = 0.0  # session seconds of audio fed so far: the echo filter's clock
 
     def remaining_seconds(self, session_id: str) -> float:
         """Audio seconds not transcribed yet, summed over the channels (for job weights)."""
-        points = resume_points(self._store.load_raw_transcript(session_id), CHANNELS)
-        spans = self._spans(session_id, points)
+        existing = self._store.load_raw_transcript(session_id)
+        spans = self._spans(session_id, existing, resume_points(existing, CHANNELS))
         return sum((span.end - span.start) / span.rate for span in spans.values())
 
     def run(
@@ -102,9 +105,9 @@ class OfflineTranscription:
         """Transcribe and append the rest; raises `StepCancelled` between blocks when `token` is
         cancelled (segments committed so far are kept; the carried tails are not flushed)."""
         token.raise_if_cancelled()
-        existing = self._store.load_raw_transcript(session_id)
+        existing = sorted(self._store.load_raw_transcript(session_id), key=lambda s: s.end)
         points = resume_points(existing, CHANNELS)
-        spans = self._spans(session_id, points)
+        spans = self._spans(session_id, existing, points)
         for span in spans.values():
             if span.rate != self._settings.sample_rate:
                 raise ValueError(
@@ -117,51 +120,51 @@ class OfflineTranscription:
         transcriber = self._transcriber_factory()
         try:
             sink = self._store.open_transcript(session_id, self._labeler)
-            output, tick = self._output(sink, existing)
+            output = _Output(self._settings, sink, existing)
             try:
                 stitchers = self._stitchers(transcriber, existing, points)
                 chunkers = {
-                    channel: _ShiftedChunker(
+                    channel: ShiftedChunker(
                         self._chunker_factory,
                         channel,
                         spans[channel].start / spans[channel].rate,
-                        self._commit(stitchers[channel], output),
+                        self._commit(stitchers[channel], output.sink),
                     )
                     for channel in CHANNELS
                 }
-                self._feed(session_id, spans, chunkers, tick, token, on_progress, total)
+
+                def after_block(fraction: float) -> None:
+                    output.tick()
+                    on_progress(fraction)
+
+                feed_in_lockstep(
+                    self._audio,
+                    session_id,
+                    spans,
+                    chunkers,
+                    self._block_seconds,
+                    token,
+                    output.before_block,
+                    after_block,
+                )
                 for channel in CHANNELS:
                     chunkers[channel].flush()
                     for segment in stitchers[channel].flush():
-                        output.emit(segment)
+                        output.sink.emit(segment)
             finally:
-                output.close()
+                output.sink.close()
         finally:
             transcriber.close()
 
     def _spans(
-        self, session_id: str, points: Mapping[Channel, ResumePoint]
-    ) -> dict[Channel, _Span]:
-        spans: dict[Channel, _Span] = {}
-        for channel in CHANNELS:
-            rate = self._audio.sample_rate(session_id, channel)
-            end = self._audio.length(session_id, channel)
-            spans[channel] = _Span(min(round(points[channel].start * rate), end), end, rate)
-        return spans
-
-    def _output(
-        self, sink: TranscriptSink, existing: Sequence[TranscriptSegment]
-    ) -> tuple[TranscriptSink, Callable[[], None]]:
-        """Echo dedupe (when enabled) in front of `sink`, holding mic segments on audio time and
-        knowing the system speech already written; also its `tick`."""
-        self._now = 0.0
-        if not self._settings.echo_dedupe_enabled:
-            return sink, lambda: None
-        echo = EchoFilter.from_settings(self._settings, sink, clock=lambda: self._now)
-        for segment in existing:
-            if segment.channel is Channel.SYSTEM:
-                echo.remember(segment)
-        return echo, echo.tick
+        self,
+        session_id: str,
+        existing: Sequence[TranscriptSegment],
+        points: Mapping[Channel, ResumePoint],
+    ) -> dict[Channel, Span]:
+        written = {segment.channel for segment in existing}
+        threshold = self._settings.silence_rms_threshold
+        return track_spans(self._audio, session_id, points, written, threshold)
 
     def _stitchers(
         self,
@@ -175,7 +178,7 @@ class OfflineTranscription:
         for channel in CHANNELS:
             context = RollingContext(self._settings.context_prompt_chars)
             context.language(self._language.current())
-            for segment in sorted(existing, key=lambda written: written.end):
+            for segment in existing:  # sorted by end
                 if segment.channel is channel:
                     context.commit(segment.text, segment.end)
             stitchers[channel] = CarryOverStitcher(
@@ -198,36 +201,3 @@ class OfflineTranscription:
                 output.emit(segment)
 
         return on_chunk
-
-    def _feed(
-        self,
-        session_id: str,
-        spans: Mapping[Channel, _Span],
-        chunkers: Mapping[Channel, _ShiftedChunker],
-        tick: Callable[[], None],
-        token: CancelToken,
-        on_progress: Callable[[float], None],
-        total: int,
-    ) -> None:
-        """Feed block k of every channel before block k + 1 of any, each at its session time."""
-        rate = self._settings.sample_rate
-        block = max(1, round(self._block_seconds * rate))
-        cursor = {channel: span.start for channel, span in spans.items()}
-        timeline = min(span.start for span in spans.values() if span.start < span.end)
-        fed = 0
-        while any(cursor[channel] < spans[channel].end for channel in CHANNELS):
-            token.raise_if_cancelled()
-            timeline += block
-            for channel in CHANNELS:
-                stop = min(timeline, spans[channel].end)
-                if cursor[channel] >= stop:
-                    continue
-                count = stop - cursor[channel]
-                samples = self._audio.frames(session_id, channel, cursor[channel], count)
-                self._now = max(self._now, stop / rate)
-                chunkers[channel].feed(
-                    samples.astype(np.float32) / _INT16_SCALE, cursor[channel] / rate
-                )
-                cursor[channel], fed = stop, fed + count
-            tick()
-            on_progress(fed / total)

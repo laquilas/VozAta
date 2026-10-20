@@ -1,7 +1,10 @@
 """Where each channel's transcription resumes on a meeting whose transcript is partial.
 
-`CarryOverStitcher` drops committed audio and carries the uncommitted tail, so a channel's last
-committed segment `end` is exactly where the rest of its transcription starts.
+`CarryOverStitcher` drops committed audio and carries the uncommitted tail. A segment's `end` is
+its last word's end, but the stitcher cuts up to `MAX_WORD_TAIL_SECONDS` later (through the
+word's still-voiced tail, `voiced_end`) or halfway to the next word. `ResumePoint.start` is the
+segment `end`, the lower bound from the transcript alone; `offline_feed.track_spans` moves it
+past the voiced tail in the stored audio, as the live cut did, so no fragment is re-transcribed.
 """
 
 from __future__ import annotations
@@ -15,7 +18,8 @@ from vozata.domain import Channel, TranscriptSegment
 
 @dataclass(frozen=True)
 class ResumePoint:
-    """`start`: session seconds to transcribe from; `next_index`: the channel's next id number."""
+    """`start`: the channel's last written `end` (session seconds; the voiced tail after it is
+    skipped from the audio); `next_index`: the channel's next id number."""
 
     start: float
     next_index: int
