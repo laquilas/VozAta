@@ -105,8 +105,9 @@ class Settings:
     vad_min_chunk_seconds: float = 1.0
     vad_max_chunk_seconds: float = 15.0
     vad_speech_pad_ms: int = 200
-    # Live interim text (phase 28)
+    # Live transcription (phase 41)
     live_transcription: bool = True
+    # Live interim text (phase 28)
     live_partials: bool = True
     partial_interval_seconds: float = 1.5
     # Echo dedupe (phase 18)
