@@ -89,6 +89,14 @@ class WhisperDevice(StrEnum):
     CPU = "cpu"
 
 
+class ModelKind(StrEnum):
+    """What a downloaded model is for (the `download_progress` event's `kind`, phase 42)."""
+
+    SPEECH = "speech"
+    SPEAKERS = "speakers"
+    TRANSLATION = "translation"
+
+
 @dataclass(frozen=True, eq=False)
 class AudioChunk:
     """Float32 mono samples at the session sample rate, starting at `start`.

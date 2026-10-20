@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import gc
 import logging
-import os
 from collections.abc import Callable
 from typing import Any
 
@@ -35,7 +34,6 @@ class FasterWhisperTranscriber:
 
     def __init__(self, settings: Settings, model_factory: ModelFactory | None = None) -> None:
         register_cuda_dlls()
-        os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet download protocol hangs here
         factory = model_factory or _whisper_model
         self.device, self._model = self._load(settings, factory)
 

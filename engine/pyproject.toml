@@ -49,6 +49,10 @@ target-version = "py313"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# `HF_HUB_DISABLE_XET` is set before the imports: huggingface_hub reads it once (phase 42).
+"src/vozata/__main__.py" = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

@@ -298,3 +298,36 @@ def test_diarize_command_runs_on_the_folder_and_can_chain_the_minutes(
     folder = Path("recordings/20261015_202358")
     assert received == [(folder, then_minutes)]
     assert (code, minutes) == ((5, [folder]) if then_minutes else (0, []))
+
+
+def test_main_sets_hf_hub_disable_xet_before_importing_the_hub(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """huggingface_hub reads `HF_HUB_DISABLE_XET` once, at its first import (phase 42)."""
+    import ast
+    import importlib
+
+    tree = ast.parse(Path(cli.__file__).read_text(encoding="utf-8"))
+    statements = [
+        node
+        for node in tree.body
+        if not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant))
+    ]
+    imports = [
+        index
+        for index, node in enumerate(statements)
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        and not (isinstance(node, ast.ImportFrom) and node.module == "__future__")
+        and not (isinstance(node, ast.Import) and [a.name for a in node.names] == ["os"])
+    ]
+    setdefault = next(
+        index
+        for index, node in enumerate(statements)
+        if isinstance(node, ast.Expr) and "HF_HUB_DISABLE_XET" in ast.unparse(node)
+    )
+    assert setdefault < min(imports)
+
+    monkeypatch.delenv("HF_HUB_DISABLE_XET", raising=False)
+    importlib.reload(cli)
+
+    assert __import__("os").environ["HF_HUB_DISABLE_XET"] == "1"

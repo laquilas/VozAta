@@ -104,13 +104,13 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
-- **Updated:** 2026-10-20 20:55
-- **Next step:** Task 1 of `plans/42-download-progress.md` (downloader and tracker).
+- **Updated:** 2026-10-20 20:57
+- **Next step:** Task 2 of `plans/42-download-progress.md` (wire the downloads and the event).
 
 ### Steps
 
 - [x] Implementation plan (`plans/42-download-progress.md`) and spec amendments
-- [ ] Downloader and tracker
+- [x] Downloader and tracker
 - [ ] Wire the downloads and the event
 - [ ] UI bottom bar
 - [ ] Full suites, manual check
@@ -120,3 +120,5 @@ indeterminate state, two downloads, failure toast, locale parity.
 - Commits stay local until the PR (user rule, 2026-10-20: save GitHub Actions minutes).
 - The three design notes marked "amended 2026-10-20" come from the code map: no resume in
   huggingface_hub 2.2.0, pyannote pre-downloaded in the engine, XET switched off at engine start.
+- huggingface_hub 2.2.0 feeds every HTTP chunk to two byte bars (transfer and reconstruct): the
+  byte counter reports the furthest byte bar, not their sum, so bytes are not counted twice.

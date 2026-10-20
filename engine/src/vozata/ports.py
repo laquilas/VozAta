@@ -22,6 +22,7 @@ from vozata.domain import (
     ConversationLanguage,
     ExportDocument,
     ImportedSession,
+    ModelKind,
     SearchHit,
     SessionStatus,
     SpeakerTurn,
@@ -270,6 +271,24 @@ class Translator(Protocol):
 
     def close(self) -> None:
         """Release the model memory."""
+        ...
+
+
+@runtime_checkable
+class ModelDownloader(Protocol):
+    """Makes sure a model repo is in the local cache, reporting progress while it downloads
+    (phase 42)."""
+
+    def ensure(
+        self,
+        kind: ModelKind,
+        repo_id: str,
+        *,
+        allow_patterns: Sequence[str] | None = None,
+        token: str | None = None,
+    ) -> Path:
+        """The local snapshot folder of `repo_id` (only the files matching `allow_patterns`),
+        downloading what is missing; raises the hub's exception when it cannot."""
         ...
 
 

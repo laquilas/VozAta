@@ -3,6 +3,11 @@ recover [<dir> | --all] | migrate [--dry-run] | transcribe <id>`."""
 
 from __future__ import annotations
 
+import os
+
+# huggingface_hub reads it once, at its first import: set it before anything imports the hub.
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet download protocol hangs here
+
 import argparse
 import functools
 import logging
