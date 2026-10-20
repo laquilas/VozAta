@@ -856,6 +856,9 @@ only validator.
   the engine works without the extra. The installer (13) does not bundle it.
 - `python -m vozata diarize <session_dir> [--minutes]` diarizes a stored session (ignores
   `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
+- `python -m vozata transcribe <id | session_dir>` transcribes, from the stored audio, whatever a
+  stopped meeting's raw transcript does not cover yet (all of it when recorded with live
+  transcription off); no speakers, no minutes. Refused while the meeting is recording or paused.
 - Readers (minutes, export, `GET /sessions/{id}/transcript`, search hits) label speakers with
   `SpeakerLabeler.with_names(store.speaker_names(id))`: a name in `speakers.json` wins over
   `User {n}`.

@@ -170,6 +170,10 @@ migrate_progress = "Importando {done}/{total}: {folder}"
 migrate_skipped = "Não importada: {folder} ({message})"
 migrate_done = "Importadas {imported}, não importadas {skipped}."
 migrate_failed = "A importação parou ({reason}); execute-a de novo para continuar."
+transcribe_progress = "Transcrevendo: {percent} %"
+transcribe_done = "Transcrição concluída: {count} novo(s) trecho(s) gravado(s)."
+transcribe_recording = "A sessão {id} ainda está gravando; pare-a antes de transcrever."
+transcribe_failed = "Não foi possível transcrever o áudio ({reason})."
 
 [cli.devices]
 microphones = "Microfones:"
@@ -193,6 +197,8 @@ recover = "repara e finaliza uma sessão interrompida por uma falha (áudio, fal
 recover_all = "recupera todas as sessões interrompidas em OUTPUT_DIR"
 migrate = "importa para o banco de dados as pastas de reuniões gravadas antes dele (as pastas são mantidas)"
 migrate_dry_run = "apenas lista as pastas que seriam importadas"
+transcribe = "transcreve uma sessão guardada a partir do áudio, o que a transcrição ainda não cobre (sem falantes, sem ata)"
+transcribe_target = "id da sessão ou pasta da sessão, ex.: 20261015_202358"
 
 [export]
 title = "Reunião de {date}"

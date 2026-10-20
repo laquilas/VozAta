@@ -114,15 +114,15 @@ translation disabled, locale parity.
 
 - **Branch:** `feature/41-record-only`
 - **Status:** in progress
-- **Updated:** 2026-10-20 17:40
-- **Next step:** Task 3 of `plans/41-record-only.md` (`python -m vozata transcribe <id>`).
+- **Updated:** 2026-10-20 18:30
+- **Next step:** Task 4 of `plans/41-record-only.md` (UI checkbox, preference and notices).
 
 ### Steps
 
 - [x] Implementation plan (`plans/41-record-only.md`)
 - [x] `LIVE_TRANSCRIPTION` setting and the per-recording option
-- [x] Audio-only capture (this commit)
-- [ ] `python -m vozata transcribe <id>`
+- [x] Audio-only capture
+- [x] `python -m vozata transcribe <id>` (this commit)
 - [ ] UI checkbox, preference and notices
 - [ ] Full suites, manual check
 
