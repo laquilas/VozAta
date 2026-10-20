@@ -139,9 +139,13 @@ class FakeLanguageModel:
         self.prompts: list[tuple[str, str, dict | None]] = []
         self.releases = 0
         self.cancels = 0
+        self.closes = 0
 
     def cancel(self) -> None:
         self.cancels += 1
+
+    def close(self) -> None:
+        self.closes += 1
 
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         self.prompts.append((system, prompt, json_schema))

@@ -365,3 +365,38 @@ def test_resumed_job_transcribes_from_the_last_committed_segment(
     assert {s.segment_id for s in added}.isdisjoint({"mic-000001", "system-000002"})
     meta = store.read_meta(session_id)
     assert meta["status"] == "done"
+
+
+@pytest.mark.parametrize(
+    ("kind", "built"),
+    [
+        (StepKind.MIX, 0),
+        (StepKind.DIARIZE, 0),
+        (StepKind.MINUTES, 1),
+        (StepKind.ACTION_ITEMS, 1),
+        (StepKind.INDEX, 0),
+    ],
+)
+def test_each_step_attempt_builds_only_its_model_and_closes_it(
+    tmp_path: Path, models: list[FakeLanguageModel], kind: StepKind, built: int
+) -> None:
+    settings = _settings(tmp_path, diarization_enabled=True)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store)
+    [step] = [step for step in _job(settings, store, session_id).steps if step.kind == kind]
+
+    step.run(CancelToken(), lambda fraction: None)  # a missing diarizer only reports an error
+
+    assert len(models) == built  # one language model client at most, never two
+    assert all(model.closes == 1 for model in models)
+
+
+def test_the_finished_hook_builds_no_model(tmp_path: Path, models: list) -> None:
+    settings = _settings(tmp_path)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store)
+
+    _job(settings, store, session_id).on_finished()
+
+    assert models == []
+    assert store.read_meta(session_id)["status"] == "done"

@@ -11,7 +11,7 @@ import functools
 import logging
 import os
 import threading
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -82,7 +82,7 @@ from vozata.ports import (
     Translator,
 )
 from vozata.processing.gpu_gate import GpuGate, GpuUsage, GpuUser, gpu_usage
-from vozata.processing.job import ProcessingJob
+from vozata.processing.job import ProcessingJob, StepKind
 from vozata.processing.live_lease import LiveModelTurn
 from vozata.processing.queue import ProcessingQueue, ProcessingState
 from vozata.qa.answerer import MeetingAnswerer
@@ -595,23 +595,30 @@ def _no_transcriber() -> Transcriber:
 
 
 def _stored_components(
-    settings: Settings, store: SessionRepository, session_id: str, models: bool = True
+    settings: Settings,
+    store: SessionRepository,
+    session_id: str,
+    models: Collection[StepKind] | None = None,
 ) -> tuple[SessionComponents, dict[str, Any]]:
     """The stop-step components of a stored session, and its metadata.
 
     Nothing is captured or transcribed; the minutes template, glossary and mix mode come from
     the session's metadata, so the result matches what its own stop would have produced. The
-    search index is the one of `OUTPUT_DIR`, used only when the session lives there. Without
-    `models` no language model or diarizer is built (steps that need neither, phase 40).
+    search index is the one of `OUTPUT_DIR`, used only when the session lives there. `models`
+    names the steps whose model is built (`diarize`: the diarizer, `minutes`: the minutes
+    generator, `action_items`: the extractor; each its own language model client); None builds
+    every configured one, an empty collection none (phase 40: one step per attempt).
     """
+    wanted = set(StepKind) if models is None else set(models)
     meta = store.read_meta(session_id)
     localizer = build_localizer(settings)
     template = stored_template(meta) or settings.minutes_template
     minutes = (
         build_minutes_generator(settings, localizer, template)
-        if settings.generate_minutes and models
+        if settings.generate_minutes and StepKind.MINUTES in wanted
         else None
     )
+    extract = settings.generate_minutes and settings.extract_action_items
     recorded = meta.get("settings")
     mix_value = recorded.get("MIX_MODE") if isinstance(recorded, dict) else None
     mix_mode = MixMode(mix_value) if mix_value in set(MixMode) else settings.mix_mode
@@ -626,12 +633,12 @@ def _stored_components(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        diarizer_factory=build_diarizer_factory(settings) if models else None,
+        diarizer_factory=build_diarizer_factory(settings) if StepKind.DIARIZE in wanted else None,
         search_index=build_search_index(settings) if in_output_dir else None,
         minutes_template=template,
         vocabulary=tuple(stored_vocabulary(meta)),
         action_items=build_action_item_extractor(settings, localizer)
-        if minutes is not None and settings.extract_action_items
+        if extract and StepKind.ACTION_ITEMS in wanted
         else None,
     )
     return components, meta
@@ -643,13 +650,14 @@ def build_finisher(
     audio: SessionAudio,
     observer: SessionObserver,
     session_id: str,
-    models: bool = True,
+    models: Collection[StepKind] | None = None,
 ) -> SessionFinisher:
     """The stop steps of a stored session (phase 40), with the components of its metadata.
 
     The title is read from `session.json` each time the minutes are written, so a rename made
-    while the session waits for its turn is used. Without `models`, only `mix`, `index` and
-    `ended` do anything (no language model or diarizer is built).
+    while the session waits for its turn is used. `models` limits the models built to those of
+    the named steps (None: all; empty: none, so only `mix`, `index` and `ended` do anything);
+    `SessionFinisher.close()` closes the language model clients built.
     """
     components, meta = _stored_components(settings, store, session_id, models)
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))

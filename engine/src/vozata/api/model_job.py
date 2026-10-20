@@ -24,25 +24,36 @@ from vozata.processing.session_job import INDEX_WEIGHT
 _log = logging.getLogger(__name__)
 
 
-class Cancellable(Protocol):
+class AttemptModel(Protocol):
     def cancel(self) -> None: ...
+
+    def close(self) -> None: ...
 
 
 class Cancels:
-    """Ties every model built during one step attempt to its token (`close()` undoes it)."""
+    """Ties every model built during one step attempt to its token; `close()` undoes that and
+    closes the models (their language model clients) once the attempt is over."""
 
     def __init__(self, token: CancelToken) -> None:
         self._token = token
         self._undo: list[Callable[[], None]] = []
+        self._models: list[AttemptModel] = []
 
-    def watch[T: Cancellable](self, model: T) -> T:
+    def watch[T: AttemptModel](self, model: T) -> T:
         self._undo.append(self._token.on_cancel(model.cancel))
+        self._models.append(model)
         return model
 
     def close(self) -> None:
         for undo in self._undo:
             undo()
         self._undo.clear()
+        models, self._models = self._models, []
+        for model in models:
+            try:
+                model.close()
+            except Exception:
+                _log.exception("Closing a language model client failed")
 
 
 class QueuedModelJob:

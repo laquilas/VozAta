@@ -84,6 +84,10 @@ class MinutesGenerator:
         if isinstance(self._llm, Cancellable):
             self._llm.cancel()
 
+    def close(self) -> None:
+        """Close the model's client (its HTTP connections) once this generator is done."""
+        self._llm.close()
+
     def _release(self) -> None:
         try:
             self._llm.release()

@@ -342,7 +342,9 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    runs the same job inline (`run_job_inline`), with the session's own components.
 3. The job (`processing/session_job.py`, composed by `bootstrap_processing.py`) waits for
    `closed` (`before`, no timeout, a warning every 5 min), then runs its steps in order; each
-   builds the providers it uses when it runs:
+   attempt builds only the provider it uses when it runs (the diarizer, the minutes generator or
+   the action-item extractor, each with its own language model client) and closes the language
+   model clients it built when the attempt ends (`SessionFinisher.close()`):
    - `repair` (crash recovery only): the `RecoverableStore`s of the backend, length stored.
    - `transcribe` (GPU when speech runs on CUDA): `OfflineTranscription` transcribes, from the
      stored tracks, whatever the raw transcript does not cover yet (each channel from its last

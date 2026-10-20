@@ -137,6 +137,10 @@ class LanguageModel(Protocol):
         """Free the model's memory (VRAM) after a job; raises `LanguageModelError` on failure."""
         ...
 
+    def close(self) -> None:
+        """Free the client's resources (HTTP connections); idempotent."""
+        ...
+
 
 class DiarizationError(RuntimeError):
     """Speaker identification failed (missing extra or token, model error, bad output)."""

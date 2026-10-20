@@ -135,6 +135,10 @@ class ActionItemExtractor:
         if isinstance(self._llm, Cancellable):
             self._llm.cancel()
 
+    def close(self) -> None:
+        """Close the model's client (its HTTP connections) once this extractor is done."""
+        self._llm.close()
+
     def _release(self) -> None:
         try:
             self._llm.release()

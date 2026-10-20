@@ -6,8 +6,10 @@ step runs (so a registry entry replaced at runtime, e.g. by tests, is honoured).
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import threading
+from collections.abc import Iterator
 from pathlib import Path
 
 from vozata import bootstrap as root
@@ -23,7 +25,7 @@ from vozata.ports import (
     Transcriber,
 )
 from vozata.processing.gpu_gate import GpuUsage
-from vozata.processing.job import AbortJob, ProcessingJob
+from vozata.processing.job import AbortJob, ProcessingJob, StepKind
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.session_finisher import SessionFinisher
 from vozata.storage.recovery import SessionRecovery
@@ -58,8 +60,14 @@ def build_processing_job(
     duration = float(meta.get("duration_seconds") or 0.0)
     after = settings.generate_minutes or settings.diarization_enabled  # VRAM rule
 
-    def finisher(models: bool) -> SessionFinisher:
-        return root.build_finisher(settings, store, audio, observer, session_id, models)
+    @contextlib.contextmanager
+    def finisher(kind: StepKind) -> Iterator[SessionFinisher]:
+        """One step attempt's finisher: only that step's model is built, closed at the end."""
+        built = root.build_finisher(settings, store, audio, observer, session_id, (kind,))
+        try:
+            yield built
+        finally:
+            built.close()
 
     def transcriber() -> Transcriber:
         if shared is not None and gate_usage.speech:
@@ -81,7 +89,8 @@ def build_processing_job(
         )
 
     def finished() -> None:
-        finisher(False).ended(store.now())
+        with finisher(StepKind.INDEX) as done:  # no model
+            done.ended(store.now())
         length = float(store.read_meta(session_id).get("duration_seconds") or 0.0)
         observer.on_status(SessionStatus.DONE, length)
 

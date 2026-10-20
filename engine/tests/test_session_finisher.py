@@ -417,3 +417,32 @@ def test_mix_runs_the_mixer(tmp_path: Path) -> None:
     rig.finisher.mix()
 
     assert rig.log.entries == ["mix"] and rig.observer.of("error") == []
+
+
+def test_close_closes_both_language_model_clients(tmp_path: Path) -> None:
+    action_items_llm = FakeLanguageModel()
+    rig = _Rig(tmp_path, action_items_llm=action_items_llm)
+
+    rig.finisher.close()
+
+    assert (rig.llm.closes, action_items_llm.closes) == (1, 1)
+
+
+def test_a_failing_close_is_logged_and_the_other_client_still_closes(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    class Stuck(FakeLanguageModel):
+        def close(self) -> None:
+            raise RuntimeError("socket stuck")
+
+    action_items_llm = FakeLanguageModel()
+    rig = _Rig(tmp_path, llm=Stuck(), action_items_llm=action_items_llm)
+
+    rig.finisher.close()
+
+    assert action_items_llm.closes == 1
+    assert "Closing a language model client failed" in caplog.text
+
+
+def test_close_without_models_does_nothing(tmp_path: Path) -> None:
+    _Rig(tmp_path, with_minutes=False).finisher.close()

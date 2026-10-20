@@ -59,6 +59,16 @@ class SessionFinisher:
         self._title = title
         self._meta = meta
 
+    def close(self) -> None:
+        """Close the language model clients this finisher was built with (a per-attempt finisher
+        of the processing job, phase 40); the session's own finisher (CLI) is never closed."""
+        for model in (self._c.minutes, self._c.action_items):
+            if model is not None:
+                try:
+                    model.close()
+                except Exception:
+                    _log.exception("Closing a language model client failed")
+
     def mix(self) -> None:
         try:
             self._audio.write_mix(self._id, self._c.mixer)

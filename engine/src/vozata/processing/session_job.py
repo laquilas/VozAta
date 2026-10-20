@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 
 from vozata.ports import SessionRepository
@@ -42,16 +43,33 @@ REPAIR_WEIGHT = 1.0
 class JobParts:
     """How a meeting is finished; `finisher` and `transcription` are called once per attempt.
 
-    `finisher(models)` builds the language model and diarizer only when `models` is true (the
-    `mix` and `index` steps need neither).
+    `finisher(kind)` gives the finisher of one step attempt, as a context manager: it builds only
+    the model that step uses (the diarizer, the minutes generator or the action-item extractor;
+    none for `mix` and `index`) and closes what it built when the attempt ends.
     """
 
-    finisher: Callable[[bool], SessionFinisher]
+    finisher: Callable[[StepKind], AbstractContextManager[SessionFinisher]]
     transcription: Callable[[], OfflineTranscription]
     diarize: bool  # a diarizer is configured
     minutes: bool  # minutes are generated
     action_items: bool  # action items follow the minutes
     repair: Callable[[], None] | None = None  # crash recovery only (phase 17)
+
+
+_WEIGHTS = {
+    StepKind.MIX: MIX_WEIGHT,
+    StepKind.DIARIZE: DIARIZE_WEIGHT,
+    StepKind.MINUTES: MINUTES_WEIGHT,
+    StepKind.ACTION_ITEMS: ACTION_ITEMS_WEIGHT,
+    StepKind.INDEX: INDEX_WEIGHT,
+}
+
+
+def _gpu(kind: StepKind, usage: GpuUsage) -> bool:
+    """Whether a finisher step runs on the local GPU (and is cancelled by a priority user)."""
+    if kind is StepKind.DIARIZE:
+        return usage.speakers
+    return usage.llm if kind in (StepKind.MINUTES, StepKind.ACTION_ITEMS) else False
 
 
 def transcribe_weight(store: SessionRepository, session_id: str, duration: float) -> float:
@@ -87,42 +105,26 @@ def session_job(
     def transcribe(token: CancelToken, progress: Progress) -> None:
         parts.transcription().run(session_id, token, progress)
 
+    def finishing(kind: StepKind, run: Callable[[SessionFinisher, CancelToken], None]) -> Step:
+        def attempt(token: CancelToken, progress: Progress) -> None:
+            with parts.finisher(kind) as finisher:
+                run(finisher, token)
+
+        return Step(kind, _WEIGHTS[kind], _gpu(kind, usage), attempt)
+
     steps: list[Step] = []
     if parts.repair is not None:
         repair = parts.repair
         steps.append(Step(StepKind.REPAIR, REPAIR_WEIGHT, False, lambda token, p: repair()))
     steps.append(Step(StepKind.TRANSCRIBE, weight, usage.speech, transcribe))
-    steps.append(Step(StepKind.MIX, MIX_WEIGHT, False, lambda t, p: parts.finisher(False).mix()))
+    steps.append(finishing(StepKind.MIX, lambda finisher, token: finisher.mix()))
     if parts.diarize:
-        steps.append(
-            Step(
-                StepKind.DIARIZE,
-                DIARIZE_WEIGHT,
-                usage.speakers,
-                lambda token, p: parts.finisher(True).identify_speakers(token),
-            )
-        )
+        steps.append(finishing(StepKind.DIARIZE, SessionFinisher.identify_speakers))
     if parts.minutes:
-        steps.append(
-            Step(
-                StepKind.MINUTES,
-                MINUTES_WEIGHT,
-                usage.llm,
-                lambda token, p: parts.finisher(True).write_minutes(token),
-            )
-        )
+        steps.append(finishing(StepKind.MINUTES, SessionFinisher.write_minutes))
         if parts.action_items:
-            steps.append(
-                Step(
-                    StepKind.ACTION_ITEMS,
-                    ACTION_ITEMS_WEIGHT,
-                    usage.llm,
-                    lambda token, p: parts.finisher(True).extract_action_items(token),
-                )
-            )
-    steps.append(
-        Step(StepKind.INDEX, INDEX_WEIGHT, False, lambda t, p: parts.finisher(False).index())
-    )
+            steps.append(finishing(StepKind.ACTION_ITEMS, SessionFinisher.extract_action_items))
+    steps.append(finishing(StepKind.INDEX, lambda finisher, token: finisher.index()))
 
     def before() -> None:
         if closed is None:

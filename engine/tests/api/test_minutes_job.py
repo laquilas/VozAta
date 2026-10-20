@@ -122,10 +122,12 @@ def _rig(
 def test_writes_the_minutes_in_the_queue_announces_them_and_indexes(
     tmp_path: Path, rigs: list[_Rig]
 ) -> None:
-    rig = _rig(rigs, tmp_path, FakeLanguageModel(["# Minutes"]))
+    llm = FakeLanguageModel(["# Minutes"])
+    rig = _rig(rigs, tmp_path, llm)
 
     rig.run()
 
+    assert llm.closes == 1  # the attempt's client is closed once it is over
     assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     assert rig.broadcaster.of("minutes_ready") == [(rig.paths.id, {"session_id": rig.paths.id})]
     assert rig.indexed == [rig.paths.id]
@@ -224,6 +226,7 @@ def test_a_live_recording_cancels_the_step_and_a_fresh_generator_redoes_it(
     assert rig.queue.wait_idle(5)
 
     assert rig.built == [None, None]  # one generator per attempt
+    assert blocking.closes == 1  # the cancelled attempt's client is closed too
     assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     assert rig.broadcaster.of("error") == []
     assert len(rig.broadcaster.of("minutes_ready")) == 1

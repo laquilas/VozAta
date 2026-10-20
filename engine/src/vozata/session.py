@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 from collections.abc import Callable, Mapping
@@ -249,9 +250,10 @@ class RecordingSession:
 
     def processing_job(self, closed: threading.Event | None) -> ProcessingJob:
         """The rest of this meeting (transcribe the rest, mix, speakers, minutes, index, done) with
-        this session's own components; never cancelled, so they are reused across steps."""
+        this session's own components; never cancelled, so they are reused across steps (and not
+        closed after each one)."""
         parts = JobParts(
-            finisher=lambda models: self._finisher(),
+            finisher=lambda kind: contextlib.nullcontext(self._finisher()),
             transcription=self._offline,
             diarize=self._c.diarizer_factory is not None,
             minutes=self._c.minutes is not None,
