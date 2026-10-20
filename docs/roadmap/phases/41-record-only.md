@@ -127,7 +127,7 @@ translation disabled, locale parity.
 - [x] UI checkbox, preference and notices
 - [ ] Final review fixes: no leaked test threads, setting comment, CLI
       refuses interrupted, pre-empted audio-only
-      transcription resumes (this commit)
+      transcription resumes, recorder notice follows the recording's mode (this commit)
 - [ ] Full suites, manual check
 
 ### Decisions and notes
@@ -139,3 +139,7 @@ translation disabled, locale parity.
 - Audio only is `CapturePipeline(live=False)`; the live half (worker, stitchers, echo filter,
   live speakers, sinks) moved to `session_live.LiveTranscription`, and the pipeline now opens the
   transcript itself (`open_transcript`), so an audio-only recording creates no transcript files.
+- The audio-only notice shows only while an audio-only recording is recording or paused; idle,
+  the recorder keeps "Press Start...". A recording the page did not start (another client, or
+  before the app connected) shows its own mode, read once from `live_transcription` in its
+  session detail (live when absent); the chip keeps the user's choice.

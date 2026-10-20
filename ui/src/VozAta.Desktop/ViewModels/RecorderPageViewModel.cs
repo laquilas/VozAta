@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VozAta.Client;
@@ -26,6 +27,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private readonly IEngineClient _client;
     private readonly IUiPreferences _preferences;
     private bool _liveTranscription = true;
+    private bool? _recordingLive; // live transcription of the followed recording; null while none
     private readonly ILocalizationService _localization;
     private readonly IUiTimer _timer;
     private readonly Action<string> _notify;
@@ -175,11 +177,17 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     /// <summary>Translation needs live transcription.</summary>
     public bool CanChooseTranslation => CanEditOptions && LiveTranscription;
 
-    /// <summary>The transcript placeholder says the transcript comes after Stop (live transcription off).</summary>
-    public bool IsAudioOnlyNotice => !LiveTranscription && IsTranscriptEmpty;
+    /// <summary>
+    /// The transcript placeholder says the transcript comes after Stop: only while an audio-only
+    /// recording is recording or paused (the chip alone does not change the idle prompt).
+    /// </summary>
+    public bool IsAudioOnlyNotice => IsRecording && _recordingLive == false && IsTranscriptEmpty;
 
-    /// <summary>The transcript placeholder for the usual case (live transcription on).</summary>
-    public bool IsStartPromptVisible => LiveTranscription && IsTranscriptEmpty;
+    /// <summary>The transcript placeholder for the usual case ("Press Start...").</summary>
+    public bool IsStartPromptVisible => IsTranscriptEmpty && !IsAudioOnlyNotice;
+
+    /// <summary>The last read of an adopted recording's mode (tests await it).</summary>
+    public Task RecordingModeLookup { get; private set; } = Task.CompletedTask;
 
     /// <summary>The engine is still loading the speech model; audio is already being recorded.</summary>
     [ObservableProperty]
@@ -424,6 +432,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         DetectedLanguage = _detectedLanguage = null;
         Session.Elapsed = TranscriptLine.FormatTime(0);
         SetState(RecordingState.Starting);
+        _recordingLive = LiveTranscription; // this page started it: never looked up
         try
         {
             var terms = VocabularyViewModel.ParseTerms(SessionTerms);
@@ -563,6 +572,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
                 OnPropertyChanged(nameof(IsActivelyRecording));
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(PauseResumeText));
+                NotifyTranscriptEmpty(); // the audio-only notice shows only while recording
                 StartCommand.NotifyCanExecuteChanged();
                 StopCommand.NotifyCanExecuteChanged();
                 PauseResumeCommand.NotifyCanExecuteChanged();
@@ -700,6 +710,11 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         if (status.Status is "recording" or "paused" && status.SessionId is { } sessionId)
         {
             Session.SessionId = sessionId; // also adopts a recording that started before the app connected
+            if (_recordingLive is null)
+            {
+                _recordingLive = true; // started elsewhere: live until its session.json says otherwise
+                RecordingModeLookup = ReadRecordingModeAsync(sessionId);
+            }
         }
 
         SetState(status.Status switch
@@ -710,6 +725,27 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             // (phase 40), also when it was stopped elsewhere (API, another client)
             _ => RecordingState.Idle,
         });
+    }
+
+    /// <summary>Show an adopted recording's own mode (<c>live_transcription</c> in its session.json).</summary>
+    private async Task ReadRecordingModeAsync(string sessionId)
+    {
+        try
+        {
+            var detail = await _client.GetSessionAsync(sessionId, _cancellation);
+            if (Session.SessionId == sessionId && _recordingLive is not null
+                && detail.Metadata?.TryGetValue("live_transcription", out var live) == true
+                && live.ValueKind == JsonValueKind.False)
+            {
+                _recordingLive = false;
+                NotifyTranscriptEmpty();
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException
+                                          or OperationCanceledException)
+        {
+            // unknown: the notice stays as for a live recording
+        }
     }
 
     private void SetState(RecordingState state)
@@ -726,6 +762,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         UpdateMeters(wasRecording);
         if (state == RecordingState.Idle)
         {
+            _recordingLive = null;
             IsModelLoading = false;
             Partials.Clear();
             if (hadSession)
