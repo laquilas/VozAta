@@ -158,19 +158,19 @@ previous one is processed").
 
 ## Acceptance criteria
 
-- [ ] After Stop, Start is enabled within 2 s; the next meeting records and shows its live
+- [x] After Stop, Start is enabled within 2 s; the next meeting records and shows its live
       transcript at once, while the first is still being processed.
-- [ ] Three meetings stopped one after the other are processed one at a time, in stop order; the
+- [x] Three meetings stopped one after the other are processed one at a time, in stop order; the
       queued ones show "Queued" with position and the running one "Processing N %".
-- [ ] The percent never goes down; at the end the indicator turns green and the % disappears.
-- [ ] Starting a live recording while a queued meeting is writing its minutes (local Ollama)
+- [x] The percent never goes down; at the end the indicator turns green and the % disappears.
+- [x] Starting a live recording while a queued meeting is writing its minutes (local Ollama)
       cancels that step within 5 s ("Paused"); after Stop it is redone and the meeting finishes.
-- [ ] A meeting stopped while its speech model was still loading gets its full transcript from the
+- [x] A meeting stopped while its speech model was still loading gets its full transcript from the
       transcribe step.
-- [ ] Closing the app with a non-empty queue warns and closes; the next start repairs, resumes and
+- [x] Closing the app with a non-empty queue warns and closes; the next start repairs, resumes and
       finishes those meetings with complete transcripts.
-- [ ] A failing step (e.g. Ollama down) does not block the meetings behind it.
-- [ ] Contract docs updated (`processing` event and field, start / recover / minutes rules,
+- [x] A failing step (e.g. Ollama down) does not block the meetings behind it.
+- [x] Contract docs updated (`processing` event and field, start / recover / minutes rules,
       `capture_ended_at`, gate in architecture §6).
 
 ## Tests
@@ -194,9 +194,9 @@ close-with-pending message; locale parity.
 ## Progress
 
 - **Branch:** `feature/40-background-processing`
-- **Status:** in progress
-- **Updated:** 2026-10-21 03:00
-- **Next step:** Task 12 of `plans/40-background-processing.md` (full suites, manual check).
+- **Status:** ready for PR
+- **Updated:** 2026-10-20 16:20
+- **Next step:** open the PR (pr-ready → pr-open); the user merges.
 
 ### Steps
 
@@ -212,8 +212,8 @@ close-with-pending message; locale parity.
 - [x] UI client and recorder
 - [x] Meetings and meeting page indicators (f944d53; fix round 1: this commit)
 - [x] Shell indicator and close warning (05b718d; fix round 1: this commit)
-- [ ] Final review fixes (live GPU hold and skipped loads: 349f69f; start waits for a stop: 7e0da23; CLI recovery through the job: eb690ac; one model per attempt, closed: 827d1d9; unload after a cancel: dcbcb77; cancelled transcribe keeps the shared Whisper: 652a023; queue stopped at shutdown: 43e0764; meetings processing state on reconnect and slow lists: 568a4c4; close dialog Cancel key: be344da; coverage of the skipped load and the finisher clock: this commit)
-- [ ] Full suites, manual check
+- [x] Final review fixes (live GPU hold and skipped loads: 349f69f; start waits for a stop: 7e0da23; CLI recovery through the job: eb690ac; one model per attempt, closed: 827d1d9; unload after a cancel: dcbcb77; cancelled transcribe keeps the shared Whisper: 652a023; queue stopped at shutdown: 43e0764; meetings processing state on reconnect and slow lists: 568a4c4; close dialog Cancel key: be344da; coverage of the skipped load and the finisher clock: this commit)
+- [x] Full suites, manual check (fixes found by it: f5d1623, 3b616fd, 883a3bf)
 
 ### Decisions and notes
 
@@ -280,3 +280,19 @@ close-with-pending message; locale parity.
   Fix round 2: `SharedTranscriber` counts its leases, so an unload (a lease without keep, or
   `release()`) waits for the last open lease; the CLI segment notifier no longer swallows a
   failing transcript write; `LiveModelTurn.wait()` warns every 5 min.
+- Manual check (2026-10-20, a scratch database via `DATABASE_PATH`, large-v3 + qwen2.5:7b on the
+  RTX 3050): Start enabled 0.2 s after Stop and the next meeting recorded while the first was
+  processed; two stopped meetings ran one at a time in stop order ("Na fila (1)", then
+  "Processando N %" through transcribe → diarize → minutes → action items) and ended `done` with
+  minutes; the sidebar showed "Processando 1 reunião(ões) · N %" and "+1 na fila"; a live
+  recording started while a meeting wrote its minutes paused it 3.4 s later, and after Stop the
+  minutes were redone and both meetings ended `done`; an app closed while a meeting wrote its
+  minutes (engine killed) resumed it on the next start (repair → transcribe → … → done);
+  re-extracting action items of a finished meeting queued behind the running one. Found and fixed:
+  a test that wrote `LLM_PROVIDER=fake` into the real `engine/.env` (f5d1623, with a guard), the
+  sidebar text overflowing into the page (3b616fd) and the recorder staying in "Finalizando" for a
+  meeting stopped through the API (883a3bf). Engine suite 1974 passed (99.75 %), UI suite 760.
+- Accepted residuals (final review): with `WHISPER_KEEP_LOADED` and a local Ollama, an Ask that
+  pre-empts a transcribe step runs next to the kept Whisper; the sidebar indicator disappears when
+  the queue empties (rows and the page show the green check); `serve` started while a CLI
+  `record`/`recover --all` processes a meeting inline processes it too (documented).
