@@ -63,10 +63,13 @@ internal sealed class FakeDialogs : IDialogService
 
     public List<string> Messages { get; } = [];
 
+    public List<(string Confirm, string Cancel)> Buttons { get; } = [];
+
     public Task<bool> ConfirmAsync(string title, string message, string confirm, string cancel)
     {
         Asked.Add(title);
         Messages.Add(message);
+        Buttons.Add((confirm, cancel));
         return Task.FromResult(Answers is { Count: > 0 } ? Answers.Dequeue() : Answer);
     }
 }

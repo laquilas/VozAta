@@ -1290,4 +1290,7 @@
   <data name="Close_PendingProcessing" xml:space="preserve">
     <value>{0} meeting(s) are still being processed. Processing resumes the next time VozAta opens.</value>
   </data>
+  <data name="Close_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
 </root>

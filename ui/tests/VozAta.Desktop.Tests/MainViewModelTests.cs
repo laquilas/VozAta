@@ -749,6 +749,7 @@ public sealed class MainViewModelTests
 
         Assert.Equal([_localization["AppTitle"]], _dialogs.Asked);
         Assert.Equal([_localization.Format("Close_PendingProcessing", 2)], _dialogs.Messages);
+        Assert.Equal([(_localization["TrayQuit"], _localization["Close_Cancel"])], _dialogs.Buttons);
     }
 
     [Fact]
