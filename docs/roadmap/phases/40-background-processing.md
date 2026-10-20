@@ -195,8 +195,8 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 14:30
-- **Next step:** Task 5 of `plans/40-background-processing.md` (processing job and queue).
+- **Updated:** 2026-10-20 16:00
+- **Next step:** Task 6 of `plans/40-background-processing.md` (Stop frees the recorder).
 
 ### Steps
 
@@ -205,7 +205,7 @@ close-with-pending message; locale parity.
 - [x] Cancellable LLM and diarizer (fix round 1: release after cancel, cancel before spawn)
 - [x] Session finisher steps (0f2a1ad)
 - [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
-- [ ] Processing job and queue
+- [x] Processing job and queue (this commit)
 - [ ] Stop frees the recorder
 - [ ] Restart and recovery through the queue
 - [ ] API, events and other model users
