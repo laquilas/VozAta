@@ -260,14 +260,17 @@ def test_cancel_during_stream_raises_language_model_error() -> None:
         list(model.stream("s", "p"))
 
 
-def test_release_after_cancel_still_unloads_through_a_fresh_client() -> None:
+@pytest.mark.parametrize("configured", ["0", "300", "5m", "-1"])
+def test_release_after_cancel_unloads_through_a_fresh_client_whatever_keep_alive(
+    configured: str,
+) -> None:
     bodies: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         bodies.append(json.loads(request.content))
         return chat_reply("")
 
-    model = model_with(handler, keep_alive="0")
+    model = model_with(handler, keep_alive=configured)
     model.cancel()
 
     model.release()

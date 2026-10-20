@@ -88,8 +88,12 @@ class OllamaLanguageModel:
         return self._model in names or f"{self._model}:latest" in names
 
     def release(self) -> None:
-        """Apply `keep_alive` now: an empty chat is Ollama's way to unload (or re-time) a model."""
-        body = {"model": self._model, "messages": [], "keep_alive": _keep_alive(self.keep_alive)}
+        """Apply `keep_alive` now: an empty chat is Ollama's way to unload (or re-time) a model.
+
+        After `cancel()` the model is always unloaded (`keep_alive` 0), whatever
+        `OLLAMA_KEEP_ALIVE` says: a cancel means a live recording or Ask needs the GPU now."""
+        keep_alive = 0 if self._cancelled else _keep_alive(self.keep_alive)
+        body = {"model": self._model, "messages": [], "keep_alive": keep_alive}
         try:
             if self._cancelled:  # the main client is closed: unload through a short-lived one
                 with httpx.Client(

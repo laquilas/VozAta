@@ -360,7 +360,8 @@ stream opens and `terminate()`; the session releases it once capture has stopped
      reports `error` `diarization_failed` (with the `python -m vozata diarize` retry command) and
      keeps the `system` labels.
    - `minutes` (if `GENERATE_MINUTES`; GPU with local Ollama): `MinutesGenerator` → `minutes.md`,
-     then `llm.release()` (Ollama unloads per `OLLAMA_KEEP_ALIVE`, also after a failed job).
+     then `llm.release()` (Ollama unloads per `OLLAMA_KEEP_ALIVE`, also after a failed job;
+     after a cancel always at once, `keep_alive` 0, since the GPU is needed by a live user).
    - `action_items` (if `EXTRACT_ACTION_ITEMS` too): `ActionItemExtractor` → `action_items.json`
      (items already exported are kept), `on_action_items_ready` (23; a failure reports
      `action_items_failed`).
