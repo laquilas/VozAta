@@ -86,16 +86,16 @@ Requested by the user on 2026-10-20.
 
 ## Acceptance criteria
 
-- [ ] Unchecked: during the recording no model is loaded (VRAM unchanged), the level meters work,
+- [x] Unchecked: during the recording no model is loaded (VRAM unchanged), the level meters work,
       and the recorder says it is recording audio only.
-- [ ] After Stop, the meeting is queued, shows "Processing N %" driven by the transcription, and
+- [x] After Stop, the meeting is queued, shows "Processing N %" driven by the transcription, and
       ends with transcript, speakers, minutes and action items like a live meeting.
-- [ ] Mic and system speech of the same moment are not duplicated (echo dedupe works offline).
-- [ ] A live-transcription recording started while an audio-only meeting is transcribing
+- [x] Mic and system speech of the same moment are not duplicated (echo dedupe works offline).
+- [x] A live-transcription recording started while an audio-only meeting is transcribing
       interrupts that job, which later resumes from where it stopped; an audio-only recording does
       not interrupt it.
-- [ ] The checkbox default comes from Config; the last choice is remembered.
-- [ ] Contract docs updated (`live_transcription` in `POST /sessions`, `LIVE_TRANSCRIPTION`,
+- [x] The checkbox default comes from Config; the last choice is remembered.
+- [x] Contract docs updated (`live_transcription` in `POST /sessions`, `LIVE_TRANSCRIPTION`,
       `session.json`).
 
 ## Tests
@@ -113,10 +113,9 @@ translation disabled, locale parity.
 ## Progress
 
 - **Branch:** `feature/41-record-only`
-- **Status:** in progress
-- **Updated:** 2026-10-20 21:00
-- **Next step:** The manual check (Task 5 of `plans/41-record-only.md`); the full suites pass
-  after the final review fixes.
+- **Status:** ready for PR
+- **Updated:** 2026-10-20 20:35
+- **Next step:** open the PR (push the branch only then); the user merges.
 
 ### Steps
 
@@ -128,7 +127,7 @@ translation disabled, locale parity.
 - [x] Final review fixes: no leaked test threads, setting comment, CLI
       refuses interrupted, pre-empted audio-only
       transcription resumes, recorder notice follows the recording's mode
-- [ ] Full suites, manual check
+- [x] Full suites, manual check
 
 ### Decisions and notes
 
@@ -143,3 +142,15 @@ translation disabled, locale parity.
   the recorder keeps "Press Start...". A recording the page did not start (another client, or
   before the app connected) shows its own mode, read once from `live_transcription` in its
   session detail (live when absent); the chip keeps the user's choice.
+- Manual check (2026-10-20, a scratch database via `DATABASE_PATH`, large-v3 + qwen2.5:7b, driven
+  through the engine API): an audio-only recording of 30 s sent only `level` (382) and `status`
+  events — no `model_loading` / `segment` / `partial` — and GPU memory stayed at ≈1.6 GB;
+  `session.json` stored `live_transcription: false`; after Stop the queue transcribed it from 0
+  (`processing` 0 → 16 → 32 % on `transcribe`, then minutes and action items) and the meeting ended
+  `done` with its transcript ("teste, 1, 2, 3, teste…") and minutes. A first run captured digital
+  silence on both tracks because the JBL mic was muted (a live recording on the same engine was
+  silent too): not a code issue. In the app: the "Transcrição simultânea" chip renders first among
+  the options, unchecking it removes the check and disables "Traduzir para". The final review found a
+  test that leaked a live session (pytest never exited); fixed with a conftest guard against leaked
+  non-daemon threads. Engine suite 2004 passed (99.74 %), UI suite 777 passed; no push until the PR
+  (user rule: save GitHub Actions minutes).
