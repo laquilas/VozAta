@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import threading
 import wave
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -115,6 +115,18 @@ class _LoggingLanguageModel(FakeLanguageModel):
         return super().generate(system, prompt, json_schema)
 
 
+_RIGS: list[_Rig] = []
+
+
+@pytest.fixture(autouse=True)
+def _abandon_started_sessions() -> Iterator[None]:
+    """Stop the capture of any rig session a test left recording, so its live threads
+    (`transcription`, `live-speakers`) exit instead of keeping pytest alive."""
+    yield
+    while _RIGS:
+        _RIGS.pop().close()
+
+
 class _Rig:
     def __init__(
         self,
@@ -141,6 +153,7 @@ class _Rig:
         live_models: LiveModelTurn | None = None,
         live_transcription: bool = True,
     ) -> None:
+        _RIGS.append(self)
         self._load_gate = load_gate
         self._load_error = load_error
         moments = [STARTED, ENDED]
@@ -189,6 +202,12 @@ class _Rig:
             language,
             open_timeout=open_timeout,
         )
+
+    def close(self) -> None:
+        """Abandon the session if it is still recording; wait for its pipeline to close."""
+        if self._load_gate is not None:
+            self._load_gate.set()  # a model still loading would hold the pipeline open
+        self.session.stop_capture().wait(10)
 
     def _load_transcriber(self) -> FakeTranscriber:
         if self._load_gate is not None:
@@ -849,6 +868,7 @@ def test_session_json_records_live_transcription(tmp_path: Path, live: bool) -> 
     rig.session.start()
 
     assert rig.store.read_meta(rig.session.id)["live_transcription"] is live
+    assert rig.session.stop_capture().wait(5)
 
 
 def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> None:

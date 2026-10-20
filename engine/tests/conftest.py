@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import sys
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -37,3 +38,25 @@ def _real_env_file_untouched() -> Iterator[None]:
     after = hashlib.sha256(env_file.read_bytes()).hexdigest() if env_file.exists() else None
     if before != after:
         pytest.fail(f"A test modified the real {env_file}; pass env_file=tmp_path / '.env'.")
+
+
+_LEAK_GRACE_SECONDS = 2.0
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _no_leaked_threads() -> Iterator[None]:
+    """Fail the session if a test left a non-daemon thread running (e.g. a started session's
+    `transcription`, `live-speakers`, `capture-*` or `stop-capture` thread): such a thread keeps
+    the pytest process alive after the summary. Each one gets a short grace period to finish."""
+    before = set(threading.enumerate())
+    yield
+    leaked = [
+        thread
+        for thread in threading.enumerate()
+        if thread not in before and not thread.daemon and thread is not threading.current_thread()
+    ]
+    for thread in leaked:
+        thread.join(_LEAK_GRACE_SECONDS)
+    alive = sorted(thread.name for thread in leaked if thread.is_alive())
+    if alive:
+        pytest.fail(f"Tests leaked non-daemon threads that are still running: {', '.join(alive)}.")
