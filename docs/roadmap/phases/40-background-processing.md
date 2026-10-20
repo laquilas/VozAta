@@ -233,7 +233,11 @@ close-with-pending message; locale parity.
   ends `done`; an unexpected minutes failure publishes `minutes_failed` with `internal_error`
   (`QueuedModelJob` in `api/model_job.py` is the shared base).
 
-- UI client and recorder (Task 9): `StopAsync` sets the recorder Idle on the 202. `OnStatus` follows  only the recorded session once its id is known; while no id is known (idle or starting) it adopts  only `recording`/`paused` of an unknown session. A status without a session id still applies.  Recovery no longer blocks Start (its `finalizing` is ignored by the recorder). `GuardClosing`  waits only 15 s for `Recorder.Idle`.
+- UI client and recorder (Task 9): `StopAsync` sets the recorder Idle on the 202. `OnStatus` follows
+  only the recorded session once its id is known; while no id is known (idle or starting) it adopts
+  only `recording`/`paused` of an unknown session. A status without a session id still applies.
+  Recovery no longer blocks Start (its `finalizing` is ignored by the recorder). `GuardClosing`
+  waits only 15 s for `Recorder.Idle`.
 - Restart and recovery (Task 7): `SessionManager.resume_pending()` runs in the app lifespan before
   the migration job; `find_interrupted` skips active sessions with `capture_ended_at`; `/recover`
   enqueues a `repair=True` job and no longer holds a slot (`_recovering`, `SessionBeingRecoveredError`
