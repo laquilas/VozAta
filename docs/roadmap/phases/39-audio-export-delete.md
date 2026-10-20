@@ -64,16 +64,16 @@ Audio stays in SQLite: the 1 s chunks are what make crash recovery a non-event, 
 
 ## Acceptance criteria
 
-- [ ] "Delete audio" on a meeting asks for confirmation, removes the player, keeps transcript /
+- [x] "Delete audio" on a meeting asks for confirmation, removes the player, keeps transcript /
       minutes / Ask, and `storage.size_bytes` drops once the space is reclaimed.
-- [ ] "Export recording (.zip)" saves a ZIP that holds the session folder with `mic.wav` and
+- [x] "Export recording (.zip)" saves a ZIP that holds the session folder with `mic.wav` and
       `system.wav` of the full length.
-- [ ] Importing that ZIP into another database adds the meeting with its transcript, minutes,
+- [x] Importing that ZIP into another database adds the meeting with its transcript, minutes,
       speakers, action items and audio.
-- [ ] Importing it after "Delete audio" restores the audio of the same meeting.
-- [ ] Importing a ZIP of a meeting that still has audio, or an invalid ZIP, shows a clear error
+- [x] Importing it after "Delete audio" restores the audio of the same meeting.
+- [x] Importing a ZIP of a meeting that still has audio, or an invalid ZIP, shows a clear error
       and changes nothing.
-- [ ] Both storage backends pass the shared contract tests for `discard`.
+- [x] Both storage backends pass the shared contract tests for `discard`.
 
 ## Tests
 
@@ -89,9 +89,9 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 ## Progress
 
 - **Branch:** `feature/39-audio-export-delete`
-- **Status:** in progress
-- **Updated:** 2026-10-19 17:45
-- **Next step:** manual UI check in the rebuilt app (meeting page: Export recording, Delete audio; Meetings: Import meeting), then tick the acceptance criteria and open the PR.
+- **Status:** done
+- **Updated:** 2026-10-20 10:05
+- **Next step:** none (phase done).
 
 ### Steps
 
@@ -104,7 +104,7 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
 - [x] UI client methods
 - [x] Meeting page: export ZIP and delete audio
 - [x] Meetings page: import and ZIP export entry
-- [ ] Full suites, manual check
+- [x] Full suites, manual check
 
 ### Decisions and notes
 
@@ -124,3 +124,10 @@ slip, oversize, wrong layout). UI: client methods, page and list view models, lo
   35 MB; delete audio took the database from 77.5 MB to 41.3 MB and `mixed` to 404; importing
   the ZIP answered `audio_restored` with the same three track lengths; a second import gave 409
   `session_exists`, a non-ZIP 422. Engine suite: 1,760+ tests, 99 % coverage; UI suite: 709.
+- Manual UI check (2026-10-20, a copy of the database via `DATABASE_PATH`, 10 s meeting
+  `20261016_094548`): "Export recording (.zip)" saved the session folder with `mic.wav` and
+  `system.wav` of 10.4 s each; "Delete audio" asked for confirmation, removed the player and kept
+  the minutes and tabs, and the chunks' pages were freed; "Import meeting" with that ZIP
+  restored the player (10.4 s tracks); a second import showed the `session_exists` message, a
+  non-ZIP the `bundle_invalid` message; after deleting the meeting, importing the ZIP added it
+  back (`imported`). Engine suite: 1,755 passed, 99.88 % coverage; UI suite: 709 passed.

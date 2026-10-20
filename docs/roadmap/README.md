@@ -88,7 +88,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 36 | [Meetings list grouped by day](phases/36-meetings-by-day.md) | 35, 31 | done |
 | 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | done |
 | 38 | [Config page redesign](phases/38-config-page.md) | 35 | done |
-| 39 | [Audio delete, export and import](phases/39-audio-export-delete.md) | 32, 37 | in progress (`feature/39-audio-export-delete`) |
+| 39 | [Audio delete, export and import](phases/39-audio-export-delete.md) | 32, 37 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·
