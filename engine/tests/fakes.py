@@ -138,6 +138,10 @@ class FakeLanguageModel:
         self.available = available
         self.prompts: list[tuple[str, str, dict | None]] = []
         self.releases = 0
+        self.cancels = 0
+
+    def cancel(self) -> None:
+        self.cancels += 1
 
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         self.prompts.append((system, prompt, json_schema))
@@ -163,6 +167,10 @@ class FakeDiarizer:
         self.error = error
         self.calls: list[tuple[Path, int | None, int | None]] = []
         self.closed = False
+        self.cancels = 0
+
+    def cancel(self) -> None:
+        self.cancels += 1
 
     def diarize(
         self, wav: Path, min_speakers: int | None, max_speakers: int | None

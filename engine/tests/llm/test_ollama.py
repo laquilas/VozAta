@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Callable
 
 import httpx
 import pytest
 
 from vozata.llm.ollama import OllamaLanguageModel
-from vozata.ports import LanguageModel, LanguageModelError
+from vozata.ports import Cancellable, LanguageModel, LanguageModelError
 
 URL = "http://ollama.test:11434"
 
@@ -218,3 +219,42 @@ def test_is_available_uses_a_short_timeout() -> None:
     model_with(handler).is_available()
 
     assert seen[0]["read"] == 3.0
+
+
+def test_cancel_during_generate_raises_language_model_error() -> None:
+    started, finish = threading.Event(), threading.Event()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        started.set()
+        finish.wait(5)
+        return chat_reply("late")
+
+    model = model_with(handler)
+    assert isinstance(model, Cancellable)
+    errors: list[Exception] = []
+
+    def work() -> None:
+        try:
+            model.generate("s", "p")
+        except Exception as error:  # noqa: BLE001
+            errors.append(error)
+
+    thread = threading.Thread(target=work)
+    thread.start()
+    assert started.wait(5)
+
+    model.cancel()
+    finish.set()
+    thread.join(5)
+
+    assert len(errors) == 1 and isinstance(errors[0], LanguageModelError)
+    with pytest.raises(LanguageModelError):
+        model.generate("s", "p")
+
+
+def test_cancel_during_stream_raises_language_model_error() -> None:
+    model = model_with(lambda request: chat_reply("x"))
+    model.cancel()
+
+    with pytest.raises(LanguageModelError):
+        list(model.stream("s", "p"))

@@ -11,6 +11,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import threading
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -21,7 +22,7 @@ from vozata.ports import DiarizationError
 CHILD_MODULE = "vozata.diarization.child"
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no console flash under the UI
 
-Runner = Callable[..., subprocess.CompletedProcess[str]]
+Launcher = Callable[..., subprocess.Popen[str]]
 
 
 class SubprocessDiarizer:
@@ -32,12 +33,15 @@ class SubprocessDiarizer:
         hf_token: str,
         device: WhisperDevice,
         command: Sequence[str] = (sys.executable, "-m", CHILD_MODULE),
-        run: Runner = subprocess.run,
+        popen: Launcher = subprocess.Popen,
     ) -> None:
         self._token = hf_token
         self._device = device
         self._command = list(command)
-        self._run = run
+        self._popen = popen
+        self._lock = threading.Lock()
+        self._process: subprocess.Popen[str] | None = None
+        self._cancelled = False
 
     def diarize(
         self, wav: Path, min_speakers: int | None, max_speakers: int | None
@@ -52,25 +56,44 @@ class SubprocessDiarizer:
                 "min_speakers": min_speakers,
                 "max_speakers": max_speakers,
             }
-            completed = self._run(
-                self._command,
-                input=json.dumps(request),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                creationflags=_NO_WINDOW,
-                check=False,
-            )
-            if completed.returncode != 0:
-                raise DiarizationError(
-                    _last_line(completed.stderr) or f"exit {completed.returncode}"
-                )
+            returncode, stderr = self._run_child(json.dumps(request))
+            if self._cancelled:
+                raise DiarizationError("cancelled")
+            if returncode != 0:
+                raise DiarizationError(_last_line(stderr) or f"exit {returncode}")
             try:
                 rows = json.loads(output.read_text(encoding="utf-8"))["turns"]
                 return [SpeakerTurn(float(s), float(e), int(i)) for s, e, i in rows]
             except (OSError, ValueError, KeyError, TypeError) as error:
                 raise DiarizationError(f"unreadable diarizer output: {error}") from error
+
+    def cancel(self) -> None:
+        """Terminate the running child (another thread); `diarize` then raises. No child: no-op."""
+        with self._lock:
+            if self._process is not None:
+                self._cancelled = True
+                self._process.terminate()
+
+    def _run_child(self, request: str) -> tuple[int, str]:
+        with self._lock:
+            self._cancelled = False
+            self._process = self._popen(
+                self._command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                creationflags=_NO_WINDOW,
+            )
+            process = self._process
+        try:
+            _, stderr = process.communicate(request)
+        finally:
+            with self._lock:
+                self._process = None
+        return process.returncode, stderr or ""
 
     def close(self) -> None:
         """Nothing to release: the child process has already exited."""

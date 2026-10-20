@@ -10,7 +10,7 @@ from vozata.formatting import render_line
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.prompts import map_prompt, minutes_prompt, reduce_prompt
 from vozata.minutes.template_repository import LocalizedTemplate
-from vozata.ports import LanguageModel, LanguageModelError, Localizer
+from vozata.ports import Cancellable, LanguageModel, LanguageModelError, Localizer
 
 _log = logging.getLogger(__name__)
 
@@ -78,6 +78,11 @@ class MinutesGenerator:
             for i, part in enumerate(parts, start=1)
         ]
         return self._ask(reduce_prompt(loc, template, notes, language, glossary, title))
+
+    def cancel(self) -> None:
+        """Stop the model's call in flight (another thread); a no-op when it cannot be cancelled."""
+        if isinstance(self._llm, Cancellable):
+            self._llm.cancel()
 
     def _release(self) -> None:
         try:

@@ -10,7 +10,7 @@ from typing import Any
 from vozata.domain import ActionItem, ConversationLanguage, TranscriptSegment, optional_text
 from vozata.formatting import format_timestamp
 from vozata.labels import SpeakerLabeler
-from vozata.ports import LanguageModel, LanguageModelError, Localizer
+from vozata.ports import Cancellable, LanguageModel, LanguageModelError, Localizer
 
 _log = logging.getLogger(__name__)
 
@@ -129,6 +129,11 @@ class ActionItemExtractor:
                 _log.warning("Invalid action-item reply (attempt %d): %s", attempt, error)
                 last = error
         raise ActionItemsError(f"The model did not return valid action items: {last}")
+
+    def cancel(self) -> None:
+        """Stop the model's call in flight (another thread); a no-op when it cannot be cancelled."""
+        if isinstance(self._llm, Cancellable):
+            self._llm.cancel()
 
     def _release(self) -> None:
         try:

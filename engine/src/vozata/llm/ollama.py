@@ -36,6 +36,7 @@ class OllamaLanguageModel:
         self._model = model
         self.keep_alive = keep_alive
         self._client = httpx.Client(base_url=url, timeout=timeout, transport=transport)
+        self._cancelled = False
 
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         body = self._body(system, prompt, stream=False)
@@ -44,6 +45,8 @@ class OllamaLanguageModel:
         try:
             response = self._client.post("/api/chat", json=body)
             response.raise_for_status()
+            if self._cancelled:
+                raise RuntimeError("cancelled")
             return str(response.json()["message"]["content"])
         except (httpx.HTTPError, RuntimeError, ValueError, KeyError, TypeError) as error:
             raise LanguageModelError(f"Ollama chat request failed: {error}") from error
@@ -55,6 +58,8 @@ class OllamaLanguageModel:
             ) as response:
                 response.raise_for_status()
                 for line in response.iter_lines():
+                    if self._cancelled:
+                        raise RuntimeError("cancelled")
                     if not line.strip():
                         continue
                     data = json.loads(line)
@@ -87,6 +92,11 @@ class OllamaLanguageModel:
             self._client.post("/api/chat", json=body).raise_for_status()
         except (httpx.HTTPError, RuntimeError) as error:
             raise LanguageModelError(f"Ollama release failed: {error}") from error
+
+    def cancel(self) -> None:
+        """Abort the call in flight from another thread; it and every later call raise."""
+        self._cancelled = True
+        self._client.close()
 
     def close(self) -> None:
         self._client.close()
