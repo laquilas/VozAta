@@ -19,8 +19,8 @@ from tests.fakes import (
     FakeSessionObserver,
     minutes_template,
 )
+from tests.session_folders import SEGMENTS, make_session_folder
 from tests.test_session import ENDED, SETTINGS, _CheckingMixer, _Log
-from tests.test_session_recover import SEGMENTS, make_session_folder
 from vozata.config import ConfigError
 from vozata.domain import ConversationLanguage, SearchHit, SpeakerTurn, TranscriptSegment
 from vozata.labels import SpeakerLabeler

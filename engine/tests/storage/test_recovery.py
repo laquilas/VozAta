@@ -7,15 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from tests.fakes import FakeSessionObserver
-from tests.test_session import ENDED, STARTED, _Rig
-from tests.test_session_recover import SEGMENTS, make_session_folder, write_wav
+from tests.session_folders import SEGMENTS, make_session_folder, write_wav
+from tests.test_session import ENDED, STARTED
 from vozata.domain import Channel
-from vozata.ports import RecoverableStore, SessionNotFoundError, SessionObserver
+from vozata.ports import RecoverableStore, SessionNotFoundError, StoreRepairError
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repair import repair_transcript
 from vozata.storage.files.repository import FileSessionRepository
-from vozata.storage.recovery import RecoveryError, SessionRecovery, find_interrupted
+from vozata.storage.recovery import SessionRecovery, find_interrupted
 from vozata.storage.session_store import SessionStore
 
 RATE = 16000
@@ -47,27 +46,8 @@ def _break_header(path: Path, cut_bytes: int = 0) -> None:
             file.truncate(file.seek(0, 2) - cut_bytes)
 
 
-class _SpySession:
-    def __init__(self, store: FileSessionRepository) -> None:
-        self.store = store
-        self.calls: list[tuple[str, float]] = []
-
-    def recover(self, session_id: str, duration_seconds: float) -> None:
-        self.calls.append((session_id, duration_seconds))
-        self.store.write_meta(session_id, {**self.store.read_meta(session_id), "status": "done"})
-
-
-def _recovery(
-    store: FileSessionRepository,
-) -> tuple[SessionRecovery, _SpySession, list[SessionObserver]]:
-    spy = _SpySession(store)
-    observers: list[SessionObserver] = []
-
-    def build(session_id: str, observer: SessionObserver) -> _SpySession:
-        observers.append(observer)
-        return spy
-
-    return SessionRecovery(store, _repairs(store), build), spy, observers
+def _recovery(store: FileSessionRepository) -> SessionRecovery:
+    return SessionRecovery(store, _repairs(store))
 
 
 # find_interrupted
@@ -201,126 +181,70 @@ def test_a_missing_or_intact_transcript_is_untouched(tmp_path: Path) -> None:
     assert not (tmp_path / "transcript.jsonl.damaged").exists()
 
 
-# SessionRecovery
+# SessionRecovery (the processing job finishes the meeting, phase 40)
 
 
-def test_recover_repairs_the_files_then_finishes_the_session(tmp_path: Path) -> None:
-    store = _store(tmp_path)
-    session_id = make_session_folder(store, mic_seconds=0.5, system_seconds=1.0)
-    _break_header(store.paths(session_id).wav(Channel.SYSTEM))
-    recovery, spy, observers = _recovery(store)
-    observer = FakeSessionObserver()
-
-    assert recovery.recover(session_id, observer) is True
-
-    assert spy.calls == [(session_id, 1.0)]
-    assert observers == [observer]
-    assert _frames(store.paths(session_id).wav(Channel.MIC)) == RATE
-
-
-def test_recover_is_idempotent(tmp_path: Path) -> None:
-    store = _store(tmp_path)
-    session_id = make_session_folder(store)
-    recovery, spy, _ = _recovery(store)
-
-    assert recovery.recover(session_id, FakeSessionObserver()) is True
-    assert recovery.recover(session_id, FakeSessionObserver()) is False
-    assert len(spy.calls) == 1
-
-
-def test_only_interrupted_sessions_are_recovered(tmp_path: Path) -> None:
+def test_is_interrupted_and_is_resumable_read_the_status(tmp_path: Path) -> None:
     store = _store(tmp_path)
     recording = make_session_folder(store, status="recording")
-    recovery, spy, _ = _recovery(store)
+    interrupted = make_session_folder(store, status="interrupted")
+    stopped = make_session_folder(store, status="finalizing", capture_ended_at=ENDED.isoformat())
+    recovery = _recovery(store)
 
-    assert recovery.is_interrupted(recording) is False
-    assert recovery.recover(recording, FakeSessionObserver()) is False
-    assert spy.calls == []
+    assert (recovery.is_interrupted(recording), recovery.is_interrupted(interrupted)) == (
+        False,
+        True,
+    )
+    assert (recovery.is_resumable(interrupted), recovery.is_resumable(stopped)) == (False, True)
     with pytest.raises(SessionNotFoundError):
-        recovery.recover("20990101_000000", FakeSessionObserver())
-
-
-def test_a_failed_repair_keeps_the_session_interrupted_with_the_reason(tmp_path: Path) -> None:
-    store = _store(tmp_path)
-    session_id = make_session_folder(store)
-    mic = store.paths(session_id).wav(Channel.MIC)
-    mic.write_bytes(b"not a wav at all")
-    recovery, spy, _ = _recovery(store)
-
-    with pytest.raises(RecoveryError, match="RIFF"):
-        recovery.recover(session_id, FakeSessionObserver())
-
-    meta = store.read_meta(session_id)
-    assert meta["status"] == "interrupted"
-    assert "RIFF" in meta["recovery_error"]
-    assert mic.read_bytes() == b"not a wav at all"  # never deletes data
-    assert spy.calls == []
-
-    write_wav(mic, 1.0)  # the user fixed the file by hand: a retry clears the error
-    assert recovery.recover(session_id, FakeSessionObserver()) is True
-    meta = store.read_meta(session_id)
-    assert "recovery_error" not in meta
-    assert meta["ended_at"] is None  # other keys, even null ones, are kept
+        recovery.is_interrupted("20990101_000000")
 
 
 def test_find_interrupted_uses_the_configured_staleness(tmp_path: Path) -> None:
     store = _store(tmp_path)
     fresh = make_session_folder(store, status="recording", last_heartbeat_at=ENDED.isoformat())
-    spy = _SpySession(store)
 
-    assert (
-        SessionRecovery(store, _repairs(store), lambda i, o: spy, stale_after=30).find_interrupted()
-        == []
-    )
-    assert SessionRecovery(store, _repairs(store), lambda i, o: spy).find_interrupted() == [fresh]
-    assert SessionRecovery(store, _repairs(store), lambda i, o: spy).store is store
+    assert SessionRecovery(store, _repairs(store), stale_after=30).find_interrupted() == []
+    assert _recovery(store).find_interrupted() == [fresh]
+    assert _recovery(store).store is store
 
 
-def test_recover_runs_the_real_stop_steps_on_a_crashed_folder(tmp_path: Path) -> None:
-    rig = _Rig(tmp_path)
-    rig.store.now()  # the rig's first moment is the start
-    session_id = make_session_folder(rig.store, status="recording", mic_seconds=1.0)
-    paths = rig.store.paths(session_id)
-    _break_header(paths.wav(Channel.MIC))
-    _break_header(paths.wav(Channel.SYSTEM), cut_bytes=RATE)  # system lost its last 0.5 s
+def test_repair_fixes_a_crashed_folder_and_returns_the_longest_length(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    session_id = make_session_folder(store, status="recording", mic_seconds=0.5)
+    paths = store.paths(session_id)
+    _break_header(paths.wav(Channel.SYSTEM))
     with paths.transcript_jsonl.open("a", encoding="utf-8") as file:
         file.write('{"segment_id": "system-00')
-    recovery = SessionRecovery(
-        rig.store, [rig.audio, rig.store], lambda session_id, observer: rig.session
-    )
 
-    assert recovery.find_interrupted() == [session_id]
-    assert recovery.recover(session_id, rig.observer) is True
+    assert _recovery(store).repair(session_id) == 1.0
 
-    assert rig.mixer.lengths == (RATE, RATE)  # mixed from equal, repaired tracks
-    assert rig.log.entries == ["mix", "llm.generate"]
-    assert paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
-    meta = rig.store.read_meta(session_id)
-    assert (meta["status"], meta["duration_seconds"]) == ("done", 1.0)
-    assert [s.segment_id for s in rig.store.load_transcript(session_id)] == [
+    assert _frames(paths.wav(Channel.MIC)) == _frames(paths.wav(Channel.SYSTEM)) == RATE
+    assert [s.segment_id for s in store.load_transcript(session_id)] == [
         "mic-000001",
         "system-000002",
     ]
-    assert recovery.recover(session_id, rig.observer) is False  # idempotent
 
 
-def test_repair_is_public_and_returns_the_longest_length(tmp_path: Path) -> None:
+def test_a_failed_repair_raises_and_never_deletes_data(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    session_id = make_session_folder(store, mic_seconds=0.5, system_seconds=1.0)
-    _break_header(store.paths(session_id).wav(Channel.SYSTEM))
-    recovery, spy, _ = _recovery(store)
+    session_id = make_session_folder(store)
+    mic = store.paths(session_id).wav(Channel.MIC)
+    mic.write_bytes(b"not a wav at all")
 
-    assert recovery.repair(session_id) == 1.0
-    assert _frames(store.paths(session_id).wav(Channel.MIC)) == RATE
-    assert spy.calls == []  # only the files: the stop steps are the processing job's
+    with pytest.raises(StoreRepairError, match="RIFF"):
+        _recovery(store).repair(session_id)
+
+    assert mic.read_bytes() == b"not a wav at all"
+    write_wav(mic, 1.0)  # the user fixed the file by hand: a retry works
+    assert _recovery(store).repair(session_id) == 1.0
 
 
 def test_fail_stores_the_reason_and_marks_the_session_interrupted(tmp_path: Path) -> None:
     store = _store(tmp_path)
     session_id = make_session_folder(store, status="finalizing")
-    recovery, _, _ = _recovery(store)
 
-    recovery.fail(session_id, "bad header")
+    _recovery(store).fail(session_id, "bad header")
 
     meta = store.read_meta(session_id)
     assert (meta["status"], meta["recovery_error"]) == ("interrupted", "bad header")

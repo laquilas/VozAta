@@ -416,9 +416,11 @@ once repaired, so a further restart resumes it. The repair step is `SessionRecov
 and transcript, below); when it fails the step stores `recovery_error`, marks the session
 `interrupted`, sends `error` `recovery_failed` and aborts the job (`AbortJob`): it ends `failed`
 and no later step runs. The transcribe step then continues from each channel's last committed
-segment (`resume_points`), after the repair set a half-written last line aside. Recovering
-(`POST /sessions/{id}/recover`, `python -m vozata recover [<dir> | --all]`; the CLI runs the
-older inline path for `interrupted` sessions). A meeting a CLI `record` left `finalizing` with
+segment (`resume_points`), after the repair set a half-written last line aside. Recovering:
+`POST /sessions/{id}/recover` enqueues that job; `python -m vozata recover [<dir> | --all]` runs
+the same job inline (`build_resume_job`: repair, transcribe the rest from the stored audio, stop
+steps) for each `interrupted` session. `SessionRecovery` only finds and repairs; there is no
+other recovery path. A meeting a CLI `record` left `finalizing` with
 `capture_ended_at` (it crashed in its inline job) is not listed by `recover --all`, since another
 process may still be running it; it is resumed by `serve` at start or by `recover <dir>`, which
 runs the same job (repair, transcribe the rest, stop steps) inline. Known limitation: a `serve`
@@ -430,7 +432,7 @@ graph LR
   I[interrupted] --> R[repair_wav both tracks: RIFF/data sizes from the file size]
   R --> P[pad_wav to the longest track]
   P --> T[unreadable transcript.jsonl lines moved to transcript.jsonl.damaged]
-  T --> F["status finalizing; CLI: RecordingSession.recover(), serve: transcribe + stop steps in the queue"]
+  T --> F["status finalizing; transcribe the rest + stop steps (serve: in the queue, CLI: inline)"]
   F --> D[done]
   R -- header unreadable --> E[stays interrupted + recovery_error]
 ```

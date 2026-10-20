@@ -14,7 +14,7 @@ from tests.api.conftest import (
     SessionFactory,
     make_manager,
 )
-from tests.test_session_recover import make_session_folder
+from tests.session_folders import make_session_folder
 from vozata.api.session_manager import (
     NoActiveSessionError,
     SessionConflictError,

@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
-from tests.test_session_recover import make_session_folder, segment, write_wav
+from tests.session_folders import make_session_folder, segment, write_wav
 from vozata import bootstrap, bootstrap_processing
 from vozata.config import Settings
 from vozata.domain import (

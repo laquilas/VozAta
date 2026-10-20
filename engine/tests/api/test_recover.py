@@ -5,15 +5,13 @@ from __future__ import annotations
 import threading
 from collections.abc import Collection, Iterator
 from pathlib import Path
-from typing import NoReturn
 
 import pytest
 
 from tests.api.conftest import Api, RecordingBroadcaster, make_manager
-from tests.test_session_recover import make_session_folder
+from tests.session_folders import make_session_folder
 from vozata.api.session_manager import session_observer
 from vozata.domain import SessionStatus
-from vozata.ports import SessionObserver
 from vozata.processing.job import ProcessingJob, Step, StepKind
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repository import FileSessionRepository
@@ -30,10 +28,7 @@ class _Rig:
         self.api = Api(tmp_path, recovery=self._recovery, jobs=self._jobs)
 
     def _recovery(self, store: FileSessionRepository) -> SessionRecovery:
-        def build(session_id: str, observer: SessionObserver) -> NoReturn:
-            raise AssertionError("the job runs the stop steps")
-
-        return SessionRecovery(store, [FileAudioStore(store.store, 16000), store], build)
+        return SessionRecovery(store, [FileAudioStore(store.store, 16000), store])
 
     def _jobs(self, api: Api):  # type: ignore[no-untyped-def]
         def make(session_id: str, repair: bool, closed: threading.Event | None) -> ProcessingJob:

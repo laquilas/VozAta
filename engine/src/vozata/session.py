@@ -30,7 +30,6 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
-from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import ProcessingJob, run_job_inline
 from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn, ModelLoadSkipped
@@ -119,7 +118,7 @@ class RecordingSession:
         self._id: str | None = None
         self._captured: float | None = None  # recorded length, fixed once capture stops
         self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
-        self._pipeline: CapturePipeline | None = None  # None until `start()`, and on `recover()`
+        self._pipeline: CapturePipeline | None = None  # None until `start()`
         self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
         self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
 
@@ -311,38 +310,6 @@ class RecordingSession:
         if self._abandoned.is_set():  # stopped while the previous session's models closed
             raise ModelLoadSkipped
         hold()
-
-    def recover(self, session_id: str, duration_seconds: float) -> None:
-        """Finish an interrupted session whose audio and transcript were repaired (phase 17).
-
-        Runs the same `_finish()` sequence as `stop()` (mix onwards), so every stop step also
-        runs on recovery. `duration_seconds` is the recorded length found in the repaired audio.
-        """
-        if self._id is not None:
-            raise RuntimeError("A session can only be started or recovered once")
-        meta = self._store.read_meta(session_id)
-        self._id = session_id
-        self._meta = SessionMeta.restore(self._store, session_id, meta)
-        language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
-        self._lock = LanguageLock(language, self._on_language_detected)
-        self._captured = duration_seconds
-        self._meta.captured(duration_seconds)
-        self._set_status(SessionStatus.FINALIZING)
-        self._start_heartbeat()
-        self._finish()
-
-    def _finish(self) -> None:
-        """Stop steps 3 (mix) to 7, shared by `stop()` and `recover()` (phase 17)."""
-        finisher = self._finisher()
-        token = CancelToken()  # a live stop is never cancelled
-        finisher.mix()  # 3
-        finisher.identify_speakers(token)  # 5
-        finisher.write_minutes(token)  # 6
-        finisher.extract_action_items(token)  # 6: action items (phase 23)
-        finisher.index()  # 6: search (phase 22)
-        finisher.ended(self._store.now())  # 7
-        self._set_status(SessionStatus.DONE)
-        self._stop_heartbeat()
 
     def _finisher(self) -> SessionFinisher:
         return SessionFinisher(

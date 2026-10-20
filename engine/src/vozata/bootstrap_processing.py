@@ -9,7 +9,6 @@ from __future__ import annotations
 import functools
 import threading
 from pathlib import Path
-from typing import NoReturn
 
 from vozata import bootstrap as root
 from vozata.config import Settings
@@ -110,10 +109,6 @@ def _detected(store: SessionRepository, session_id: str, language: ConversationL
     )
 
 
-def _no_stop_steps(session_id: str, observer: SessionObserver) -> NoReturn:
-    raise RuntimeError("the processing job runs the stop steps itself")
-
-
 def _repair(
     settings: Settings,
     store: SessionRepository,
@@ -128,7 +123,7 @@ def _repair(
     `recovery_error`, an `error` event says so, and the job ends `failed` (`AbortJob`).
     """
     repairs = [part for part in (audio, store) if isinstance(part, RecoverableStore)]
-    recovery = SessionRecovery(store, repairs, _no_stop_steps)
+    recovery = SessionRecovery(store, repairs)
     try:
         length = recovery.repair(session_id)
     except StoreRepairError as error:
@@ -155,8 +150,9 @@ def build_resume_job(
     session_id: str,
     observer: SessionObserver,
 ) -> ProcessingJob:
-    """The job the CLI `recover <dir>` runs inline on a meeting left `finalizing` (phase 40):
-    repair, transcribe the rest, then the stop steps. Nothing is gated or shared in the CLI."""
+    """The job the CLI `recover` runs inline on an `interrupted` meeting or one left `finalizing`
+    (phase 40): repair (which makes it `finalizing`), transcribe the rest, then the stop steps.
+    Nothing is gated or shared in the CLI."""
     return build_processing_job(
         settings,
         root.build_store(settings, output_dir),

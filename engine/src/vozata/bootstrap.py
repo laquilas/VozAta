@@ -637,20 +637,6 @@ def _stored_components(
     return components, meta
 
 
-def build_recovery_session(
-    settings: Settings,
-    store: SessionRepository,
-    audio: SessionAudio,
-    observer: SessionObserver,
-    session_id: str,
-) -> RecordingSession:
-    """A `RecordingSession` that finishes an interrupted session (phase 17)."""
-    components, _ = _stored_components(settings, store, session_id)
-    return RecordingSession(
-        settings, store, audio, components, observer, settings.transcription_language
-    )
-
-
 def build_finisher(
     settings: Settings,
     store: SessionRepository,
@@ -686,25 +672,14 @@ def build_recovery(
     store: SessionRepository | None = None,
     audio: SessionAudio | None = None,
     stale_after: float = 0.0,
-    current: Callable[[], Settings] | None = None,
-    before_finish: Callable[[], None] = lambda: None,
 ) -> SessionRecovery:
-    """Crash recovery over `store` / `audio` (default: those of `output_dir`, else `OUTPUT_DIR`).
-
-    `current` gives the settings each recovery uses (`serve`: the ones saved through
-    `PUT /settings`); `before_finish` runs before the stop steps (`serve`: unload a kept Whisper,
-    VRAM rule). `stale_after` > 0 leaves alone sessions with a recent heartbeat (CLI).
-    """
+    """Crash recovery over `store` / `audio` (default: those of `output_dir`, else `OUTPUT_DIR`):
+    finds `interrupted` sessions and repairs their files; their processing job finishes them.
+    `stale_after` > 0 leaves alone sessions with a recent heartbeat (CLI)."""
     store = store or build_store(settings, output_dir)
     audio = audio or build_audio_store(settings, output_dir)
-    settings_now = current or (lambda: settings)
-
-    def session(session_id: str, observer: SessionObserver) -> RecordingSession:
-        before_finish()
-        return build_recovery_session(settings_now(), store, audio, observer, session_id)
-
     repairs = [part for part in (audio, store) if isinstance(part, RecoverableStore)]
-    return SessionRecovery(store, repairs, session, stale_after)
+    return SessionRecovery(store, repairs, stale_after)
 
 
 def cli_stale_after(settings: Settings) -> float:
@@ -828,13 +803,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
 
     _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
     search_index = build_search_index(settings)
-    recovery = build_recovery(  # phase 17: only sessions not live in this process
-        settings,
-        store=store,
-        audio=audio,
-        current=lambda: settings_file.current,
-        before_finish=shared.release if shared is not None else lambda: None,
-    )
+    recovery = build_recovery(settings, store=store, audio=audio)  # 17: sessions not live here
     manager = SessionManager(
         session_factory,
         store,
