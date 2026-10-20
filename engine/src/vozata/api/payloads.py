@@ -20,9 +20,13 @@ def segment_payload(segment: TranscriptSegment, labeler: SpeakerLabeler) -> dict
 
 
 def session_summary(
-    store: SessionRepository, session_id: str, live_duration: float | None = None
+    store: SessionRepository,
+    session_id: str,
+    live_duration: float | None = None,
+    processing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """`SessionSummary` from the metadata; `live_duration` for the session being recorded."""
+    """`SessionSummary` from the metadata; `live_duration` for the session being recorded and
+    `processing` (`ProcessingState.to_payload()`) while the meeting is in the queue (phase 40)."""
     meta = store.read_meta(session_id)
     return {
         "id": session_id,
@@ -36,6 +40,7 @@ def session_summary(
         "speaker_count": store.speaker_count(session_id),  # phase 36
         "has_action_items": bool(store.read_action_items(session_id)),
         "template": meta.get("template") if isinstance(meta.get("template"), str) else None,
+        "processing": processing,  # phase 40; None when not queued or processed
     }
 
 

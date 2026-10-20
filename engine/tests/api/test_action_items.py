@@ -28,7 +28,7 @@ class _Rig:
         self.targets = ["github"]
         api.app.state.container = dataclasses.replace(
             api.app.state.container,
-            extract_action_items=self.extracted.append,
+            extract_action_items=lambda session_id: self.extracted.append(session_id) or True,
             task_targets=lambda: list(self.targets),
             task_exporter=lambda target: self.exporter if target in self.targets else None,
         )
@@ -113,6 +113,19 @@ def test_post_is_refused_while_the_session_records(api: Api) -> None:
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "action_items_still_recording"
     assert rig.extracted == []
+
+
+def test_post_while_the_meeting_is_in_the_queue_is_409(api: Api) -> None:
+    rig = _Rig(api)
+    session_id = rig.session()
+    api.app.state.container = dataclasses.replace(
+        api.app.state.container, extract_action_items=lambda session_id: False
+    )
+
+    response = api.client.post(f"/sessions/{session_id}/action-items")
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "session_still_active"
 
 
 def test_post_without_an_extractor_is_503(api: Api) -> None:

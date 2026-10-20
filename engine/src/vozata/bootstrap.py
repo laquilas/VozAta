@@ -5,12 +5,14 @@ New providers are added to a registry here; orchestrators never change.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import functools
 import logging
 import os
 import threading
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -79,7 +81,7 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
-from vozata.processing.gpu_gate import GpuGate, GpuUsage, gpu_usage
+from vozata.processing.gpu_gate import GpuGate, GpuUsage, GpuUser, gpu_usage
 from vozata.processing.job import ProcessingJob
 from vozata.processing.live_lease import LiveModelTurn
 from vozata.processing.queue import ProcessingQueue, ProcessingState
@@ -814,11 +816,6 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             live_models=live_models,
         )
 
-    def minutes_generator(template: str | None = None) -> MinutesGenerator:
-        if shared is not None:
-            shared.release()  # VRAM rule: never Whisper and the LLM together
-        return build_minutes_generator(settings_file.current, None, template)  # current language
-
     def llm_reachable() -> bool:
         current = settings_file.current
         model = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", current.llm_provider)(current)
@@ -848,19 +845,35 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         job_factory=job_factory,
     )
 
-    def answerer() -> MeetingAnswerer:
+    def free_whisper() -> None:
+        """VRAM rule: unload the kept Whisper before the language model loads, unless a recording
+        is using it right now (asked under its lease, the unload would still happen when the
+        recording ends, dropping a model it keeps loaded)."""
         current = manager.current
         recording = current is not None and current.status in _ACTIVE
         if shared is not None and not recording:
-            shared.release()  # VRAM rule, unless a recording is using the model right now
+            shared.release()
+
+    def minutes_generator(template: str | None = None) -> MinutesGenerator:
+        free_whisper()
+        return build_minutes_generator(settings_file.current, None, template)  # current language
+
+    def answerer() -> MeetingAnswerer:
+        free_whisper()
         return build_answerer(settings_file.current, store, search_index)  # current language
 
     def action_item_extractor() -> ActionItemExtractor:
-        current = manager.current
-        recording = current is not None and current.status in _ACTIVE
-        if shared is not None and not recording:
-            shared.release()  # VRAM rule, as for answers
+        free_whisper()
         return build_action_item_extractor(settings_file.current)  # current language
+
+    def llm_on_gpu() -> bool:
+        return usage(settings_file.current).llm
+
+    def check_priority(current: Settings) -> AbstractContextManager[None]:
+        return gate.priority(GpuUser.CHECK) if usage(current).llm else contextlib.nullcontext()
+
+    def index(session_id: str) -> None:
+        search_index.index_session(session_id, store.load_transcript(session_id))
 
     options = build_setting_options(lambda: settings_file.current, lambda: gpu_info().available)
     threading.Thread(
@@ -878,14 +891,30 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         devices=WasapiCatalog(),
         gpu_info=gpu_info,
         llm_reachable=llm_reachable,
-        regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
+        regenerate_minutes=MinutesJob(
+            store,
+            minutes_generator,
+            labeler,
+            broadcaster,
+            localizer,
+            queue=queue,
+            uses_gpu=llm_on_gpu,
+            index=index,
+        ),
         release_models=shared.release if shared is not None else lambda: None,
         exporters={name: build() for name, build in EXPORTERS.items()},
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
-        ask=AskJob(answerer, broadcaster, localizer),
+        ask=AskJob(answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu),
         extract_action_items=ActionItemsJob(
-            store, action_item_extractor, labeler, broadcaster, localizer
+            store,
+            action_item_extractor,
+            labeler,
+            broadcaster,
+            localizer,
+            queue=queue,
+            uses_gpu=llm_on_gpu,
+            index=index,
         ),
         task_targets=lambda: task_targets(settings_file.current),
         task_exporter=lambda target: build_task_exporter(settings_file.current, target),
@@ -895,5 +924,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         migration=migration,
         bundle_importer=build_bundle_importer(settings),
         setting_options=options.collect,
-        connection_check=ConnectionChecks((DIARIZATION_MODEL, EMBEDDING_MODEL)).run,
+        connection_check=ConnectionChecks(
+            (DIARIZATION_MODEL, EMBEDDING_MODEL), priority=check_priority
+        ).run,
     )

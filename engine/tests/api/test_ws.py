@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
+import threading
+import time
 
 from fastapi.testclient import TestClient
 
-from tests.api.conftest import Api
+from tests.api.conftest import Api, hold_in_queue
 from vozata.api.app import create_app
 from vozata.domain import Channel, TranscriptSegment
+from vozata.processing.job import ProcessingJob, Step, StepKind
 
 SESSION = "20261015_202358"
 
@@ -116,3 +119,64 @@ def test_models_are_released_when_the_api_shuts_down(api: Api) -> None:
         assert released == []
 
     assert released == [True]
+
+
+def test_ws_connect_sends_processing_snapshot_after_status(api: Api) -> None:
+    running = hold_in_queue(api.manager, "20261014_090000")
+    queued = hold_in_queue(api.manager, SESSION)
+    queued.set()
+    assert _wait_for(lambda: api.manager._queue.state("20261014_090000").state == "running")
+
+    with api.client.websocket_connect("/ws") as ws:
+        first = ws.receive_json()
+        snapshot = [ws.receive_json(), ws.receive_json()]
+        api.broadcaster.publish("minutes_ready", SESSION, {"session_id": SESSION})
+        after = ws.receive_json()
+
+    running.set()
+    assert api.manager._queue.wait_idle(5)
+    assert first["type"] == "status"
+    assert snapshot == [
+        {
+            "type": "processing",
+            "session_id": "20261014_090000",
+            "data": {"state": "running", "percent": 0, "step": "index"},
+        },
+        {
+            "type": "processing",
+            "session_id": SESSION,
+            "data": {"state": "queued", "percent": 0, "step": None, "position": 1},
+        },
+    ]
+    assert after["type"] == "minutes_ready"
+
+
+def test_ws_connect_snapshot_skips_a_meeting_that_is_already_done(api: Api) -> None:
+    finishing = threading.Event()
+    release = threading.Event()
+
+    def on_finished() -> None:
+        finishing.set()
+        assert release.wait(5)
+
+    step = Step(StepKind.INDEX, 1.0, False, lambda token, progress: None)
+    assert api.manager._queue.enqueue(ProcessingJob(SESSION, (step,), on_finished=on_finished))
+    assert finishing.wait(5)  # the queue lists it as `done` during `on_finished`
+
+    with api.client.websocket_connect("/ws") as ws:
+        assert ws.receive_json()["type"] == "status"
+        api.broadcaster.publish("minutes_ready", SESSION, {"session_id": SESSION})
+        after = ws.receive_json()
+
+    release.set()
+    assert api.manager._queue.wait_idle(5)
+    assert after["type"] == "minutes_ready"
+
+
+def _wait_for(condition, timeout: float = 5.0) -> bool:  # type: ignore[no-untyped-def]
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if condition():
+            return True
+        time.sleep(0.01)
+    return False

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import dataclasses
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import httpx
@@ -387,3 +388,33 @@ def test_every_result_code_has_a_message_in_every_language(language: str) -> Non
     ):
         text = localizer.t(f"settings_test.{code}", **params)
         assert text and not text.startswith("settings_test.")
+
+
+def test_connection_check_holds_check_priority() -> None:
+    held: list[bool] = []
+    entered: list[Settings] = []
+
+    @contextlib.contextmanager
+    def priority(settings: Settings) -> Iterator[None]:
+        entered.append(settings)
+        held.append(True)
+        try:
+            yield
+        finally:
+            held.append(False)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.url.host, held[-1] if held else False))
+        if request.url.host == "ollama.test":
+            return httpx.Response(200, json={"models": [{"name": "qwen2.5:7b"}]})
+        return httpx.Response(200, json={})
+
+    seen: list[tuple[str | None, bool]] = []
+    checks = ConnectionChecks(HF_MODELS, transport=httpx.MockTransport(handler), priority=priority)
+    settings = _settings()
+
+    assert checks.run(CheckTarget.OLLAMA, settings).ok
+    assert checks.run(CheckTarget.GITHUB, settings).ok
+
+    assert seen == [("ollama.test", True), ("api.github.com", False)]  # only the model test
+    assert entered == [settings]

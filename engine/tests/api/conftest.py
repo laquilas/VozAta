@@ -330,8 +330,8 @@ class Api:
             devices=self.devices,
             gpu_info=lambda: self.gpu,
             llm_reachable=lambda: self.reachable,
-            regenerate_minutes=lambda session_id, template: self.regenerated.append(
-                (session_id, template)
+            regenerate_minutes=lambda session_id, template: (
+                self.regenerated.append((session_id, template)) or True
             ),
             vocabulary_file=lambda: self.vocabulary_file,
             migration=migration(self) if migration is not None else None,  # phase 33

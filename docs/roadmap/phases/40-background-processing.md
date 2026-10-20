@@ -195,9 +195,8 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 20:30
-- **Next step:** Task 8 of `plans/40-background-processing.md` (API, events and other model
-  users).
+- **Updated:** 2026-10-20 22:30
+- **Next step:** Task 9 of `plans/40-background-processing.md` (UI client and recorder).
 
 ### Steps
 
@@ -209,13 +208,24 @@ close-with-pending message; locale parity.
 - [x] Processing job and queue (04afa22; fix round 1: this commit)
 - [x] Stop frees the recorder (c7756b8, dab272b; fix round 1: ddaf3fb; fix round 2: this commit)
 - [x] Restart and recovery through the queue (478d112; fix round 1: this commit)
-- [ ] API, events and other model users
+- [x] API, events and other model users (this commit)
 - [ ] UI client and recorder
 - [ ] Meetings and meeting page indicators
 - [ ] Shell indicator and close warning
 - [ ] Full suites, manual check
 
 ### Decisions and notes
+
+- API and other model users (Task 8): `SessionSummary.processing` and the connect snapshot come
+  from `SessionManager.processing()` / `processing_messages()`, which leave out a job already
+  `done`/`failed` (the queue still lists it during `on_finished`). `POST .../minutes` and
+  `POST .../action-items` enqueue a model step + `index` (`api/model_job.py`; 409
+  `session_still_active` when the meeting is already in the queue); the model step is a GPU step
+  when `gpu_usage().llm` and builds a fresh generator / extractor per attempt. The kept Whisper is
+  released before a language model loads only when no recording holds it (`free_whisper` in
+  `bootstrap.py`, shared by minutes, action items and Ask). Ask holds `GpuUser.ASK` and the
+  Config `ollama` test `GpuUser.CHECK` only when the language model runs on the local GPU. The
+  `session_still_active` message no longer mentions deletion (minutes / action items use it too).
 
 - Restart and recovery (Task 7): `SessionManager.resume_pending()` runs in the app lifespan before
   the migration job; `find_interrupted` skips active sessions with `capture_ended_at`; `/recover`

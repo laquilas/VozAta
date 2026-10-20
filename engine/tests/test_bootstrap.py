@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -25,6 +26,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    SessionStatus,
     StorageInfo,
 )
 from vozata.llm.ollama import OllamaLanguageModel
@@ -400,6 +402,11 @@ def test_the_api_container_shares_the_transcriber_when_keep_loaded(
     shared.lease(keep=True).close()
     container.release_models()  # API shutdown
     assert not shared.loaded and fakes[1].closed
+    shared.lease(keep=True)  # a live session holds the model
+    container.manager._session = SimpleNamespace(status=SessionStatus.RECORDING)
+    container.regenerate_minutes._build_generator()  # never unloads the live Whisper
+    container.manager._session = None
+    assert shared.loaded and not shared._unload
 
 
 def test_without_keep_loaded_sessions_load_their_own_transcriber(
@@ -695,3 +702,25 @@ def test_the_api_container_queues_stopped_meetings_with_their_events(
     )
     assert published[1] == ("status", session_id, {"status": "done", "duration_seconds": 0.0})
     assert container.store.read_meta(session_id)["status"] == "done"
+
+
+def test_ask_and_the_model_test_take_gpu_priority_only_for_a_local_gpu_llm(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata.api.system_info import GpuInfo
+
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(True, "RTX 3050", 6144))
+    container = bootstrap.build_api_container(_settings(tmp_path, llm_provider="ollama"))
+    gate = container.manager._queue._gate
+
+    assert container.ask._gate is gate and container.ask._uses_gpu() is True
+    checks = container.connection_check.__self__
+    with checks._priority(container.settings_file.current):
+        assert gate.priority_held
+    container.settings_file.update({"LLM_PROVIDER": "fake"})
+    assert container.ask._uses_gpu() is False
+    with checks._priority(container.settings_file.current):
+        assert not gate.priority_held
+    assert container.regenerate_minutes._uses_gpu() is False
+    assert container.extract_action_items._uses_gpu() is False

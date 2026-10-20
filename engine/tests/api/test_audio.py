@@ -234,3 +234,21 @@ def test_deleting_the_audio_of_a_queued_session_is_409(api: Api, recorded: str) 
     release.set()
     assert api.manager._queue.wait_idle(5)
     assert response.status_code == 409
+
+
+def test_delete_and_delete_audio_refused_while_queued_then_allowed(
+    api: Api, recorded: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(api.manager, "_store", api.app.state.container.store)
+    release = hold_in_queue(api.manager, recorded)
+
+    audio_refused = api.client.delete(f"/sessions/{recorded}/audio")
+    delete_refused = api.client.delete(f"/sessions/{recorded}")
+
+    release.set()
+    assert api.manager._queue.wait_idle(5)
+    assert (audio_refused.status_code, delete_refused.status_code) == (409, 409)
+    assert audio_refused.json()["error"]["code"] == "session_still_active"
+    assert delete_refused.json()["error"]["code"] == "session_still_active"
+    assert api.client.delete(f"/sessions/{recorded}/audio").status_code == 204
+    assert api.client.delete(f"/sessions/{recorded}").status_code == 204

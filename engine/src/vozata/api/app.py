@@ -80,6 +80,8 @@ def create_app(container: ApiContainer) -> FastAPI:
         client = container.broadcaster.subscribe()
         try:
             await websocket.send_json(container.manager.status_message())
+            for message in container.manager.processing_messages():  # phase 40
+                await websocket.send_json(message)
             if container.migration is not None and container.migration.is_running():
                 await websocket.send_json(container.migration.progress_message())  # phase 33
             interrupted = await asyncio.to_thread(container.manager.interrupted_sessions)

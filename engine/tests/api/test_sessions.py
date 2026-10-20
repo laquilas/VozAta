@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.api.conftest import START_ERROR, Api
+from tests.api.conftest import START_ERROR, Api, hold_in_queue
 from vozata.domain import Channel, ConversationLanguage, StorageInfo, TranscriptSegment
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.repository import SqliteSessionRepository
@@ -156,6 +156,7 @@ def test_list_sessions_newest_first_with_paging(api: Api) -> None:
         "speaker_count": 0,
         "has_action_items": False,
         "template": None,
+        "processing": None,
     }
 
 
@@ -382,3 +383,32 @@ def test_a_diarized_transcript_is_labeled_per_speaker_with_stored_names(api: Api
     assert body["source"] == "diarized"
     labels = [(s["speaker_id"], s["label"]) for s in body["segments"]]
     assert labels == [("system:1", "labels.user(n=1)"), ("system:2", "Ana")]
+
+
+def test_regenerate_minutes_of_a_meeting_still_in_the_queue_is_409(api: Api) -> None:
+    _recorded(api)
+    api.app.state.container = dataclasses.replace(
+        api.app.state.container, regenerate_minutes=lambda session_id, template: False
+    )
+
+    response = api.client.post(f"/sessions/{SESSION}/minutes")
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "session_still_active"
+
+
+def test_summary_has_processing_while_queued_and_null_after(api: Api) -> None:
+    _recorded(api)
+    running = hold_in_queue(api.manager, "20261014_090000")  # another meeting runs first
+    queued = hold_in_queue(api.manager, SESSION)
+    queued.set()
+
+    detail = api.client.get(f"/sessions/{SESSION}").json()
+    listed = api.client.get("/sessions").json()["items"][0]
+
+    running.set()
+    assert api.manager._queue.wait_idle(5)
+    assert detail["processing"] == {"state": "queued", "percent": 0, "step": None, "position": 1}
+    assert listed["processing"] == detail["processing"]
+    assert api.client.get(f"/sessions/{SESSION}").json()["processing"] is None
+    assert api.client.get("/sessions").json()["items"][0]["processing"] is None

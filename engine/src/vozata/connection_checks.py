@@ -8,8 +8,10 @@ outcome only.
 from __future__ import annotations
 
 import base64
+import contextlib
 import logging
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from urllib.parse import quote, urlparse
@@ -32,6 +34,10 @@ class CheckTarget(StrEnum):
     GITHUB = "github"
 
 
+MODEL_TARGETS = frozenset({CheckTarget.OLLAMA})  # tests of a model that may run on the GPU
+_NO_PRIORITY = contextlib.nullcontext()
+
+
 @dataclass(frozen=True)
 class CheckResult:
     """`ok` and the locale key (under `settings_test`) of the message, with its parameters."""
@@ -49,7 +55,11 @@ class ConnectionChecks:
         hf_models: Sequence[str],
         transport: httpx.BaseTransport | None = None,
         timeout: float = 10.0,
+        priority: Callable[[Settings], AbstractContextManager[None]] | None = None,
     ) -> None:
+        # phase 40: the model tests run under the Config-test GPU priority (`priority(settings)`
+        # is a no-op unless the model runs on the local GPU)
+        self._priority = priority or (lambda settings: contextlib.nullcontext())
         self._hf_models = tuple(hf_models)  # gated pyannote models the HF token must open
         self._transport = transport
         self._timeout = timeout
@@ -66,7 +76,9 @@ class ConnectionChecks:
             with httpx.Client(
                 timeout=self._timeout, transport=self._transport, follow_redirects=False
             ) as client:
-                result = self._checks[target](client, settings)
+                gpu = self._priority(settings) if target in MODEL_TARGETS else _NO_PRIORITY
+                with gpu:
+                    result = self._checks[target](client, settings)
         except httpx.HTTPError as error:
             host = urlparse(str(error.request.url)).hostname if _has_request(error) else None
             result = CheckResult(False, "unreachable", {"host": host or "?"})

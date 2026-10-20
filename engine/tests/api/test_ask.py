@@ -16,6 +16,10 @@ from vozata.domain import Channel, Citation, TranscriptSegment
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
 from vozata.ports import LanguageModelError
+from vozata.processing.cancel import CancelToken, StepCancelled
+from vozata.processing.gpu_gate import GpuGate
+from vozata.processing.job import ProcessingJob, Step, StepKind
+from vozata.processing.queue import ProcessingQueue
 from vozata.qa.answerer import Answer, MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.storage.search_index import SearchIndex
@@ -258,3 +262,66 @@ def test_end_to_end_with_the_real_answerer_and_index(tmp_path: Path) -> None:
         ),
     ]
     assert llm.releases == 1
+
+
+def test_ask_cancels_running_llm_step_and_the_step_is_redone() -> None:
+    gate = GpuGate()
+    queue = ProcessingQueue(gate, lambda state: None)
+    attempts: list[str] = []
+    running = threading.Event()
+
+    def llm_step(token: CancelToken, progress: Callable[[float], None]) -> None:
+        attempts.append("answering" if gate.priority_held else "free")
+        if len(attempts) == 1:
+            running.set()
+            cancelled = threading.Event()
+            token.on_cancel(cancelled.set)
+            assert cancelled.wait(5)
+            raise StepCancelled
+
+    step = Step(StepKind.MINUTES, 1.0, True, llm_step)
+    queue.start()
+    assert queue.enqueue(ProcessingJob(SESSION, (step,), on_finished=lambda: None))
+    assert running.wait(5)
+    held: list[bool] = []
+
+    class Answering(StubAnswerer):
+        def answer(self, question, session_id, on_chunk):  # type: ignore[no-untyped-def]
+            held.append(gate.priority_held)
+            return super().answer(question, session_id, on_chunk)
+
+    broadcaster = RecordingBroadcaster()
+    ask = AskJob(
+        lambda: Answering(["ok"]), broadcaster, FakeLocalizer(), gate=gate, uses_gpu=lambda: True
+    )
+    assert ask.start("a1", "Who?", None)
+    assert ask.wait(5)
+    assert queue.wait_idle(5)
+    queue.stop()
+
+    assert held == [True]
+    assert attempts == ["free", "free"]  # redone once the answer released the GPU
+    [(_, done)] = broadcaster.of("answer_done")
+    assert done["error"] is None
+
+
+def test_ask_without_a_local_gpu_llm_does_not_take_priority() -> None:
+    gate = GpuGate()
+    held: list[bool] = []
+
+    class Answering(StubAnswerer):
+        def answer(self, question, session_id, on_chunk):  # type: ignore[no-untyped-def]
+            held.append(gate.priority_held)
+            return super().answer(question, session_id, on_chunk)
+
+    ask = AskJob(
+        lambda: Answering(["ok"]),
+        RecordingBroadcaster(),
+        FakeLocalizer(),
+        gate=gate,
+        uses_gpu=lambda: False,
+    )
+    assert ask.start("a1", "Who?", None)
+    assert ask.wait(5)
+
+    assert held == [False]

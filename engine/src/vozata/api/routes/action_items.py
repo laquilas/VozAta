@@ -20,12 +20,14 @@ Container = Annotated[ApiContainer, Depends(container)]
 
 @router.post("/sessions/{session_id}/action-items", status_code=status.HTTP_202_ACCEPTED)
 def extract(session_id: str, c: Container) -> None:
-    """Extract again in the background; the result comes as `action_items_ready`."""
+    """Extract again in the processing queue; the result comes as `action_items_ready`.
+    `409 session_still_active` while the meeting is already queued or processed."""
     c.store.read_meta(session_id)  # 404 session_not_found
     _check_finished(c, session_id)
     if c.extract_action_items is None:
         raise ApiError(503, "action_items_unavailable")
-    c.extract_action_items(session_id)
+    if not c.extract_action_items(session_id):  # phase 40: a queue job
+        raise ApiError(409, "session_still_active", id=session_id)
 
 
 @router.get("/sessions/{session_id}/action-items", response_model=ActionItems)

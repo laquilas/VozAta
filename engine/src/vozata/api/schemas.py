@@ -90,6 +90,8 @@ class SessionSummary(BaseModel):
     speaker_count: int = 0
     has_action_items: bool = False
     template: str | None = None
+    # phase 40: {state, percent, step, position?} while queued or processed; None otherwise
+    processing: dict[str, Any] | None = None
 
 
 class SessionDetail(SessionSummary):

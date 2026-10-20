@@ -27,6 +27,7 @@ from vozata.processing.queue import ProcessingQueue
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
+_PENDING = frozenset({"queued", "running", "paused"})  # processing states clients are sent
 
 _log = logging.getLogger(__name__)
 
@@ -268,7 +269,7 @@ class SessionManager:
                 return self.summary(session)
             meta = self._store.read_meta(session_id)
             self._store.write_meta(session_id, {**meta, "title": title})
-        return session_summary(self._store, session_id)
+        return session_summary(self._store, session_id, processing=self.processing(session_id))
 
     def delete(self, session_id: str) -> None:
         """Delete a finished session through the repository (phase 36). The session being
@@ -364,7 +365,22 @@ class SessionManager:
 
     def summary(self, session: Session) -> dict[str, Any]:
         live = session.duration_seconds if session is self._session else None
-        return session_summary(self._store, session.id, live)
+        return session_summary(self._store, session.id, live, self.processing(session.id))
+
+    def processing(self, session_id: str) -> dict[str, Any] | None:
+        """The `processing` field of a meeting (phase 40): its queue state, or None when it is
+        not queued or processed (a job that just ended `done`/`failed` counts as gone)."""
+        state = self._queue.state(session_id)
+        return state.to_payload() if state is not None and state.state in _PENDING else None
+
+    def processing_messages(self) -> list[dict[str, Any]]:
+        """One `processing` envelope per meeting still queued or processed, running first (the
+        snapshot a client gets when it connects, phase 40)."""
+        return [
+            {"type": "processing", "session_id": state.session_id, "data": state.to_payload()}
+            for state in self._queue.pending()
+            if state.state in _PENDING
+        ]
 
     def status_message(self) -> dict[str, Any]:
         """The `status` envelope sent to a client when it connects."""
