@@ -125,7 +125,8 @@ translation disabled, locale parity.
 - [x] Audio-only capture
 - [x] `python -m vozata transcribe <id>`
 - [x] UI checkbox, preference and notices
-- [ ] Final review fixes: no leaked test threads, setting comment (this commit)
+- [ ] Final review fixes: no leaked test threads, setting comment, CLI
+      refuses interrupted (this commit)
 - [ ] Full suites, manual check
 
 ### Decisions and notes

@@ -23,8 +23,14 @@ TranscribeFactory = Callable[
     [Settings, SessionFolder, Callable[[TranscriptSegment], None] | None], OfflineTranscription
 ]
 _log = logging.getLogger(__name__)
-# recording, paused or queued/running in a job of `serve`: a second writer would duplicate segments
-BUSY = (SessionStatus.RECORDING, SessionStatus.PAUSED, SessionStatus.FINALIZING)
+# recording, paused or queued/running in a job of `serve` (a second writer would duplicate
+# segments), or interrupted (its audio is not repaired yet: `recover` finishes it)
+BUSY = (
+    SessionStatus.RECORDING,
+    SessionStatus.PAUSED,
+    SessionStatus.FINALIZING,
+    SessionStatus.INTERRUPTED,
+)
 PROGRESS_STEP = 10  # percent between two progress lines
 
 
@@ -39,7 +45,7 @@ def run_transcribe(
     """Transcribe the missing part of one meeting; `target` is its id (in `OUTPUT_DIR`) or folder.
 
     Exit code 0 on success (also when nothing was missing), 1 for an unknown session, a meeting
-    still recording, paused or finalizing or a transcription that failed.
+    still recording, paused, finalizing or interrupted, or a transcription that failed.
     """
     t = localizer.t
     path = Path(target)

@@ -118,7 +118,7 @@ def test_transcribe_of_a_fully_transcribed_meeting_adds_nothing(tmp_path: Path) 
     assert rig.transcriber.calls == []
 
 
-@pytest.mark.parametrize("status", ["recording", "paused", "finalizing"])
+@pytest.mark.parametrize("status", ["recording", "paused", "finalizing", "interrupted"])
 def test_transcribe_refuses_a_busy_session(tmp_path: Path, status: str) -> None:
     rig = _Rig(tmp_path, status=status)
 
