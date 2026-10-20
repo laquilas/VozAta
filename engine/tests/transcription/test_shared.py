@@ -98,3 +98,18 @@ def test_closing_a_lease_twice_counts_once() -> None:
     assert not loader.models[0].closed  # `second` is still open
     second.close()
     assert loader.models[0].closed
+
+
+def test_keep_when_is_read_at_close_and_keeps_the_model_when_true() -> None:
+    loader = Loader()
+    shared = SharedTranscriber(loader)
+    cancelled = [False]
+    lease = shared.lease(keep=False, keep_when=lambda: cancelled[0])
+
+    cancelled[0] = True  # e.g. the step was cancelled by a live start meanwhile
+    lease.close()
+
+    assert shared.loaded
+    assert not loader.models[0].closed
+    shared.lease(keep=False, keep_when=lambda: False).close()
+    assert loader.models[0].closed  # not cancelled: the VRAM rule unloads it

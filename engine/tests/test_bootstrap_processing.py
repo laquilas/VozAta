@@ -21,7 +21,7 @@ from vozata.domain import (
     TranscriptionResult,
     Word,
 )
-from vozata.processing.cancel import CancelToken
+from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import StepKind, run_job_inline
 from vozata.processing.queue import ProcessingQueue
@@ -400,3 +400,28 @@ def test_the_finished_hook_builds_no_model(tmp_path: Path, models: list) -> None
 
     assert models == []
     assert store.read_meta(session_id)["status"] == "done"
+
+
+def test_a_cancelled_transcribe_step_keeps_the_shared_whisper_for_the_live_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    token = CancelToken()
+    loads: list[FakeTranscriber] = []
+
+    def load() -> FakeTranscriber:
+        token.cancel()  # a live start pre-empts the step while its lease is open
+        loads.append(FakeTranscriber())
+        return loads[-1]
+
+    shared = SharedTranscriber(load)
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    settings = _settings(tmp_path, generate_minutes=True)  # minutes follow: normally unloaded
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, segments=[], duration_seconds=1.0)
+    [transcribe] = [s for s in _job(settings, store, session_id, shared=shared).steps][:1]
+
+    with pytest.raises(StepCancelled):
+        transcribe.run(token, lambda fraction: None)
+
+    [model] = loads
+    assert shared.loaded and not model.closed  # never unloaded just before the live lease

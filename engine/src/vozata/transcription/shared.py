@@ -32,13 +32,15 @@ class SharedTranscriber:
     def loaded(self) -> bool:
         return self._model is not None
 
-    def lease(self, *, keep: bool) -> Transcriber:
-        """The shared transcriber; closing the lease unloads it unless `keep`."""
+    def lease(self, *, keep: bool, keep_when: Callable[[], bool] = lambda: False) -> Transcriber:
+        """The shared transcriber; closing the lease unloads it unless `keep`, or unless
+        `keep_when()` is true at that moment (phase 40: a transcribe step cancelled by a live
+        start keeps the model, since the live session leases it next)."""
         with self._lock:
             if self._model is None:
                 self._model = self._factory()
             self._open += 1
-            return _Lease(self, self._model, keep)
+            return _Lease(self, self._model, keep, keep_when)
 
     def release(self) -> None:
         """Unload the transcriber now, or when the last open lease closes (no-op when nothing
@@ -62,10 +64,17 @@ class SharedTranscriber:
 
 
 class _Lease:
-    def __init__(self, owner: SharedTranscriber, model: Transcriber, keep: bool) -> None:
+    def __init__(
+        self,
+        owner: SharedTranscriber,
+        model: Transcriber,
+        keep: bool,
+        keep_when: Callable[[], bool],
+    ) -> None:
         self._owner = owner
         self._model = model
         self._keep = keep
+        self._keep_when = keep_when
         self._closed = False
 
     def transcribe(
@@ -81,4 +90,4 @@ class _Lease:
         if self._closed:
             return
         self._closed = True
-        self._owner._closed(self._keep)
+        self._owner._closed(self._keep or self._keep_when())

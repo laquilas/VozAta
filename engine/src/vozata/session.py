@@ -31,6 +31,7 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
+from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import ProcessingJob, run_job_inline
 from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn, ModelLoadSkipped
@@ -277,7 +278,8 @@ class RecordingSession:
             self._gpu.release()
             closed.set()
 
-    def _offline(self) -> OfflineTranscription:
+    def _offline(self, token: CancelToken) -> OfflineTranscription:
+        """The rest of the meeting (CLI: never cancelled, so `token` is not needed)."""
         return OfflineTranscription(
             self._settings,
             self._store,

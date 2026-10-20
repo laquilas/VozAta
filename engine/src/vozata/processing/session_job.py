@@ -49,7 +49,7 @@ class JobParts:
     """
 
     finisher: Callable[[StepKind], AbstractContextManager[SessionFinisher]]
-    transcription: Callable[[], OfflineTranscription]
+    transcription: Callable[[CancelToken], OfflineTranscription]  # the attempt's token
     diarize: bool  # a diarizer is configured
     minutes: bool  # minutes are generated
     action_items: bool  # action items follow the minutes
@@ -103,7 +103,7 @@ def session_job(
     transcript must be final first) but logs a warning every `warn_every` seconds."""
 
     def transcribe(token: CancelToken, progress: Progress) -> None:
-        parts.transcription().run(session_id, token, progress)
+        parts.transcription(token).run(session_id, token, progress)
 
     def finishing(kind: StepKind, run: Callable[[SessionFinisher, CancelToken], None]) -> Step:
         def attempt(token: CancelToken, progress: Progress) -> None:

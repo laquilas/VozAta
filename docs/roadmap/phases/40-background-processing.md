@@ -212,7 +212,7 @@ close-with-pending message; locale parity.
 - [x] UI client and recorder
 - [x] Meetings and meeting page indicators (f944d53; fix round 1: this commit)
 - [x] Shell indicator and close warning (05b718d; fix round 1: this commit)
-- [ ] Final review fixes (live GPU hold and skipped loads: 349f69f; start waits for a stop: 7e0da23; CLI recovery through the job: eb690ac; one model per attempt, closed: 827d1d9; unload after a cancel: this commit)
+- [ ] Final review fixes (live GPU hold and skipped loads: 349f69f; start waits for a stop: 7e0da23; CLI recovery through the job: eb690ac; one model per attempt, closed: 827d1d9; unload after a cancel: dcbcb77; cancelled transcribe keeps the shared Whisper: this commit)
 - [ ] Full suites, manual check
 
 ### Decisions and notes

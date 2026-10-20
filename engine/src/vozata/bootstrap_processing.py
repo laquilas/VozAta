@@ -24,6 +24,7 @@ from vozata.ports import (
     StoreRepairError,
     Transcriber,
 )
+from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuUsage
 from vozata.processing.job import AbortJob, ProcessingJob, StepKind
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
@@ -69,19 +70,20 @@ def build_processing_job(
         finally:
             built.close()
 
-    def transcriber() -> Transcriber:
+    def transcriber(token: CancelToken) -> Transcriber:
         if shared is not None and gate_usage.speech:
-            return shared.lease(keep=not after)
+            # cancelled by a live start: keep the model, the live session leases it next
+            return shared.lease(keep=not after, keep_when=lambda: token.cancelled)
         return root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)(settings)
 
-    def transcription() -> OfflineTranscription:
+    def transcription(token: CancelToken) -> OfflineTranscription:
         stored = store.read_meta(session_id)
         language = ConversationLanguage(stored.get("language", ConversationLanguage.AUTO.value))
         return OfflineTranscription(
             settings,
             store,
             audio,
-            transcriber,
+            functools.partial(transcriber, token),
             root.build_labeler(settings, root.build_localizer(settings)),
             LanguageLock(language, functools.partial(_detected, store, session_id)),
             build_hints(tuple(stored_vocabulary(stored))),

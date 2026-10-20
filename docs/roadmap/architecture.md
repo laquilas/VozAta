@@ -350,7 +350,8 @@ stream opens and `terminate()`; the session releases it once capture has stopped
      stored tracks, whatever the raw transcript does not cover yet (each channel from its last
      segment; the whole meeting when the model was still loading at Stop), in the conversation
      language stored in `session.json`. Weight `2 + 60 × left / duration`. With
-     `WHISPER_KEEP_LOADED` and speech on the GPU it leases the shared Whisper (no second model).
+     `WHISPER_KEEP_LOADED` and speech on the GPU it leases the shared Whisper (no second model);
+     an attempt cancelled by a live start keeps it loaded (the live session leases it next).
    - `mix`: `AudioMixer` → `mixed.wav` (file backend; with `sqlite` the mix is computed on read).
    - `diarize` (if `DIARIZATION_ENABLED`; GPU when pyannote runs on CUDA): diarize the system
      track (`materialize_wav(id, system)`: `system.wav`, or with `sqlite` a WAV built in the
