@@ -165,6 +165,7 @@ FIELDS: tuple[Field, ...] = (
     Field("VAD_MAX_CHUNK_SECONDS", "vad_max_chunk_seconds", "number", group="segmentation"),
     Field("VAD_SPEECH_PAD_MS", "vad_speech_pad_ms", "integer", group="segmentation"),
     # Live interim text (phase 28)
+    Field("LIVE_TRANSCRIPTION", "live_transcription", "bool", group="transcription"),
     Field("LIVE_PARTIALS", "live_partials", "bool", group="transcription"),
     Field("PARTIAL_INTERVAL_SECONDS", "partial_interval_seconds", "number", group="transcription"),
     # Echo dedupe (phase 18)

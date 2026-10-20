@@ -435,6 +435,12 @@
   <data name="SettingHelp_SILENCE_RMS_THRESHOLD" xml:space="preserve">
     <value>Audio quieter than this (RMS, 0 to 1) is treated as silence and not transcribed.</value>
   </data>
+  <data name="Setting_LIVE_TRANSCRIPTION" xml:space="preserve">
+    <value>Live transcription by default</value>
+  </data>
+  <data name="SettingHelp_LIVE_TRANSCRIPTION" xml:space="preserve">
+    <value>Off: new recordings only record audio and are transcribed after you stop.</value>
+  </data>
   <data name="Setting_LIVE_PARTIALS" xml:space="preserve">
     <value>Show text while people speak</value>
   </data>

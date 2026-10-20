@@ -32,6 +32,9 @@ class DeviceNames(Protocol):
     @property
     def title(self) -> str | None: ...
 
+    @property
+    def live_transcription(self) -> bool: ...
+
 
 class SessionMeta:
     """Thread-safe metadata, saved on every change (language may be detected on another thread).
@@ -66,6 +69,7 @@ class SessionMeta:
             "vocabulary": list(components.vocabulary),
             "devices": {channel.value: names[channel] for channel in Channel if channel in names},
             "pauses": [],
+            "live_transcription": components.live_transcription,
             "settings": {
                 "CHUNK_MODE": settings.chunk_mode.value,
                 "CHUNK_SECONDS": settings.chunk_seconds,

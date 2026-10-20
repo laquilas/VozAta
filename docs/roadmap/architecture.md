@@ -658,6 +658,7 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "app_language": "en",
   "template": "general",
   "title": "Weekly sync",
+  "live_transcription": true,
   "vocabulary": ["Avalonia", "N5 Sensors"],
   "devices": {"mic": "Headset Microphone", "system": "Headphones [Loopback]"},
   "pauses": [{"start": 120.5, "end": 180.0}],
@@ -705,6 +706,9 @@ before phase 20 have no key and regenerate with `MINUTES_TEMPLATE`. `vocabulary`
 terms (from `POST /sessions`) followed by the glossary file, deduplicated case-insensitively, written
 at start (an empty list when there are none); it is the minutes glossary at stop and on
 regeneration.
+`live_transcription` (41) is whether the recording was transcribed live (`false`: audio only,
+transcribed after Stop by the processing queue); written at start, always, from the `POST /sessions`
+option or `LIVE_TRANSCRIPTION`.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (stop step 1); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
@@ -789,6 +793,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `VAD_MIN_SILENCE_MS` | `600` | 27 | pause that ends a chunk |
 | `VAD_MIN_CHUNK_SECONDS` / `VAD_MAX_CHUNK_SECONDS` | `1` / `15` | 27 | chunk length bounds |
 | `VAD_SPEECH_PAD_MS` | `200` | 27 | audio kept around detected speech |
+| `LIVE_TRANSCRIPTION` | `true` | 41 | default of the per-recording option; `false` = only record audio, transcribe after Stop |
 | `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
 | `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
 | `TRANSLATE_TO` | `off` | 29 | live translation target: `off` \| `en` \| `pt` \| `es` (empty = off); `POST /sessions` `translate_to` overrides it per session |

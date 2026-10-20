@@ -137,6 +137,7 @@ class _Rig:
         gate: GpuGate | None = None,
         gpu_usage: GpuUsage | None = None,
         live_models: LiveModelTurn | None = None,
+        live_transcription: bool = True,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -180,6 +181,7 @@ class _Rig:
                 gate=gate,
                 gpu_usage=gpu_usage,
                 live_models=live_models,
+                live_transcription=live_transcription,
             ),
             self.observer,
             language,
@@ -522,6 +524,7 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
         "vocabulary": [],
         "devices": {"mic": "Headset Mic", "system": "Speakers [Loopback]"},
         "pauses": [],
+        "live_transcription": True,
         "settings": {
             "CHUNK_MODE": "vad",
             "CHUNK_SECONDS": 1.0,
@@ -835,6 +838,15 @@ def test_clearing_the_title_while_recording_leaves_it_null(tmp_path: Path) -> No
     rig.session.stop()
 
     assert rig.store.read_meta(rig.session.id)["title"] is None
+
+
+@pytest.mark.parametrize("live", [True, False])
+def test_session_json_records_live_transcription(tmp_path: Path, live: bool) -> None:
+    rig = _Rig(tmp_path, live_transcription=live)
+
+    rig.session.start()
+
+    assert rig.store.read_meta(rig.session.id)["live_transcription"] is live
 
 
 def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> None:

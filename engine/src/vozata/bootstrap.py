@@ -498,6 +498,7 @@ def build_session(
     gate: GpuGate | None = None,
     gpu_usage: GpuUsage | None = None,
     live_models: LiveModelTurn | None = None,
+    live_transcription: bool | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -511,7 +512,8 @@ def build_session(
     (normalized, phase 35) is stored in the metadata. With a `gate` (`serve`), the session holds
     its live GPU priority while recording when `gpu_usage` says its speech or speaker model runs on
     the local GPU (phase 40); with `live_models` its models load only once the previous
-    session's abandoned pipeline closed.
+    session's abandoned pipeline closed. `live_transcription` (default `LIVE_TRANSCRIPTION`,
+    phase 41) is the per-recording option; it is stored in `session.json`.
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -569,6 +571,9 @@ def build_session(
         gate=gate,
         gpu_usage=gpu_usage,
         live_models=live_models,
+        live_transcription=settings.live_transcription
+        if live_transcription is None
+        else live_transcription,
     )
     return RecordingSession(
         settings,
@@ -797,6 +802,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             gate=gate,
             gpu_usage=usage(current),
             live_models=live_models,
+            live_transcription=options.live_transcription,
         )
 
     def llm_reachable() -> bool:

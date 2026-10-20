@@ -82,6 +82,7 @@ class SessionComponents:
     gate: GpuGate | None = None  # shared with the processing queue (phase 40); None = no gate
     gpu_usage: GpuUsage | None = None  # which models use the local GPU (phase 40)
     live_models: LiveModelTurn | None = None  # shared by `serve` sessions (phase 40); None = own
+    live_transcription: bool = True  # phase 41; False = audio only, transcribed after stop
 
 
 class SessionStartError(RuntimeError):

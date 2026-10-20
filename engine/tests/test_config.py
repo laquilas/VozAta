@@ -417,6 +417,11 @@ def test_whisper_keep_loaded_defaults_to_false_and_accepts_booleans() -> None:
     assert caught.value.key == "WHISPER_KEEP_LOADED"
 
 
+def test_live_transcription_defaults_to_true_and_reads_the_key() -> None:
+    assert load_settings(env={}).live_transcription is True
+    assert load_settings(env={"LIVE_TRANSCRIPTION": "false"}).live_transcription is False
+
+
 def test_live_partials_defaults_and_values() -> None:
     settings = load_settings(env={})
     assert (settings.live_partials, settings.partial_interval_seconds) == (True, 1.5)

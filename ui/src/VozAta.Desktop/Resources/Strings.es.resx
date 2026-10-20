@@ -435,6 +435,12 @@
   <data name="SettingHelp_SILENCE_RMS_THRESHOLD" xml:space="preserve">
     <value>El audio más bajo que esto (RMS, 0 a 1) se trata como silencio y no se transcribe.</value>
   </data>
+  <data name="Setting_LIVE_TRANSCRIPTION" xml:space="preserve">
+    <value>Transcripción simultánea por defecto</value>
+  </data>
+  <data name="SettingHelp_LIVE_TRANSCRIPTION" xml:space="preserve">
+    <value>Desactivado: las nuevas grabaciones solo graban el audio y se transcriben al detenerlas.</value>
+  </data>
   <data name="Setting_LIVE_PARTIALS" xml:space="preserve">
     <value>Mostrar texto mientras hablan</value>
   </data>
