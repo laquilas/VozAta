@@ -6,10 +6,12 @@ import dataclasses
 import threading
 from pathlib import Path
 
+import pytest
+
 from tests.fakes import FakeEmbedder
 from tests.test_session import SETTINGS, _Rig, _voice, _wait_for
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
-from vozata.processing.live_lease import LiveModelTurn
+from vozata.processing.live_lease import LiveModelTurn, ModelLoadSkipped
 
 LIVE = dataclasses.replace(SETTINGS, chunk_seconds=3.0)
 POST_SPEAKERS_ON_GPU = GpuUsage(speech=False, speakers=True, llm=False)
@@ -71,3 +73,21 @@ def test_a_session_stopped_while_waiting_for_its_turn_never_loads_nor_holds(
     assert not gate.priority_held
     assert rig.observer.of("error") == []  # a skip, not a model failure
     assert rig.session._pipeline.transcriber is None
+
+
+def test_a_model_load_starting_after_stop_is_skipped_without_waiting_or_holding(
+    tmp_path: Path,
+) -> None:
+    turn = LiveModelTurn()
+    turn.stopping(threading.Event())  # never set: a wait would block
+    gate = GpuGate()
+    rig = _Rig(tmp_path, gate=gate, gpu_usage=SPEECH_ON_GPU)
+    rig.session.start()
+    assert rig.session.stop_capture().wait(5)
+    rig.session._c = dataclasses.replace(rig.session._c, live_models=turn)
+    held: list[str] = []
+
+    with pytest.raises(ModelLoadSkipped):  # e.g. the live speaker loader thread starting late
+        rig.session._before_model(lambda: held.append("hold"))
+
+    assert held == []

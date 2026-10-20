@@ -50,6 +50,8 @@ def test_the_stored_components_take_template_glossary_and_mix_mode_from_session_
     assert isinstance(components.action_items, ActionItemExtractor)
     assert components.diarizer_factory is None
     assert components.sources == {}
+    assert components.clock.now() == 0.0  # capture is over
+    components.clock.start()
     with pytest.raises(RuntimeError):
         components.transcriber_factory()
 
