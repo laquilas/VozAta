@@ -239,6 +239,7 @@ def test_deleting_the_audio_of_a_queued_session_is_409(api: Api, recorded: str) 
 def test_delete_and_delete_audio_refused_while_queued_then_allowed(
     api: Api, recorded: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # `recorded` swaps only the container to the SQLite store; the manager deletes through its own
     monkeypatch.setattr(api.manager, "_store", api.app.state.container.store)
     release = hold_in_queue(api.manager, recorded)
 

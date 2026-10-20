@@ -51,7 +51,7 @@ def _run(tmp_path: Path, build, *, transcript: bool = True, uses_gpu: bool = Fal
         assert queue.wait_idle(5)
     finally:
         queue.stop()
-    assert indexed == [session_id]
+    assert indexed == ([session_id] if broadcaster.of("action_items_ready") else [])
     return session_id, broadcaster
 
 

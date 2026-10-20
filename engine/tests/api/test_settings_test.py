@@ -13,6 +13,8 @@ import pytest
 from tests.api.conftest import Api
 from vozata.config import Settings
 from vozata.connection_checks import CheckResult, CheckTarget, ConnectionChecks
+from vozata.processing.cancel import CancelToken
+from vozata.processing.gpu_gate import GpuGate, GpuUser
 
 HF_MODELS = ("pyannote/speaker-diarization-community-1", "pyannote/wespeaker-voxceleb-resnet34-LM")
 SECRETS = ("sk-stt-secret", "hf_secret_token", "azdo-secret-pat", "ghp_secret_token")
@@ -410,7 +412,12 @@ def test_connection_check_holds_check_priority() -> None:
         return httpx.Response(200, json={})
 
     seen: list[tuple[str | None, bool]] = []
-    checks = ConnectionChecks(HF_MODELS, transport=httpx.MockTransport(handler), priority=priority)
+    checks = ConnectionChecks(
+        HF_MODELS,
+        transport=httpx.MockTransport(handler),
+        priority=priority,
+        model_targets=frozenset({CheckTarget.OLLAMA}),  # a future model-loading check opts in
+    )
     settings = _settings()
 
     assert checks.run(CheckTarget.OLLAMA, settings).ok
@@ -418,3 +425,22 @@ def test_connection_check_holds_check_priority() -> None:
 
     assert seen == [("ollama.test", True), ("api.github.com", False)]  # only the model test
     assert entered == [settings]
+
+
+def test_the_ollama_check_does_not_cancel_a_running_llm_step() -> None:
+    gate = GpuGate()
+    token = CancelToken()
+
+    def tags(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"models": [{"name": "qwen2.5:7b"}]})
+
+    checks = ConnectionChecks(
+        HF_MODELS,
+        transport=httpx.MockTransport(tags),
+        priority=lambda settings: gate.priority(GpuUser.CHECK),
+    )
+    with gate.queue_step(token, lambda: None):  # the queue's minutes generation runs
+        result = checks.run(CheckTarget.OLLAMA, _settings())
+
+    assert result.ok
+    assert not token.cancelled  # it only lists the pulled models: nothing loads on the GPU

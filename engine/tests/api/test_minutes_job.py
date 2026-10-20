@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -55,6 +56,8 @@ class _Rig:
         self.queue = ProcessingQueue(self.gate, lambda state: self.states.append(state))
         self.states: list = []
         self.indexed: list[str] = []
+        self.gpu = uses_gpu  # read by the job when the step runs
+        self.index_error: Exception | None = None
         self.built: list[str | None] = []
         localizer = FakeLocalizer()
         llms = list(llms)
@@ -73,10 +76,15 @@ class _Rig:
             self.broadcaster,
             localizer,
             queue=self.queue,
-            uses_gpu=lambda: uses_gpu,
-            index=self.indexed.append,
+            uses_gpu=lambda: self.gpu,
+            index=self._index,
         )
         self.queue.start()
+
+    def _index(self, session_id: str) -> None:
+        if self.index_error is not None:
+            raise self.index_error
+        self.indexed.append(session_id)
 
     def transcript(self) -> None:
         segment = TranscriptSegment("mic-000001", Channel.MIC, "mic", 1.0, 2.0, "Hi.", ())
@@ -252,3 +260,92 @@ class _Renaming(FakeLanguageModel):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         self.rename()
         return super().generate(system, prompt, json_schema)
+
+
+def test_an_unexpected_failure_is_published_as_an_internal_error(
+    tmp_path: Path, rigs: list[_Rig]
+) -> None:
+    rig = _rig(rigs, tmp_path, _Broken())
+
+    rig.run()
+
+    assert rig.broadcaster.of("error") == [
+        (rig.paths.id, {"code": "minutes_failed", "message": "errors.api.internal_error"})
+    ]
+    assert rig.indexed == []
+    assert rig.states[-1].state == "done"
+
+
+@pytest.mark.parametrize("transcript", [True, False])
+def test_a_failed_model_step_skips_the_index(
+    tmp_path: Path, rigs: list[_Rig], transcript: bool
+) -> None:
+    rig = _rig(rigs, tmp_path, _Failing(), transcript=transcript)
+
+    rig.run()
+
+    assert len(rig.broadcaster.of("error")) == 1
+    assert rig.indexed == []
+
+
+def test_an_index_failure_is_reported_and_the_job_still_ends_done(
+    tmp_path: Path, rigs: list[_Rig]
+) -> None:
+    rig = _rig(rigs, tmp_path, FakeLanguageModel(["# Minutes"]))
+    rig.index_error = OSError("disk full")
+
+    rig.run()
+
+    assert len(rig.broadcaster.of("minutes_ready")) == 1
+    assert rig.broadcaster.of("error") == [
+        (
+            rig.paths.id,
+            {"code": "index_failed", "message": "errors.session.index_failed(reason=disk full)"},
+        )
+    ]
+    assert rig.states[-1].state == "done"
+
+
+def test_the_gpu_setting_is_read_when_the_step_runs(tmp_path: Path, rigs: list[_Rig]) -> None:
+    rig = _rig(rigs, tmp_path, FakeLanguageModel(["# Minutes"]), uses_gpu=False)
+    running, release = threading.Event(), threading.Event()
+
+    def held(token: object, progress: object) -> None:
+        running.set()
+        assert release.wait(5)
+
+    hold = Step(StepKind.INDEX, 1.0, False, held)
+    assert rig.queue.enqueue(ProcessingJob("20261014_090000", (hold,), on_finished=lambda: None))
+    assert running.wait(5)
+    assert rig.job(rig.paths.id, None)  # queued while the language model is not on the GPU
+    rig.gpu = True  # the settings changed before the step runs
+
+    with rig.gate.priority(GpuUser.LIVE):
+        release.set()
+        paused = _wait_for(lambda: (rig.queue.state(rig.paths.id) or _NONE).state == "paused")
+        written_while_live = rig.paths.minutes_md.exists()
+    assert rig.queue.wait_idle(5)
+
+    assert paused and not written_while_live
+    assert rig.paths.minutes_md.exists()
+
+
+class _Broken(FakeLanguageModel):
+    def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+        raise RuntimeError("bug")
+
+
+class _NoState:
+    state = None
+
+
+_NONE = _NoState()
+
+
+def _wait_for(condition, timeout: float = 5.0) -> bool:  # type: ignore[no-untyped-def]
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if condition():
+            return True
+        time.sleep(0.01)
+    return False

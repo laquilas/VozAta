@@ -143,3 +143,14 @@ def test_run_job_inline_stops_at_an_aborting_step_without_on_finished():
     run_job_inline(job)
 
     assert ran == []
+
+
+def test_a_step_reads_its_gpu_use_at_each_attempt():
+    gpu = [False]
+    step = Step(StepKind.MINUTES, 1.0, True, lambda token, progress: None, gpu_now=lambda: gpu[0])
+
+    first = step.uses_gpu()
+    gpu[0] = True
+
+    assert (first, step.uses_gpu()) == (False, True)
+    assert Step(StepKind.MIX, 1.0, True, lambda token, progress: None).uses_gpu() is True

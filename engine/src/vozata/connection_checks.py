@@ -34,7 +34,10 @@ class CheckTarget(StrEnum):
     GITHUB = "github"
 
 
-MODEL_TARGETS = frozenset({CheckTarget.OLLAMA})  # tests of a model that may run on the GPU
+# Checks that load a model on the GPU take the Config-test GPU priority (phase 40). None does
+# today: the `ollama` check only lists the pulled models (`/api/tags`), it never loads one, so it
+# must not cancel the queue's running generation.
+MODEL_TARGETS: frozenset[CheckTarget] = frozenset()
 _NO_PRIORITY = contextlib.nullcontext()
 
 
@@ -56,10 +59,12 @@ class ConnectionChecks:
         transport: httpx.BaseTransport | None = None,
         timeout: float = 10.0,
         priority: Callable[[Settings], AbstractContextManager[None]] | None = None,
+        model_targets: frozenset[CheckTarget] = MODEL_TARGETS,
     ) -> None:
-        # phase 40: the model tests run under the Config-test GPU priority (`priority(settings)`
-        # is a no-op unless the model runs on the local GPU)
+        # phase 40: the checks in `model_targets` run under the Config-test GPU priority
+        # (`priority(settings)` is a no-op unless the model runs on the local GPU)
         self._priority = priority or (lambda settings: contextlib.nullcontext())
+        self._model_targets = model_targets
         self._hf_models = tuple(hf_models)  # gated pyannote models the HF token must open
         self._transport = transport
         self._timeout = timeout
@@ -76,7 +81,7 @@ class ConnectionChecks:
             with httpx.Client(
                 timeout=self._timeout, transport=self._transport, follow_redirects=False
             ) as client:
-                gpu = self._priority(settings) if target in MODEL_TARGETS else _NO_PRIORITY
+                gpu = self._priority(settings) if target in self._model_targets else _NO_PRIORITY
                 with gpu:
                     result = self._checks[target](client, settings)
         except httpx.HTTPError as error:

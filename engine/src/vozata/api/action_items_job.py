@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import functools
 import logging
 from collections.abc import Callable
 
-from vozata.api.model_job import Cancels, Progress, model_job
+from vozata.api.model_job import Cancels, QueuedModelJob
 from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.session_action_items import Extractor, write_session_action_items
@@ -20,13 +19,13 @@ from vozata.processing.session_job import ACTION_ITEMS_WEIGHT
 _log = logging.getLogger(__name__)
 
 
-class ActionItemsJob:
+class ActionItemsJob(QueuedModelJob):
     """Callable `(session_id)`: queues an extraction (phase 40) and returns whether it was queued
     (False: the meeting is already in the queue).
 
     Success publishes `action_items_ready {session_id, count}`; failures publish a localized
     `error` event (`empty_transcript`, `action_items_failed`). Each attempt builds its own
-    extractor; `uses_gpu()` puts the step behind the GPU gate; `index(session_id)` follows.
+    extractor.
     """
 
     def __init__(
@@ -41,29 +40,20 @@ class ActionItemsJob:
         uses_gpu: Callable[[], bool] = lambda: False,
         index: Callable[[str], None] = lambda session_id: None,
     ) -> None:
-        self._store = store
+        super().__init__(
+            store, labeler, broadcaster, localizer, queue=queue, uses_gpu=uses_gpu, index=index
+        )
         self._build = build_extractor
-        self._labeler = labeler
-        self._broadcaster = broadcaster
-        self._t = localizer.t
-        self._queue = queue
-        self._uses_gpu = uses_gpu
-        self._index = index
 
     def __call__(self, session_id: str) -> bool:
-        run = functools.partial(self._run, session_id)
-        job = model_job(
+        return self._enqueue(
             session_id,
             StepKind.ACTION_ITEMS,
             ACTION_ITEMS_WEIGHT,
-            self._uses_gpu(),
-            run,
-            self._index,
+            lambda token: self._attempt(session_id, token),
         )
-        return self._queue.enqueue(job)
 
-    def _run(self, session_id: str, token: CancelToken, progress: Progress) -> None:
-        publish = self._broadcaster.publish
+    def _attempt(self, session_id: str, token: CancelToken) -> bool:
         cancels = Cancels(token)
         try:
             token.raise_if_cancelled()
@@ -73,7 +63,8 @@ class ActionItemsJob:
             raise
         except EmptyTranscriptError:
             message = self._t("errors.api.empty_transcript", id=session_id)
-            publish("error", session_id, {"code": "empty_transcript", "message": message})
+            self._error(session_id, "empty_transcript", message)
+            return False
         except Exception as error:
             if token.cancelled:  # pre-empted: the queue redoes the step
                 raise StepCancelled from error
@@ -83,9 +74,10 @@ class ActionItemsJob:
             else:
                 _log.exception("Extracting action items for %s failed", session_id)
                 message = self._t("errors.api.internal_error")
-            publish("error", session_id, {"code": "action_items_failed", "message": message})
-        else:
-            data = {"session_id": session_id, "count": len(items)}
-            publish("action_items_ready", session_id, data)
+            self._error(session_id, "action_items_failed", message)
+            return False
         finally:
             cancels.close()
+        data = {"session_id": session_id, "count": len(items)}
+        self._broadcaster.publish("action_items_ready", session_id, data)
+        return True

@@ -202,8 +202,9 @@ class ProcessingQueue:
         sid = job.session_id
         while True:
             token = CancelToken()  # a cancelled token stays cancelled: one per attempt
+            gpu = step.uses_gpu()
             try:
-                if step.gpu:
+                if gpu:
                     on_wait = lambda: self._set(sid, "paused", step=kind)  # noqa: E731
                     with self._gate.queue_step(token, on_wait):
                         self._set(sid, "running", step=kind)
@@ -214,7 +215,7 @@ class ProcessingQueue:
             except AbortJob:
                 raise
             except StepCancelled:
-                if not (step.gpu and token.cancelled):
+                if not (gpu and token.cancelled):
                     log.error(
                         "step %s of meeting %s raised a cancel it was not given",
                         step.kind.value,

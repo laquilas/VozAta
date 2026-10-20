@@ -38,6 +38,12 @@ class Step:
     weight: float
     gpu: bool
     run: Callable[[CancelToken, Callable[[float], None]], None]
+    # read at each attempt instead of `gpu` when given (the current settings decide, phase 40)
+    gpu_now: Callable[[], bool] | None = None
+
+    def uses_gpu(self) -> bool:
+        """Whether this attempt goes through the GPU gate."""
+        return self.gpu_now() if self.gpu_now is not None else self.gpu
 
 
 def _nothing() -> None:
