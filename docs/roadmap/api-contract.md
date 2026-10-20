@@ -16,7 +16,9 @@ own rows. Changing a row requires updating both sides.
   stopped, or being recovered, do not count: they are processed by the background queue (40).
 - `session.json` carries `capture_ended_at` (40): when capture stopped. A `finalizing` meeting that
   has it is re-queued when the engine starts (repair, then the processing steps); one without it was
-  cut short while recording and is offered for recovery (`recovery_available`).
+  cut short while recording and is offered for recovery (`recovery_available`). For a meeting recovered
+  after a crash during capture it is the repair time, written once the repair succeeds (a resume
+  marker, not the real end of capture).
 - OpenAPI is served at `/docs` (Swagger UI) and `/redoc`, both showing the VozAta favicon, and must
   match this document.
 

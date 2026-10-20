@@ -8,6 +8,7 @@ import threading
 import time
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Protocol
 
 from vozata.api.payloads import segment_payload, session_summary
@@ -318,7 +319,7 @@ class SessionManager:
         not be created at Stop. Call it at start, before `interrupted_sessions()`.
         """
         with self._lock:
-            pending: list[tuple[str, str]] = []
+            pending: list[tuple[float, str]] = []
             live = {_started_id([self._session] if self._session else [])}
             for session_id in self._store.list_sessions():
                 try:
@@ -333,7 +334,7 @@ class SessionManager:
                     and session_id not in live
                     and not self._queue.contains(session_id)
                 ):
-                    pending.append((str(ended), session_id))
+                    pending.append((_moment(str(ended)), session_id))
             queued: list[str] = []
             for _, session_id in sorted(pending):
                 try:
@@ -405,6 +406,14 @@ class SessionManager:
                 return
             data = {"status": session.status.value, "duration_seconds": session.duration_seconds}
             self._broadcaster.publish("status", session.id, data)
+
+
+def _moment(stamp: str) -> float:
+    """`capture_ended_at` as a timestamp (offsets and DST compared properly); 0 if unreadable."""
+    try:
+        return datetime.fromisoformat(stamp).timestamp()
+    except ValueError:
+        return 0.0
 
 
 def _started_id(holder: list[Session]) -> str | None:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import functools
 import threading
+from pathlib import Path
 from typing import NoReturn
 
 from vozata import bootstrap as root
@@ -145,3 +146,24 @@ def _repair(
     if length > 0:
         meta["duration_seconds"] = round(length, 3)
     store.write_meta(session_id, meta)
+    observer.on_status(SessionStatus.FINALIZING, float(meta.get("duration_seconds") or 0.0))
+
+
+def build_resume_job(
+    settings: Settings,
+    output_dir: Path | None,
+    session_id: str,
+    observer: SessionObserver,
+) -> ProcessingJob:
+    """The job the CLI `recover <dir>` runs inline on a meeting left `finalizing` (phase 40):
+    repair, transcribe the rest, then the stop steps. Nothing is gated or shared in the CLI."""
+    return build_processing_job(
+        settings,
+        root.build_store(settings, output_dir),
+        root.build_audio_store(settings, output_dir),
+        observer,
+        session_id,
+        repair=True,
+        closed=None,
+        gate_usage=GpuUsage(speech=False, speakers=False, llm=False),
+    )

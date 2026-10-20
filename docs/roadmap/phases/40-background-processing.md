@@ -195,7 +195,7 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 20:00
+- **Updated:** 2026-10-20 20:30
 - **Next step:** Task 8 of `plans/40-background-processing.md` (API, events and other model
   users).
 
@@ -208,7 +208,7 @@ close-with-pending message; locale parity.
 - [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
 - [x] Processing job and queue (04afa22; fix round 1: this commit)
 - [x] Stop frees the recorder (c7756b8, dab272b; fix round 1: ddaf3fb; fix round 2: this commit)
-- [x] Restart and recovery through the queue (this commit)
+- [x] Restart and recovery through the queue (478d112; fix round 1: this commit)
 - [ ] API, events and other model users
 - [ ] UI client and recorder
 - [ ] Meetings and meeting page indicators

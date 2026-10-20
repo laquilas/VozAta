@@ -293,11 +293,13 @@ def test_repair_success_marks_the_session_finalizing_with_a_capture_end(tmp_path
     settings = _settings(tmp_path, generate_minutes=False)
     store = bootstrap.build_store(settings)
     session_id = make_session_folder(store, status="interrupted", recovery_error="old")  # crashed
-    [repair] = [step for step in _job(settings, store, session_id, repair=True).steps][:1]
+    observer = FakeSessionObserver()
+    [repair] = [step for step in _job(settings, store, session_id, observer, repair=True).steps][:1]
 
     repair.run(CancelToken(), lambda fraction: None)
 
     meta = store.read_meta(session_id)
+    assert observer.of("status") == [(SessionStatus.FINALIZING, 1.0)]  # clients see it
     assert meta["status"] == "finalizing"  # a restart now resumes it
     assert meta["capture_ended_at"] is not None
     assert "recovery_error" not in meta

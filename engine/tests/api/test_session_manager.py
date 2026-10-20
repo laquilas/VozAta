@@ -447,6 +447,26 @@ class _ResumeJobs:
         return ProcessingJob(session_id, (step,), on_finished=finished)
 
 
+class _LiveSession:
+    """Only what `resume_pending` reads of the session being recorded or stopped."""
+
+    def __init__(self, session_id: str) -> None:
+        self.id = session_id
+
+
+def test_resume_pending_orders_by_the_real_moment_not_the_text(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    # 23:30-03:00 is 02:30Z, later than 01:00+00:00 although its text sorts first
+    later = _folder(store, "finalizing", capture_ended_at="2026-10-15T23:30:00-03:00")
+    earlier = _folder(store, "finalizing", capture_ended_at="2026-10-16T01:00:00+00:00")
+    broken = _folder(store, "finalizing", capture_ended_at="not a date")
+    manager, _ = _resume_manager(factory, store, broadcaster)
+
+    assert manager.resume_pending() == [broken, earlier, later]
+    assert manager.wait_until_finished(5)
+
+
 def _resume_manager(
     factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> tuple[SessionManager, _ResumeJobs]:
@@ -482,14 +502,17 @@ def test_resume_pending_skips_live_queued_and_unreadable_sessions(
     factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
     queued = _folder(store, "finalizing", capture_ended_at="2026-10-15T20:10:00-03:00")
+    live = _folder(store, "finalizing", capture_ended_at="2026-10-15T20:11:00-03:00")
     bad = store.paths(store.create(datetime(2026, 10, 1, 9, 0)))
     bad.meta.write_text("{not json", encoding="utf-8")
     manager, jobs = _resume_manager(factory, store, broadcaster)
     hold = threading.Event()
     step = Step(StepKind.INDEX, 1.0, False, lambda token, progress: hold.wait(5))
     manager._queue.enqueue(ProcessingJob(queued, (step,), on_finished=lambda: None))
+    manager._session = _LiveSession(live)  # type: ignore[assignment]
 
     assert manager.resume_pending() == []
+    manager._session = None
 
     hold.set()
     assert manager.wait_until_finished(5)

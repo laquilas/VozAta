@@ -3,11 +3,15 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
-from tests.fakes import FakeLocalizer
+import pytest
+
+from tests.fakes import FakeLocalizer, FakeTranscriber
 from tests.test_session_recover import make_session_folder
+from vozata import bootstrap, bootstrap_processing
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.recover import run_recover
-from vozata.domain import Channel
+from vozata.config import Settings
+from vozata.domain import Channel, StorageBackend
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver
 from vozata.storage.files.audio import FileAudioStore
@@ -111,3 +115,63 @@ def test_a_failed_repair_is_reported_and_the_exit_code_is_1(tmp_path: Path) -> N
     assert code == 1
     assert finisher.recovered == []
     assert f"cli.recover_failed(id={broken},reason=" in out
+
+
+def _resume(folder: Path, settings: Settings, localizer: FakeLocalizer) -> tuple[int, str]:
+    out = io.StringIO()
+    console = ConsoleObserver(localizer, SpeakerLabeler(localizer), out)
+    store = _repository(folder.parent)
+
+    def build(output_dir: Path | None) -> SessionRecovery:
+        return SessionRecovery(store, [FileAudioStore(store.store, 16000), store], lambda i, o: 1)  # type: ignore[arg-type, return-value]
+
+    code = run_recover(
+        folder,
+        build,
+        console,
+        localizer,
+        lambda output_dir, session_id, observer: bootstrap_processing.build_resume_job(
+            settings, output_dir, session_id, observer
+        ),
+    )
+    return code, out.getvalue()
+
+
+def test_a_folder_left_finalizing_by_a_crashed_record_is_finished_with_the_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    settings = Settings(
+        output_dir=tmp_path / "recordings",
+        storage_backend=StorageBackend.FILES,
+        stt_provider="fake",
+        generate_minutes=False,
+    )
+    store = _repository(tmp_path / "recordings")
+    session_id = make_session_folder(
+        store, status="finalizing", capture_ended_at="2026-10-15T20:30:00-03:00"
+    )
+    all_ids = _run(None, store)  # `--all` leaves it to serve / `recover <dir>`
+    assert all_ids[1] == "cli.recover_none\n"
+
+    code, out = _resume(store.paths(session_id).root, settings, FakeLocalizer())
+
+    assert code == 0
+    assert out.startswith(f"cli.recovering(id={session_id})")
+    meta = store.read_meta(session_id)
+    assert (meta["status"], meta["ended_at"] is not None) == ("done", True)
+
+
+def test_a_finalizing_folder_whose_repair_fails_is_reported(tmp_path: Path) -> None:
+    settings = Settings(output_dir=tmp_path / "recordings", storage_backend=StorageBackend.FILES)
+    store = _repository(tmp_path / "recordings")
+    session_id = make_session_folder(
+        store, status="finalizing", capture_ended_at="2026-10-15T20:30:00-03:00"
+    )
+    store.paths(session_id).wav(Channel.MIC).write_bytes(b"garbage")
+
+    code, out = _resume(store.paths(session_id).root, settings, FakeLocalizer())
+
+    assert code == 1
+    assert f"cli.recover_failed(id={session_id},reason=" in out
+    assert store.read_meta(session_id)["status"] == "interrupted"

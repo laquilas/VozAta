@@ -413,7 +413,12 @@ and transcript, below); when it fails the step stores `recovery_error`, marks th
 and no later step runs. The transcribe step then continues from each channel's last committed
 segment (`resume_points`), after the repair set a half-written last line aside. Recovering
 (`POST /sessions/{id}/recover`, `python -m vozata recover [<dir> | --all]`; the CLI runs the
-older inline path):
+older inline path for `interrupted` sessions). A meeting a CLI `record` left `finalizing` with
+`capture_ended_at` (it crashed in its inline job) is not listed by `recover --all`, since another
+process may still be running it; it is resumed by `serve` at start or by `recover <dir>`, which
+runs the same job (repair, transcribe the rest, stop steps) inline. Known limitation: a `serve`
+started while a CLI `record` is still running that inline job re-queues the meeting too (the queue
+is per process).
 
 ```mermaid
 graph LR

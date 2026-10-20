@@ -20,6 +20,7 @@ from vozata.audio.devices import (
     list_input_devices,
     list_loopback_devices,
 )
+from vozata.bootstrap_processing import build_resume_job
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.diarize import run_diarize
 from vozata.cli.migrate import run_migrate
@@ -136,6 +137,9 @@ def main(
                 ),
                 console,
                 localizer,
+                lambda output_dir, session_id, observer: build_resume_job(
+                    settings, output_dir, session_id, observer
+                ),
             )
         if args.list_devices:
             return print_devices(

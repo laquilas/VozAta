@@ -110,6 +110,14 @@ class SessionRecovery:
         status = self._store.read_meta(session_id).get("status")
         return status == SessionStatus.INTERRUPTED.value
 
+    def is_resumable(self, session_id: str) -> bool:
+        """A `finalizing` session with `capture_ended_at`: capture ended and only its processing
+        job is missing (the CLI `record` crashed in its inline job)."""
+        meta = self._store.read_meta(session_id)
+        return meta.get("status") == SessionStatus.FINALIZING.value and bool(
+            meta.get("capture_ended_at")
+        )
+
     def recover(self, session_id: str, observer: SessionObserver) -> bool:
         """Finish an `interrupted` session; False (nothing done) for any other status.
 
