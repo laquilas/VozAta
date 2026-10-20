@@ -641,8 +641,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         {
             "recording" => RecordingState.Recording,
             "paused" => RecordingState.Paused,
-            "finalizing" => RecordingState.Finalizing,
-            _ => RecordingState.Idle, // idle, done, interrupted
+            // finalizing, idle, done, interrupted: a finalizing meeting is processed in the background
+            // (phase 40), also when it was stopped elsewhere (API, another client)
+            _ => RecordingState.Idle,
         });
     }
 

@@ -267,6 +267,20 @@ public sealed class RecorderPageViewModelTests
     }
 
     [Fact]
+    public async Task A_meeting_stopped_elsewhere_frees_the_recorder_when_it_starts_finalizing()
+    {
+        var recorder = await RecordingAsync(); // e.g. stopped through the API, not this page's Stop
+
+        recorder.Handle(new StatusEvent(SessionId, "finalizing", 15));
+        recorder.Handle(new StatusEvent(SessionId, "recording", 15)); // a late heartbeat
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.True(recorder.Idle.IsCompleted);
+        Assert.Null(_session.SessionId);
+        Assert.True(recorder.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task Late_recording_status_of_a_stopped_meeting_while_idle_is_ignored()
     {
         var recorder = await RecordingAsync();
