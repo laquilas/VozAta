@@ -10,13 +10,11 @@ from typing import Protocol
 
 from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
 from vozata.config import ConfigError, Settings
-from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.heartbeat import Heartbeat
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
-from vozata.minutes.session_action_items import Extractor, write_session_action_items
-from vozata.minutes.session_minutes import EmptyTranscriptError
+from vozata.minutes.session_action_items import Extractor
 from vozata.minutes.template_repository import DEFAULT_TEMPLATE
 from vozata.ports import (
     AudioMixer,
@@ -31,6 +29,8 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
+from vozata.processing.cancel import CancelToken
+from vozata.session_finisher import SessionFinisher
 from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.transcription.language_lock import LanguageLock
@@ -213,15 +213,30 @@ class RecordingSession:
 
     def _finish(self) -> None:
         """Stop steps 3 (mix) to 7, shared by `stop()` and `recover()` (phase 17)."""
-        self._mix()  # 3
+        finisher = self._finisher()
+        token = CancelToken()  # a live stop is never cancelled
+        finisher.mix()  # 3
         self._release_transcriber()  # 4
-        self._identify_speakers()  # 5
-        self._write_minutes()  # 6
-        self._extract_action_items()  # 6: action items (phase 23)
-        self._index_transcript()  # 6: search (phase 22)
-        self._meta.ended(self._store.now())  # 7
+        finisher.identify_speakers(token)  # 5
+        finisher.write_minutes(token)  # 6
+        finisher.extract_action_items(token)  # 6: action items (phase 23)
+        finisher.index()  # 6: search (phase 22)
+        finisher.ended(self._store.now())  # 7
         self._set_status(SessionStatus.DONE)
         self._stop_heartbeat()
+
+    def _finisher(self) -> SessionFinisher:
+        return SessionFinisher(
+            self._settings,
+            self._store,
+            self._audio,
+            self._c,
+            self._observer,
+            self.id,
+            self._lock,
+            lambda: self._meta.title,
+            self._meta,
+        )
 
     def _start_heartbeat(self) -> None:
         """Save `last_heartbeat_at` and the length so far every `AUTOSAVE_SECONDS` until done, so
@@ -298,13 +313,6 @@ class RecordingSession:
         except Exception:
             _log.exception("Releasing the audio backend failed")
 
-    def _mix(self) -> None:
-        try:
-            self._audio.write_mix(self.id, self._c.mixer)
-        except Exception as error:
-            _log.exception("Mixing %s failed", self.id)
-            self._error("mix_failed", reason=str(error))
-
     def _release_transcriber(self) -> None:
         transcriber = self._pipeline.transcriber if self._pipeline is not None else None
         if transcriber is None:
@@ -328,84 +336,6 @@ class RecordingSession:
                 raise
 
         return build
-
-    def _identify_speakers(self) -> None:
-        """Diarize the system track (Whisper is already released); a failure keeps `system`
-        labels.
-
-        Once speakers are written, `speakers_relabeled` tells clients to reload the transcript:
-        the post-session speakers replace the live ones (phase 15).
-        """
-        if self._c.diarizer_factory is None:
-            return
-        try:
-            found = diarize_session(
-                self._store,
-                self._audio,
-                self.id,
-                self._c.diarizer_factory,
-                self._settings.min_speakers,
-                self._settings.max_speakers,
-            )
-        except Exception as error:
-            _log.warning("Speaker identification for %s failed: %s", self.id, error)
-            reason = self._reason(error)
-            command = f'python -m vozata diarize "{self._command_target()}"'
-            self._error("diarization_failed", reason=reason, command=command)
-            return
-        if found is not None:
-            self._observer.on_speakers_relabeled(self.id)
-
-    def _write_minutes(self) -> None:
-        if self._c.minutes is None:
-            return
-        segments = self._store.load_transcript(self.id)
-        if not segments:
-            _log.info("No speech in %s; minutes skipped", self.id)
-            return
-        try:
-            labeler = self._c.labeler.with_names(self._store.speaker_names(self.id))
-            minutes = self._c.minutes.generate(
-                segments, labeler, self._lock.language, self._c.vocabulary, title=self._meta.title
-            )
-        except Exception as error:
-            _log.exception("Generating minutes for %s failed", self.id)
-            command = f'python -m vozata minutes "{self._command_target()}"'
-            self._error("minutes_failed", reason=str(error), command=command)
-            return
-        self._store.write_minutes(self.id, minutes + "\n")
-        self._observer.on_minutes_ready(self.id)
-
-    def _extract_action_items(self) -> None:
-        """After the minutes, with the same model (phase 23); a failure keeps everything else."""
-        if self._c.action_items is None:
-            return
-        try:
-            items = write_session_action_items(
-                self._store, self.id, self._c.action_items, self._c.labeler
-            )
-        except EmptyTranscriptError:
-            return
-        except Exception as error:
-            _log.exception("Extracting action items for %s failed", self.id)
-            self._error("action_items_failed", reason=str(error))
-            return
-        self._observer.on_action_items_ready(self.id, len(items))
-
-    def _index_transcript(self) -> None:
-        if self._c.search_index is None:
-            return
-        try:
-            self._c.search_index.index_session(self.id, self._store.load_transcript(self.id))
-        except Exception as error:
-            _log.exception("Indexing %s for search failed", self.id)
-            self._error("index_failed", reason=str(error))
-
-    def _command_target(self) -> str:
-        """What the CLI commands in error messages take: the session folder, or for a backend
-        without folders `OUTPUT_DIR/<id>` (the commands open the storage of its parent)."""
-        folder = self.folder
-        return str(folder if folder is not None else self._settings.output_dir / self.id)
 
     def _reason(self, error: Exception) -> str:
         return error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)

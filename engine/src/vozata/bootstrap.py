@@ -13,6 +13,7 @@ import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
@@ -81,6 +82,8 @@ from vozata.ports import (
 from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
+from vozata.session_finisher import SessionFinisher
+from vozata.session_title import stored_title
 from vozata.settings_file import SettingsFile
 from vozata.settings_options import SettingsOptions
 from vozata.storage.audio_cache import WavCache
@@ -102,6 +105,7 @@ from vozata.storage.sqlite.repository import SqliteSessionRepository
 from vozata.storage.sqlite.search import SqliteSearch
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
+from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
@@ -575,18 +579,14 @@ def _no_transcriber() -> Transcriber:
     raise RuntimeError("A recovered session is not transcribed again")
 
 
-def build_recovery_session(
-    settings: Settings,
-    store: SessionRepository,
-    audio: SessionAudio,
-    observer: SessionObserver,
-    session_id: str,
-) -> RecordingSession:
-    """A `RecordingSession` that finishes an interrupted session (phase 17).
+def _stored_components(
+    settings: Settings, store: SessionRepository, session_id: str
+) -> tuple[SessionComponents, dict[str, Any]]:
+    """The stop-step components of a stored session, and its metadata.
 
-    Nothing is captured or transcribed; the minutes template, glossary and mix mode come from the
-    session's metadata, so the result matches what its own stop would have produced. The search
-    index is the one of `OUTPUT_DIR`, used only when the session lives there.
+    Nothing is captured or transcribed; the minutes template, glossary and mix mode come from
+    the session's metadata, so the result matches what its own stop would have produced. The
+    search index is the one of `OUTPUT_DIR`, used only when the session lives there.
     """
     meta = store.read_meta(session_id)
     localizer = build_localizer(settings)
@@ -618,8 +618,46 @@ def build_recovery_session(
         if minutes is not None and settings.extract_action_items
         else None,
     )
+    return components, meta
+
+
+def build_recovery_session(
+    settings: Settings,
+    store: SessionRepository,
+    audio: SessionAudio,
+    observer: SessionObserver,
+    session_id: str,
+) -> RecordingSession:
+    """A `RecordingSession` that finishes an interrupted session (phase 17)."""
+    components, _ = _stored_components(settings, store, session_id)
     return RecordingSession(
         settings, store, audio, components, observer, settings.transcription_language
+    )
+
+
+def build_finisher(
+    settings: Settings,
+    store: SessionRepository,
+    audio: SessionAudio,
+    observer: SessionObserver,
+    session_id: str,
+) -> SessionFinisher:
+    """The stop steps of a stored session (phase 40), with the components of its metadata.
+
+    The title is read from `session.json` each time the minutes are written, so a rename made
+    while the session waits for its turn is used.
+    """
+    components, meta = _stored_components(settings, store, session_id)
+    language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
+    return SessionFinisher(
+        settings,
+        store,
+        audio,
+        components,
+        observer,
+        session_id,
+        LanguageLock(language, lambda detected: None),
+        lambda: stored_title(store.read_meta(session_id)),
     )
 
 

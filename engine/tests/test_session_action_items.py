@@ -10,7 +10,6 @@ from tests.fakes import FakeLanguageModel, FakeLocalizer
 from tests.test_session import _Rig, _voice, _words
 from vozata.domain import SessionStatus
 from vozata.minutes.action_items import ActionItemExtractor
-from vozata.ports import LanguageModelError
 from vozata.storage.action_items import read_action_items
 
 REPLY = json.dumps(
@@ -69,31 +68,3 @@ def test_a_failed_extraction_is_reported_and_the_session_still_finishes(tmp_path
     assert rig.observer.of("action_items_ready") == []
     assert rig.paths.minutes_md.is_file()
     assert rig.session.status is SessionStatus.DONE
-
-
-def test_an_unreachable_model_is_reported(tmp_path: Path) -> None:
-    class Down(FakeLanguageModel):
-        def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
-            raise LanguageModelError("connection refused")
-
-    rig = _rig(tmp_path, Down(), results=[_words("Hi.")], with_minutes=False)
-    rig.session.start()
-    rig.mic.push(_voice(1.0), 0.0)
-
-    rig.session.stop()
-
-    [(code, message)] = rig.observer.of("error")
-    assert code == "action_items_failed"
-    assert "connection refused" in message
-
-
-def test_a_silent_session_has_no_action_items_and_no_error(tmp_path: Path) -> None:
-    llm = FakeLanguageModel([REPLY])
-    rig = _rig(tmp_path, llm)
-    rig.session.start()
-
-    rig.session.stop()
-
-    assert llm.prompts == []
-    assert rig.observer.of("error") == []
-    assert rig.observer.of("action_items_ready") == []

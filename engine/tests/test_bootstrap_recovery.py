@@ -11,8 +11,9 @@ from tests.test_session_recover import make_session_folder
 from vozata import bootstrap
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.config import Settings
-from vozata.domain import MixMode, StorageBackend
+from vozata.domain import ConversationLanguage, MixMode, StorageBackend
 from vozata.minutes.action_items import ActionItemExtractor
+from vozata.processing.cancel import CancelToken
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.search_index import SearchIndex
@@ -80,6 +81,50 @@ def test_defaults_apply_when_session_json_lacks_them(tmp_path: Path) -> None:
     assert isinstance(components.mixer, StereoMixer)
     assert components.search_index is None
     assert components.diarizer_factory is not None
+
+
+def test_the_finisher_takes_its_components_language_and_title_from_session_json(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path, mix_mode=MixMode.MONO)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(
+        store, template="daily", vocabulary=["Avalonia"], settings={"MIX_MODE": "stereo"}
+    )
+    audio = bootstrap.build_audio_store(settings)
+
+    finisher = bootstrap.build_finisher(settings, store, audio, FakeSessionObserver(), session_id)
+
+    components = finisher._c
+    assert components.minutes is not None and components.minutes.template_id == "daily"
+    assert components.vocabulary == ("Avalonia",)
+    assert isinstance(components.mixer, StereoMixer)
+    assert isinstance(components.search_index, SearchIndex)
+    assert finisher._lock.language is ConversationLanguage.PT
+    assert finisher._title() is None
+    store.write_meta(session_id, {**store.read_meta(session_id), "title": "Budget"})
+    assert finisher._title() == "Budget"  # read when needed, not captured
+
+
+def test_a_finisher_runs_the_steps_of_a_stored_session(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, generate_minutes=False)
+    store = bootstrap.build_store(settings)
+    audio = bootstrap.build_audio_store(settings)
+    session_id = make_session_folder(store)
+    observer = FakeSessionObserver()
+
+    finisher = bootstrap.build_finisher(settings, store, audio, observer, session_id)
+    token = CancelToken()
+    finisher.mix()
+    finisher.identify_speakers(token)
+    finisher.write_minutes(token)
+    finisher.extract_action_items(token)
+    finisher.index()
+    finisher.ended(store.now())
+
+    assert observer.of("error") == []
+    assert store.paths(session_id).mixed_wav.is_file()
+    assert store.read_meta(session_id)["status"] == "done"
 
 
 def test_action_items_follow_extract_action_items(tmp_path: Path) -> None:
