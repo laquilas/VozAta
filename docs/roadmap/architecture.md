@@ -336,8 +336,9 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    once the previous session's `closed` is set (`LiveModelTurn`): never two live Whisper models.
 2. `serve`: `SessionManager.stop()` runs step 1 on a short-lived thread, then (under its lock)
    frees the recording slot and puts the meeting's `ProcessingJob` on the `ProcessingQueue`
-   (`bootstrap.build_processing_job`). `POST /sessions` is refused (`409
-   session_already_active`) only until the slot is free. CLI `record`: `RecordingSession.stop()`
+   (`bootstrap.build_processing_job`). `POST /sessions` sent before the slot is free waits for it
+   (outside the lock, up to 10 s, `stop_wait`), then starts; only a slot still taken after that
+   answers `409 session_already_active`. CLI `record`: `RecordingSession.stop()`
    runs the same job inline (`run_job_inline`), with the session's own components.
 3. The job (`processing/session_job.py`, composed by `bootstrap_processing.py`) waits for
    `closed` (`before`, no timeout, a warning every 5 min), then runs its steps in order; each

@@ -13,7 +13,9 @@ own rows. Changing a row requires updating both sides.
 - Errors: HTTP status + `{"error": {"code": "session_not_found", "message": "<localized>"}}`.
   Codes are stable English identifiers; `message` is localized with `APP_LANGUAGE`.
 - Only one recording session can be active at a time (`409 session_already_active`); meetings already
-  stopped, or being recovered, do not count: they are processed by the background queue (40).
+  stopped, or being recovered, do not count: they are processed by the background queue (40). A
+  `POST /sessions` sent while an accepted stop is still releasing its capture waits up to 10 s for
+  the slot, then starts (or answers `409 session_already_active` if the slot is still taken).
 - `session.json` carries `capture_ended_at` (40): when capture stopped. A `finalizing` meeting that
   has it is re-queued when the engine starts (repair, then the processing steps); one without it was
   cut short while recording and is offered for recovery (`recovery_available`). For a meeting recovered

@@ -77,6 +77,46 @@ def test_manager_start_refused_until_stop_capture_released_the_slot(
     assert [s.calls[-2:] for s in factory.sessions] == [["stop_capture", "finish"]] * 2
 
 
+def test_a_start_during_stop_capture_waits_for_the_slot_and_succeeds(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    manager = make_manager(factory, store, broadcaster, stop_wait=5.0)
+    factory.stop_gate = threading.Event()  # PortAudio still being released
+    manager.start(OPTIONS)
+    manager.stop()
+    started: list[dict[str, Any]] = []
+    starting = threading.Thread(target=lambda: started.append(manager.start(OPTIONS)))
+
+    starting.start()
+    threading.Event().wait(0.1)
+    assert not started  # waiting for the stop, outside the lock
+    factory.stop_gate.set()
+    starting.join(5)
+
+    [summary] = started
+    assert summary["status"] == "recording"
+    assert summary["id"] == "20261015_202358_2"
+    manager.stop()
+    assert manager.wait_until_finished(5)
+
+
+def test_a_start_during_a_stop_that_does_not_free_the_slot_in_time_is_refused(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    manager = make_manager(factory, store, broadcaster, stop_wait=0.1)
+    factory.stop_gate = threading.Event()
+    manager.start(OPTIONS)
+    manager.stop()
+
+    began = time.monotonic()
+    with pytest.raises(SessionConflictError):
+        manager.start(OPTIONS)
+    assert time.monotonic() - began >= 0.1
+
+    factory.stop_gate.set()
+    assert manager.wait_until_finished(5)
+
+
 def test_manager_start_allowed_after_stop_while_job_pending(
     manager: SessionManager, factory: SessionFactory, jobs: FakeJobs, store: FileSessionRepository
 ) -> None:

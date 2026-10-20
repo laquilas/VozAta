@@ -27,6 +27,7 @@ from vozata.processing.queue import ProcessingQueue
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
+STOP_WAIT = 10.0  # how long `start()` waits for a stop in progress to free the slot
 _PENDING = frozenset({"queued", "running", "paused"})  # processing states clients are sent
 
 _log = logging.getLogger(__name__)
@@ -193,6 +194,7 @@ class SessionManager:
         *,
         queue: ProcessingQueue,
         job_factory: JobFactory,
+        stop_wait: float = STOP_WAIT,
     ) -> None:
         self._factory = factory
         self._store = store
@@ -203,6 +205,7 @@ class SessionManager:
         self._recovery = recovery
         self._queue = queue
         self._job_factory = job_factory
+        self._stop_wait = stop_wait
         self._lock = threading.Lock()
         self._session: Session | None = None
         self._stopping: Session | None = None  # stop accepted, `stop_capture()` running
@@ -220,6 +223,13 @@ class SessionManager:
         return self._session is not None or bool(self._queue.pending())
 
     def start(self, options: StartOptions) -> dict[str, Any]:
+        """Start a recording. While a stop is still releasing its capture (sources, PortAudio),
+        wait up to `stop_wait` seconds (outside the lock) for the slot, so a Start right after the
+        stop was accepted succeeds; `SessionConflictError` when the slot is still taken."""
+        with self._lock:
+            stopping = self._stopping is not None
+        if stopping:
+            self._finished.wait(self._stop_wait)
         with self._lock:
             if self._session is not None:
                 raise SessionConflictError

@@ -245,7 +245,9 @@ def manager(
     broadcaster: RecordingBroadcaster,
     jobs: FakeJobs,
 ) -> SessionManager:
-    return make_manager(factory, store, broadcaster, jobs=jobs, status_interval=0.02)
+    return make_manager(
+        factory, store, broadcaster, jobs=jobs, status_interval=0.02, stop_wait=0.05
+    )
 
 
 START_ERROR = SessionStartError("device_timeout", "The mic did not open")
@@ -304,6 +306,7 @@ class Api:
             jobs=self.jobs,
             labeler=self.labeler,
             status_interval=60,
+            stop_wait=0.05,  # a Start during a held stop is refused quickly
             recovery=recovery(self.store) if recovery is not None else None,  # phase 17
         )
         self.devices = FakeDevices()
