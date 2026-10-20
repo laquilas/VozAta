@@ -382,6 +382,13 @@ class CacheCleared(BaseModel):
     freed_bytes: int
 
 
+class BundleImported(BaseModel):
+    """Phase 39: `POST /sessions/import` (`mode`: imported | audio_restored)."""
+
+    id: str
+    mode: str
+
+
 class MigrationErrorModel(BaseModel):
     folder: str
     reason: str  # unreadable_json | unreadable_wav | unsupported_wav | id_in_use

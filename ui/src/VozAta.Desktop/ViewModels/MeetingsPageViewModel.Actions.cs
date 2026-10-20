@@ -18,6 +18,7 @@ public sealed partial class MeetingsPageViewModel
         ["md"] = "FileTypeMarkdown",
         ["docx"] = "FileTypeWord",
         ["pdf"] = "FileTypePdf",
+        ["zip"] = "FileTypeZip",
     };
 
     private readonly HashSet<string> _hidden = []; // deleted, waiting for the engine or the undo window
@@ -191,7 +192,7 @@ public sealed partial class MeetingsPageViewModel
         row.IsExportOpen = open;
     }
 
-    /// <summary>Download the meeting as Markdown, Word or PDF and ask where to save it.</summary>
+    /// <summary>Download the meeting as Markdown, Word, PDF or a ZIP of the recording (39) and ask where to save it.</summary>
     [RelayCommand]
     private async Task ExportAsync(MeetingExport? export)
     {
@@ -204,8 +205,10 @@ public sealed partial class MeetingsPageViewModel
         Message = null;
         try
         {
-            var file = await _client.ExportSessionAsync(export.Row.Id, export.Format);
-            var path = await _saver.SaveAsync(file.FileName, _localization[FileTypes[export.Format]], export.Format, file.Content);
+            var path = export.Format == "zip"
+                ? await _saver.SaveAsync(
+                    $"{export.Row.Id}.zip", _localization[FileTypes["zip"]], "zip", stream => _client.DownloadBundleAsync(export.Row.Id, stream))
+                : await SaveDocumentAsync(export);
             if (path is not null)
             {
                 Error = null;
@@ -215,6 +218,73 @@ public sealed partial class MeetingsPageViewModel
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException or IOException or UnauthorizedAccessException)
         {
             Error = ErrorText(error);
+        }
+    }
+
+    private async Task<string?> SaveDocumentAsync(MeetingExport export)
+    {
+        var file = await _client.ExportSessionAsync(export.Row.Id, export.Format);
+        return await _saver.SaveAsync(file.FileName, _localization[FileTypes[export.Format]], export.Format, file.Content);
+    }
+
+    /// <summary>An import is running (the button waits for it).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ImportCommand))]
+    public partial bool IsImporting { get; private set; }
+
+    /// <summary>
+    /// Read a meeting ZIP the user picks (phase 39): a new meeting, or the audio of a kept one. The
+    /// list is reloaded and the meeting opened.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanImport))]
+    private async Task ImportAsync()
+    {
+        Error = Message = null;
+        IsImporting = true;
+        try
+        {
+            var bundle = await _saver.OpenAsync(_localization["MeetingImportTitle"], _localization["FileTypeZip"], "zip");
+            if (bundle is null)
+            {
+                return;
+            }
+
+            ImportedSession result;
+            await using (bundle)
+            {
+                result = await _client.ImportBundleAsync(bundle);
+            }
+
+            await LoadAsync();
+            var summary = await ImportedSummaryAsync(result.Id);
+            var name = summary is null ? result.Id : NewRow(summary).DisplayTitle;
+            Message = _localization.Format(result.AudioRestored ? "MeetingAudioRestored" : "MeetingImported", name);
+            if (summary is not null)
+            {
+                History.Show(summary);
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException or IOException or UnauthorizedAccessException)
+        {
+            Error = ErrorText(error);
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
+
+    private bool CanImport() => !IsImporting;
+
+    private async Task<SessionSummary?> ImportedSummaryAsync(string id)
+    {
+        try
+        {
+            return FromDetail(await _client.GetSessionAsync(id));
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            return null; // imported all the same; the list shows it after a refresh
         }
     }
 

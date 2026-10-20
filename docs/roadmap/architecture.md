@@ -192,10 +192,12 @@ class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessio
     def load_transcript(self, session_id: str) -> list[TranscriptSegment]: ...  # edited > diarized > raw
     def load_transcript_with_source(self, session_id: str) -> tuple[str, list[TranscriptSegment]]: ...
     def load_raw_transcript(self, session_id: str) -> list[TranscriptSegment]: ...
+    def load_source(self, session_id: str, source: str) -> list[TranscriptSegment]: ...  # (39) raw | diarized | edited
     def write_diarized(...) / write_edited(...) / delete_edited(session_id) -> bool
     def open_translations(self, session_id: str) -> TranslationWriter: ...  # append(Translation), close()
     def load_translations(self, session_id: str) -> dict[str, Translation]: ...  # last one wins
     def speaker_names(...) / write_speakers(session_id, ids) / rename_speakers(session_id, names)
+    def speaker_ids(self, session_id: str) -> list[str]: ...  # (39) every speaker, named or not, in order
     def read_minutes(self, session_id: str) -> str | None: ...; write_minutes(session_id, markdown); has_minutes(session_id)
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
     def folder(self, session_id: str) -> Path | None: ...  # the session folder (files); sqlite: None (32)
@@ -211,6 +213,7 @@ class AudioStore(Protocol):           # FileAudioStore (30), SqliteAudioStore (3
     def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter: ...
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None: ...  # files: mixed.wav; sqlite: nothing (mixed on read)
     def delete(self, session_id: str) -> None: ...  # (32) after DELETE /sessions/{id}: sqlite drops cached WAVs, reclaims space; files: nothing
+    def discard(self, session_id: str) -> None: ...  # (39) DELETE /sessions/{id}/audio: sqlite as delete; files: WAVs to the Recycle Bin
 class AudioReader(Protocol):          # int16 mono samples
     def frames(self, session_id: str, channel: Channel, start: int, count: int) -> np.ndarray: ...
     def length(self, session_id: str, channel: Channel) -> int: ...
@@ -224,6 +227,8 @@ class AudioTracks(Protocol):          # GET /sessions/{id}/audio/{track} (32)
 class AudioCache(Protocol):           # (32) WavCache, OUTPUT_DIR/cache: GET /health size, DELETE /storage/cache (38)
     def size(self) -> int: ...; def clear(self) -> int: ...  # clear skips files in use, returns bytes freed
 class SessionAudio(AudioStore, AudioReader, AudioTracks, Protocol): ...  # what RecordingSession gets
+class BundleImporter(Protocol):       # (39) SqliteBundleImporter (FolderImporter), FileBundleImporter (moves into OUTPUT_DIR)
+    def import_folder(self, folder: Path) -> ImportedSession: ...  # mode imported | audio_restored; BundleError, SessionExistsError
 class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository] (sqlite: audio only)
     def repair(self, session_id: str) -> float | None: ...  # recorded seconds if it holds audio; StoreRepairError
 ```
@@ -471,7 +476,18 @@ variables can miss a personal OneDrive next to a business one) and
   atomically and reused while their size matches; the cache is kept under `AUDIO_CACHE_MB`,
   least recently used first out, trimmed at engine start and after each build.
   `SqliteAudioStore.delete(id)` drops the chunks and cached files, then reclaims the space in
-  the background (used by `DELETE /sessions/{id}`, phase 36).
+  the background (used by `DELETE /sessions/{id}`, phase 36, and by `discard`, which keeps the
+  session row: `DELETE /sessions/{id}/audio`, phase 39).
+- **Meeting ZIP** (phase 39): `GET /sessions/{id}/bundle` writes the session back as a session
+  folder (`storage/folder_writer.py`, the reverse of `folder_reader.py`: metadata, the three
+  transcript sources, translations, speakers, minutes, action items, `mic.wav`, `system.wav`;
+  no `mixed.wav`) and zips it as `<id>/<file>` (WAVs stored, texts deflated).
+  `POST /sessions/import` unpacks such a ZIP strictly (one `SESSION_ID` folder, only
+  `SessionPaths` file names, at most `MAX_BUNDLE_BYTES` = 8 GiB uncompressed) and hands it to the
+  backend's `BundleImporter`. SQLite reuses `FolderImporter` with `record_errors=False`: an
+  unknown id is imported whole; a kept session without audio gets only its audio (the round
+  trip after "Delete audio"); a session with audio is refused. The minutes' `generated_at`
+  becomes the export time.
 
 | Table | Columns | Notes |
 |-------|---------|-------|

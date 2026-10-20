@@ -426,3 +426,17 @@ def test_the_default_clock_is_local_and_aware() -> None:
     from vozata.storage.migration import _local_now
 
     assert _local_now().tzinfo is not None
+
+
+def test_errors_can_be_returned_without_being_recorded(rig: Rig) -> None:
+    session_id = rig.folder()
+    rig.files.paths(session_id).meta.write_text("{", encoding="utf-8")
+    importer = FolderImporter(
+        rig.output, rig.files, rig.file_audio, rig.repo, rig.audio, RATE, record_errors=False
+    )
+
+    error = importer.import_one(session_id)
+
+    assert error is not None and error.reason == "unreadable_json"
+    assert importer.errors() == []
+    assert importer.pending() == [session_id]

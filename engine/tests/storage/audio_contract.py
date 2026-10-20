@@ -132,3 +132,20 @@ class AudioStoreContract:
         path = audio.materialize_wav(session_id, AudioTrack.MIXED)
 
         assert path.read_bytes()[:4] == b"RIFF"
+
+    def test_discard_removes_every_track_of_the_session(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        _record(
+            audio, session_id, {Channel.MIC: [([0.1] * 4, 0.0)], Channel.SYSTEM: [([0.2] * 4, 0.0)]}
+        )
+        audio.write_mix(session_id, MonoMixer())
+
+        audio.discard(session_id)
+
+        assert [audio.track(session_id, track) for track in AudioTrack] == [None, None, None]
+
+    def test_discard_without_audio_does_nothing(self, audio: SessionAudio, session_id: str) -> None:
+        audio.discard(session_id)
+
+        assert audio.track(session_id, AudioTrack.MIC) is None

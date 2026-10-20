@@ -62,6 +62,7 @@ from vozata.minutes.session_minutes import stored_template, stored_vocabulary
 from vozata.minutes.template_repository import bundled_templates
 from vozata.ports import (
     AudioMixer,
+    BundleImporter,
     Chunker,
     Diarizer,
     DocumentExporter,
@@ -84,6 +85,7 @@ from vozata.settings_file import SettingsFile
 from vozata.settings_options import SettingsOptions
 from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
+from vozata.storage.files.bundle_import import FileBundleImporter
 from vozata.storage.files.folder import open_session_folder as open_files_folder
 from vozata.storage.files.recycle_bin import Send2TrashRecycler
 from vozata.storage.files.repository import FileSessionRepository
@@ -93,6 +95,7 @@ from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_folder import SessionFolder
 from vozata.storage.session_store import SessionStore
 from vozata.storage.sqlite.audio import SqliteAudioStore
+from vozata.storage.sqlite.bundle_import import SqliteBundleImporter
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.location import onedrive_root
 from vozata.storage.sqlite.repository import SqliteSessionRepository
@@ -194,7 +197,9 @@ AUDIO_STORES: dict[StorageBackend, Callable[[Settings], SessionAudio]] = {
         audio_cache(settings),
     ),
     StorageBackend.FILES: lambda settings: FileAudioStore(
-        SessionStore(settings.output_dir), settings.sample_rate
+        SessionStore(settings.output_dir),
+        settings.sample_rate,
+        Send2TrashRecycler(),  # discarded audio (phase 39)
     ),
 }
 SEARCHES: dict[StorageBackend, Callable[[Settings], SqliteSearch | SearchIndex]] = {
@@ -316,6 +321,17 @@ def build_folder_importer(settings: Settings) -> FolderImporter | None:
         audio,
         settings.sample_rate,
     )
+
+
+def build_bundle_importer(settings: Settings) -> BundleImporter:
+    """Meeting ZIPs (phase 39) into the configured storage backend."""
+    repository = build_store(settings)
+    audio = build_audio_store(settings)
+    if isinstance(repository, SqliteSessionRepository) and isinstance(audio, SqliteAudioStore):
+        return SqliteBundleImporter(repository, audio, settings.sample_rate)
+    if not isinstance(repository, FileSessionRepository) or not isinstance(audio, FileAudioStore):
+        raise TypeError(f"no meeting import for {type(repository).__name__}")
+    return FileBundleImporter(repository, audio, MIXERS[settings.mix_mode]())
 
 
 def build_migration_job(
@@ -785,6 +801,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         audio=audio,
         audio_cache=audio.cache if isinstance(audio, SqliteAudioStore) else None,
         migration=migration,
+        bundle_importer=build_bundle_importer(settings),
         setting_options=options.collect,
         connection_check=ConnectionChecks((DIARIZATION_MODEL, EMBEDDING_MODEL)).run,
     )

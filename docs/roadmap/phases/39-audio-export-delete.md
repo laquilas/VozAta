@@ -1,0 +1,133 @@
+# Phase 39 — Delete a meeting's audio, export and import a meeting as a ZIP
+
+## Goal
+
+Since phase 32 the audio lives in `vozata.db` (raw PCM, ≈ 230 MB per hour) and there is no way
+to free one meeting's audio or to take a recording out of the app. Add:
+
+- **Delete audio**: drop a meeting's audio and keep its transcript, minutes, speakers and action
+  items.
+- **Export recording**: a ZIP holding the meeting as a phase 30 session folder (metadata,
+  transcripts, minutes, action items, `mic.wav`, `system.wav`).
+- **Import**: read such a ZIP back. An unknown meeting is added; a meeting that is already there
+  without audio gets its audio back (the round trip after "Delete audio").
+
+Audio stays in SQLite: the 1 s chunks are what make crash recovery a non-event, and
+`STORAGE_BACKEND=files` still exists for whoever wants WAV files.
+
+## Depends on
+
+32, 37
+
+## Read first
+
+- `engine/CLAUDE.md`, `ui/CLAUDE.md`
+- [phase 32](32-audio-in-sqlite.md) (`AudioStore`, `audio_chunks`, `Database.reclaim`)
+- [phase 33](33-folder-migration.md) (`FolderImporter`, `folder_reader.py`: the folder format)
+- [phase 37](37-detail-and-player.md) (meeting page actions, player)
+- `docs/roadmap/architecture.md` §8 (data model, session folder layout)
+
+## Scope
+
+**Engine**
+
+| File | Content |
+|------|---------|
+| `ports.py` | `AudioStore.discard(session_id)`: remove a kept session's audio |
+| `storage/sqlite/audio.py`, `storage/files/audio.py` | `discard`: chunks deleted and space reclaimed / WAVs to the Recycle Bin |
+| `api/routes/audio.py` | `DELETE /sessions/{id}/audio` → 204; 404 `session_not_found`; 409 `session_live` |
+| `storage/folder_writer.py` | writes a stored session as a session folder (reverse of `folder_reader.py`) |
+| `export/bundle.py` | zips that folder (`ZIP_STORED`) |
+| `storage/bundle_import.py` | safe extraction of an uploaded ZIP + `FolderImporter` rooted at the extraction dir |
+| `api/routes/bundle.py` | `GET /sessions/{id}/bundle` (`<id>.zip`), `POST /sessions/import` (raw `application/zip` body) → `{id, mode}` |
+| `locales/*.toml` | error messages |
+
+**UI**
+
+| File | Content |
+|------|---------|
+| `VozAta.Client/EngineClient.cs` | `DeleteSessionAudioAsync`, `DownloadBundleAsync`, `ImportBundleAsync` |
+| `Services/FileSaver.cs` | streaming save; a `.zip` open picker |
+| `SessionPage` | "Export recording (.zip)" and "Delete audio" actions |
+| `MeetingsPage` | "Import" button; ZIP entry in the row export menu |
+| Resources | strings in en / pt-BR / es |
+
+## Design notes
+
+- The ZIP has one top-level folder named after the session id, laid out as
+  `storage/files/layout.py` (`SessionPaths`). No `mixed.wav`: the import computes the mix, as for
+  phase 33 folders.
+- Import safety: exactly one top-level folder matching `SESSION_ID`, no absolute paths or `..`,
+  only known file names, and an uncompressed-size cap checked before extraction.
+- An id that exists **with** audio is refused (409 `session_exists`); nothing is overwritten.
+- The live session can neither lose its audio nor be exported.
+
+## Acceptance criteria
+
+- [x] "Delete audio" on a meeting asks for confirmation, removes the player, keeps transcript /
+      minutes / Ask, and `storage.size_bytes` drops once the space is reclaimed.
+- [x] "Export recording (.zip)" saves a ZIP that holds the session folder with `mic.wav` and
+      `system.wav` of the full length.
+- [x] Importing that ZIP into another database adds the meeting with its transcript, minutes,
+      speakers, action items and audio.
+- [x] Importing it after "Delete audio" restores the audio of the same meeting.
+- [x] Importing a ZIP of a meeting that still has audio, or an invalid ZIP, shows a clear error
+      and changes nothing.
+- [x] Both storage backends pass the shared contract tests for `discard`.
+
+## Tests
+
+Engine: contract tests for `discard`; route tests (204 / 404 / 409, detail shows `audio: {}`);
+writer → zip → import round trip (sqlite to sqlite, audio-only restore, `session_exists`, zip
+slip, oversize, wrong layout). UI: client methods, page and list view models, locale parity.
+
+## Out of scope
+
+- Compressed audio (FLAC/Opus) inside the database or the ZIP.
+- Exporting or importing several meetings at once.
+
+## Progress
+
+- **Branch:** `feature/39-audio-export-delete`
+- **Status:** done
+- **Updated:** 2026-10-20 10:05
+- **Next step:** none (phase done).
+
+### Steps
+
+- [x] Phase file and roadmap row
+- [x] `AudioStore.discard` (sqlite + files) + contract tests
+- [x] `DELETE /sessions/{id}/audio`
+- [x] Session folder writer + `GET /sessions/{id}/bundle`
+- [x] `POST /sessions/import` (safe extraction + `FolderImporter`)
+- [x] API contract and architecture docs
+- [x] UI client methods
+- [x] Meeting page: export ZIP and delete audio
+- [x] Meetings page: import and ZIP export entry
+- [x] Full suites, manual check
+
+### Decisions and notes
+
+- Requested during the manual checks of phases 32/33/37: the user chose "delete audio only" and
+  a ZIP that can be imported back, without `mixed.wav`.
+- `DELETE /sessions/{id}/audio` without audio is `404 no_audio` (new error key); the live check
+  runs first, under the manager lock shared with `DELETE /sessions/{id}`.
+- The port gained `SessionRepository.load_source` and `speaker_ids` so the writer keeps every
+  transcript source (the diarized one under an edit too) and unnamed speakers. The minutes'
+  `generated_at` is not carried: the import takes the file time, i.e. the export time.
+- `POST /sessions/import` takes the raw ZIP as the request body (no multipart dependency), streams
+  it to a temporary file with an 8 GiB cap (`storage.bundle_import.MAX_BUNDLE_BYTES`) and
+  unpacks it with the same cap on the uncompressed size. Errors: 409 `session_exists`, 413
+  `bundle_too_large`, 422 `bundle_invalid`, 503 `import_unavailable`, 507 `not_enough_space`.
+- `FolderImporter(record_errors=False)` keeps a failed ZIP out of the phase 33 error list.
+- API round trip on a scratch engine (2026-10-19, the 9-min meeting `20261016_095109`): bundle
+  35 MB; delete audio took the database from 77.5 MB to 41.3 MB and `mixed` to 404; importing
+  the ZIP answered `audio_restored` with the same three track lengths; a second import gave 409
+  `session_exists`, a non-ZIP 422. Engine suite: 1,760+ tests, 99 % coverage; UI suite: 709.
+- Manual UI check (2026-10-20, a copy of the database via `DATABASE_PATH`, 10 s meeting
+  `20261016_094548`): "Export recording (.zip)" saved the session folder with `mic.wav` and
+  `system.wav` of 10.4 s each; "Delete audio" asked for confirmation, removed the player and kept
+  the minutes and tabs, and the chunks' pages were freed; "Import meeting" with that ZIP
+  restored the player (10.4 s tracks); a second import showed the `session_exists` message, a
+  non-ZIP the `bundle_invalid` message; after deleting the meeting, importing the ZIP added it
+  back (`imported`). Engine suite: 1,755 passed, 99.88 % coverage; UI suite: 709 passed.

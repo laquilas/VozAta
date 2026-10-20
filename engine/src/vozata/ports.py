@@ -21,6 +21,7 @@ from vozata.domain import (
     Channel,
     ConversationLanguage,
     ExportDocument,
+    ImportedSession,
     SearchHit,
     SessionStatus,
     SpeakerTurn,
@@ -338,6 +339,10 @@ class SessionRepository(Protocol):
         """The transcript as captured (empty when there is none)."""
         ...
 
+    def load_source(self, session_id: str, source: str) -> list[TranscriptSegment]:
+        """One transcript: `raw`, `diarized` or `edited` (empty when there is none; phase 39)."""
+        ...
+
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
         """Replace the speaker-labelled transcript (phase 14)."""
         ...
@@ -364,6 +369,10 @@ class SessionRepository(Protocol):
 
     def write_speakers(self, session_id: str, speaker_ids: Sequence[str]) -> None:
         """Replace the speakers with these ids, without names (phase 14)."""
+        ...
+
+    def speaker_ids(self, session_id: str) -> list[str]:
+        """Every speaker id, named or not, in the order they were added (phase 39)."""
         ...
 
     def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:
@@ -445,6 +454,21 @@ class AudioStore(Protocol):
 
     def delete(self, session_id: str) -> None:
         """Drop what this store keeps of a deleted session beyond the repository (phase 32)."""
+        ...
+
+    def discard(self, session_id: str) -> None:
+        """Remove the audio of a session that is kept: its transcript and minutes stay (39)."""
+        ...
+
+
+class BundleImporter(Protocol):
+    """Reads an unpacked meeting ZIP into the storage backend (phase 39)."""
+
+    def import_folder(self, folder: Path) -> ImportedSession:
+        """Import the session folder `<dir>/<id>/`: a new session, or only its audio into a kept
+        session that has none. Raises `storage.bundle_import.BundleError` for a folder that
+        cannot be read and `SessionExistsError` when the session is there with its audio;
+        nothing is changed then."""
         ...
 
 

@@ -160,4 +160,43 @@ internal sealed class FakeFileSaver : IFileSaver
         Saves.Add((suggestedName, typeName, extension, content));
         return Task.FromResult(Path);
     }
+
+    /// <summary>Streamed saves with what was written; a save whose writer failed is not listed.</summary>
+    public List<(string Name, string TypeName, string Extension, byte[] Content)> StreamSaves { get; } = [];
+
+    /// <summary>How many half-written files were removed after their writer failed.</summary>
+    public int Removed { get; private set; }
+
+    public async Task<string?> SaveAsync(string suggestedName, string typeName, string extension, Func<Stream, Task> write)
+    {
+        if (Path is null)
+        {
+            return null;
+        }
+
+        using var stream = new MemoryStream();
+        try
+        {
+            await write(stream);
+        }
+        catch
+        {
+            Removed++;
+            throw;
+        }
+
+        StreamSaves.Add((suggestedName, typeName, extension, stream.ToArray()));
+        return Path;
+    }
+
+    /// <summary>The content of the file the user opens; null = the user cancelled.</summary>
+    public byte[]? OpenContent { get; set; } = "PK"u8.ToArray();
+
+    public List<(string Title, string TypeName, string Extension)> Opens { get; } = [];
+
+    public Task<Stream?> OpenAsync(string title, string typeName, string extension)
+    {
+        Opens.Add((title, typeName, extension));
+        return Task.FromResult<Stream?>(OpenContent is null ? null : new MemoryStream(OpenContent));
+    }
 }

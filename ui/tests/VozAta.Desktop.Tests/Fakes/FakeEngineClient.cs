@@ -221,6 +221,54 @@ internal sealed partial class FakeEngineClient : IEngineClient
         await destination.WriteAsync("RIFF"u8.ToArray(), cancellationToken);
     }
 
+    public List<string> AudioDeleted { get; } = [];
+
+    public Exception? DeleteAudioError { get; set; }
+
+    public Task DeleteSessionAudioAsync(string id, CancellationToken cancellationToken = default)
+    {
+        Calls.Add($"delete-audio {id}");
+        if (DeleteAudioError is not null)
+        {
+            return Task.FromException(DeleteAudioError);
+        }
+
+        AudioDeleted.Add(id);
+        return Task.CompletedTask;
+    }
+
+    public List<string> BundleDownloads { get; } = [];
+
+    /// <summary>When set, <see cref="DownloadBundleAsync"/> writes one byte, then fails with it.</summary>
+    public Exception? BundleError { get; set; }
+
+    public async Task DownloadBundleAsync(string id, Stream destination, CancellationToken cancellationToken = default)
+    {
+        BundleDownloads.Add(id);
+        if (BundleError is not null)
+        {
+            await destination.WriteAsync(new byte[] { 0x50 }, cancellationToken);
+            throw BundleError;
+        }
+
+        await destination.WriteAsync("PK"u8.ToArray(), cancellationToken);
+    }
+
+    /// <summary>The bytes of every imported bundle, in order.</summary>
+    public List<byte[]> Imported { get; } = [];
+
+    public ImportedSession ImportResult { get; set; } = new("20261015_202358", "imported");
+
+    public Exception? ImportError { get; set; }
+
+    public async Task<ImportedSession> ImportBundleAsync(Stream bundle, CancellationToken cancellationToken = default)
+    {
+        using var copy = new MemoryStream();
+        await bundle.CopyToAsync(copy, cancellationToken);
+        Imported.Add(copy.ToArray());
+        return ImportError is null ? ImportResult : throw ImportError;
+    }
+
     /// <summary>The template of each regeneration, in the same order as <see cref="Regenerated"/>.</summary>
     public List<string?> RegeneratedTemplates { get; } = [];
 

@@ -329,6 +329,14 @@ class ActionItem:
 
 
 @dataclass(frozen=True)
+class ImportedSession:
+    """A meeting ZIP read back (phase 39): a new session, or the audio of a kept one."""
+
+    id: str
+    mode: str  # "imported" | "audio_restored"
+
+
+@dataclass(frozen=True)
 class TaskDraft:
     """One work item or issue to create from an action item; `body` is localized plain text."""
 

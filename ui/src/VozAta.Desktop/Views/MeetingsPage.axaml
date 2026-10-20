@@ -227,6 +227,9 @@
           <TextBox Width="220" Classes="clearButton" Text="{Binding Search.Query}"
                    PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchPlaceholder]}"
                    AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SearchPlaceholder]}" />
+          <Button Command="{Binding ImportCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingImport]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingImport]}" />
           <Button Classes="icon" Command="{Binding RefreshCommand}"
                   ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}"
                   AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}">

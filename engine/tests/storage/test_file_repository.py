@@ -44,7 +44,8 @@ class TestFileSessionRepository(RepositoryContract):
 class TestFileAudioStore(AudioStoreContract):
     @pytest.fixture
     def audio(self, tmp_path: Path) -> SessionAudio:
-        return FileAudioStore(SessionStore(tmp_path / "recordings"), RATE)
+        recycler = FakeRecycler(tmp_path / "recycle-bin")
+        return FileAudioStore(SessionStore(tmp_path / "recordings"), RATE, recycler)
 
     @pytest.fixture
     def session_id(self, tmp_path: Path) -> str:
@@ -72,6 +73,25 @@ class TestFileAudioStore(AudioStoreContract):
         audio.delete(session_id)
 
         assert wav.exists()  # the folder goes to the Recycle Bin with the session (phase 36)
+
+    def test_discard_sends_the_wavs_to_the_recycle_bin(self, tmp_path: Path) -> None:
+        recycler = FakeRecycler(tmp_path / "recycle-bin")
+        audio = FileAudioStore(SessionStore(tmp_path / "recordings"), RATE, recycler)
+        session_id = _repository(tmp_path).create(STARTED)
+        for track in AudioTrack:
+            audio.materialize_wav(session_id, track).write_bytes(b"RIFF")
+
+        audio.discard(session_id)
+
+        assert [path.name for path in recycler.recycled] == ["mic.wav", "system.wav", "mixed.wav"]
+
+    def test_discard_without_a_recycler_fails(self, tmp_path: Path) -> None:
+        audio = FileAudioStore(SessionStore(tmp_path / "recordings"), RATE)
+        session_id = _repository(tmp_path).create(STARTED)
+        audio.materialize_wav(session_id, AudioTrack.MIC).write_bytes(b"RIFF")
+
+        with pytest.raises(RuntimeError):
+            audio.discard(session_id)
 
     def test_a_wav_that_is_not_16_bit_is_refused_as_a_track(
         self, audio: SessionAudio, session_id: str

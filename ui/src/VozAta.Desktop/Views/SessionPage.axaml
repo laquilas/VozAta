@@ -80,6 +80,10 @@
                   Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportPdf]}" />
           <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="mixed"
                   Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerExternal]}" />
+          <Button Margin="0,0,8,4" Command="{Binding ExportBundleCommand}" IsVisible="{Binding !IsLive}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportBundle]}" />
+          <Button Margin="0,0,8,4" Command="{Binding DeleteAudioCommand}" IsVisible="{Binding HasAudio}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDeleteAudio]}" />
           <Button Margin="0,0,8,4" Command="{Binding OpenFolderCommand}"
                   Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}"
                   IsVisible="{Binding Folder, Converter={x:Static ObjectConverters.IsNotNull}}" />

@@ -96,6 +96,16 @@ class SessionStore:
         path = self.paths(session_id).transcript_jsonl
         return read_segments(path) if path.is_file() else []
 
+    def load_source(self, session_id: str, source: str) -> list[TranscriptSegment]:
+        """`transcript.jsonl`, `transcript.diarized.jsonl` or `transcript.edited.jsonl`."""
+        paths = self.paths(session_id)
+        path = {
+            "raw": paths.transcript_jsonl,
+            "diarized": paths.diarized_jsonl,
+            "edited": paths.edited_jsonl,
+        }[source]
+        return read_segments(path) if path.is_file() else []
+
     def write_diarized(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None:
         """Replace `transcript.diarized.jsonl` atomically (phase 14)."""
         _write_atomic(self.paths(session_id).diarized_jsonl, _jsonl(segments))

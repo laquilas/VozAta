@@ -57,6 +57,13 @@ class SessionAnnotations:
                 [(session_id, speaker_id) for speaker_id in speaker_ids],
             )
 
+    def speaker_ids(self, session_id: str) -> list[str]:
+        check_id(session_id)
+        rows = self._db.connection().execute(
+            "SELECT speaker_id FROM speakers WHERE session_id = ? ORDER BY rowid", (session_id,)
+        )
+        return [row[0] for row in rows]
+
     def rename_speakers(self, session_id: str, names: Mapping[str, str | None]) -> None:
         check_id(session_id)
         with self._db.write() as db:

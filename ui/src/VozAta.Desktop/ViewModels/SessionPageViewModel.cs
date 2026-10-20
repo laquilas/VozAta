@@ -161,7 +161,11 @@ public sealed partial class SessionPageViewModel(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportBundleCommand))]
     public partial bool IsExporting { get; private set; }
+
+    /// <summary>The meeting has audio (the player, "Open in external player" and "Delete audio").</summary>
+    public bool HasAudio => _audio.Count > 0;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenFolderCommand))]
@@ -206,8 +210,7 @@ public sealed partial class SessionPageViewModel(
         try
         {
             var detail = await client.GetSessionAsync(Id, cancellationToken);
-            _audio = detail.Audio ?? new Dictionary<string, double>();
-            OpenAudioCommand.NotifyCanExecuteChanged();
+            SetAudio(detail.Audio ?? new Dictionary<string, double>());
             CreatePlayer();
             Folder = detail.Folder;
             RegenerateTemplate ??= templates?.Find(SessionTemplate(detail));
@@ -333,18 +336,108 @@ public sealed partial class SessionPageViewModel(
         }
     }
 
+    private bool CanExportBundle() => !IsExporting && !IsLive;
+
+    /// <summary>
+    /// Save the meeting as a ZIP of its session folder (phase 39): transcripts, minutes, action
+    /// items and both audio tracks; "Import meeting" reads it back.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanExportBundle))]
+    private async Task ExportBundleAsync()
+    {
+        Error = Message = null;
+        IsExporting = true;
+        try
+        {
+            var path = await saver.SaveAsync(
+                $"{Id}.zip", localization["FileTypeZip"], "zip", stream => client.DownloadBundleAsync(Id, stream));
+            if (path is not null)
+            {
+                Message = localization.Format("ExportSaved", path);
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException or IOException or UnauthorizedAccessException)
+        {
+            Error = ErrorText(error);
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+
+    private bool CanDeleteAudio() => !IsLive && HasAudio;
+
+    /// <summary>
+    /// Delete the meeting's audio after a confirmation (phase 39); the transcript, minutes and
+    /// action items stay, and the player goes away.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanDeleteAudio))]
+    private async Task DeleteAudioAsync()
+    {
+        if (dialogs is not null && !await dialogs.ConfirmAsync(
+                localization["MeetingDeleteAudioTitle"],
+                localization.Format("MeetingDeleteAudioMessage", Title),
+                localization["MeetingDeleteAudio"],
+                localization["MeetingDeleteCancel"]))
+        {
+            return;
+        }
+
+        Error = Message = null;
+        try
+        {
+            await client.DeleteSessionAudioAsync(Id);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            Error = ErrorText(error);
+            return;
+        }
+
+        RemovePlayer();
+        SetAudio(new Dictionary<string, double>());
+        Message = localization["MeetingAudioDeleted"];
+    }
+
+    private void SetAudio(IReadOnlyDictionary<string, double> audio)
+    {
+        _audio = audio;
+        OnPropertyChanged(nameof(HasAudio));
+        OpenAudioCommand.NotifyCanExecuteChanged();
+        DeleteAudioCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RemovePlayer()
+    {
+        if (Player is null)
+        {
+            return;
+        }
+
+        Player.PositionMoved -= OnPlayerMoved;
+        Player.Dispose();
+        Player = null;
+        if (CurrentLine is not null && Lines.IndexOf(CurrentLine) is var index and >= 0)
+        {
+            Lines[index] = CurrentLine with { IsCurrent = false };
+        }
+
+        CurrentLine = null;
+    }
+
     private bool HasFolder() => Folder is not null;
 
     [RelayCommand(CanExecute = nameof(HasFolder))]
     private void OpenFolder() => shell.Open(Folder!);
 
-    private bool HasAudio(string? track) => track is not null && _audio.ContainsKey(track);
+    private bool HasTrack(string? track) => track is not null && _audio.ContainsKey(track);
 
     /// <summary>
     /// Download <c>mic</c>, <c>system</c> or <c>mixed</c> as <c>&lt;id&gt;-&lt;track&gt;.wav</c> and open it in the
     /// default player. A file the player still holds is opened again as it is.
     /// </summary>
-    [RelayCommand(CanExecute = nameof(HasAudio))]
+    [RelayCommand(CanExecute = nameof(HasTrack))]
     private async Task OpenAudioAsync(string? track)
     {
         Error = null;
@@ -446,14 +539,7 @@ public sealed partial class SessionPageViewModel(
         Player.Position = seconds;
     }
 
-    public void Dispose()
-    {
-        if (Player is not null)
-        {
-            Player.PositionMoved -= OnPlayerMoved;
-            Player.Dispose();
-        }
-    }
+    public void Dispose() => RemovePlayer();
 
     /// <summary>Play the recording from a transcript line.</summary>
     [RelayCommand]
