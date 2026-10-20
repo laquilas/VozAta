@@ -144,10 +144,18 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
     {
         IsLoading = true;
         Error = null;
+        var requestedAt = ProcessingSequence; // events received while the request runs are newer
+        var load = ++_loadsStarted;
         try
         {
             var range = await _client.ListSessionDaysAsync(_oldest, WeekStart.AddDays(6), cancellationToken);
-            _processing.Clear(); // the list is the truth now
+            if (load < _loadApplied)
+            {
+                return; // a newer list already answered: this one is stale
+            }
+
+            _loadApplied = load;
+            ForgetProcessingBefore(requestedAt); // the list is the truth for the older events
             _days.Clear();
             _days.AddRange(range.Days);
             HasEarlier = range.HasEarlier;

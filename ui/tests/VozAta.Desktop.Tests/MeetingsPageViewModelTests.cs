@@ -910,6 +910,84 @@ public sealed class MeetingsPageViewModelTests
     }
 
     [Fact]
+    public async Task An_event_received_while_the_list_loads_is_not_lost()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("queued", 0, null, 1), status: "finalizing");
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        _client.DaysGate = new TaskCompletionSource();
+
+        var loading = page.LoadAsync(); // the list was read before the event below
+        await page.OnProcessingAsync(new ProcessingEvent(meeting.Id, new ProcessingInfo("running", 50, "transcribe")));
+        _client.DaysGate.SetResult();
+        await loading;
+
+        Assert.Equal("Processing 50 %", Rows(page).Single().ProcessingText);
+        _client.DaysGate = null;
+        _client.Sessions[0] = meeting with { Processing = new ProcessingInfo("running", 60, "mix") };
+        await page.LoadAsync(); // a list requested after the event is the truth again
+        Assert.Equal("Processing 60 %", Rows(page).Single().ProcessingText);
+    }
+
+    [Fact]
+    public async Task A_finished_meeting_is_not_shown_processing_by_a_list_read_before_it_finished()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("running", 99, "index"), status: "finalizing");
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        _client.DaysGate = new TaskCompletionSource();
+
+        var loading = page.LoadAsync(); // asked while it still ran: stale
+        _client.Sessions[0] = meeting with { Status = "done", Processing = null, SpeakerCount = 2 };
+        var done = page.OnSessionDoneAsync(meeting.Id);
+        _client.DaysGate.SetResult();
+        await Task.WhenAll(loading, done);
+
+        var row = Rows(page).Single();
+        Assert.Equal((false, 2), (row.IsProcessing, row.SpeakerCount));
+    }
+
+    [Fact]
+    public async Task A_list_answered_after_a_newer_one_is_ignored()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("running", 99, "index"), status: "finalizing");
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        var (older, newer) = (new TaskCompletionSource(), new TaskCompletionSource());
+        _client.DaysGates = new Queue<TaskCompletionSource>([older, newer]);
+
+        var stale = page.LoadAsync();
+        _client.Sessions[0] = meeting with { Status = "done", Processing = null, SpeakerCount = 2 };
+        var fresh = page.LoadAsync();
+        newer.SetResult();
+        await fresh;
+        older.SetResult();
+        await stale;
+
+        Assert.Equal((false, 2), (Rows(page).Single().IsProcessing, Rows(page).Single().SpeakerCount));
+        Assert.False(page.IsLoading);
+    }
+
+    [Fact]
+    public async Task Connection_loss_clears_the_badges_until_the_snapshot_rebuilds_them()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("queued", 0, null, 1), status: "finalizing");
+        var other = AddProcessing(NoonClock.Local(2026, 10, 15, 9), null);
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        await page.OnProcessingAsync(new ProcessingEvent(meeting.Id, new ProcessingInfo("running", 30, "transcribe")));
+
+        page.OnConnectionLost();
+
+        Assert.All(Rows(page), row => Assert.False(row.IsProcessing));
+        page.RefreshTexts(); // a re-render does not bring the stale summary back
+        Assert.All(Rows(page), row => Assert.False(row.IsProcessing));
+        await page.OnProcessingAsync(new ProcessingEvent(meeting.Id, new ProcessingInfo("running", 35, "transcribe"))); // snapshot
+        Assert.Equal("Processing 35 %", Rows(page).Single(row => row.Id == meeting.Id).ProcessingText);
+        Assert.False(Rows(page).Single(row => row.Id == other.Id).IsProcessing);
+    }
+
+    [Fact]
     public async Task Finalizing_row_is_not_pinned_as_live()
     {
         Add(NoonClock.Local(2026, 10, 14, 9), 60, status: "finalizing");

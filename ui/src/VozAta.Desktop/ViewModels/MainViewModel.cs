@@ -412,6 +412,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (!connection.Connected)
                 {
                     Processing.Clear(); // the snapshot on reconnect rebuilds it
+                    Meetings.OnConnectionLost(); // the rows' badges too
                     History.Ask.OnConnectionLost();
                     Recovery.OnConnectionLost();
                     Migration.OnConnectionLost();

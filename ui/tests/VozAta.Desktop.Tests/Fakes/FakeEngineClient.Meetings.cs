@@ -19,12 +19,20 @@ internal sealed partial class FakeEngineClient
     /// <summary>When set, range requests wait for it (tests check what shows while loading).</summary>
     public TaskCompletionSource? DaysGate { get; set; }
 
+    /// <summary>Per-request gates, used first (one per request, in order) when set.</summary>
+    public Queue<TaskCompletionSource>? DaysGates { get; set; }
+
     public async Task<SessionDays> ListSessionDaysAsync(
         DateOnly first, DateOnly last, CancellationToken cancellationToken = default)
     {
         Calls.Add($"days {first:yyyy-MM-dd} {last:yyyy-MM-dd}");
         DayRequests.Add((first, last));
-        if (DaysGate is { } gate)
+        var sessions = Sessions.ToList(); // the engine answers with what it had when asked
+        if (DaysGates is { Count: > 0 } gates)
+        {
+            await gates.Dequeue().Task;
+        }
+        else if (DaysGate is { } gate)
         {
             await gate.Task;
         }
@@ -34,14 +42,14 @@ internal sealed partial class FakeEngineClient
             throw DaysError;
         }
 
-        var days = Sessions
+        var days = sessions
             .Where(session => Day(session) is { } day && day >= first && day <= last)
             .OrderByDescending(session => session.StartedAt)
             .GroupBy(session => Day(session)!.Value)
             .OrderByDescending(group => group.Key)
             .Select(group => new SessionDay(group.Key, group.Sum(item => item.DurationSeconds ?? 0), [.. group]))
             .ToList();
-        var earlier = Sessions.Any(session => Day(session) is { } day && day < first);
+        var earlier = sessions.Any(session => Day(session) is { } day && day < first);
         return new SessionDays(days, days.Sum(day => day.TotalSeconds), earlier, Storage);
     }
 

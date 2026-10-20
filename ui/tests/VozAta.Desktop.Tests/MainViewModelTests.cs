@@ -835,6 +835,23 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Losing_the_engine_clears_the_meeting_rows_processing_badges()
+    {
+        var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9));
+        _client.Sessions.Add(new SessionSummary("20261015_090000", "finalizing", started, null, 5, "en", false)
+        {
+            Processing = new ProcessingInfo("running", 40, "transcribe"),
+        });
+        var viewModel = await ReadyAsync();
+        var row = viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single();
+        Assert.True(row.IsProcessing);
+
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+
+        Assert.False(row.IsProcessing); // the snapshot on reconnect brings it back
+    }
+
+    [Fact]
     public async Task Closing_with_unsaved_transcript_edits_asks_first()
     {
         _client.Sessions.Add(new SessionSummary("20261015_202358", "done", null, null, 5, "en", false));
