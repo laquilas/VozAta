@@ -217,6 +217,9 @@ close-with-pending message; locale parity.
 
 ### Decisions and notes
 
+- Test isolation: `build_api_container` defaults to the real `engine/.env`, so the gate test that
+  calls `settings_file.update` now passes `env_file=tmp_path / ".env"`; a session-scoped autouse
+  fixture in `tests/conftest.py` fails the run if the real `.env` changes.
 - API and other model users (Task 8): `SessionSummary.processing` and the connect snapshot come
   from `SessionManager.processing()` / `processing_messages()`, which leave out a job already
   `done`/`failed` (the queue still lists it during `on_finished`). `POST .../minutes` and

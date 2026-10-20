@@ -711,7 +711,9 @@ def test_ask_and_the_model_test_take_gpu_priority_only_for_a_local_gpu_llm(
 
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
     monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(True, "RTX 3050", 6144))
-    container = bootstrap.build_api_container(_settings(tmp_path, llm_provider="ollama"))
+    container = bootstrap.build_api_container(
+        _settings(tmp_path, llm_provider="ollama"), env_file=tmp_path / ".env"
+    )
     gate = container.manager._queue._gate
 
     assert container.ask._gate is gate and container.ask._uses_gpu() is True
