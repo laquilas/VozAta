@@ -8,7 +8,7 @@ one and transcribed again; committed audio is dropped, so no text is duplicated.
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Protocol
 
 import numpy as np
@@ -31,10 +31,15 @@ class LanguageProvider(Protocol):
 
 
 class SegmentIds:
-    """Session-wide segment ids: `<channel>-<6-digit counter>`, counted per channel."""
+    """Session-wide segment ids: `<channel>-<6-digit counter>`, counted per channel.
 
-    def __init__(self) -> None:
-        self._counts: Counter[Channel] = Counter()
+    `start` gives a channel's next number (resuming a transcript); other channels start at 1.
+    """
+
+    def __init__(self, start: Mapping[Channel, int] | None = None) -> None:
+        self._counts: Counter[Channel] = Counter(
+            {channel: number - 1 for channel, number in (start or {}).items()}
+        )
 
     def next(self, channel: Channel) -> str:
         self._counts[channel] += 1

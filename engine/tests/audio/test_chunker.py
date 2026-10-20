@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from vozata.audio.chunker import FixedWindowChunker
+from vozata.audio.chunker import FixedWindowChunker, fixed_windows
+from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel
 
 RATE = 10  # 1-second windows of 10 samples
@@ -118,3 +119,13 @@ def test_buffered_returns_a_copy_of_the_partial_window(
     buffered.samples[:] = 0
     chunker.flush()
     assert np.all(chunks[-1].samples == 0.5)
+
+
+def test_fixed_windows_builds_chunkers_of_the_configured_window() -> None:
+    emitted: list[AudioChunk] = []
+    build = fixed_windows(Settings(chunk_seconds=2.0, sample_rate=RATE))
+
+    chunker = build(Channel.SYSTEM, emitted.append)
+    chunker.feed(_block(25), 0.0)
+
+    assert [(c.channel, c.start, len(c.samples)) for c in emitted] == [(Channel.SYSTEM, 0.0, 20)]

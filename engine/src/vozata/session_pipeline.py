@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 
-from vozata.audio.chunker import FixedWindowChunker
+from vozata.audio.chunker import ChunkerFactory, fixed_windows
 from vozata.audio.levels import rms_db
 from vozata.config import Settings
 from vozata.diarization.live import LiveSpeakerTagger
@@ -30,16 +30,7 @@ from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 from vozata.transcription.worker import PartialOptions, TranscriptionWorker
 
-ChunkerFactory = Callable[[Channel, Callable[[AudioChunk], None]], Chunker]
-
 _log = logging.getLogger(__name__)
-
-
-def _fixed_windows(settings: Settings) -> ChunkerFactory:
-    def build(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> Chunker:
-        return FixedWindowChunker(channel, settings.chunk_seconds, settings.sample_rate, on_chunk)
-
-    return build
 
 
 class _DeferredTranscriber:
@@ -93,12 +84,7 @@ def _echo_filter(
         if settings.live_partials:
             observer.on_partial(segment.channel, segment.channel.value, segment.start, "")
 
-    return EchoFilter(
-        sinks,
-        settings.echo_similarity,
-        settings.effective_echo_hold_seconds,
-        on_dropped=clear_partial,
-    )
+    return EchoFilter.from_settings(settings, sinks, on_dropped=clear_partial)
 
 
 def _live_speakers(
@@ -169,7 +155,7 @@ class CapturePipeline:
         extra_sinks: Sequence[TranscriptSink] = (),
     ) -> None:
         self._rate = settings.sample_rate
-        new_chunker = chunker_factory or _fixed_windows(settings)
+        new_chunker = chunker_factory or fixed_windows(settings)
         self._observer = observer
         self._accepting = False
         chunks: queue.Queue[AudioChunk] = queue.Queue()

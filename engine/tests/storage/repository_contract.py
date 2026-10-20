@@ -125,6 +125,23 @@ class RepositoryContract:
         assert repository.load_transcript_with_source(session_id) == ("raw", RAW)
         assert repository.load_transcript(session_id) == RAW
 
+    def test_open_transcript_on_session_with_segments_appends(
+        self, repository: SessionRepository
+    ) -> None:
+        session_id = self._session(repository)
+        labeler = SpeakerLabeler(FakeLocalizer())
+        live = repository.open_transcript(session_id, labeler)
+        live.emit(RAW[0])
+        live.close()
+        later = segment("mic-000002", 5.0, "Later.")
+
+        rest = repository.open_transcript(session_id, labeler)  # the rest, from stored audio
+        rest.emit(RAW[1])
+        rest.emit(later)
+        rest.close()
+
+        assert repository.load_raw_transcript(session_id) == [*RAW, later]
+
     def test_a_session_without_transcript_has_an_empty_raw_one(
         self, repository: SessionRepository
     ) -> None:

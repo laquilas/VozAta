@@ -16,6 +16,7 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from vozata.config import Settings
 from vozata.domain import Channel, TranscriptSegment
 from vozata.ports import TranscriptSink
 
@@ -75,6 +76,27 @@ class EchoFilter:
         self._held: deque[_Held] = deque()
         self._system: deque[TranscriptSegment] = deque()
         self.dropped = 0
+
+    @classmethod
+    def from_settings(
+        cls,
+        settings: Settings,
+        downstream: TranscriptSink,
+        clock: Callable[[], float] = time.monotonic,
+        on_dropped: Callable[[TranscriptSegment], None] = lambda segment: None,
+    ) -> EchoFilter:
+        """The filter configured by `ECHO_SIMILARITY` and `ECHO_HOLD_SECONDS`."""
+        return cls(
+            downstream,
+            settings.echo_similarity,
+            settings.effective_echo_hold_seconds,
+            clock=clock,
+            on_dropped=on_dropped,
+        )
+
+    def remember(self, segment: TranscriptSegment) -> None:
+        """Know a system segment already written (resuming a transcript) without emitting it."""
+        self._remember(segment)
 
     def emit(self, segment: TranscriptSegment) -> None:
         self.tick()

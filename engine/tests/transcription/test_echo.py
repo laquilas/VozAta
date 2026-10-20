@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from tests.fakes import FakeTranscriptSink
+from vozata.config import Settings
 from vozata.domain import Channel, TranscriptSegment, Word
 from vozata.transcription.echo import EchoFilter, echo_score, normalize
 
@@ -242,3 +243,35 @@ def test_without_a_callback_drops_are_only_counted() -> None:
 
     assert echo.dropped == 1
     assert [segment.channel for segment in sink.segments] == [Channel.SYSTEM]
+
+
+def test_a_remembered_system_segment_drops_its_echo_without_being_emitted() -> None:
+    rig = _Rig()
+    rig.filter.remember(_system(10.0, ECHO))
+    rig.filter.emit(_mic(10.2, ECHO))
+
+    rig.filter.close()
+
+    assert rig.texts() == []
+    assert rig.filter.dropped == 1
+
+
+def test_from_settings_uses_the_echo_settings_and_the_given_clock() -> None:
+    clock = _Clock()
+    sink = FakeTranscriptSink()
+    dropped: list[TranscriptSegment] = []
+    settings = Settings(chunk_seconds=2.0, echo_similarity=0.6)
+
+    echo = EchoFilter.from_settings(settings, sink, clock=clock, on_dropped=dropped.append)
+    echo.emit(_mic(10.0, "Monday works better."))
+    clock.time = 4.9
+    echo.tick()
+    assert sink.segments == []
+    clock.time = 5.0  # hold = CHUNK_SECONDS + 3
+    echo.tick()
+
+    assert [segment.text for segment in sink.segments] == ["Monday works better."]
+    assert echo._threshold == 0.6
+    echo.emit(_system(20.0, ECHO))
+    echo.emit(_mic(20.0, ECHO))
+    assert [segment.text for segment in dropped] == [ECHO]

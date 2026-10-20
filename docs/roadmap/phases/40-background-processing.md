@@ -195,16 +195,16 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 14:00
-- **Next step:** Task 4 of `plans/40-background-processing.md` (offline transcription of the rest of a meeting).
+- **Updated:** 2026-10-20 14:30
+- **Next step:** Task 5 of `plans/40-background-processing.md` (processing job and queue).
 
 ### Steps
 
 - [x] Phase files 40-43, roadmap rows and the implementation plan
 - [x] Cancel token and GPU gate
 - [x] Cancellable LLM and diarizer (fix round 1: release after cancel, cancel before spawn)
-- [x] Session finisher steps (this commit)
-- [ ] Offline transcription of the rest of a meeting
+- [x] Session finisher steps (0f2a1ad)
+- [x] Offline transcription of the rest of a meeting (this commit)
 - [ ] Processing job and queue
 - [ ] Stop frees the recorder
 - [ ] Restart and recovery through the queue
@@ -219,3 +219,6 @@ close-with-pending message; locale parity.
 - Designed with the user on 2026-10-20: a new live recording interrupts the queue's running GPU step
   (redone later); after Stop the rest of the transcript comes from the stored audio; processing
   resumes after the app is closed. The implementation plan is `plans/40-background-processing.md`.
+- Offline transcription (`transcription/offline.py`) seeds each channel's rolling context with its
+  written text and the echo filter with the written system segments, so the appended rows match
+  what the live pipeline would have produced; echo holds run on audio time.

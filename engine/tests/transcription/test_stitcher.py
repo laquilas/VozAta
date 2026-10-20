@@ -198,6 +198,16 @@ def test_segment_ids_count_per_channel() -> None:
     ]
 
 
+def test_segment_ids_continue_from_the_given_next_numbers() -> None:
+    ids = SegmentIds({Channel.MIC: 13})
+
+    assert [ids.next(Channel.MIC), ids.next(Channel.SYSTEM), ids.next(Channel.MIC)] == [
+        "mic-000013",
+        "system-000001",
+        "mic-000014",
+    ]
+
+
 def test_segments_carry_channel_speaker_and_sequential_ids() -> None:
     fake = FakeTranscriber([result(w(" A.", 0.1, 0.4), w(" B.", 1.0, 1.3), w(" C", 4.6, 4.9))])
 
