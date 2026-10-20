@@ -67,7 +67,13 @@ Found on 2026-10-20 while testing the packaged app: a 16 s meeting stayed `final
   tests.
 - Closing the app kills the engine and its download; there is no download outside the engine.
 - Offline mode (`HF_HUB_OFFLINE=1`) never downloads: no bar, the existing error applies.
-- The resumable `.incomplete` files Hugging Face leaves are counted as already downloaded bytes.
+- No resume: huggingface_hub 2.2.0 writes each file to a unique `.{uuid}.incomplete` and deletes it
+  on failure, so an interrupted download starts again from 0 (amended 2026-10-20).
+- pyannote loads its models in a child process with no progress channel: the engine pre-downloads
+  both pyannote repos (with `HF_TOKEN`) through the downloader before spawning the child, which then
+  loads from the cache (amended 2026-10-20).
+- `HF_HUB_DISABLE_XET` is read once when huggingface_hub is first imported: it is set at the start
+  of `vozata.__main__` (the late `setdefault` in the transcriber had no effect under `serve`).
 
 ## Acceptance criteria
 
@@ -77,8 +83,8 @@ Found on 2026-10-20 while testing the packaged app: a 16 s meeting stayed `final
 - [ ] A UI that reconnects to the running engine during a download (e.g. the window restored
       from the tray) shows the bar again with the current percent.
 - [ ] After the app is closed mid-download, the next time the model is needed (a recording, or
-      the phase 40 queue resuming) the download resumes from the partial files and the bar
-      starts at the percent already downloaded.
+      the phase 40 queue resuming) the download starts again and the bar shows it (no resume:
+      see the design notes).
 - [ ] Pulling the network cable shows an error toast and hides the bar.
 - [ ] Cached models never show the bar.
 - [ ] Contract docs updated (`download_progress`).
@@ -93,3 +99,24 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - Pre-downloading models from the Config page (a later "Download now" button can reuse this).
 - Ollama model pulls (Ollama manages them).
+
+## Progress
+
+- **Branch:** `feature/42-download-progress`
+- **Status:** in progress
+- **Updated:** 2026-10-20 20:55
+- **Next step:** Task 1 of `plans/42-download-progress.md` (downloader and tracker).
+
+### Steps
+
+- [x] Implementation plan (`plans/42-download-progress.md`) and spec amendments
+- [ ] Downloader and tracker
+- [ ] Wire the downloads and the event
+- [ ] UI bottom bar
+- [ ] Full suites, manual check
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20: save GitHub Actions minutes).
+- The three design notes marked "amended 2026-10-20" come from the code map: no resume in
+  huggingface_hub 2.2.0, pyannote pre-downloaded in the engine, XET switched off at engine start.
