@@ -91,3 +91,31 @@ def test_a_model_load_starting_after_stop_is_skipped_without_waiting_or_holding(
         rig.session._before_model(lambda: held.append("hold"))
 
     assert held == []
+
+
+def test_audio_only_session_loads_no_model_and_never_holds_the_gate(tmp_path: Path) -> None:
+    gate = GpuGate()
+    embedder_loads: list[str] = []
+    rig = _Rig(
+        tmp_path,
+        settings=LIVE,
+        gate=gate,
+        gpu_usage=dataclasses.replace(LIVE_SPEAKERS_ON_GPU, speech=True),
+        embedder_factory=lambda: embedder_loads.append("embedder") or FakeEmbedder(),
+        live_transcription=False,
+        with_minutes=False,
+    )
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.system.push(_voice(1.0), 0.0)
+    threading.Event().wait(0.1)  # a live session would be loading its models by now
+
+    assert not gate.priority_held
+    assert rig.session._pipeline.transcriber is None
+    closed = rig.session.stop_capture()
+
+    assert closed.is_set()
+    assert not gate.priority_held
+    assert "transcriber.load" not in rig.log.entries
+    assert embedder_loads == []
+    assert rig.observer.of("model_loading") == []

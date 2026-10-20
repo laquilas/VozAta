@@ -114,14 +114,14 @@ translation disabled, locale parity.
 
 - **Branch:** `feature/41-record-only`
 - **Status:** in progress
-- **Updated:** 2026-10-20 17:10
-- **Next step:** Task 2 of `plans/41-record-only.md` (audio-only capture).
+- **Updated:** 2026-10-20 17:40
+- **Next step:** Task 3 of `plans/41-record-only.md` (`python -m vozata transcribe <id>`).
 
 ### Steps
 
 - [x] Implementation plan (`plans/41-record-only.md`)
-- [x] `LIVE_TRANSCRIPTION` setting and the per-recording option (this commit)
-- [ ] Audio-only capture
+- [x] `LIVE_TRANSCRIPTION` setting and the per-recording option
+- [x] Audio-only capture (this commit)
 - [ ] `python -m vozata transcribe <id>`
 - [ ] UI checkbox, preference and notices
 - [ ] Full suites, manual check
@@ -132,3 +132,6 @@ translation disabled, locale parity.
   at 0 for an empty raw transcript (and recovery goes through it), so the queue needs no change.
 - The remembered checkbox choice (ui.json) wins over `LIVE_TRANSCRIPTION`; saving the setting in
   Config resets it.
+- Audio only is `CapturePipeline(live=False)`; the live half (worker, stitchers, echo filter,
+  live speakers, sinks) moved to `session_live.LiveTranscription`, and the pipeline now opens the
+  transcript itself (`open_transcript`), so an audio-only recording creates no transcript files.

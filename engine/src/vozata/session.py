@@ -148,7 +148,8 @@ class RecordingSession:
 
         `recording` is reported as soon as the sources are open; the speech model loads on the
         transcription thread (`on_model_loading`) and audio captured meanwhile is transcribed
-        once it is ready.
+        once it is ready. Without live transcription (phase 41) only the audio is recorded: no
+        model, live speakers or translation, and the GPU gate is never held.
         """
         if self._id is not None:
             raise RuntimeError("A session can only be started once")
@@ -161,7 +162,7 @@ class RecordingSession:
         self._pipeline = CapturePipeline(
             self._c.sources,
             lambda channel: self._audio.open_writer(self.id, channel),
-            self._store.open_transcript(self.id, self._c.labeler),
+            lambda: self._store.open_transcript(self.id, self._c.labeler),
             self._settings,
             self._live_transcriber,
             self._lock,
@@ -171,13 +172,15 @@ class RecordingSession:
             hints=build_hints(self._c.vocabulary),
             speaker_embedder=self._live_embedder(),
             extra_sinks=[translation] if translation else [],
+            live=self._c.live_transcription,
         )
         self._c.clock.start()
         self._pipeline.accept()
         self._open_sources()
         self._set_status(SessionStatus.RECORDING)
         self._start_heartbeat()
-        self._pipeline.start_transcription()
+        if self._c.live_transcription:
+            self._pipeline.start_transcription()
         if translation:
             translation.start()
 
@@ -343,8 +346,13 @@ class RecordingSession:
         self._meta.heartbeat(self._store.now(), self.duration_seconds)
 
     def _live_translation(self) -> TranslationWorker | None:
-        """The translation worker (phase 29), closed with the transcript files at step 2."""
-        if self._c.translate_to is None or self._c.translator_factory is None:
+        """The translation worker (phase 29), closed with the transcript files at step 2; None
+        when off or audio only (phase 41)."""
+        if (
+            not self._c.live_transcription
+            or self._c.translate_to is None
+            or self._c.translator_factory is None
+        ):
             return None
         return live_translation(
             self._c.translate_to,
@@ -391,9 +399,10 @@ class RecordingSession:
             _log.exception("Releasing the audio backend failed")
 
     def _live_embedder(self) -> Callable[[], SpeakerEmbedder] | None:
-        """The embedder for live speaker labels (phase 15); a failed load reports an error."""
+        """The embedder for live speaker labels (phase 15); a failed load reports an error. None
+        when off or audio only (phase 41)."""
         factory = self._c.embedder_factory
-        if factory is None:
+        if factory is None or not self._c.live_transcription:
             return None
 
         def build() -> SpeakerEmbedder:

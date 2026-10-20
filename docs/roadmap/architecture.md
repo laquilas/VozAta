@@ -316,6 +316,13 @@ worker loads the transcriber on its own thread (`on_model_loading(True/False)`, 
 (the backlog warning stays silent while catching up). A failed load reports `error`
 `model_failed`; the WAVs keep recording and the queued chunks are dropped.
 
+**Audio only** (phase 41, `live_transcription` false): `CapturePipeline(live=False)` keeps only
+the writers and level meters (pause still writes silence). No chunker, transcription worker,
+transcript files, echo filter, interim text, live speakers or translation are built, no model is
+loaded and the GPU gate is never held. At Stop the WAVs are finalized on the caller's thread, so
+`closed` is set before `stop_capture()` returns; the job's `transcribe` step then transcribes the
+whole recording (the raw transcript is empty, so every channel starts at 0).
+
 **PortAudio thread**: WASAPI binds PortAudio's host state to the thread that initialized it (COM);
 streams opened from another thread fail with "Unanticipated host error" (-9999). `bootstrap.py`
 creates one `PortAudioThread` per session that owns the `PyAudio` instance and runs device lookups,
