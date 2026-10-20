@@ -109,3 +109,26 @@ translation disabled, locale parity.
 
 - Transcribing imported audio files that were never recorded by VozAta.
 - Changing the choice in the middle of a recording.
+
+## Progress
+
+- **Branch:** `feature/41-record-only`
+- **Status:** in progress
+- **Updated:** 2026-10-20 16:40
+- **Next step:** Task 1 of `plans/41-record-only.md` (the setting and the per-recording option).
+
+### Steps
+
+- [x] Implementation plan (`plans/41-record-only.md`)
+- [ ] `LIVE_TRANSCRIPTION` setting and the per-recording option
+- [ ] Audio-only capture
+- [ ] `python -m vozata transcribe <id>`
+- [ ] UI checkbox, preference and notices
+- [ ] Full suites, manual check
+
+### Decisions and notes
+
+- Since phase 40 the queue's `transcribe` step lives in `processing/session_job.py` and already starts
+  at 0 for an empty raw transcript (and recovery goes through it), so the queue needs no change.
+- The remembered checkbox choice (ui.json) wins over `LIVE_TRANSCRIPTION`; saving the setting in
+  Config resets it.
