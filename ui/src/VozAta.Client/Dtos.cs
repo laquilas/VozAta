@@ -41,7 +41,9 @@ public sealed record StartSessionRequest(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     string? TranslateTo = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    string? Title = null);
+    string? Title = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? LiveTranscription = null);
 
 /// <summary><c>GET|PUT /vocabulary</c> (phase 19): the glossary terms, one per entry.</summary>
 public sealed record VocabularyTerms(IReadOnlyList<string> Terms);

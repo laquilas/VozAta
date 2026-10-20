@@ -44,6 +44,7 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
         vocabulary=tuple(body.vocabulary or ()),
         translate_to=TranslationTarget(body.translate_to) if body.translate_to else None,
         title=title,
+        live_transcription=body.live_transcription,
     )
     try:
         return c.manager.start(options)

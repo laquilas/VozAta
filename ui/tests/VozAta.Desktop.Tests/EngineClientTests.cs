@@ -225,6 +225,19 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task StartSessionRequest_serializes_live_transcription()
+    {
+        var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);
+        var client = new EngineClient(handler.Client());
+
+        await client.StartSessionAsync(new StartSessionRequest(Language: "en", LiveTranscription: false));
+        await client.StartSessionAsync(new StartSessionRequest(Language: "en"));
+
+        Assert.Contains("\"live_transcription\":false", handler.Requests[0].Body);
+        Assert.DoesNotContain("live_transcription", handler.Requests[1].Body);
+    }
+
+    [Fact]
     public async Task Vocabulary_is_read_and_replaced()
     {
         var handler = FakeHttpHandler.Json("""{"terms": ["Avalonia", "Jéssica"]}""");

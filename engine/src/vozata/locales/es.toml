@@ -170,6 +170,10 @@ migrate_progress = "Importando {done}/{total}: {folder}"
 migrate_skipped = "No importada: {folder} ({message})"
 migrate_done = "Importadas {imported}, no importadas {skipped}."
 migrate_failed = "La importación se detuvo ({reason}); ejecútala de nuevo para continuar."
+transcribe_progress = "Transcribiendo: {percent} %"
+transcribe_done = "Transcripción terminada: {count} segmento(s) nuevo(s) escrito(s)."
+transcribe_busy = "Esta reunión todavía se está grabando o procesando; para terminar una reunión interrumpida, usa `python -m vozata recover <carpeta>`."
+transcribe_failed = "No se pudo transcribir el audio ({reason})."
 
 [cli.devices]
 microphones = "Micrófonos:"
@@ -193,6 +197,8 @@ recover = "repara y finaliza una sesión interrumpida por un fallo (audio, habla
 recover_all = "recupera todas las sesiones interrumpidas en OUTPUT_DIR"
 migrate = "importa a la base de datos las carpetas de reuniones grabadas antes de ella (las carpetas se conservan)"
 migrate_dry_run = "solo lista las carpetas que se importarían"
+transcribe = "transcribe una sesión guardada a partir de su audio, lo que su transcripción aún no cubre (sin hablantes, sin acta)"
+transcribe_target = "id de la sesión o carpeta de la sesión, p. ej.: 20261015_202358"
 
 [export]
 title = "Reunión del {date}"

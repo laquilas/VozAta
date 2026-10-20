@@ -174,6 +174,22 @@ def test_recover_command_targets_a_folder_or_every_session(
     assert received == [(Path(expected) if expected else None, tmp_path, 15.0)]
 
 
+def test_transcribe_command_passes_the_session_to_the_runner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    received: list[Any] = []
+
+    def fake_run(target: str, settings: Any, *args: Any) -> int:
+        received.append(target)
+        return 3
+
+    monkeypatch.setattr(cli, "run_transcribe", fake_run)
+
+    code, _ = _main(["transcribe", "20261015_202358"])
+
+    assert (code, received) == (3, ["20261015_202358"])
+
+
 def test_recover_needs_a_folder_or_all() -> None:
     with pytest.raises(SystemExit):
         _main(["recover"])

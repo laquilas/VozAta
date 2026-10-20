@@ -21,7 +21,7 @@ def _long_words(*texts: str) -> TranscriptionResult:
 
 
 def _ready(rig: _Rig) -> bool:
-    live = rig.session._pipeline._live
+    live = rig.session._pipeline._live.speakers
     return live is not None and live._tagger is not None
 
 
@@ -86,4 +86,4 @@ def test_without_a_system_source_no_live_worker_runs(tmp_path: Path) -> None:
     rig.session.start()
     rig.session.stop()
 
-    assert rig.session._pipeline._live is None
+    assert rig.session._pipeline._live.speakers is None

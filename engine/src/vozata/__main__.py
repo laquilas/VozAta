@@ -1,5 +1,5 @@
 """Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex |
-recover [<dir> | --all] | migrate [--dry-run]`."""
+recover [<dir> | --all] | migrate [--dry-run] | transcribe <id>`."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from vozata.audio.devices import (
     list_input_devices,
     list_loopback_devices,
 )
-from vozata.bootstrap_processing import build_resume_job
+from vozata.bootstrap_processing import build_resume_job, build_transcribe_command
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.diarize import run_diarize
 from vozata.cli.migrate import run_migrate
@@ -29,6 +29,7 @@ from vozata.cli.record import print_devices, run_record
 from vozata.cli.recover import run_recover
 from vozata.cli.reindex import run_reindex
 from vozata.cli.serve import run_serve
+from vozata.cli.transcribe import run_transcribe
 from vozata.config import ConfigError, Settings, load_settings
 from vozata.domain import ConversationLanguage
 from vozata.ports import Localizer
@@ -69,6 +70,8 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     target.add_argument("--all", action="store_true", help=t("cli.help.recover_all"))
     migrate = commands.add_parser("migrate", help=t("cli.help.migrate"))
     migrate.add_argument("--dry-run", action="store_true", help=t("cli.help.migrate_dry_run"))
+    transcribe = commands.add_parser("transcribe", help=t("cli.help.transcribe"))
+    transcribe.add_argument("session", help=t("cli.help.transcribe_target"))
     return parser
 
 
@@ -128,6 +131,15 @@ def main(
         if args.command == "migrate":
             return run_migrate(
                 bootstrap.build_folder_importer(settings), args.dry_run, console, localizer
+            )
+        if args.command == "transcribe":
+            return run_transcribe(
+                args.session,
+                settings,
+                console,
+                localizer,
+                build_transcribe_command,
+                functools.partial(bootstrap.open_session_folder, settings),
             )
         if args.command == "recover":
             return run_recover(

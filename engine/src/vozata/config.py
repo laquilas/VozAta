@@ -105,6 +105,8 @@ class Settings:
     vad_min_chunk_seconds: float = 1.0
     vad_max_chunk_seconds: float = 15.0
     vad_speech_pad_ms: int = 200
+    # Live transcription (phase 41)
+    live_transcription: bool = True
     # Live interim text (phase 28)
     live_partials: bool = True
     partial_interval_seconds: float = 1.5
@@ -216,6 +218,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         vad_min_chunk_seconds=_number(raw, "VAD_MIN_CHUNK_SECONDS", 1.0, minimum=0, maximum=5),
         vad_max_chunk_seconds=_number(raw, "VAD_MAX_CHUNK_SECONDS", 15.0, minimum=5, maximum=60),
         vad_speech_pad_ms=_integer(raw, "VAD_SPEECH_PAD_MS", 200, minimum=0, maximum=1000),
+        live_transcription=_flag(raw, "LIVE_TRANSCRIPTION", True),
         live_partials=_flag(raw, "LIVE_PARTIALS", True),
         partial_interval_seconds=_number(
             raw, "PARTIAL_INTERVAL_SECONDS", 1.5, minimum=0.5, maximum=10

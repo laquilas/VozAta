@@ -72,6 +72,12 @@
   <data name="TranscriptEmpty" xml:space="preserve">
     <value>Pressione Iniciar: a transcrição aparece aqui enquanto as pessoas falam.</value>
   </data>
+  <data name="LiveTranscription" xml:space="preserve">
+    <value>Transcrição simultânea</value>
+  </data>
+  <data name="TranscriptAudioOnly" xml:space="preserve">
+    <value>Gravando apenas o áudio. A transcrição é criada depois que você parar.</value>
+  </data>
   <data name="EngineStarting" xml:space="preserve">
     <value>Iniciando o motor (a primeira vez carrega os modelos)…</value>
   </data>
@@ -434,6 +440,12 @@
   </data>
   <data name="SettingHelp_SILENCE_RMS_THRESHOLD" xml:space="preserve">
     <value>Áudio mais baixo que isto (RMS, 0 a 1) é tratado como silêncio e não é transcrito.</value>
+  </data>
+  <data name="Setting_LIVE_TRANSCRIPTION" xml:space="preserve">
+    <value>Transcrição simultânea por padrão</value>
+  </data>
+  <data name="SettingHelp_LIVE_TRANSCRIPTION" xml:space="preserve">
+    <value>Desligado: novas gravações apenas gravam o áudio e são transcritas depois que você parar.</value>
   </data>
   <data name="Setting_LIVE_PARTIALS" xml:space="preserve">
     <value>Mostrar texto enquanto falam</value>

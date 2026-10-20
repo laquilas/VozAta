@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import threading
 import wave
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -18,6 +18,7 @@ from tests.fakes import (
     FakeSessionObserver,
     FakeSpeechDetector,
     FakeTranscriber,
+    FakeTranslator,
     minutes_template,
 )
 from vozata.audio.levels import rms_db
@@ -41,6 +42,7 @@ from vozata.ports import (
     TranscriptSearch,
 )
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
+from vozata.processing.job import run_job_inline
 from vozata.processing.live_lease import LiveModelTurn
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
@@ -113,6 +115,18 @@ class _LoggingLanguageModel(FakeLanguageModel):
         return super().generate(system, prompt, json_schema)
 
 
+_RIGS: list[_Rig] = []
+
+
+@pytest.fixture(autouse=True)
+def _abandon_started_sessions() -> Iterator[None]:
+    """Stop the capture of any rig session a test left recording, so its live threads
+    (`transcription`, `live-speakers`) exit instead of keeping pytest alive."""
+    yield
+    while _RIGS:
+        _RIGS.pop().close()
+
+
 class _Rig:
     def __init__(
         self,
@@ -137,7 +151,9 @@ class _Rig:
         gate: GpuGate | None = None,
         gpu_usage: GpuUsage | None = None,
         live_models: LiveModelTurn | None = None,
+        live_transcription: bool = True,
     ) -> None:
+        _RIGS.append(self)
         self._load_gate = load_gate
         self._load_error = load_error
         moments = [STARTED, ENDED]
@@ -180,11 +196,18 @@ class _Rig:
                 gate=gate,
                 gpu_usage=gpu_usage,
                 live_models=live_models,
+                live_transcription=live_transcription,
             ),
             self.observer,
             language,
             open_timeout=open_timeout,
         )
+
+    def close(self) -> None:
+        """Abandon the session if it is still recording; wait for its pipeline to close."""
+        if self._load_gate is not None:
+            self._load_gate.set()  # a model still loading would hold the pipeline open
+        self.session.stop_capture().wait(10)
 
     def _load_transcriber(self) -> FakeTranscriber:
         if self._load_gate is not None:
@@ -522,6 +545,7 @@ def test_session_json_matches_the_data_model(tmp_path: Path) -> None:
         "vocabulary": [],
         "devices": {"mic": "Headset Mic", "system": "Speakers [Loopback]"},
         "pauses": [],
+        "live_transcription": True,
         "settings": {
             "CHUNK_MODE": "vad",
             "CHUNK_SECONDS": 1.0,
@@ -837,6 +861,16 @@ def test_clearing_the_title_while_recording_leaves_it_null(tmp_path: Path) -> No
     assert rig.store.read_meta(rig.session.id)["title"] is None
 
 
+@pytest.mark.parametrize("live", [True, False])
+def test_session_json_records_live_transcription(tmp_path: Path, live: bool) -> None:
+    rig = _Rig(tmp_path, live_transcription=live)
+
+    rig.session.start()
+
+    assert rig.store.read_meta(rig.session.id)["live_transcription"] is live
+    assert rig.session.stop_capture().wait(5)
+
+
 def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> None:
     rig = _Rig(tmp_path)
     rig.session.start()
@@ -1000,3 +1034,66 @@ def test_a_new_session_loads_its_model_only_once_the_previous_pipeline_closed(
     assert closed.wait(5)
     _wait_for(lambda: "transcriber.load" in second.log.entries)
     second.session.stop()
+
+
+def test_audio_only_session_ignores_translation(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, live_transcription=False)
+    built: list[FakeTranslator] = []
+    rig.session._c = dataclasses.replace(
+        rig.session._c,
+        translate_to="es",
+        translator_factory=lambda: built.append(FakeTranslator()) or built[-1],
+    )
+    rig.session.start()
+    rig.system.push(_voice(1.0), 0.0)
+
+    assert rig.session.stop_capture().wait(5)
+    assert built == []
+    assert rig.observer.of("error") == []
+    assert not rig.paths.translated_jsonl.exists()
+
+
+def test_audio_only_pause_resume_and_rename_still_work(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, live_transcription=False)
+    rig.session.start()
+    rig.mic.push(_voice(0.5), 0.0)
+    rig.session.pause()
+    rig.mic.push(_voice(0.5), 0.5)
+    rig.session.resume()
+    rig.session.set_title("Audio only")
+
+    assert rig.session.stop_capture().is_set()
+    mic = rig.wav(Channel.MIC)
+    assert np.any(mic[: RATE // 2]) and not np.any(mic[RATE // 2 :])  # silence while paused
+    meta = rig.store.read_meta(rig.session.id)
+    assert meta["title"] == "Audio only" and len(meta["pauses"]) == 1
+
+
+def test_audio_only_stop_sets_closed_at_once_and_the_job_transcribes_from_zero(
+    tmp_path: Path,
+) -> None:
+    rig = _Rig(
+        tmp_path,
+        results=[_words("Good", " morning."), _words("Thanks", " everyone.")],
+        live_transcription=False,
+        with_minutes=False,
+    )
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.system.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+
+    closed = rig.session.stop_capture()
+
+    assert closed.is_set()  # nothing to wait for: no worker, no model
+    meta = rig.store.read_meta(rig.session.id)
+    assert meta["status"] == "finalizing" and meta["capture_ended_at"] is not None
+    assert not rig.paths.transcript_jsonl.exists()  # no transcript files during capture
+    assert "transcriber.load" not in rig.log.entries
+    run_job_inline(rig.session.processing_job(closed))
+
+    segments = rig.store.load_raw_transcript(rig.session.id)
+    assert {segment.channel for segment in segments} == {Channel.MIC, Channel.SYSTEM}
+    assert all(segment.start < 0.5 for segment in segments)  # fed from 0.0
+    assert rig.log.entries.count("transcriber.load") == 1  # the offline model only
+    assert rig.session.status is SessionStatus.DONE

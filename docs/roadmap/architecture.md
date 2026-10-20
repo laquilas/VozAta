@@ -316,6 +316,13 @@ worker loads the transcriber on its own thread (`on_model_loading(True/False)`, 
 (the backlog warning stays silent while catching up). A failed load reports `error`
 `model_failed`; the WAVs keep recording and the queued chunks are dropped.
 
+**Audio only** (phase 41, `live_transcription` false): `CapturePipeline(live=False)` keeps only
+the writers and level meters (pause still writes silence). No chunker, transcription worker,
+transcript files, echo filter, interim text, live speakers or translation are built, no model is
+loaded and the GPU gate is never held. At Stop the WAVs are finalized on the caller's thread, so
+`closed` is set before `stop_capture()` returns; the job's `transcribe` step then transcribes the
+whole recording (the raw transcript is empty, so every channel starts at 0).
+
 **PortAudio thread**: WASAPI binds PortAudio's host state to the thread that initialized it (COM);
 streams opened from another thread fail with "Unanticipated host error" (-9999). `bootstrap.py`
 creates one `PortAudioThread` per session that owns the `PyAudio` instance and runs device lookups,
@@ -658,6 +665,7 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "app_language": "en",
   "template": "general",
   "title": "Weekly sync",
+  "live_transcription": true,
   "vocabulary": ["Avalonia", "N5 Sensors"],
   "devices": {"mic": "Headset Microphone", "system": "Headphones [Loopback]"},
   "pauses": [{"start": 120.5, "end": 180.0}],
@@ -705,6 +713,9 @@ before phase 20 have no key and regenerate with `MINUTES_TEMPLATE`. `vocabulary`
 terms (from `POST /sessions`) followed by the glossary file, deduplicated case-insensitively, written
 at start (an empty list when there are none); it is the minutes glossary at stop and on
 regeneration.
+`live_transcription` (41) is whether the recording was transcribed live (`false`: audio only,
+transcribed after Stop by the processing queue); written at start, always, from the `POST /sessions`
+option or `LIVE_TRANSCRIPTION`.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (stop step 1); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
@@ -789,6 +800,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `VAD_MIN_SILENCE_MS` | `600` | 27 | pause that ends a chunk |
 | `VAD_MIN_CHUNK_SECONDS` / `VAD_MAX_CHUNK_SECONDS` | `1` / `15` | 27 | chunk length bounds |
 | `VAD_SPEECH_PAD_MS` | `200` | 27 | audio kept around detected speech |
+| `LIVE_TRANSCRIPTION` | `true` | 41 | default of the per-recording option; `false` = only record audio, transcribe after Stop |
 | `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
 | `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
 | `TRANSLATE_TO` | `off` | 29 | live translation target: `off` \| `en` \| `pt` \| `es` (empty = off); `POST /sessions` `translate_to` overrides it per session |
@@ -844,6 +856,11 @@ only validator.
   the engine works without the extra. The installer (13) does not bundle it.
 - `python -m vozata diarize <session_dir> [--minutes]` diarizes a stored session (ignores
   `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
+- `python -m vozata transcribe <id | session_dir>` transcribes, from the stored audio, whatever a
+  stopped meeting's raw transcript does not cover yet (all of it when recorded with live
+  transcription off); no speakers, no minutes. Refused while the meeting is recording, paused,
+  finalizing or interrupted (`recover` repairs its audio first); do not run it while `serve` may be
+  redoing that meeting (e.g. regenerate minutes queued): two writers would duplicate segments.
 - Readers (minutes, export, `GET /sessions/{id}/transcript`, search hits) label speakers with
   `SpeakerLabeler.with_names(store.speaker_names(id))`: a name in `speakers.json` wins over
   `User {n}`.

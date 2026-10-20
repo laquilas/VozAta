@@ -341,11 +341,30 @@ def test_build_api_container_wires_real_providers(
             "shared": None,
             "translate_to": None,
             "title": None,
+            "live_transcription": None,
             "gpu_usage": GpuUsage(speech=True, speakers=False, llm=False),  # LLM "fake"
         }
     ]
     generator = container.regenerate_minutes._build_generator()
     assert generator._llm is llm
+
+
+@pytest.mark.parametrize(
+    ("setting", "option", "expected"),
+    [(True, None, True), (False, None, False), (False, True, True), (True, False, False)],
+)
+def test_build_session_uses_the_setting_when_the_option_is_none(
+    tmp_path: Path,
+    devices: list[int],
+    setting: bool,
+    option: bool | None,
+    expected: bool,
+) -> None:
+    settings = _settings(tmp_path, live_transcription=setting)
+
+    session = bootstrap.build_session(settings, FakeSessionObserver(), live_transcription=option)
+
+    assert session._c.live_transcription is expected
 
 
 @pytest.mark.parametrize(("generate_minutes", "kept"), [(False, True), (True, False)])

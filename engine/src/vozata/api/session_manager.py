@@ -90,6 +90,7 @@ class StartOptions:
         None  # live translation (phase 29); None = TRANSLATE_TO
     )
     title: str | None = None  # meeting title (phase 35), already normalized; None = untitled
+    live_transcription: bool | None = None  # phase 41; None = LIVE_TRANSCRIPTION
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]

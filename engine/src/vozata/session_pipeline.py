@@ -1,4 +1,5 @@
-"""The live part of a session: audio writers, chunkers, the transcription worker and sinks."""
+"""The capture side of a session: audio writers, level meters and, when live, chunkers feeding
+the live transcription (`session_live.py`)."""
 
 from __future__ import annotations
 
@@ -12,10 +13,7 @@ import numpy as np
 from vozata.audio.chunker import ChunkerFactory, fixed_windows
 from vozata.audio.levels import rms_db
 from vozata.config import Settings
-from vozata.diarization.live import LiveSpeakerTagger
-from vozata.diarization.live_sink import AudioHistory, LiveSpeakerSink
-from vozata.domain import AudioChunk, Channel, TranscriptionResult, TranscriptSegment
-from vozata.output.sinks import CompositeSink
+from vozata.domain import AudioChunk, Channel
 from vozata.ports import (
     AudioTrackWriter,
     Chunker,
@@ -24,109 +22,25 @@ from vozata.ports import (
     Transcriber,
     TranscriptSink,
 )
-from vozata.processing.live_lease import ModelLoadSkipped
-from vozata.transcription.context import RollingContext
-from vozata.transcription.echo import EchoFilter
+from vozata.session_live import LiveTranscription
 from vozata.transcription.language_lock import LanguageLock
-from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
-from vozata.transcription.worker import PartialOptions, TranscriptionWorker
 
 _log = logging.getLogger(__name__)
 
 
-class _DeferredTranscriber:
-    """The session's transcriber, loaded by the transcription worker once capture is running."""
-
-    def __init__(
-        self,
-        factory: Callable[[], Transcriber],
-        observer: SessionObserver,
-        on_failed: Callable[[Exception], None],
-    ) -> None:
-        self._factory = factory
-        self._observer = observer
-        self._on_failed = on_failed
-        self.loaded: Transcriber | None = None
-
-    def load(self) -> bool:
-        self._observer.on_model_loading(True)
-        try:
-            self.loaded = self._factory()
-        except ModelLoadSkipped:
-            return False  # the session stopped before its model loaded: nothing to report
-        except Exception as error:
-            _log.exception("Loading the speech model failed")
-            self._on_failed(error)
-            return False
-        finally:
-            self._observer.on_model_loading(False)
-        return True
-
-    def transcribe(
-        self,
-        samples: np.ndarray,
-        language: str | None,
-        hints: str | None = None,
-        prompt: str | None = None,
-    ) -> TranscriptionResult:
-        if self.loaded is None:
-            raise RuntimeError("The speech model is not loaded")
-        return self.loaded.transcribe(samples, language, hints, prompt)
-
-    def close(self) -> None:  # the session releases `loaded` itself
-        pass
-
-
-def _echo_filter(
-    settings: Settings, sinks: TranscriptSink, observer: SessionObserver
-) -> EchoFilter:
-    """Echo dedupe in front of the sinks (phase 18); a dropped mic segment also clears the mic
-    interim text it had replaced, since no segment will replace it."""
-
-    def clear_partial(segment: TranscriptSegment) -> None:
-        if settings.live_partials:
-            observer.on_partial(segment.channel, segment.channel.value, segment.start, "")
-
-    return EchoFilter.from_settings(settings, sinks, on_dropped=clear_partial)
-
-
-def _live_speakers(
-    settings: Settings, sinks: TranscriptSink, embedder: Callable[[], SpeakerEmbedder]
-) -> tuple[LiveSpeakerSink, AudioHistory]:
-    """Live speaker labels (phase 15) on their own thread, in front of the sinks."""
-    history = AudioHistory(settings.sample_rate, 60.0 + settings.max_carry_seconds)
-
-    def load() -> LiveSpeakerTagger:
-        return LiveSpeakerTagger(
-            embedder(), settings.speaker_similarity_threshold, max_seconds=settings.chunk_seconds
-        )
-
-    return LiveSpeakerSink(sinks, load, history), history
-
-
-class _ObserverSink:
-    def __init__(self, observer: SessionObserver) -> None:
-        self._observer = observer
-
-    def emit(self, segment: TranscriptSegment) -> None:
-        self._observer.on_segment(segment)
-
-    def close(self) -> None:
-        pass
-
-
 class _Track:
-    """One channel's writer and chunker; the lock serializes capture writes and pause toggles."""
+    """One channel's writer and (live) chunker; the lock serializes capture writes and pause
+    toggles."""
 
-    def __init__(self, writer: AudioTrackWriter, chunker: Chunker) -> None:
+    def __init__(self, writer: AudioTrackWriter, chunker: Chunker | None) -> None:
         self.writer = writer
         self.chunker = chunker
         self.lock = threading.Lock()
 
 
 class CapturePipeline:
-    """Route captured samples to the audio writers and transcription; segments go to the
-    stored `transcript` and the observer.
+    """Route captured samples to the audio writers and, when `live`, to transcription; segments
+    go to the transcript from `open_transcript()` and the observer.
 
     `open_writer(channel)` gives each channel's `AudioTrackWriter` (`AudioStore.open_writer`).
     `receiver(channel)` is the callback for that channel's source. Samples arriving after
@@ -140,13 +54,16 @@ class CapturePipeline:
     speakers from a `LiveSpeakerSink` between the echo filter and the sinks. `extra_sinks` get
     every committed segment after echo dedupe (and live speakers), next to the transcript files
     (e.g. the translation worker, phase 29); they must return quickly and are closed by `drain()`.
+
+    With `live=False` (phase 41, audio only) only the writers and level meters run: no chunker,
+    worker, transcript files or model; the transcription arguments are not used.
     """
 
     def __init__(
         self,
         channels: Iterable[Channel],
         open_writer: Callable[[Channel], AudioTrackWriter],
-        transcript: TranscriptSink,
+        open_transcript: Callable[[], TranscriptSink],
         settings: Settings,
         transcriber_factory: Callable[[], Transcriber],
         language: LanguageLock,
@@ -156,67 +73,36 @@ class CapturePipeline:
         hints: str | None = None,
         speaker_embedder: Callable[[], SpeakerEmbedder] | None = None,
         extra_sinks: Sequence[TranscriptSink] = (),
+        live: bool = True,
     ) -> None:
         self._rate = settings.sample_rate
-        new_chunker = chunker_factory or fixed_windows(settings)
         self._observer = observer
         self._accepting = False
+        self._live: LiveTranscription | None = None
         chunks: queue.Queue[AudioChunk] = queue.Queue()
-        self._history: AudioHistory | None = None
-        self._live: LiveSpeakerSink | None = None
+        new_chunker = (chunker_factory or fixed_windows(settings)) if live else None
         self._tracks = {
             channel: _Track(
                 open_writer(channel),
-                new_chunker(channel, self._queue(chunks)),
+                new_chunker(channel, self._queue(chunks)) if new_chunker else None,
             )
             for channel in channels
         }
-        sinks = CompositeSink(
-            [
-                transcript,
-                _ObserverSink(observer),
-                *extra_sinks,
-            ]
-        )
-        if speaker_embedder is not None and Channel.SYSTEM in self._tracks:
-            self._live, self._history = _live_speakers(settings, sinks, speaker_embedder)
-        tagged: TranscriptSink = self._live or sinks
-        self._echo = (
-            _echo_filter(settings, tagged, observer) if settings.echo_dedupe_enabled else None
-        )
-        self._sink: TranscriptSink = self._echo or tagged
-        self._transcriber = _DeferredTranscriber(transcriber_factory, observer, on_load_failed)
-        transcriber = self._transcriber
-        ids = SegmentIds()
-        stitchers = {
-            channel: CarryOverStitcher(
-                channel,
-                transcriber,
+        if live:
+            self._live = LiveTranscription(
+                chunks,
+                list(self._tracks),
+                open_transcript(),
                 settings,
+                transcriber_factory,
                 language,
-                ids.next,
-                hints=hints,
-                context=RollingContext(settings.context_prompt_chars),
-            )
-            for channel in self._tracks
-        }
-        partials = None
-        if settings.live_partials:
-            partials = PartialOptions(
-                settings.partial_interval_seconds,
+                observer,
+                on_load_failed,
                 self._uncut_audio,
-                lambda channel, start, text: observer.on_partial(
-                    channel, channel.value, start, text
-                ),
+                hints=hints,
+                speaker_embedder=speaker_embedder,
+                extra_sinks=extra_sinks,
             )
-        self._worker = TranscriptionWorker(
-            chunks,
-            stitchers,
-            self._sink,
-            load=transcriber.load,
-            partials=partials,
-            tick=self._echo.tick if self._echo else lambda: None,
-        )
 
     @property
     def accepting(self) -> bool:
@@ -224,22 +110,24 @@ class CapturePipeline:
 
     @property
     def echo_dropped(self) -> int | None:
-        """Mic segments dropped as echo so far; None when `ECHO_DEDUPE_ENABLED` is off."""
-        return self._echo.dropped if self._echo else None
+        """Mic segments dropped as echo so far; None when `ECHO_DEDUPE_ENABLED` is off or the
+        pipeline is audio only."""
+        echo = self._live.echo if self._live else None
+        return echo.dropped if echo else None
 
     @property
     def transcriber(self) -> Transcriber | None:
-        """The loaded transcriber (None before or after a failed load)."""
-        return self._transcriber.loaded
+        """The loaded transcriber (None before or after a failed load, and when audio only)."""
+        return self._live.transcriber.loaded if self._live else None
 
     def accept(self) -> None:
         self._accepting = True
 
     def start_transcription(self) -> None:
         """Load the transcriber on the worker thread, then transcribe the queued chunks."""
-        self._worker.start()
-        if self._live is not None:
-            self._live.start()
+        if self._live is None:
+            raise RuntimeError("The pipeline records audio only")
+        self._live.start()
 
     def receiver(self, channel: Channel) -> Callable[[np.ndarray, float], None]:
         track = self._tracks[channel]
@@ -249,7 +137,8 @@ class CapturePipeline:
                 return
             with track.lock:
                 track.writer.write(samples, at)
-                track.chunker.feed(samples, at)
+                if track.chunker is not None:
+                    track.chunker.feed(samples, at)
             self._observer.on_level(channel, rms_db(samples))
 
         return on_samples
@@ -258,8 +147,9 @@ class CapturePipeline:
         """Queue a chunk for transcription; system chunks are also kept for live speakers."""
 
         def put(chunk: AudioChunk) -> None:
-            if self._history is not None and chunk.channel is Channel.SYSTEM:
-                self._history.add(chunk)
+            history = self._live.history if self._live else None
+            if history is not None and chunk.channel is Channel.SYSTEM:
+                history.add(chunk)
             chunks.put(chunk)
 
         return put
@@ -268,59 +158,64 @@ class CapturePipeline:
         """The chunker's audio not emitted yet (interim text); taken under the track lock."""
         track = self._tracks[channel]
         with track.lock:
-            return track.chunker.buffered()
+            return track.chunker.buffered() if track.chunker else None
 
     def set_paused(self, paused: bool) -> None:
         """Paused: WAVs get silence, chunkers drop audio (their partial window is emitted)."""
         for track in self._tracks.values():
             with track.lock:
                 track.writer.paused = paused
-                track.chunker.paused = paused
+                if track.chunker is not None:
+                    track.chunker.paused = paused
 
     def stop_capture(self) -> None:
         """Ignore further samples and emit every chunker's last partial window."""
         self._accepting = False
         for track in self._tracks.values():
             with track.lock:
-                track.chunker.paused = False
-                track.chunker.flush()
+                if track.chunker is not None:
+                    track.chunker.paused = False
+                    track.chunker.flush()
 
     def drain(self) -> None:
         """Transcribe everything queued, flush the stitchers and close the transcript files.
 
         Closing releases the mic segments the echo filter still holds (`EchoFilter.flush()`).
         """
-        self._worker.stop()
-        self._sink.close()
+        if self._live is not None:
+            self._live.worker.stop()
+            self._live.sink.close()
 
     def abandon(self, on_closed: Callable[[], None]) -> None:
         """Stop without draining (phase 40); returns at once.
 
         The worker finishes the chunk (or model load) in hand and skips its backlog; then, on its
         thread, the sinks are closed (the echo filter releases the mic segments it holds), the
-        loaded transcriber is closed, the WAVs are finalized and `on_closed()` runs. A failing
-        part is logged and the next one still runs.
+        loaded transcriber is closed, the WAVs are finalized and `on_closed()` runs. Audio only,
+        the WAVs are finalized and `on_closed()` runs on the caller's thread. A failing part is
+        logged and the next one still runs.
         """
         self._accepting = False
+        live = self._live
+        parts = [(self.finalize_wavs, "Finalizing the WAVs")]
+        if live is not None:
+            parts[:0] = [
+                (live.sink.close, "Closing the transcript"),
+                (live.close_transcriber, "Releasing the transcriber"),
+            ]
 
         def close() -> None:
-            for part, what in (
-                (self._sink.close, "Closing the transcript"),
-                (self._close_transcriber, "Releasing the transcriber"),
-                (self.finalize_wavs, "Finalizing the WAVs"),
-            ):
+            for part, what in parts:
                 try:
                     part()
                 except Exception:
                     _log.exception("%s failed", what)
             on_closed()
 
-        self._worker.abandon(close)
-
-    def _close_transcriber(self) -> None:
-        loaded = self._transcriber.loaded
-        if loaded is not None:
-            loaded.close()
+        if live is None:
+            close()
+        else:
+            live.worker.abandon(close)
 
     def finalize_wavs(self) -> None:
         """Pad every WAV to the longest one and close them."""

@@ -43,6 +43,15 @@ def test_start_pause_resume_stop_lifecycle(api: Api) -> None:
     assert api.client.get(f"/sessions/{SESSION}").json()["status"] == "done"
 
 
+@pytest.mark.parametrize(("body", "expected"), [({"live_transcription": False}, False), ({}, None)])
+def test_start_passes_live_transcription_to_the_factory(
+    api: Api, body: dict, expected: bool | None
+) -> None:
+    assert _start(api, **body).status_code == 201
+
+    assert api.factory.sessions[0].options.live_transcription is expected
+
+
 def test_second_start_is_409_with_a_localized_message(api: Api) -> None:
     _start(api)
 

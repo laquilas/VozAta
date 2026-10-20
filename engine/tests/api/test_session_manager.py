@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -14,14 +15,25 @@ from tests.api.conftest import (
     SessionFactory,
     make_manager,
 )
+from tests.fakes import FakeSessionObserver, FakeTranscriber
 from tests.session_folders import make_session_folder
+from vozata import bootstrap, bootstrap_processing
 from vozata.api.session_manager import (
     NoActiveSessionError,
     SessionConflictError,
     SessionManager,
     StartOptions,
 )
-from vozata.domain import Channel, ConversationLanguage, TranscriptSegment
+from vozata.config import Settings
+from vozata.domain import (
+    Channel,
+    ConversationLanguage,
+    StorageBackend,
+    TranscriptionResult,
+    TranscriptSegment,
+    Word,
+)
+from vozata.processing.gpu_gate import GpuUsage
 from vozata.processing.job import ProcessingJob, Step, StepKind
 from vozata.session import SessionStartError
 from vozata.storage.files.repository import FileSessionRepository
@@ -592,3 +604,59 @@ def test_resume_pending_goes_on_when_one_job_cannot_be_built(
 
     assert manager.resume_pending() == [fine]
     assert manager.wait_until_finished(5)
+
+
+def test_resumed_audio_only_meeting_is_transcribed_whole(
+    factory: SessionFactory,
+    store: FileSessionRepository,
+    broadcaster: RecordingBroadcaster,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeTranscriber(
+        [TranscriptionResult(words=(Word("Hello.", 0.1, 0.5, 0.9),), language="pt")] * 8
+    )
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    settings = Settings(
+        output_dir=tmp_path / "recordings",
+        storage_backend=StorageBackend.FILES,
+        stt_provider="fake",
+        chunk_mode="fixed",
+        chunk_seconds=1.0,
+        generate_minutes=False,
+        echo_dedupe_enabled=False,  # both tracks hold the same tone
+    )
+    audio = bootstrap.build_audio_store(settings)
+    session_id = make_session_folder(  # a restart after Stop: nothing was transcribed live
+        store,
+        status="finalizing",
+        capture_ended_at="2026-10-15T20:30:00-03:00",
+        mic_seconds=2.0,
+        system_seconds=2.0,
+        segments=[],
+        duration_seconds=2.0,
+        live_transcription=False,
+    )
+
+    def jobs(sid: str, repair: bool, closed: threading.Event | None) -> ProcessingJob:
+        return bootstrap_processing.build_processing_job(
+            settings,
+            store,
+            audio,
+            FakeSessionObserver(),
+            sid,
+            repair=repair,
+            closed=closed,
+            gate_usage=GpuUsage(speech=True, speakers=False, llm=False),
+        )
+
+    manager = make_manager(factory, store, broadcaster, jobs=jobs)  # type: ignore[arg-type]
+
+    assert manager.resume_pending() == [session_id]
+    assert manager.wait_until_finished(5)
+
+    segments = store.load_raw_transcript(session_id)
+    assert {s.channel for s in segments} == {Channel.MIC, Channel.SYSTEM}
+    assert min(s.start for s in segments) < 0.5  # from the start of the recording
+    assert len(fake.calls) >= 4  # 2 s per channel in 1 s windows, both channels
+    assert store.read_meta(session_id)["status"] == "done"

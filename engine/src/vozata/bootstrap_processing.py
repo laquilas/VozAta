@@ -9,12 +9,12 @@ from __future__ import annotations
 import contextlib
 import functools
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from vozata import bootstrap as root
 from vozata.config import Settings
-from vozata.domain import ConversationLanguage, SessionStatus
+from vozata.domain import ConversationLanguage, SessionStatus, TranscriptSegment
 from vozata.minutes.session_minutes import stored_vocabulary
 from vozata.ports import (
     RecoverableStore,
@@ -30,6 +30,7 @@ from vozata.processing.job import AbortJob, ProcessingJob, StepKind
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.session_finisher import SessionFinisher
 from vozata.storage.recovery import SessionRecovery
+from vozata.storage.session_folder import SessionFolder
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.offline import OfflineTranscription
 from vozata.transcription.shared import SharedTranscriber
@@ -77,17 +78,8 @@ def build_processing_job(
         return root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)(settings)
 
     def transcription(token: CancelToken) -> OfflineTranscription:
-        stored = store.read_meta(session_id)
-        language = ConversationLanguage(stored.get("language", ConversationLanguage.AUTO.value))
-        return OfflineTranscription(
-            settings,
-            store,
-            audio,
-            functools.partial(transcriber, token),
-            root.build_labeler(settings, root.build_localizer(settings)),
-            LanguageLock(language, functools.partial(_detected, store, session_id)),
-            build_hints(tuple(stored_vocabulary(stored))),
-            functools.partial(root.CHUNKERS[settings.chunk_mode], settings),
+        return build_offline_transcription(
+            settings, store, audio, session_id, functools.partial(transcriber, token)
         )
 
     def finished() -> None:
@@ -109,6 +101,48 @@ def build_processing_job(
     weight = transcribe_weight(store, session_id, duration)
     return session_job(
         session_id, parts, gate_usage, weight=weight, closed=closed, on_finished=finished
+    )
+
+
+def build_offline_transcription(
+    settings: Settings,
+    store: SessionRepository,
+    audio: SessionAudio,
+    session_id: str,
+    transcriber: Callable[[], Transcriber] | None = None,
+    on_segment: Callable[[TranscriptSegment], None] | None = None,
+) -> OfflineTranscription:
+    """The transcription of what a meeting's raw transcript does not cover, built from its
+    stored metadata: the conversation language (selected, or detected live; a language detected
+    now is stored back), the session vocabulary and the configured chunker. The speech provider
+    is `STT_PROVIDER` unless `transcriber` is given."""
+    stored = store.read_meta(session_id)
+    language = ConversationLanguage(stored.get("language", ConversationLanguage.AUTO.value))
+    if transcriber is None:
+        transcriber = functools.partial(
+            root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider), settings
+        )
+    return OfflineTranscription(
+        settings,
+        store,
+        audio,
+        transcriber,
+        root.build_labeler(settings, root.build_localizer(settings)),
+        LanguageLock(language, functools.partial(_detected, store, session_id)),
+        build_hints(tuple(stored_vocabulary(stored))),
+        functools.partial(root.CHUNKERS[settings.chunk_mode], settings),
+        on_segment=on_segment,
+    )
+
+
+def build_transcribe_command(
+    settings: Settings,
+    folder: SessionFolder,
+    on_segment: Callable[[TranscriptSegment], None] | None = None,
+) -> OfflineTranscription:
+    """The transcription the CLI `transcribe` runs on a stored meeting (phase 41)."""
+    return build_offline_transcription(
+        settings, folder.repository, folder.audio, folder.session_id, on_segment=on_segment
     )
 
 

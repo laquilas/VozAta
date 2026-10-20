@@ -170,6 +170,10 @@ migrate_progress = "Importing {done}/{total}: {folder}"
 migrate_skipped = "Not imported: {folder} ({message})"
 migrate_done = "Imported {imported}, not imported {skipped}."
 migrate_failed = "The import stopped ({reason}); run it again to continue."
+transcribe_progress = "Transcribing: {percent} %"
+transcribe_done = "Transcription finished: {count} new segment(s) written."
+transcribe_busy = "This meeting is still being recorded or processed; to finish an interrupted one, run `python -m vozata recover <folder>`."
+transcribe_failed = "The audio could not be transcribed ({reason})."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -193,6 +197,8 @@ recover = "repair and finish a session interrupted by a crash (audio, speakers, 
 recover_all = "recover every interrupted session in OUTPUT_DIR"
 migrate = "import the meeting folders recorded before the database into it (the folders are kept)"
 migrate_dry_run = "only list the folders that would be imported"
+transcribe = "transcribe a stored session from its audio, whatever its transcript does not cover yet (no speakers, no minutes)"
+transcribe_target = "session id or session folder, e.g. 20261015_202358"
 
 [export]
 title = "Meeting of {date}"

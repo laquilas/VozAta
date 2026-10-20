@@ -217,6 +217,26 @@ def test_auto_language_detected_while_transcribing_the_rest_is_stored(
     assert transcriber.calls[0][1] is None  # detected per window until locked
 
 
+def test_the_transcribe_command_transcribes_with_the_stored_language_and_reports_segments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    said = TranscriptionResult(words=(Word("Resto", 0.0, 0.95, 0.9),), language="pt")
+    transcriber = FakeTranscriber([said] * 4)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: transcriber)
+    settings = _settings(tmp_path)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, mic_seconds=4.0, segments=[], duration_seconds=4.0)
+    write_wav(store.paths(session_id).wav(Channel.SYSTEM), 4.0, level=0)
+    folder = bootstrap.open_session_folder(settings, settings.output_dir / session_id)
+    told: list[object] = []
+
+    transcription = bootstrap_processing.build_transcribe_command(settings, folder, told.append)
+    transcription.run(session_id, CancelToken(), lambda fraction: None)
+
+    assert len(told) == len(store.load_raw_transcript(session_id))  # on_segment is wired through
+    assert transcriber.calls[0][1:] == ("pt", "Avalonia")  # the stored language and vocabulary
+
+
 def test_a_redone_minutes_step_gets_a_fresh_language_model(
     tmp_path: Path, models: list[FakeLanguageModel]
 ) -> None:

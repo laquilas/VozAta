@@ -90,7 +90,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 38 | [Config page redesign](phases/38-config-page.md) | 35 | done |
 | 39 | [Audio delete, export and import](phases/39-audio-export-delete.md) | 32, 37 | done |
 | 40 | [Background processing queue](phases/40-background-processing.md) | 17, 26, 37 | done |
-| 41 | [Live transcription toggle](phases/41-record-only.md) | 40 | todo |
+| 41 | [Live transcription toggle](phases/41-record-only.md) | 40 | done |
 | 42 | [Model download progress bar](phases/42-download-progress.md) | 26, 35 | todo |
 | 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | todo |
 
