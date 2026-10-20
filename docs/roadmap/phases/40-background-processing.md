@@ -195,8 +195,8 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-21 00:10
-- **Next step:** Task 10 of `plans/40-background-processing.md` (meetings and meeting page indicators).
+- **Updated:** 2026-10-21 01:00
+- **Next step:** Task 11 of `plans/40-background-processing.md` (shell indicator and close warning).
 
 ### Steps
 
@@ -209,8 +209,8 @@ close-with-pending message; locale parity.
 - [x] Stop frees the recorder (c7756b8, dab272b; fix round 1: ddaf3fb; fix round 2: this commit)
 - [x] Restart and recovery through the queue (478d112; fix round 1: this commit)
 - [x] API, events and other model users (6b499ad; fix round 1: this commit)
-- [x] UI client and recorder (this commit)
-- [ ] Meetings and meeting page indicators
+- [x] UI client and recorder
+- [x] Meetings and meeting page indicators (this commit)
 - [ ] Shell indicator and close warning
 - [ ] Full suites, manual check
 

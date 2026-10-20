@@ -912,4 +912,31 @@ public sealed class MainViewModelTests
         await SendAsync(viewModel, new ConnectionChangedEvent(false));
         Assert.False(viewModel.Migration.IsVisible);
     }
+
+    [Fact]
+    public async Task Processing_events_update_the_meetings_row_and_a_background_done_refreshes_the_list()
+    {
+        var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9));
+        const string id = "20261015_100000";
+        _client.Sessions.Add(new SessionSummary(id, "finalizing", started, null, 60, "pt", false));
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null); // a new meeting is recorded meanwhile
+        var row = viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single();
+
+        await SendAsync(viewModel, new ProcessingEvent(id, new ProcessingInfo("running", 42, "transcribe")));
+        Assert.Equal("Processing 42 %", row.ProcessingText);
+
+        var requests = _client.DayRequests.Count;
+        _client.Sessions[0] = _client.Sessions[0] with { Status = "done", SpeakerCount = 2 };
+        await SendAsync(viewModel, new StatusEvent(id, "done", 60));
+        await viewModel.HistoryRefresh;
+
+        Assert.True(_client.DayRequests.Count > requests);
+        Assert.Equal(2, viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single().SpeakerCount);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
+
+        await SendAsync(viewModel, new ProcessingEvent(id, new ProcessingInfo("done", 100, null)));
+        await viewModel.HistoryRefresh;
+        Assert.True(viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single().ShowsDoneCheck);
+    }
 }

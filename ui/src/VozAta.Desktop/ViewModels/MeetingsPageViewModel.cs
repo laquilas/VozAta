@@ -52,8 +52,10 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
         IShellService shell,
         IFileSaver saver,
         MinutesTemplatesViewModel? templates = null,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        IProcessingMarkers? markers = null)
     {
+        _markers = markers ?? new ProcessingMarkers();
         _client = client;
         History = history;
         _localization = localization;
@@ -145,6 +147,7 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
         try
         {
             var range = await _client.ListSessionDaysAsync(_oldest, WeekStart.AddDays(6), cancellationToken);
+            _processing.Clear(); // the list is the truth now
             _days.Clear();
             _days.AddRange(range.Days);
             HasEarlier = range.HasEarlier;
@@ -284,14 +287,21 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
             tags.Add(_localization[key]);
         }
 
-        return new MeetingRow(
+        var row = new MeetingRow(
             summary,
             summary.Title ?? _localization["Untitled"],
             tags,
             TimeRange(summary),
             FormatDuration(summary.DurationSeconds ?? 0),
             _localization.Format("MeetingSpeakers", summary.SpeakerCount),
-            [.. ExportFormats.Select(export => (export.Format, _localization[export.LabelKey]))]);
+            [.. ExportFormats.Select(export => (export.Format, _localization[export.LabelKey]))])
+        {
+            DoneText = _localization["Processing_Done"],
+        };
+        var info = ProcessingOf(summary);
+        row.ApplyProcessing(info, ProcessingText(info));
+        row.UnseenDone = _markers.IsUnseen(summary.Id);
+        return row;
     }
 
     private string TimeRange(SessionSummary summary)
@@ -350,6 +360,11 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
         foreach (var row in AllRows().Concat(Matches.Select(match => match.Row).OfType<MeetingRow>()))
         {
             row.IsSelected = row.Id == selected;
+            if (row.IsSelected)
+            {
+                _markers.Clear(row.Id); // opened: the done check has done its job
+                row.UnseenDone = false;
+            }
         }
     }
 

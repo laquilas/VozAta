@@ -172,6 +172,13 @@
     <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
     <Setter Property="FontSize" Value="{StaticResource FontSize.Tiny}" />
   </Style>
+  <!-- Background processing (phase 40): queued and paused are subtle, running is accent -->
+  <Style Selector="Border.tag.running">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+  </Style>
+  <Style Selector="Border.tag.running TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+  </Style>
   <Style Selector="Border.tag.live">
     <Setter Property="Background" Value="{DynamicResource Brush.Danger}" />
   </Style>

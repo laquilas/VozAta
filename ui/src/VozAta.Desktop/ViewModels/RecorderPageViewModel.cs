@@ -36,6 +36,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private string? _defaultTemplate;
     private string _defaultTranslation = "off";
     private string? _liveSessionId; // the session whose lines Segments shows
+    private string? _lastStoppedId; // never adopted again by a late recording/paused heartbeat
     private TaskCompletionSource _idle = NewIdleSignal(completed: true);
     private readonly Func<TimeSpan, CancellationToken, Task> _titleDelay;
     private CancellationTokenSource? _titleTyping; // the pending debounced title update
@@ -614,7 +615,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
         return Session.SessionId is { } current
             ? id == current
-            : status.Status is "recording" or "paused";
+            : status.Status is "recording" or "paused" && id != _lastStoppedId;
     }
 
     private void OnStatus(StatusEvent status)
@@ -696,6 +697,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
     private void EndTitle()
     {
+        _lastStoppedId = Session.SessionId ?? _lastStoppedId;
         _titleTyping?.Cancel();
         _titleTyping = null;
         _sentTitle = null;

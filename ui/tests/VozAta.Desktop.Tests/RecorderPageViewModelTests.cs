@@ -267,6 +267,23 @@ public sealed class RecorderPageViewModelTests
     }
 
     [Fact]
+    public async Task Late_recording_status_of_a_stopped_meeting_while_idle_is_ignored()
+    {
+        var recorder = await RecordingAsync();
+        await recorder.StopCommand.ExecuteAsync(null);
+
+        recorder.Handle(new StatusEvent(SessionId, "recording", 7)); // a heartbeat that crossed the 202
+        recorder.Handle(new StatusEvent(SessionId, "paused", 7));
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.Null(_session.SessionId);
+        Assert.True(recorder.StartCommand.CanExecute(null));
+
+        recorder.Handle(new StatusEvent("20261016_100000", "recording", 1)); // another meeting is still adopted
+        Assert.Equal(RecordingState.Recording, recorder.State);
+    }
+
+    [Fact]
     public async Task A_new_recording_ignores_the_old_meeting_finishing_in_the_background()
     {
         var recorder = await RecordingAsync();

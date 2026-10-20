@@ -45,8 +45,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IThemeService theme,
         IPathPicker? paths = null,
         Func<IAudioPlayer>? players = null,
-        Uri? engineUri = null)
+        Uri? engineUri = null,
+        IProcessingMarkers? markers = null)
     {
+        markers ??= new ProcessingMarkers();
         _client = client;
         _events = events;
         _process = process;
@@ -58,14 +60,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var templates = new MinutesTemplatesViewModel(client);
         Recorder = new RecorderPageViewModel(
             client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token);
-        History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs);
+        History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs, markers: markers);
         Health = new HealthViewModel(client, localization);
         Settings = new SettingsViewModel(client, process, localization, paths);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
-        Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates);
+        Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates, markers: markers);
         History.Players = players is null ? null : (id, tracks) => new PlayerBarViewModel(
             players(), dispatcher, track => AudioUri(engineUri, id, track), tracks, localization);
         History.Renamed = Meetings.OnRenamedAsync;
@@ -411,8 +413,21 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 History.Detail?.Ask.OnAnswerDone(done);
                 break;
             case StatusEvent status:
+                var wasIdle = Session.IsIdle;
                 Recorder.Handle(status);
                 RecoveryRefresh = Recovery.OnStatusAsync(status);
+                if (status is { Status: "done", SessionId: { } finished } && (wasIdle || !Session.IsIdle))
+                {
+                    // A meeting finished in the background: show its minutes and speakers (phase 40).
+                    // The recorder going idle already refreshes the list for the one it was recording.
+                    HistoryRefresh = Task.WhenAll(History.LoadAsync(), Meetings.OnSessionDoneAsync(finished));
+                }
+
+                break;
+            case ProcessingEvent processing:
+                HistoryRefresh = processing.Info.State is "done" or "failed"
+                    ? Task.WhenAll(History.LoadAsync(), Meetings.OnProcessingAsync(processing))
+                    : Meetings.OnProcessingAsync(processing);
                 break;
             case MigrationProgressEvent progress:
                 Migration.OnProgress(progress);

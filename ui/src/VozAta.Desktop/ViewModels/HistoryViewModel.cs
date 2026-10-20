@@ -35,7 +35,8 @@ public sealed partial class HistoryViewModel(
     IFileSaver saver,
     MinutesTemplatesViewModel? templates = null,
     Func<TimeSpan, CancellationToken, Task>? searchDelay = null,
-    IDialogService? dialogs = null)
+    IDialogService? dialogs = null,
+    IProcessingMarkers? markers = null)
     : ObservableObject
 {
     public const int PageSize = 20;
@@ -145,6 +146,10 @@ public sealed partial class HistoryViewModel(
     /// <summary>A <c>speakers_relabeled</c> event: the open detail reloads its transcript when it is that session.</summary>
     public Task OnSpeakersRelabeledAsync(string? sessionId) =>
         Detail?.OnSpeakersRelabeledAsync(sessionId) ?? Task.CompletedTask;
+
+    /// <summary>A <c>processing</c> event (phase 40): the open meeting page follows it when it is that meeting.</summary>
+    public Task OnProcessingAsync(ProcessingEvent processing) =>
+        Detail is { } detail && processing.SessionId == detail.Id ? detail.OnProcessingAsync(processing.Info) : Task.CompletedTask;
 
     public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
 
@@ -285,7 +290,7 @@ public sealed partial class HistoryViewModel(
     private void Open(SessionRow? row)
     {
         Detail?.Dispose();
-        Detail = row is null ? null : new SessionPageViewModel(client, shell, localization, saver, row.Summary, templates, dialogs)
+        Detail = row is null ? null : new SessionPageViewModel(client, shell, localization, saver, row.Summary, templates, dialogs, markers: markers)
         {
             Players = Players,
             Renamed = Renamed,

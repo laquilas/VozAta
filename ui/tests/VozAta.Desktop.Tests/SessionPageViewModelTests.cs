@@ -348,4 +348,73 @@ public sealed class SessionPageViewModelTests : IDisposable
         Assert.False(Create().ExportCommand.CanExecute(null));
         Assert.True(Create().ExportCommand.CanExecute("md"));
     }
+
+    // Background processing (phase 40)
+
+    private SessionPageViewModel CreateProcessing(ProcessingInfo? info, ProcessingMarkers? markers = null)
+    {
+        _client.Details[Id] = Detail([]) with { Processing = info };
+        return new(_client, _shell, _localization, _saver, Summary() with { Processing = info }, audioFolder: _audioFolder, markers: markers);
+    }
+
+    [Fact]
+    public async Task Session_page_tabs_pending_until_their_step_passes()
+    {
+        _client.MinutesText.Clear();
+        var detail = CreateProcessing(new ProcessingInfo("queued", 0, null, 1));
+        await detail.LoadAsync();
+        Assert.Equal((true, true, true, "Queued (1)"), (detail.MinutesPending, detail.SpeakersPending, detail.IsProcessing, detail.ProcessingText));
+        Assert.False(detail.HasMinutes);
+
+        await detail.OnProcessingAsync(new ProcessingInfo("running", 20, "transcribe"));
+        Assert.Equal((true, true, "Processing 20 %"), (detail.MinutesPending, detail.SpeakersPending, detail.ProcessingText));
+
+        _client.Transcripts[Id] = new Transcript("raw", [new Segment("mic-000009", "mic", "mic", "Ana", 1, 2, "Fresh line.", false, [])]);
+        await detail.OnProcessingAsync(new ProcessingInfo("running", 50, "diarize"));
+        Assert.Equal((true, true), (detail.MinutesPending, detail.SpeakersPending));
+
+        await detail.OnProcessingAsync(new ProcessingInfo("running", 60, "minutes")); // diarization passed
+        Assert.Equal((true, false), (detail.MinutesPending, detail.SpeakersPending));
+        Assert.Equal("Fresh line.", Assert.Single(detail.Lines).Text); // the speakers tab reloaded
+
+        _client.MinutesText[Id] = "## Fresh minutes";
+        await detail.OnProcessingAsync(new ProcessingInfo("running", 80, "action_items")); // minutes passed
+        Assert.Equal((false, false, true), (detail.MinutesPending, detail.SpeakersPending, detail.IsProcessing));
+        Assert.True(detail.HasMinutes); // the minutes tab reloaded
+
+        await detail.OnProcessingAsync(new ProcessingInfo("done", 100, null));
+        Assert.Equal((false, false, true), (detail.IsProcessing, detail.MinutesPending, detail.ShowsDoneCheck));
+    }
+
+    [Fact]
+    public async Task Paused_and_failed_processing_on_the_page()
+    {
+        var detail = CreateProcessing(new ProcessingInfo("paused", 30, "transcribe"));
+        await detail.LoadAsync();
+        Assert.Equal(("Paused", true), (detail.ProcessingText, detail.MinutesPending));
+
+        await detail.OnProcessingAsync(new ProcessingInfo("failed", 30, "transcribe"));
+
+        Assert.Equal((false, false, false, false), (detail.IsProcessing, detail.MinutesPending, detail.SpeakersPending, detail.ShowsDoneCheck));
+    }
+
+    [Fact]
+    public async Task A_meeting_outside_the_queue_has_no_pending_tabs()
+    {
+        var detail = CreateProcessing(null);
+        await detail.LoadAsync();
+
+        Assert.Equal((false, false, false), (detail.IsProcessing, detail.MinutesPending, detail.SpeakersPending));
+    }
+
+    [Fact]
+    public async Task Opening_the_page_clears_the_unseen_marker()
+    {
+        var markers = new ProcessingMarkers();
+        markers.MarkDone(Id);
+
+        await CreateProcessing(null, markers).LoadAsync();
+
+        Assert.False(markers.IsUnseen(Id));
+    }
 }

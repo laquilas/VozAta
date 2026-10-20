@@ -768,4 +768,158 @@ public sealed class MeetingsPageViewModelTests
         {
             Metadata = new Dictionary<string, JsonElement> { ["title"] = JsonSerializer.SerializeToElement(title) },
         };
+
+    // Background processing (phase 40)
+
+    private readonly ProcessingMarkers _markers = new();
+
+    private MeetingsPageViewModel CreateWithMarkers()
+    {
+        var history = new HistoryViewModel(_client, _shell, _localization, _saver, dialogs: _dialogs, markers: _markers);
+        return new MeetingsPageViewModel(_client, history, _localization, _clock, _dialogs, _shell, _saver, markers: _markers);
+    }
+
+    private SessionSummary AddProcessing(DateTimeOffset start, ProcessingInfo? info, string status = "done")
+    {
+        var summary = Add(start, 60, status: status) with { Processing = info };
+        _client.Sessions[^1] = summary;
+        return summary;
+    }
+
+    [Fact]
+    public async Task Row_shows_queued_position()
+    {
+        var queued = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("queued", 0, null, 2));
+        var page = CreateWithMarkers();
+
+        await page.LoadAsync();
+
+        var row = Rows(page).Single();
+        Assert.Equal(queued.Id, row.Id);
+        Assert.Equal(("Queued (2)", true, false), (row.ProcessingText, row.IsProcessing, row.ShowsDoneCheck));
+        Assert.False(row.IsLive);
+    }
+
+    [Fact]
+    public async Task Row_percent_follows_events()
+    {
+        var running = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("queued", 0, null, 1));
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        var row = Rows(page).Single();
+
+        await page.OnProcessingAsync(new ProcessingEvent(running.Id, new ProcessingInfo("running", 42, "transcribe")));
+        Assert.Equal(("Processing 42 %", true), (row.ProcessingText, row.IsProcessing));
+
+        await page.OnProcessingAsync(new ProcessingEvent(running.Id, new ProcessingInfo("paused", 42, "transcribe")));
+        Assert.Equal("Paused", row.ProcessingText);
+
+        await page.OnProcessingAsync(new ProcessingEvent(running.Id, new ProcessingInfo("running", 77, "diarize")));
+        Assert.Equal("Processing 77 %", row.ProcessingText);
+
+        await page.OnProcessingAsync(new ProcessingEvent("another", new ProcessingInfo("running", 5, "repair")));
+        Assert.Equal("Processing 77 %", row.ProcessingText); // not ours
+
+        _localization.SetLanguage("pt-BR");
+        page.RefreshTexts();
+        try
+        {
+            Assert.Equal("Processando 77 %", Rows(page).Single().ProcessingText); // survives a re-render
+        }
+        finally
+        {
+            _localization.SetLanguage("en");
+        }
+
+        _client.Sessions[0] = running with { Processing = null }; // the engine dropped it
+        await page.OnProcessingAsync(new ProcessingEvent(running.Id, new ProcessingInfo("failed", 77, "diarize")));
+        var after = Rows(page).Single();
+        Assert.Equal((false, false), (after.IsProcessing, after.ShowsDoneCheck)); // the error toast tells the rest
+    }
+
+    [Fact]
+    public async Task Row_done_shows_green_check_without_percent_until_opened()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("running", 90, "index"));
+        _client.Details[meeting.Id] = new SessionDetail(meeting.Id, "done", null, null, 60, "en", false, [], @"C:\rec");
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+
+        _client.Sessions[0] = meeting with { Processing = null, SpeakerCount = 2 }; // the engine finished it
+        await page.OnProcessingAsync(new ProcessingEvent(meeting.Id, new ProcessingInfo("done", 100, null)));
+
+        var row = Rows(page).Single();
+        Assert.Equal((true, false, "Ready", 2), (row.ShowsDoneCheck, row.IsProcessing, row.DoneText, row.SpeakerCount));
+        Assert.True(_markers.IsUnseen(meeting.Id));
+
+        await page.LoadAsync(); // reloads keep the check
+        Assert.True(Rows(page).Single().ShowsDoneCheck);
+
+        page.OpenCommand.Execute(Rows(page).Single());
+        await page.History.DetailLoading;
+        Assert.False(Rows(page).Single().ShowsDoneCheck);
+        Assert.False(_markers.IsUnseen(meeting.Id));
+    }
+
+    [Fact]
+    public async Task Opening_meeting_clears_unseen_marker()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), null);
+        _client.Details[meeting.Id] = new SessionDetail(meeting.Id, "done", null, null, 60, "en", false, [], @"C:\rec");
+        _markers.MarkDone(meeting.Id);
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        Assert.True(Rows(page).Single().ShowsDoneCheck);
+
+        page.OpenCommand.Execute(Rows(page).Single());
+        await page.History.DetailLoading;
+
+        Assert.False(_markers.IsUnseen(meeting.Id));
+        Assert.False(Rows(page).Single().ShowsDoneCheck);
+    }
+
+    [Fact]
+    public async Task A_meeting_that_finishes_while_open_is_not_marked_unseen()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("running", 90, "index"));
+        _client.Details[meeting.Id] = new SessionDetail(meeting.Id, "done", null, null, 60, "en", false, [], @"C:\rec");
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        page.OpenCommand.Execute(Rows(page).Single());
+        await page.History.DetailLoading;
+
+        _client.Sessions[0] = meeting with { Processing = null };
+        await page.OnProcessingAsync(new ProcessingEvent(meeting.Id, new ProcessingInfo("done", 100, null)));
+
+        Assert.False(_markers.IsUnseen(meeting.Id));
+        Assert.False(Rows(page).Single().ShowsDoneCheck);
+    }
+
+    [Fact]
+    public async Task Status_done_of_a_background_meeting_refreshes_its_row()
+    {
+        var meeting = AddProcessing(NoonClock.Local(2026, 10, 14, 9), new ProcessingInfo("running", 99, "index"), status: "finalizing");
+        var page = CreateWithMarkers();
+        await page.LoadAsync();
+        Assert.Null(page.Live);
+
+        _client.Sessions[0] = meeting with { Status = "done", Processing = null, SpeakerCount = 3 };
+        await page.OnSessionDoneAsync(meeting.Id);
+
+        Assert.Equal(3, Rows(page).Single().SpeakerCount);
+    }
+
+    [Fact]
+    public async Task Finalizing_row_is_not_pinned_as_live()
+    {
+        Add(NoonClock.Local(2026, 10, 14, 9), 60, status: "finalizing");
+        Add(NoonClock.Local(2026, 10, 15, 9), 60, status: "recording");
+        var page = CreateWithMarkers();
+
+        await page.LoadAsync();
+
+        Assert.Equal("20261015_090000", page.Live?.Id);
+        var finalizing = Rows(page).Single();
+        Assert.Equal(("20261014_090000", false, false), (finalizing.Id, finalizing.IsLive, finalizing.CanDelete)); // not deletable while it finishes
+    }
 }
