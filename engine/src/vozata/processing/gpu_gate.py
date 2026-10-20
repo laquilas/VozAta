@@ -26,8 +26,9 @@ class GpuUser(StrEnum):
 @dataclass(frozen=True)
 class GpuUsage:
     speech: bool
-    speakers: bool
+    speakers: bool  # post-session or live diarization
     llm: bool
+    live_speakers: bool = False  # the live speaker embedder (live diarization only)
 
 
 def gpu_usage(settings: Settings, cuda: bool) -> GpuUsage:
@@ -38,9 +39,11 @@ def gpu_usage(settings: Settings, cuda: bool) -> GpuUsage:
         and cuda
     )
     wants_speakers = settings.diarization_enabled or settings.live_diarization_enabled
-    speakers = wants_speakers and settings.diarization_device != WhisperDevice.CPU and cuda
+    speakers_on_gpu = settings.diarization_device != WhisperDevice.CPU and cuda
+    speakers = wants_speakers and speakers_on_gpu
+    live_speakers = settings.live_diarization_enabled and speakers_on_gpu
     llm = settings.llm_provider == "ollama" and cuda
-    return GpuUsage(speech=speech, speakers=speakers, llm=llm)
+    return GpuUsage(speech=speech, speakers=speakers, llm=llm, live_speakers=live_speakers)
 
 
 class GpuGate:

@@ -13,19 +13,37 @@ log = logging.getLogger(__name__)
 TURN_WARNING_SECONDS = 300.0  # the previous model load may be a cold download (20+ min)
 
 
+class ModelLoadSkipped(Exception):  # noqa: N818 - a skip, not an error
+    """A live model load skipped because its session stopped first (not a failure)."""
+
+
 class LiveGpuLease:
-    """`hold()` takes `gate.priority(GpuUser.LIVE)` once, before the live speech or speaker model
-    loads (pre-empting the queue's running GPU step, ≤ 5 s); `release()` gives it back once the
-    live models are closed. Nothing is held without a gate or when neither live model uses the
-    GPU. After `release()`, `hold()` does nothing (a load finishing after Stop)."""
+    """`hold_speech()` / `hold_speakers()` take `gate.priority(GpuUser.LIVE)` once, before a live
+    model that runs on the local GPU loads (pre-empting the queue's running GPU step, <= 5 s);
+    `release()` gives it back once the live models are closed. Only the models the live session
+    loads count: the speech model when `usage.speech`, the live speaker embedder when
+    `usage.live_speakers` (post-session diarization on the GPU does not). Nothing is held without
+    a gate. After `release()`, a hold does nothing (a load finishing after Stop)."""
 
     def __init__(self, gate: GpuGate | None, usage: GpuUsage | None) -> None:
-        self._gate = gate if usage is not None and (usage.speech or usage.speakers) else None
+        self._gate = gate if usage is not None else None
+        self._speech = usage is not None and usage.speech
+        self._speakers = usage is not None and usage.live_speakers
         self._lock = threading.Lock()
         self._held: contextlib.ExitStack | None = None
         self._released = False
 
-    def hold(self) -> None:
+    def hold_speech(self) -> None:
+        """Before the live speech model loads."""
+        if self._speech:
+            self._hold()
+
+    def hold_speakers(self) -> None:
+        """Before the live speaker embedder loads."""
+        if self._speakers:
+            self._hold()
+
+    def _hold(self) -> None:
         if self._gate is None:
             return
         with self._lock:  # a second loader waits until the first one holds the gate

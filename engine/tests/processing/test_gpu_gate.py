@@ -175,6 +175,24 @@ def test_gpu_usage_speakers(diarization, live, device, cuda, expected):
 
 
 @pytest.mark.parametrize(
+    ("diarization", "live", "device", "cuda", "expected"),
+    [
+        (True, False, WhisperDevice.AUTO, True, False),  # post-session pyannote only
+        (False, True, WhisperDevice.AUTO, True, True),
+        (True, True, WhisperDevice.CPU, True, False),
+        (False, True, WhisperDevice.AUTO, False, False),
+    ],
+)
+def test_gpu_usage_live_speakers(diarization, live, device, cuda, expected):
+    settings = _settings(
+        diarization_enabled=diarization,
+        live_diarization_enabled=live,
+        diarization_device=device,
+    )
+    assert gpu_usage(settings, cuda=cuda).live_speakers is expected
+
+
+@pytest.mark.parametrize(
     ("provider", "cuda", "expected"),
     [("ollama", True, True), ("ollama", False, False), ("other", True, False)],
 )

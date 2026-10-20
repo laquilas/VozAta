@@ -24,6 +24,7 @@ from vozata.ports import (
     Transcriber,
     TranscriptSink,
 )
+from vozata.processing.live_lease import ModelLoadSkipped
 from vozata.transcription.context import RollingContext
 from vozata.transcription.echo import EchoFilter
 from vozata.transcription.language_lock import LanguageLock
@@ -51,6 +52,8 @@ class _DeferredTranscriber:
         self._observer.on_model_loading(True)
         try:
             self.loaded = self._factory()
+        except ModelLoadSkipped:
+            return False  # the session stopped before its model loaded: nothing to report
         except Exception as error:
             _log.exception("Loading the speech model failed")
             self._on_failed(error)

@@ -195,8 +195,8 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-21 02:00
-- **Next step:** Task 12 of `plans/40-background-processing.md` (full suites, manual check).
+- **Updated:** 2026-10-21 03:00
+- **Next step:** final review fixes (start waits for a stop in progress, CLI recovery, clients, cancel), then Task 12 (full suites, manual check).
 
 ### Steps
 
@@ -212,6 +212,7 @@ close-with-pending message; locale parity.
 - [x] UI client and recorder
 - [x] Meetings and meeting page indicators (f944d53; fix round 1: this commit)
 - [x] Shell indicator and close warning (05b718d; fix round 1: this commit)
+- [ ] Final review fixes (live GPU hold and skipped loads: this commit)
 - [ ] Full suites, manual check
 
 ### Decisions and notes

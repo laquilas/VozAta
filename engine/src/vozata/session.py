@@ -33,7 +33,7 @@ from vozata.ports import (
 from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import ProcessingJob, run_job_inline
-from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn
+from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn, ModelLoadSkipped
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.session_finisher import SessionFinisher
 from vozata.session_meta import SessionMeta
@@ -121,6 +121,7 @@ class RecordingSession:
         self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
         self._pipeline: CapturePipeline | None = None  # None until `start()`, and on `recover()`
         self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
+        self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
 
     @property
     def id(self) -> str:
@@ -241,6 +242,7 @@ class RecordingSession:
                 except Exception:
                     _log.exception("%s at stop failed", what)
         finally:
+            self._abandoned.set()
             if self._c.live_models is not None:
                 self._c.live_models.stopping(closed)
             self._pipeline.abandon(lambda: self._pipeline_closed(closed))
@@ -294,15 +296,21 @@ class RecordingSession:
 
     def _live_transcriber(self) -> Transcriber:
         """The live model, loaded on the worker thread once it may (see `_before_model`)."""
-        self._before_model()
+        self._before_model(self._gpu.hold_speech)
         return self._c.transcriber_factory()
 
-    def _before_model(self) -> None:
-        """Before a live model loads: the previous session's live models are closed, then the GPU
-        gate is taken (pre-empting the queue's GPU step)."""
+    def _before_model(self, hold: Callable[[], None]) -> None:
+        """Before a live model loads: the previous session's live models are closed, then `hold`
+        takes the GPU gate when that model runs on the local GPU (pre-empting the queue's GPU
+        step). Raises `ModelLoadSkipped` once this session stopped: an abandoned session never
+        takes the gate nor loads a model only to close it."""
+        if self._abandoned.is_set():
+            raise ModelLoadSkipped
         if self._c.live_models is not None:
             self._c.live_models.wait()
-        self._gpu.hold()
+        if self._abandoned.is_set():  # stopped while the previous session's models closed
+            raise ModelLoadSkipped
+        hold()
 
     def recover(self, session_id: str, duration_seconds: float) -> None:
         """Finish an interrupted session whose audio and transcript were repaired (phase 17).
@@ -417,7 +425,7 @@ class RecordingSession:
             return None
 
         def build() -> SpeakerEmbedder:
-            self._before_model()
+            self._before_model(self._gpu.hold_speakers)
             try:
                 return factory()
             except Exception as error:

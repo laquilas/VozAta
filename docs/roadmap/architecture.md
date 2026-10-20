@@ -385,9 +385,13 @@ and at most once per second while the percent moves.
 **GPU gate** (phase 40, `processing/gpu_gate.py`, one per engine, built in `bootstrap.py`):
 `gpu_usage(settings, cuda)` says which model families run on the local GPU (speech: faster-whisper
 not on CPU; speakers: pyannote not on CPU; LLM: Ollama); without CUDA nothing is gated. Priority:
-live recording > Ask > Config tests > queue. A live session whose speech or speaker model uses the
-GPU takes `gate.priority(LIVE)` on its worker thread before its first model loads
-(`LiveGpuLease`) and gives it back once its abandoned pipeline closed. Taking a priority cancels
+live recording > Ask > Config tests > queue. A live session takes `gate.priority(LIVE)` on the
+model-load thread before a live model that runs on the local GPU loads (`LiveGpuLease`: the speech
+model when `usage.speech`, the live speaker embedder when `usage.live_speakers`, i.e.
+`LIVE_DIARIZATION_ENABLED` not on CPU; post-session diarization on the GPU does not count, so a
+recording with external or CPU speech leaves the queue alone) and gives it back once its abandoned
+pipeline closed. A session stopped before a live model started loading (or while waiting for the
+previous session's models to close, `LiveModelTurn`) skips that load silently: no gate, no model. Taking a priority cancels
 the queue's running GPU step (it must stop within 5 s; its partial output is discarded) and the job
 shows `paused`; the step is redone from its start, with fresh providers, once no priority is held
 (the transcribe step resumes from what it already wrote). Steps without GPU are never cancelled.

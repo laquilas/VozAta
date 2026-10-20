@@ -54,7 +54,8 @@ class TranscriptionWorker:
 
     `abandon(on_exit)` (phase 40) is the stop without drain: it returns at once, the thread
     finishes the chunk (or the model load) in hand, skips the backlog and the stitcher flush, clears
-    a shown partial and calls `on_exit` on its own thread.
+    a shown partial and calls `on_exit` on its own thread. A worker abandoned before its `load`
+    started never loads.
     """
 
     def __init__(
@@ -104,7 +105,8 @@ class TranscriptionWorker:
 
     def _run(self) -> None:
         if self._load is not None:
-            self._usable = self._load()
+            # abandoned before the load started: never load a model only to close it
+            self._usable = not self._stopping.is_set() and self._load()
             self._behind = True  # catching up on audio queued while loading is not "slow"
         while not self._stopping.is_set():
             try:

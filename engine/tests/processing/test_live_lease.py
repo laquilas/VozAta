@@ -8,21 +8,45 @@ from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn
 
 SPEECH = GpuUsage(speech=True, speakers=False, llm=True)
-SPEAKERS = GpuUsage(speech=False, speakers=True, llm=False)
+LIVE_SPEAKERS = GpuUsage(speech=False, speakers=True, llm=False, live_speakers=True)
+POST_SPEAKERS = GpuUsage(speech=False, speakers=True, llm=False)  # post-session pyannote only
 NONE = GpuUsage(speech=False, speakers=False, llm=True)
 
 
-@pytest.mark.parametrize("usage", [SPEECH, SPEAKERS])
-def test_hold_takes_the_live_priority_once_until_release(usage: GpuUsage) -> None:
+def test_the_speech_hold_takes_the_live_priority_once_until_release() -> None:
     gate = GpuGate()
-    lease = LiveGpuLease(gate, usage)
+    lease = LiveGpuLease(gate, SPEECH)
     assert not gate.priority_held
 
-    lease.hold()
-    lease.hold()  # the second model load shares the hold
+    lease.hold_speech()
+    lease.hold_speakers()  # a CPU embedder: no hold of its own
+    lease.hold_speech()  # a second load shares the hold
     assert gate.priority_held
 
     lease.release()
+    assert not gate.priority_held
+
+
+def test_the_live_speaker_embedder_on_the_gpu_holds_the_gate() -> None:
+    gate = GpuGate()
+    lease = LiveGpuLease(gate, LIVE_SPEAKERS)
+
+    lease.hold_speech()  # external or CPU speech: no hold
+    assert not gate.priority_held
+    lease.hold_speakers()
+    assert gate.priority_held
+
+    lease.release()
+    assert not gate.priority_held
+
+
+def test_post_session_diarization_on_the_gpu_does_not_hold_the_gate() -> None:
+    gate = GpuGate()
+    lease = LiveGpuLease(gate, POST_SPEAKERS)
+
+    lease.hold_speech()
+    lease.hold_speakers()
+
     assert not gate.priority_held
 
 
@@ -32,7 +56,8 @@ def test_nothing_is_held_without_a_gate_or_a_live_gpu_model(
 ) -> None:
     lease = LiveGpuLease(gate, usage)
 
-    lease.hold()
+    lease.hold_speech()
+    lease.hold_speakers()
 
     assert gate is None or not gate.priority_held
     lease.release()  # harmless
@@ -43,7 +68,7 @@ def test_a_hold_after_release_does_nothing() -> None:
     lease = LiveGpuLease(gate, SPEECH)
 
     lease.release()  # Stop before the model load ended
-    lease.hold()
+    lease.hold_speech()
 
     assert not gate.priority_held
 

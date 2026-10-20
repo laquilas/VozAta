@@ -490,6 +490,25 @@ def test_abandon_without_start_calls_on_exit_at_once(chunks: queue.Queue[AudioCh
     assert (loads, mic.seen, mic.flushed) == ([], [], False)
 
 
+def test_a_worker_abandoned_before_its_load_started_never_loads(
+    chunks: queue.Queue[AudioChunk],
+) -> None:
+    mic = FakeStitcher(Channel.MIC)
+    chunks.put(chunk(Channel.MIC, 0))
+    loads: list[str] = []
+    worker = TranscriptionWorker(
+        chunks, {Channel.MIC: mic}, FakeTranscriptSink(), load=lambda: bool(loads.append("x"))
+    )
+    exited = threading.Event()
+    worker._on_exit = exited.set  # abandoned while the thread was being scheduled
+    worker._stopping.set()
+
+    worker.start()
+
+    assert exited.wait(5)
+    assert (loads, mic.seen, mic.flushed) == ([], [], False)
+
+
 def test_abandon_clears_a_shown_partial(chunks: queue.Queue[AudioChunk]) -> None:
     sent: list[tuple[Channel, float, str]] = []
     mic = FakeStitcher(Channel.MIC)
