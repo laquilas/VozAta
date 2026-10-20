@@ -195,8 +195,8 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 23:15
-- **Next step:** Task 9 of `plans/40-background-processing.md` (UI client and recorder).
+- **Updated:** 2026-10-21 00:10
+- **Next step:** Task 10 of `plans/40-background-processing.md` (meetings and meeting page indicators).
 
 ### Steps
 
@@ -209,7 +209,7 @@ close-with-pending message; locale parity.
 - [x] Stop frees the recorder (c7756b8, dab272b; fix round 1: ddaf3fb; fix round 2: this commit)
 - [x] Restart and recovery through the queue (478d112; fix round 1: this commit)
 - [x] API, events and other model users (6b499ad; fix round 1: this commit)
-- [ ] UI client and recorder
+- [x] UI client and recorder (this commit)
 - [ ] Meetings and meeting page indicators
 - [ ] Shell indicator and close warning
 - [ ] Full suites, manual check
@@ -233,6 +233,7 @@ close-with-pending message; locale parity.
   ends `done`; an unexpected minutes failure publishes `minutes_failed` with `internal_error`
   (`QueuedModelJob` in `api/model_job.py` is the shared base).
 
+- UI client and recorder (Task 9): `StopAsync` sets the recorder Idle on the 202. `OnStatus` follows  only the recorded session once its id is known; while no id is known (idle or starting) it adopts  only `recording`/`paused` of an unknown session. A status without a session id still applies.  Recovery no longer blocks Start (its `finalizing` is ignored by the recorder). `GuardClosing`  waits only 15 s for `Recorder.Idle`.
 - Restart and recovery (Task 7): `SessionManager.resume_pending()` runs in the app lifespan before
   the migration job; `find_interrupted` skips active sessions with `capture_ended_at`; `/recover`
   enqueues a `repair=True` job and no longer holds a slot (`_recovering`, `SessionBeingRecoveredError`

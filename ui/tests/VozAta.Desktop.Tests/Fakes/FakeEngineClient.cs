@@ -466,6 +466,9 @@ internal sealed partial class FakeEngineClient : IEngineClient
     public static EngineApiException ApiError(string code, string message) =>
         new(HttpStatusCode.Conflict, code, message);
 
-    private static SessionSummary Summary(string status) =>
-        new("20261016_090000", status, DateTimeOffset.Now, null, 0, "pt", false);
+    /// <summary>The id <see cref="StartSessionAsync"/> answers (a second recording in a test sets another).</summary>
+    public string NextSessionId { get; set; } = "20261016_090000";
+
+    private SessionSummary Summary(string status) =>
+        new(NextSessionId, status, DateTimeOffset.Now, null, 0, "pt", false);
 }

@@ -64,7 +64,8 @@ public sealed record SessionSummary(
     string? Title = null,
     int SpeakerCount = 0,
     bool HasActionItems = false,
-    string? Template = null);
+    string? Template = null,
+    ProcessingInfo? Processing = null);
 
 public sealed record SessionPage(IReadOnlyList<SessionSummary> Items, int Total);
 
@@ -78,7 +79,8 @@ public sealed record SessionDetail(
     bool HasMinutes,
     IReadOnlyList<string>? Files,
     string? Folder,
-    IReadOnlyDictionary<string, double>? Audio = null)
+    IReadOnlyDictionary<string, double>? Audio = null,
+    ProcessingInfo? Processing = null)
 {
     /// <summary>Every other `session.json` field (devices, pauses, settings...).</summary>
     [JsonExtensionData]
@@ -171,3 +173,10 @@ public sealed record EngineSettings(
             _ => null,
         } : null;
 }
+
+/// <summary>
+/// Background processing of a stopped meeting (phase 40): <c>State</c> is queued, running, paused,
+/// done or failed; <c>Percent</c> is 0-100; <c>Step</c> names the running step; <c>Position</c> is
+/// set only while queued (1 = next).
+/// </summary>
+public sealed record ProcessingInfo(string State, int Percent, string? Step, int? Position = null);

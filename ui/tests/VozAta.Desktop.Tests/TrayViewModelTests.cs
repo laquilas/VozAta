@@ -43,7 +43,7 @@ public sealed class TrayViewModelTests
         Assert.Equal("Resume", tray.PauseResumeText);
         await tray.StopCommand.ExecuteAsync(null);
 
-        Assert.Equal(RecordingState.Finalizing, main.Recorder.State);
+        Assert.Equal(RecordingState.Idle, main.Recorder.State);
         Assert.Equal(["start", "pause", "stop"], _client.Calls.Where(call => call is "start" or "pause" or "stop"));
     }
 

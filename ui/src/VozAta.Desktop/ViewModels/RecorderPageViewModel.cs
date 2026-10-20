@@ -429,7 +429,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         {
             await SaveTitleNowAsync(); // a title still being typed belongs to this meeting
             await _client.StopSessionAsync(_cancellation);
-            SetState(RecordingState.Finalizing);
+            SetState(RecordingState.Idle); // the engine finishes the meeting in the background (phase 40)
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
         {
@@ -599,8 +599,31 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         return -1;
     }
 
+    /// <summary>
+    /// Whether a status belongs to the recording this page follows. Once the session id is known only
+    /// that session counts (a stopped meeting's finalizing/done interleaves with a new recording);
+    /// before it is known only <c>recording</c>/<c>paused</c> are adopted (a recording that started
+    /// before the app connected).
+    /// </summary>
+    private bool Follows(StatusEvent status)
+    {
+        if (status.SessionId is not { } id)
+        {
+            return true;
+        }
+
+        return Session.SessionId is { } current
+            ? id == current
+            : status.Status is "recording" or "paused";
+    }
+
     private void OnStatus(StatusEvent status)
     {
+        if (!Follows(status))
+        {
+            return;
+        }
+
         // The engine clock keeps running while paused (WAVs record silence); the display freezes
         // and continues from the engine clock on resume, matching the transcript timestamps.
         if (status.DurationSeconds is { } seconds && !(IsPaused && status.Status == "paused"))

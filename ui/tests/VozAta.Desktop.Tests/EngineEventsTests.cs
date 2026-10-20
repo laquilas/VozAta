@@ -8,6 +8,17 @@ public sealed class EngineEventsTests
     private static readonly Uri Ws = new("ws://127.0.0.1:8765/ws");
 
     [Fact]
+    public void Parses_processing_event_with_and_without_position()
+    {
+        Assert.Equal(
+            new ProcessingEvent("s1", new ProcessingInfo("queued", 0, null, 2)),
+            EngineEventParser.Parse("""{"type":"processing","session_id":"s1","data":{"state":"queued","percent":0,"step":null,"position":2}}"""));
+        Assert.Equal(
+            new ProcessingEvent("s1", new ProcessingInfo("running", 40, "transcribe", null)),
+            EngineEventParser.Parse("""{"type":"processing","session_id":"s1","data":{"state":"running","percent":40,"step":"transcribe"}}"""));
+    }
+
+    [Fact]
     public void Parser_reads_every_known_event_type()
     {
         Assert.Equal(

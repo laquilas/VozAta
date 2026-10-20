@@ -19,7 +19,8 @@ namespace VozAta.Desktop;
 public partial class App : Application
 {
     /// <summary>Longest wait for a finalizing session when the window closes.</summary>
-    private static readonly TimeSpan FinalizeWait = TimeSpan.FromMinutes(10);
+    /// <summary>Stop is accepted at once now; background processing is not waited for (phase 40).</summary>
+    private static readonly TimeSpan StopWait = TimeSpan.FromSeconds(15);
 
     public override void Initialize()
     {
@@ -159,7 +160,7 @@ public partial class App : Application
 
             closing = true;
             window.IsEnabled = false;
-            await viewModel.ShutdownAsync(FinalizeWait);
+            await viewModel.ShutdownAsync(StopWait);
             window.Close();
         };
     }
