@@ -939,4 +939,27 @@ public sealed class MainViewModelTests
         await viewModel.HistoryRefresh;
         Assert.True(viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single().ShowsDoneCheck);
     }
+
+    [Fact]
+    public async Task An_open_meeting_page_keeps_its_instance_and_shows_the_done_check_when_processing_ends()
+    {
+        const string id = "20261015_100000";
+        var queued = new ProcessingInfo("running", 90, "index");
+        _client.Sessions.Add(new SessionSummary(id, "finalizing", null, null, 60, "pt", false, Processing: queued));
+        _client.Details[id] = new SessionDetail(id, "finalizing", null, null, 60, "pt", false, [], @"C:\rec", Processing: queued);
+        _client.Transcripts[id] = new Transcript("raw", [Line("mic", "Me", 1, "Hi.")]);
+        var viewModel = await ReadyAsync();
+        viewModel.History.Selected = viewModel.History.Rows[0];
+        await viewModel.History.DetailLoading;
+        var page = viewModel.History.Detail;
+        Assert.True(page?.IsProcessing);
+
+        _client.Sessions[0] = _client.Sessions[0] with { Status = "done", Processing = null };
+        _client.MinutesText[id] = "## Done minutes";
+        await SendAsync(viewModel, new ProcessingEvent(id, new ProcessingInfo("done", 100, null)));
+        await viewModel.HistoryRefresh;
+
+        Assert.Same(page, viewModel.History.Detail);
+        Assert.Equal((false, true, true), (page!.IsProcessing, page.ShowsDoneCheck, page.HasMinutes));
+    }
 }

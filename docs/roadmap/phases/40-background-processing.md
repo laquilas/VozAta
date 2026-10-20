@@ -195,7 +195,7 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-21 01:00
+- **Updated:** 2026-10-21 01:30
 - **Next step:** Task 11 of `plans/40-background-processing.md` (shell indicator and close warning).
 
 ### Steps
@@ -210,7 +210,7 @@ close-with-pending message; locale parity.
 - [x] Restart and recovery through the queue (478d112; fix round 1: this commit)
 - [x] API, events and other model users (6b499ad; fix round 1: this commit)
 - [x] UI client and recorder
-- [x] Meetings and meeting page indicators (this commit)
+- [x] Meetings and meeting page indicators (f944d53; fix round 1: this commit)
 - [ ] Shell indicator and close warning
 - [ ] Full suites, manual check
 

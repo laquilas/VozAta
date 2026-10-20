@@ -311,7 +311,7 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
             return "";
         }
 
-        var live = summary.Status is "recording" or "paused" or "finalizing";
+        var live = summary.Status is "recording" or "paused";
         var ended = summary.EndedAt ?? (!live && summary.DurationSeconds is { } seconds ? started.AddSeconds(seconds) : null);
         var start = started.ToLocalTime().ToString("t", Culture);
         return ended is { } end ? $"{start} – {end.ToLocalTime().ToString("t", Culture)}" : $"{start} –";

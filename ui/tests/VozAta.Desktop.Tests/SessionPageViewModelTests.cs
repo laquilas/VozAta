@@ -361,6 +361,7 @@ public sealed class SessionPageViewModelTests : IDisposable
     public async Task Session_page_tabs_pending_until_their_step_passes()
     {
         _client.MinutesText.Clear();
+        _client.Transcripts[Id] = new Transcript("raw", []);
         var detail = CreateProcessing(new ProcessingInfo("queued", 0, null, 1));
         await detail.LoadAsync();
         Assert.Equal((true, true, true, "Queued (1)"), (detail.MinutesPending, detail.SpeakersPending, detail.IsProcessing, detail.ProcessingText));
@@ -389,6 +390,8 @@ public sealed class SessionPageViewModelTests : IDisposable
     [Fact]
     public async Task Paused_and_failed_processing_on_the_page()
     {
+        _client.MinutesText.Clear();
+        _client.Transcripts[Id] = new Transcript("raw", []);
         var detail = CreateProcessing(new ProcessingInfo("paused", 30, "transcribe"));
         await detail.LoadAsync();
         Assert.Equal(("Paused", true), (detail.ProcessingText, detail.MinutesPending));
@@ -396,6 +399,46 @@ public sealed class SessionPageViewModelTests : IDisposable
         await detail.OnProcessingAsync(new ProcessingInfo("failed", 30, "transcribe"));
 
         Assert.Equal((false, false, false, false), (detail.IsProcessing, detail.MinutesPending, detail.SpeakersPending, detail.ShowsDoneCheck));
+    }
+
+    [Fact]
+    public async Task A_stopped_meeting_waiting_in_the_queue_shows_its_tabs_with_the_pending_text()
+    {
+        _client.MinutesText.Clear();
+        _client.Transcripts[Id] = new Transcript("raw", []);
+        _client.Details[Id] = Detail([]) with { Status = "finalizing", Processing = new ProcessingInfo("queued", 0, null, 1) };
+        var detail = new SessionPageViewModel(
+            _client, _shell, _localization, _saver,
+            Summary("finalizing") with { Processing = new ProcessingInfo("queued", 0, null, 1) }, audioFolder: _audioFolder);
+
+        await detail.LoadAsync();
+
+        Assert.False(detail.IsLive); // the Speakers and Action items tabs are visible
+        Assert.Equal((true, true), (detail.MinutesPending, detail.SpeakersPending));
+        Assert.Contains($"action-items {Id}", _client.Calls);
+    }
+
+    [Fact]
+    public async Task A_regeneration_keeps_the_existing_minutes_and_speakers_visible()
+    {
+        var detail = CreateProcessing(new ProcessingInfo("queued", 0, null, 1));
+
+        await detail.LoadAsync();
+
+        Assert.True(detail.HasMinutes);
+        Assert.True(detail.Speakers.HasRows);
+        Assert.Equal((false, false, true), (detail.MinutesPending, detail.SpeakersPending, detail.IsProcessing));
+    }
+
+    [Fact]
+    public async Task A_stale_detail_does_not_overwrite_a_newer_processing_event()
+    {
+        var detail = CreateProcessing(new ProcessingInfo("running", 90, "index"));
+        _client.WhileGettingSession = () => detail.OnProcessingAsync(new ProcessingInfo("done", 100, null));
+
+        await detail.LoadAsync();
+
+        Assert.Equal((false, true), (detail.IsProcessing, detail.ShowsDoneCheck));
     }
 
     [Fact]

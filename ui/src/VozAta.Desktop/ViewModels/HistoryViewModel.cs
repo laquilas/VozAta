@@ -18,8 +18,8 @@ public sealed record SessionRow(SessionSummary Summary, string Date, string Dura
 
     public bool HasTitle => Title is not null;
 
-    /// <summary>The session being recorded (or finalized) right now.</summary>
-    public bool IsLive => Summary.Status is "recording" or "paused" or "finalizing";
+    /// <summary>The session being recorded right now.</summary>
+    public bool IsLive => Summary.Status is "recording" or "paused";
 
     /// <summary>What screen readers announce for the row.</summary>
     public override string ToString() =>

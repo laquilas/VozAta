@@ -110,7 +110,7 @@ public sealed partial class SessionPageViewModel(
     };
 
     /// <summary>Recording, paused or finalizing: no regeneration yet.</summary>
-    public bool IsLive => summary.Status is "recording" or "paused" or "finalizing";
+    public bool IsLive => summary.Status is "recording" or "paused";
 
     public ObservableCollection<TranscriptLine> Lines { get; } = [];
 
@@ -147,7 +147,7 @@ public sealed partial class SessionPageViewModel(
     public partial bool IsLoading { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsNoMinutes))]
+    [NotifyPropertyChangedFor(nameof(ShowsNoMinutes), nameof(MinutesPending))]
     public partial bool HasMinutes { get; private set; }
 
     [ObservableProperty]
@@ -212,8 +212,9 @@ public sealed partial class SessionPageViewModel(
         Error = null;
         try
         {
+            var version = _processingVersion;
             var detail = await client.GetSessionAsync(Id, cancellationToken);
-            Processing = detail.Processing;
+            ApplyDetailProcessing(detail.Processing, version);
             SetAudio(detail.Audio ?? new Dictionary<string, double>());
             CreatePlayer();
             Folder = detail.Folder;
@@ -484,6 +485,7 @@ public sealed partial class SessionPageViewModel(
             await Speakers.LoadAsync(transcript.Segments, cancellationToken);
         }
 
+        RefreshPending();
         RegenerateMinutesCommand.NotifyCanExecuteChanged();
     }
 
