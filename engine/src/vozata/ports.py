@@ -73,6 +73,13 @@ class Transcriber(Protocol):
 
 
 @runtime_checkable
+class Cancellable(Protocol):
+    def cancel(self) -> None:
+        """Stop the current call from another thread; the call raises."""
+        ...
+
+
+@runtime_checkable
 class TranscriptSink(Protocol):
     def emit(self, segment: TranscriptSegment) -> None: ...
 

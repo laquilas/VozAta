@@ -195,13 +195,13 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 12:30
-- **Next step:** Task 1 of `plans/40-background-processing.md` (cancel token and GPU gate).
+- **Updated:** 2026-10-20 13:00
+- **Next step:** Task 2 of `plans/40-background-processing.md` (cancellable LLM and diarizer).
 
 ### Steps
 
 - [x] Phase files 40-43, roadmap rows and the implementation plan
-- [ ] Cancel token and GPU gate
+- [x] Cancel token and GPU gate (this commit)
 - [ ] Cancellable LLM and diarizer
 - [ ] Session finisher steps
 - [ ] Offline transcription of the rest of a meeting
