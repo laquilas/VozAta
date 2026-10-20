@@ -42,8 +42,20 @@ class SubprocessDiarizer:
         self._lock = threading.Lock()
         self._process: subprocess.Popen[str] | None = None
         self._cancelled = False
+        self._active = False
 
     def diarize(
+        self, wav: Path, min_speakers: int | None, max_speakers: int | None
+    ) -> list[SpeakerTurn]:
+        with self._lock:
+            self._active, self._cancelled = True, False
+        try:
+            return self._diarize(wav, min_speakers, max_speakers)
+        finally:
+            with self._lock:
+                self._active = False
+
+    def _diarize(
         self, wav: Path, min_speakers: int | None, max_speakers: int | None
     ) -> list[SpeakerTurn]:
         with tempfile.TemporaryDirectory(prefix="vozata-diarize-") as folder:
@@ -68,15 +80,17 @@ class SubprocessDiarizer:
                 raise DiarizationError(f"unreadable diarizer output: {error}") from error
 
     def cancel(self) -> None:
-        """Terminate the running child (another thread); `diarize` then raises. No child: no-op."""
+        """Stop `diarize` from another thread: it raises, and never spawns if not yet started."""
         with self._lock:
-            if self._process is not None:
+            if self._active:
                 self._cancelled = True
+            if self._process is not None:
                 self._process.terminate()
 
     def _run_child(self, request: str) -> tuple[int, str]:
         with self._lock:
-            self._cancelled = False
+            if self._cancelled:
+                raise DiarizationError("cancelled")
             self._process = self._popen(
                 self._command,
                 stdin=subprocess.PIPE,

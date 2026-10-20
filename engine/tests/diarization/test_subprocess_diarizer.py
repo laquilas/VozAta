@@ -4,6 +4,7 @@ import io
 import json
 import subprocess
 import sys
+import tempfile
 import threading
 import wave
 from collections.abc import Callable
@@ -236,3 +237,26 @@ def test_the_pyannote_diarizer_imports_nothing_heavy_until_it_runs() -> None:
 
     assert isinstance(diarizer, Diarizer)
     assert "pyannote.audio" not in sys.modules
+
+
+def test_cancel_before_the_child_starts_prevents_the_spawn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spawned: list[str] = []
+    diarizer = SubprocessDiarizer(
+        "hf",
+        WhisperDevice.CPU,
+        popen=lambda command, **options: spawned.append("x"),  # type: ignore[arg-type,return-value]
+    )
+    real = tempfile.TemporaryDirectory
+
+    def racing(*args: Any, **kwargs: Any) -> Any:
+        diarizer.cancel()  # lands after diarize() began, before the child is spawned
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", racing)
+
+    with pytest.raises(DiarizationError, match="cancelled"):
+        diarizer.diarize(tmp_path / "a.wav", None, None)
+
+    assert spawned == []

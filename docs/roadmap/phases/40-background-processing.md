@@ -202,7 +202,7 @@ close-with-pending message; locale parity.
 
 - [x] Phase files 40-43, roadmap rows and the implementation plan
 - [x] Cancel token and GPU gate
-- [x] Cancellable LLM and diarizer (this commit)
+- [x] Cancellable LLM and diarizer (fix round 1: release after cancel, cancel before spawn)
 - [ ] Session finisher steps
 - [ ] Offline transcription of the rest of a meeting
 - [ ] Processing job and queue

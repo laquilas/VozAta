@@ -258,3 +258,30 @@ def test_cancel_during_stream_raises_language_model_error() -> None:
 
     with pytest.raises(LanguageModelError):
         list(model.stream("s", "p"))
+
+
+def test_release_after_cancel_still_unloads_through_a_fresh_client() -> None:
+    bodies: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return chat_reply("")
+
+    model = model_with(handler, keep_alive="0")
+    model.cancel()
+
+    model.release()
+
+    assert bodies == [{"model": "qwen2.5:7b", "messages": [], "keep_alive": 0}]
+
+
+def test_cancel_after_the_first_streamed_line_stops_the_stream() -> None:
+    lines = '{"message":{"content":"a"}}\n{"message":{"content":"b"}}\n{"done":true}\n'
+    model = model_with(lambda request: httpx.Response(200, text=lines))
+    stream = model.stream("s", "p")
+
+    assert next(stream) == "a"
+    model.cancel()
+
+    with pytest.raises(LanguageModelError):
+        next(stream)
