@@ -70,16 +70,24 @@ class ProcessingQueue:
         if self._thread is not None:
             self._thread.join(5.0)
 
-    def enqueue(self, job: ProcessingJob) -> None:
+    def enqueue(self, job: ProcessingJob) -> bool:
+        """Queue `job`; False when its meeting is already queued or running."""
         with self._cond:
             if job.session_id in self._states:
                 log.warning("meeting %s is already in the processing queue", job.session_id)
-                return
+                return False
             self._waiting.append(job)
             state = ProcessingState(job.session_id, "queued", 0, None, len(self._waiting))
             self._states[job.session_id] = state
             self._cond.notify_all()
-        self._publish(state)
+        self._emit(state)
+        return True
+
+    def _emit(self, state: ProcessingState) -> None:
+        try:
+            self._publish(state)
+        except Exception:
+            log.exception("publishing the processing state of %s failed", state.session_id)
 
     def state(self, session_id: str) -> ProcessingState | None:
         with self._cond:
@@ -109,9 +117,9 @@ class ProcessingQueue:
                 job = self._waiting.popleft()
                 self._current = job.session_id
                 moved = self._renumber()
-            for state in moved:
-                self._publish(state)
             try:
+                for state in moved:
+                    self._emit(state)
                 self._process(job)
             except Exception:
                 log.exception("processing of meeting %s crashed", job.session_id)
@@ -138,7 +146,7 @@ class ProcessingQueue:
             self._states[session_id] = new
             if new == old:
                 return
-        self._publish(new)
+        self._emit(new)
 
     def _process(self, job: ProcessingJob) -> None:
         total = sum(step.weight for step in job.steps) or 1.0
@@ -157,13 +165,14 @@ class ProcessingQueue:
             current = step
             kind = shown_kind(job.steps, index)
 
-            def progress(fraction: float, kind: StepKind | None = kind, step: Step = step) -> None:
+            def progress(fraction: float, kind: StepKind | None = kind) -> None:
                 value = percent_of(max(0.0, min(1.0, fraction)))
                 now = self._clock()
                 if value > last["percent"] and now - last["at"] >= self._interval:
                     last["percent"], last["at"] = value, now
                     self._set(job.session_id, "running", percent=value, step=kind)
 
+            self._set(job.session_id, "running", step=kind)
             self._run_step(job, step, kind, progress)
             done_weight += step.weight
             value = max(last["percent"], percent_of(0.0))
@@ -198,8 +207,12 @@ class ProcessingQueue:
                     step.run(token, progress)
                 return
             except StepCancelled:
-                if not step.gpu:
-                    log.error("step %s of meeting %s was cancelled", step.kind.value, sid)
+                if not (step.gpu and token.cancelled):
+                    log.error(
+                        "step %s of meeting %s raised a cancel it was not given",
+                        step.kind.value,
+                        sid,
+                    )
                     return
                 self._set(sid, "paused", step=kind)
             except Exception:

@@ -205,7 +205,7 @@ close-with-pending message; locale parity.
 - [x] Cancellable LLM and diarizer (fix round 1: release after cancel, cancel before spawn)
 - [x] Session finisher steps (0f2a1ad)
 - [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
-- [x] Processing job and queue (this commit)
+- [x] Processing job and queue (04afa22; fix round 1: this commit)
 - [ ] Stop frees the recorder
 - [ ] Restart and recovery through the queue
 - [ ] API, events and other model users

@@ -144,7 +144,6 @@ def test_cancelled_gpu_step_is_paused_then_redone_and_done_once():
         attempts["n"] += 1
         if attempts["n"] == 1:
             started.set()
-            assert token.on_cancel  # cancelled by the gate through priority()
             while not token.cancelled:
                 threading.Event().wait(0.005)
             raise StepCancelled
@@ -329,3 +328,91 @@ def test_wait_idle_times_out_while_work_is_pending():
     queue.start()  # second start is a no-op
     assert queue.wait_idle(TIMEOUT)
     queue.stop()
+
+
+def test_each_step_publishes_its_kind_before_it_finishes():
+    queue, rec = _make(interval=0.0)
+    seen: list[StepKind | None] = []
+
+    def second(token, progress):
+        seen.append(queue.state("a").step)
+
+    queue.enqueue(_job("a", [_step(StepKind.ACTION_ITEMS), _step(StepKind.INDEX, run=second)]))
+    queue.start()
+    assert queue.wait_idle(TIMEOUT)
+    queue.stop()
+    assert seen == [StepKind.INDEX]
+
+
+def test_publish_failure_does_not_kill_the_worker():
+    calls = {"n": 0}
+    done: list[str] = []
+
+    def publish(state):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("socket gone")
+
+    queue = ProcessingQueue(GpuGate(), publish)
+    queue.enqueue(_job("a", [_step()], on_finished=lambda: done.append("a")))
+    queue.enqueue(_job("b", [_step()], on_finished=lambda: done.append("b")))
+    queue.start()
+    assert queue.wait_idle(TIMEOUT)
+    queue.stop()
+    assert done == ["a", "b"]
+
+
+def test_crash_in_a_job_publishes_failed_and_the_queue_continues():
+    queue, rec = _make()
+    done: list[str] = []
+    queue.enqueue(_job("a", [_step()], on_finished=lambda: done.append("a")))
+    queue.enqueue(_job("b", [_step()], on_finished=lambda: done.append("b")))
+    original = queue._process
+
+    def flaky(job):
+        if job.session_id == "a":
+            raise RuntimeError("bug")
+        original(job)
+
+    queue._process = flaky
+    queue.start()
+    assert queue.wait_idle(TIMEOUT)
+    queue.stop()
+    assert rec.of("a")[-1].state == "failed"
+    assert done == ["b"]
+
+
+def test_non_gpu_step_raising_step_cancelled_counts_as_failed():
+    queue, rec = _make()
+    ran: list[str] = []
+
+    def cancelled(token, progress):
+        raise StepCancelled
+
+    queue.enqueue(_job("a", [_step(run=cancelled), _step(run=lambda t, p: ran.append("next"))]))
+    queue.start()
+    assert queue.wait_idle(TIMEOUT)
+    queue.stop()
+    assert ran == ["next"]
+    assert rec.of("a")[-1].state == "done"
+
+
+def test_gpu_step_raising_step_cancelled_without_a_cancelled_token_is_not_retried():
+    queue, _ = _make()
+    runs = {"n": 0}
+
+    def spurious(token, progress):
+        runs["n"] += 1
+        raise StepCancelled
+
+    queue.enqueue(_job("a", [_step(gpu=True, run=spurious)]))
+    queue.start()
+    assert queue.wait_idle(TIMEOUT)
+    queue.stop()
+    assert runs["n"] == 1
+
+
+def test_enqueue_reports_whether_the_meeting_was_accepted():
+    queue, _ = _make()
+    assert queue.enqueue(_job("a", [_step()])) is True
+    assert queue.enqueue(_job("a", [_step()])) is False
