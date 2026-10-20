@@ -858,7 +858,8 @@ only validator.
   `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
 - `python -m vozata transcribe <id | session_dir>` transcribes, from the stored audio, whatever a
   stopped meeting's raw transcript does not cover yet (all of it when recorded with live
-  transcription off); no speakers, no minutes. Refused while the meeting is recording or paused.
+  transcription off); no speakers, no minutes. Refused while the meeting is recording, paused or finalizing; do not run it while `serve` may be
+  redoing that meeting (e.g. regenerate minutes queued): two writers would duplicate segments.
 - Readers (minutes, export, `GET /sessions/{id}/transcript`, search hits) label speakers with
   `SpeakerLabeler.with_names(store.speaker_names(id))`: a name in `speakers.json` wins over
   `User {n}`.

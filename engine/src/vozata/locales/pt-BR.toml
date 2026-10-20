@@ -172,7 +172,7 @@ migrate_done = "Importadas {imported}, não importadas {skipped}."
 migrate_failed = "A importação parou ({reason}); execute-a de novo para continuar."
 transcribe_progress = "Transcrevendo: {percent} %"
 transcribe_done = "Transcrição concluída: {count} novo(s) trecho(s) gravado(s)."
-transcribe_recording = "A sessão {id} ainda está gravando; pare-a antes de transcrever."
+transcribe_busy = "Esta reunião ainda está sendo gravada ou processada; para concluir uma reunião interrompida, use `python -m vozata recover <pasta>`."
 transcribe_failed = "Não foi possível transcrever o áudio ({reason})."
 
 [cli.devices]

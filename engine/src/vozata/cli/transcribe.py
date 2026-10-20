@@ -6,6 +6,7 @@ transcription off). It runs neither the speakers nor the minutes.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -21,6 +22,9 @@ from vozata.transcription.offline import OfflineTranscription
 TranscribeFactory = Callable[
     [Settings, SessionFolder, Callable[[TranscriptSegment], None] | None], OfflineTranscription
 ]
+_log = logging.getLogger(__name__)
+# recording, paused or queued/running in a job of `serve`: a second writer would duplicate segments
+BUSY = (SessionStatus.RECORDING, SessionStatus.PAUSED, SessionStatus.FINALIZING)
 PROGRESS_STEP = 10  # percent between two progress lines
 
 
@@ -35,7 +39,7 @@ def run_transcribe(
     """Transcribe the missing part of one meeting; `target` is its id (in `OUTPUT_DIR`) or folder.
 
     Exit code 0 on success (also when nothing was missing), 1 for an unknown session, a meeting
-    still recording (or paused) or a transcription that failed.
+    still recording, paused or finalizing or a transcription that failed.
     """
     t = localizer.t
     path = Path(target)
@@ -47,8 +51,8 @@ def run_transcribe(
     except SessionNotFoundError:
         console.say(t("cli.session_not_found", folder=folder.path))
         return 1
-    if meta.get("status") in (SessionStatus.RECORDING, SessionStatus.PAUSED):
-        console.say(t("cli.transcribe_recording", id=folder.session_id))
+    if meta.get("status") in BUSY:
+        console.say(t("cli.transcribe_busy"))
         return 1
     before = len(folder.repository.load_raw_transcript(folder.session_id))
     shown = 0
@@ -63,6 +67,7 @@ def run_transcribe(
     try:
         build(settings, folder, None).run(folder.session_id, CancelToken(), progress)
     except Exception as error:
+        _log.exception("Transcribing session %s failed", folder.session_id)
         console.say(t("cli.transcribe_failed", reason=error))
         return 1
     added = len(folder.repository.load_raw_transcript(folder.session_id)) - before

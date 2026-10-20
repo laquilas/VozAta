@@ -118,12 +118,12 @@ def test_transcribe_of_a_fully_transcribed_meeting_adds_nothing(tmp_path: Path) 
     assert rig.transcriber.calls == []
 
 
-@pytest.mark.parametrize("status", ["recording", "paused"])
-def test_transcribe_refuses_a_recording_session(tmp_path: Path, status: str) -> None:
+@pytest.mark.parametrize("status", ["recording", "paused", "finalizing"])
+def test_transcribe_refuses_a_busy_session(tmp_path: Path, status: str) -> None:
     rig = _Rig(tmp_path, status=status)
 
     assert rig.run() == 1
-    assert rig.lines() == [f"cli.transcribe_recording(id={rig.id})"]
+    assert rig.lines() == ["cli.transcribe_busy"]
     assert rig.repository.load_raw_transcript(rig.id) == []
 
 
@@ -139,7 +139,6 @@ def test_transcribe_refuses_an_unknown_session(tmp_path: Path) -> None:
 
 def test_transcribe_reports_a_failing_transcription(tmp_path: Path) -> None:
     rig = _Rig(tmp_path)
-    rig.transcriber = FakeTranscriber([])  # nothing queued: transcribing raises
 
     def failing(settings, folder, on_segment):  # type: ignore[no-untyped-def]
         raise RuntimeError("model missing")
