@@ -145,6 +145,7 @@ public partial class App : Application
     private static void GuardClosing(Window window, MainViewModel viewModel)
     {
         var closing = false;
+        var confirming = false;
         window.Closing += async (_, args) =>
         {
             if (closing)
@@ -153,7 +154,23 @@ public partial class App : Application
             }
 
             args.Cancel = true;
-            if (!await viewModel.ConfirmCloseAsync())
+            if (confirming)
+            {
+                return; // a second close request while a dialog is open must not stack another
+            }
+
+            confirming = true;
+            bool confirmed;
+            try
+            {
+                confirmed = await viewModel.ConfirmCloseAsync();
+            }
+            finally
+            {
+                confirming = false;
+            }
+
+            if (!confirmed)
             {
                 return;
             }

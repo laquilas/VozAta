@@ -244,21 +244,29 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return false; // unsaved transcript edits (phase 21)
         }
 
-        if (Session.IsRecording)
+        // Every question comes before anything is stopped: cancelling at any point changes nothing.
+        var recording = Session.IsRecording;
+        if (recording && !await _dialogs.ConfirmAsync(
+            _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]))
         {
-            var confirmed = await _dialogs.ConfirmAsync(
-                _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]);
-            if (!confirmed)
-            {
-                return false;
-            }
-
-            await Recorder.StopCommand.ExecuteAsync(null);
+            return false;
         }
 
         // Pending background processing resumes on the next start (the engine re-queues it): tell the user once.
-        return PendingProcessing == 0 || await _dialogs.ConfirmAsync(
-            _localization["AppTitle"], _localization.Format("Close_PendingProcessing", PendingProcessing), _localization["TrayQuit"], _localization["ConfirmRevertNo"]);
+        // The meeting being recorded joins the queue at Stop, so it counts too.
+        var pending = PendingProcessing + (recording ? 1 : 0);
+        if (pending > 0 && !await _dialogs.ConfirmAsync(
+            _localization["AppTitle"], _localization.Format("Close_PendingProcessing", pending), _localization["TrayQuit"], _localization["ConfirmRevertNo"]))
+        {
+            return false;
+        }
+
+        if (recording)
+        {
+            await Recorder.StopCommand.ExecuteAsync(null);
+        }
+
+        return true;
     }
 
     /// <summary>Save the window size, commit a pending delete, wait (at most <paramref name="maxWait"/>) for the recorder to stop, then release the engine. Background processing is not waited for.</summary>

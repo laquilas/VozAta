@@ -56,6 +56,9 @@ internal sealed class FakeDialogs : IDialogService
 {
     public bool Answer { get; set; } = true;
 
+    /// <summary>Scripted answers, used first when set; <see cref="Answer"/> afterwards.</summary>
+    public Queue<bool>? Answers { get; set; }
+
     public List<string> Asked { get; } = [];
 
     public List<string> Messages { get; } = [];
@@ -64,7 +67,7 @@ internal sealed class FakeDialogs : IDialogService
     {
         Asked.Add(title);
         Messages.Add(message);
-        return Task.FromResult(Answer);
+        return Task.FromResult(Answers is { Count: > 0 } ? Answers.Dequeue() : Answer);
     }
 }
 

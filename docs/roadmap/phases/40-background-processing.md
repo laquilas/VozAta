@@ -211,7 +211,7 @@ close-with-pending message; locale parity.
 - [x] API, events and other model users (6b499ad; fix round 1: this commit)
 - [x] UI client and recorder
 - [x] Meetings and meeting page indicators (f944d53; fix round 1: this commit)
-- [x] Shell indicator and close warning (this commit)
+- [x] Shell indicator and close warning (05b718d; fix round 1: this commit)
 - [ ] Full suites, manual check
 
 ### Decisions and notes

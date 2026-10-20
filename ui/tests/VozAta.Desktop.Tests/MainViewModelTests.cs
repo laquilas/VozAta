@@ -732,7 +732,7 @@ public sealed class MainViewModelTests
 
         Assert.True(await viewModel.ConfirmCloseAsync());
 
-        Assert.Equal([_localization["ConfirmCloseTitle"]], _dialogs.Asked);
+        Assert.Equal([_localization["ConfirmCloseTitle"], _localization["AppTitle"]], _dialogs.Asked);
         Assert.Contains("stop", _client.Calls);
         Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
     }
@@ -784,6 +784,41 @@ public sealed class MainViewModelTests
         Assert.True(await viewModel.ConfirmCloseAsync());
 
         Assert.Equal([_localization["ConfirmCloseTitle"], _localization["AppTitle"]], _dialogs.Asked);
+    }
+
+    [Fact]
+    public async Task Recording_with_an_empty_queue_counts_the_recorded_meeting_in_the_warning()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal(_localization.Format("Close_PendingProcessing", 1), _dialogs.Messages[^1]);
+        Assert.Contains("stop", _client.Calls);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_pending_warning_while_recording_stops_nothing()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        _dialogs.Answers = new Queue<bool>([true, false]);
+
+        Assert.False(await viewModel.ConfirmCloseAsync());
+
+        Assert.DoesNotContain("stop", _client.Calls);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
+    }
+
+    [Fact]
+    public async Task A_duplicate_processing_event_does_not_change_the_pending_count()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 10, "transcribe")));
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 20, "transcribe")));
+
+        Assert.Equal(1, viewModel.PendingProcessing);
     }
 
     [Fact]

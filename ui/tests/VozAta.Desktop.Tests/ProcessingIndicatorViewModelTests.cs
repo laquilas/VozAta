@@ -81,6 +81,17 @@ public sealed class ProcessingIndicatorViewModelTests
     }
 
     [Fact]
+    public void The_tooltip_joins_both_lines_and_skips_empty_ones()
+    {
+        var indicator = Create();
+        indicator.OnProcessing(Event("b", "queued", position: 1));
+        Assert.Equal("+1 queued", indicator.ToolTipText);
+
+        indicator.OnProcessing(Event("a", "running", 5));
+        Assert.Equal("Processing 1 meeting(s) · 5 %\n+1 queued", indicator.ToolTipText);
+    }
+
+    [Fact]
     public void Events_without_a_session_are_ignored()
     {
         var indicator = Create();

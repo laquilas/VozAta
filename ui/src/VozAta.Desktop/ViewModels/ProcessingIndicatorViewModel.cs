@@ -30,6 +30,9 @@ public sealed partial class ProcessingIndicatorViewModel(ILocalizationService lo
     /// <summary>"+2 queued", empty when no meeting waits.</summary>
     public string QueuedText => HasQueued ? localization.Format("ProcessingIndicator_Queued", QueuedCount) : "";
 
+    /// <summary>Both lines for the tooltip (the collapsed rail shows only the icon).</summary>
+    public string ToolTipText => string.Join('\n', new[] { Text, QueuedText }.Where(line => line.Length > 0));
+
     private List<ProcessingInfo> Running => _pending.Values.Where(info => info.State != "queued").ToList();
 
     private int QueuedCount => _pending.Values.Count(info => info.State == "queued");
@@ -71,5 +74,6 @@ public sealed partial class ProcessingIndicatorViewModel(ILocalizationService lo
         OnPropertyChanged(nameof(HasQueued));
         OnPropertyChanged(nameof(Text));
         OnPropertyChanged(nameof(QueuedText));
+        OnPropertyChanged(nameof(ToolTipText));
     }
 }
