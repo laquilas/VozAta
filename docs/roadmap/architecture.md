@@ -329,20 +329,25 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    then, on its thread, the sinks close (the echo filter releases held mic segments, translation
    and live speakers end), `transcriber.close()` (free VRAM), the tracks are finalized to the same
    length (max written samples), `echo_dropped` is saved and the session's live GPU lease is
-   released; last, the returned `closed` event is set. From capture end on, `SessionMeta` merges
-   every change into the stored `session.json` (a rename or the job may write it meanwhile).
+   released; last, the returned `closed` event is set. A failing part (e.g. `session.json` locked
+   by OneDrive) is logged and the rest still runs; the pipeline is always abandoned. From capture
+   end on, `SessionMeta` merges every change into the stored `session.json` (a rename or the job
+   may write it meanwhile). A new recording's capture starts at once, but its models load only
+   once the previous session's `closed` is set (`LiveModelTurn`): never two live Whisper models.
 2. `serve`: `SessionManager.stop()` runs step 1 on a short-lived thread, then (under its lock)
    frees the recording slot and puts the meeting's `ProcessingJob` on the `ProcessingQueue`
    (`bootstrap.build_processing_job`). `POST /sessions` is refused (`409
    session_already_active`) only until the slot is free. CLI `record`: `RecordingSession.stop()`
    runs the same job inline (`run_job_inline`), with the session's own components.
-3. The job (`processing/session_job.py`) waits for `closed` (`before`), then runs its steps in
-   order; each builds the providers it uses when it runs:
+3. The job (`processing/session_job.py`, composed by `bootstrap_processing.py`) waits for
+   `closed` (`before`, no timeout, a warning every 5 min), then runs its steps in order; each
+   builds the providers it uses when it runs:
    - `repair` (crash recovery only): the `RecoverableStore`s of the backend, length stored.
    - `transcribe` (GPU when speech runs on CUDA): `OfflineTranscription` transcribes, from the
      stored tracks, whatever the raw transcript does not cover yet (each channel from its last
      segment; the whole meeting when the model was still loading at Stop), in the conversation
-     language stored in `session.json`. Weight `2 + 60 × left / duration`.
+     language stored in `session.json`. Weight `2 + 60 × left / duration`. With
+     `WHISPER_KEEP_LOADED` and speech on the GPU it leases the shared Whisper (no second model).
    - `mix`: `AudioMixer` → `mixed.wav` (file backend; with `sqlite` the mix is computed on read).
    - `diarize` (if `DIARIZATION_ENABLED`; GPU when pyannote runs on CUDA): diarize the system
      track (`materialize_wav(id, system)`: `system.wav`, or with `sqlite` a WAV built in the

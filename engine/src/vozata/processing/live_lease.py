@@ -36,3 +36,25 @@ class LiveGpuLease:
             self._released = True
         if held is not None:
             held.close()
+
+
+class LiveModelTurn:
+    """One live session's models at a time (phase 40): a new session's model load waits until the
+    previous session's abandoned pipeline closed (its model load may still run after Stop), so
+    two live Whisper models never coexist. Capture never waits."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._closing: threading.Event | None = None
+
+    def wait(self) -> None:
+        """Block until the last stopped session's live models are closed."""
+        with self._lock:
+            closing = self._closing
+        if closing is not None:
+            closing.wait()
+
+    def stopping(self, closed: threading.Event) -> None:
+        """A session stopped; `closed` is set once its live models are closed."""
+        with self._lock:
+            self._closing = closed

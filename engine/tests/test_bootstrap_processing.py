@@ -11,7 +11,7 @@ import pytest
 
 from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
 from tests.test_session_recover import make_session_folder, segment, write_wav
-from vozata import bootstrap
+from vozata import bootstrap, bootstrap_processing
 from vozata.config import Settings
 from vozata.domain import (
     Channel,
@@ -25,6 +25,7 @@ from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuUsage
 from vozata.processing.job import StepKind, run_job_inline
 from vozata.storage.files.repository import FileSessionRepository
+from vozata.transcription.shared import SharedTranscriber
 
 USAGE = GpuUsage(speech=True, speakers=False, llm=True)
 
@@ -67,9 +68,11 @@ def _job(
     *,
     repair: bool = False,
     closed: threading.Event | None = None,
+    usage: GpuUsage = USAGE,
+    shared: SharedTranscriber | None = None,
 ):  # type: ignore[no-untyped-def]
     audio = bootstrap.build_audio_store(settings)
-    return bootstrap.build_processing_job(
+    return bootstrap_processing.build_processing_job(
         settings,
         store,
         audio,
@@ -77,7 +80,8 @@ def _job(
         session_id,
         repair=repair,
         closed=closed,
-        gate_usage=USAGE,
+        gate_usage=usage,
+        shared=shared,
     )
 
 
@@ -237,3 +241,48 @@ def test_the_repair_step_repairs_the_stores_and_stores_the_length(tmp_path: Path
     repair.run(CancelToken(), lambda fraction: None)
 
     assert store.read_meta(session_id)["duration_seconds"] == 1.5
+
+
+@pytest.mark.parametrize("minutes", [False, True])
+def test_the_transcribe_step_uses_the_kept_whisper_on_the_gpu(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, minutes: bool
+) -> None:
+    loads: list[FakeTranscriber] = []
+
+    def load() -> FakeTranscriber:
+        loads.append(FakeTranscriber())
+        return loads[-1]
+
+    shared = SharedTranscriber(load)
+    shared.lease(keep=True).close()  # the live session kept Whisper loaded
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    settings = _settings(tmp_path, generate_minutes=minutes)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, segments=[], duration_seconds=1.0)
+    [transcribe] = [s for s in _job(settings, store, session_id, shared=shared).steps][:1]
+
+    transcribe.run(CancelToken(), lambda fraction: None)
+
+    assert len(loads) == 1  # never a second Whisper next to the kept one
+    assert loads[0].calls  # it transcribed the rest
+    assert shared.loaded is not minutes  # unloaded when minutes follow (VRAM rule)
+
+
+def test_without_gpu_speech_the_transcribe_step_loads_its_own_model(
+    tmp_path: Path, transcriber: FakeTranscriber
+) -> None:
+    loads: list[FakeTranscriber] = []
+    shared = SharedTranscriber(lambda: loads.append(FakeTranscriber()) or loads[-1])
+    settings = _settings(tmp_path, generate_minutes=False)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, segments=[], duration_seconds=1.0)
+    cpu = GpuUsage(speech=False, speakers=False, llm=False)
+    [transcribe] = [s for s in _job(settings, store, session_id, usage=cpu, shared=shared).steps][
+        :1
+    ]
+
+    transcribe.run(CancelToken(), lambda fraction: None)
+
+    assert loads == []  # not gated: a live session may be using the shared model on the CPU
+    assert transcriber.calls

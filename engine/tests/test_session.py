@@ -41,6 +41,7 @@ from vozata.ports import (
     TranscriptSearch,
 )
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
+from vozata.processing.live_lease import LiveModelTurn
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
 from vozata.storage.files.audio import FileAudioStore
@@ -135,6 +136,7 @@ class _Rig:
         title: str | None = None,
         gate: GpuGate | None = None,
         gpu_usage: GpuUsage | None = None,
+        live_models: LiveModelTurn | None = None,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -177,6 +179,7 @@ class _Rig:
                 title=title,
                 gate=gate,
                 gpu_usage=gpu_usage,
+                live_models=live_models,
             ),
             self.observer,
             language,
@@ -427,7 +430,7 @@ def test_stop_order_releases_audio_frees_whisper_then_mixes_then_writes_minutes(
     finalization = [entry for entry in rig.log.entries if entry != "transcriber.load"]
     mix = finalization.index("mix")
     assert finalization[0] == "release"
-    assert set(finalization[1:mix]) == {"transcriber.close"}  # live, then offline Whisper
+    assert finalization[1:mix] == ["transcriber.close"] * 2  # live, then offline Whisper
     assert finalization[mix:] == ["mix", "llm.generate"]
     assert rig.mixer.lengths == (int(2.5 * RATE), int(2.5 * RATE))  # padded to the longest
     assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
@@ -936,3 +939,64 @@ def test_a_failing_echo_count_save_still_closes_and_releases_the_gate(
     assert closed.wait(5)
     assert not gate.priority_held
     assert "Saving the echo count failed" in caplog.text
+
+
+def test_a_failing_metadata_write_at_stop_still_abandons_and_releases_the_gate(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    gate = GpuGate()
+    usage = GpuUsage(speech=True, speakers=False, llm=False)
+    rig = _Rig(tmp_path, gate=gate, gpu_usage=usage)
+    rig.session.start()
+    _wait_for(lambda: gate.priority_held)
+
+    def locked(at: object, duration: float) -> None:
+        raise PermissionError("session.json is locked by OneDrive")
+
+    rig.session._meta.capture_ended = locked  # type: ignore[method-assign]
+    closed = rig.session.stop_capture()
+
+    assert closed.wait(5)
+    assert not gate.priority_held
+    assert rig.session.status is SessionStatus.FINALIZING
+    assert "release" in rig.log.entries and "transcriber.close" in rig.log.entries
+    assert "locked by OneDrive" in caplog.text
+
+
+def test_the_cli_stop_prints_the_lines_transcribed_after_stop(tmp_path: Path) -> None:
+    gate = threading.Event()
+    rig = _Rig(tmp_path, results=[_words("Early", " words.")], load_gate=gate)
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    stopping = threading.Thread(target=rig.session.stop)
+
+    stopping.start()  # the live backlog is abandoned: the line comes from the stored audio
+    _wait_for(lambda: rig.session.status is SessionStatus.FINALIZING)
+    gate.set()
+    stopping.join(10)
+
+    [(segment,)] = rig.observer.of("segment")
+    assert segment.text == "Early words."
+
+
+def test_a_new_session_loads_its_model_only_once_the_previous_pipeline_closed(
+    tmp_path: Path,
+) -> None:
+    turn = LiveModelTurn()
+    first_load = threading.Event()
+    first = _Rig(tmp_path / "first", load_gate=first_load, live_models=turn)
+    first.session.start()
+    first.mic.push(_voice(1.0), 0.0)
+    closed = first.session.stop_capture()  # its model is still loading
+    second = _Rig(tmp_path / "second", live_models=turn)
+
+    second.session.start()  # capture does not wait
+    assert second.session.status is SessionStatus.RECORDING
+    threading.Event().wait(0.2)
+    assert "transcriber.load" not in second.log.entries
+    first_load.set()
+
+    assert closed.wait(5)
+    _wait_for(lambda: "transcriber.load" in second.log.entries)
+    second.session.stop()

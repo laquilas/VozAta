@@ -86,3 +86,38 @@ def test_run_job_inline_continues_after_a_failing_before(caplog):
 
     assert log == ["index", "finished"]
     assert "wait broke" in caplog.text
+
+
+def test_the_job_waits_for_the_live_pipeline_and_warns_while_it_does(caplog):
+    import threading
+
+    from vozata.processing.gpu_gate import GpuUsage
+    from vozata.processing.session_job import JobParts, session_job
+
+    closed = threading.Event()
+    parts = JobParts(
+        finisher=lambda models: None,  # type: ignore[arg-type, return-value]
+        transcription=lambda: None,  # type: ignore[arg-type, return-value]
+        diarize=False,
+        minutes=False,
+        action_items=False,
+    )
+    job = session_job(
+        "s1",
+        parts,
+        GpuUsage(False, False, False),
+        weight=2.0,
+        closed=closed,
+        on_finished=lambda: None,
+        warn_every=0.01,
+    )
+    waiting = threading.Thread(target=job.before)
+
+    waiting.start()
+    threading.Event().wait(0.1)
+    assert waiting.is_alive()  # no timeout: it keeps waiting
+    closed.set()
+    waiting.join(5)
+
+    assert not waiting.is_alive()
+    assert "still waiting for the live pipeline of meeting s1" in caplog.text

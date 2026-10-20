@@ -10,6 +10,7 @@ cancelled one is closed for good.
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -24,6 +25,10 @@ from vozata.transcription.offline_feed import CHANNELS
 from vozata.transcription.resume import resume_points
 
 Progress = Callable[[float], None]
+
+log = logging.getLogger(__name__)
+
+CLOSED_WARNING_SECONDS = 300.0  # a cold model download can keep the live pipeline open 20+ min
 
 MIX_WEIGHT = 1.0
 DIARIZE_WEIGHT = 25.0
@@ -68,9 +73,11 @@ def session_job(
     weight: float,
     closed: threading.Event | None,
     on_finished: Callable[[], None],
+    warn_every: float = CLOSED_WARNING_SECONDS,
 ) -> ProcessingJob:
     """The job of `session_id`; `before` waits for the abandoned live pipeline (`closed`), so the
-    resume points are computed from the final raw transcript and WAVs."""
+    resume points are computed from the final raw transcript and WAVs. It never gives up (the
+    transcript must be final first) but logs a warning every `warn_every` seconds."""
 
     def transcribe(token: CancelToken, progress: Progress) -> None:
         parts.transcription().run(session_id, token, progress)
@@ -113,8 +120,16 @@ def session_job(
     )
 
     def before() -> None:
-        if closed is not None:
-            closed.wait()
+        if closed is None:
+            return
+        waited = 0.0
+        while not closed.wait(warn_every):
+            waited += warn_every
+            log.warning(
+                "still waiting for the live pipeline of meeting %s to close (%.0f s)",
+                session_id,
+                waited,
+            )
 
     return ProcessingJob(
         session_id=session_id, steps=tuple(steps), on_finished=on_finished, before=before

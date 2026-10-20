@@ -17,6 +17,7 @@ from vozata.audio.chunker import ChunkerFactory, fixed_windows
 from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
+from vozata.output.sinks import CompositeSink
 from vozata.ports import AudioReader, SessionRepository, Transcriber, TranscriptSink
 from vozata.processing.cancel import CancelToken
 from vozata.transcription.context import RollingContext
@@ -66,6 +67,14 @@ class _Output:
             self._echo.tick()
 
 
+class _Notify:
+    def __init__(self, on_segment: Callable[[TranscriptSegment], None]) -> None:
+        self.emit = on_segment
+
+    def close(self) -> None:
+        pass
+
+
 class OfflineTranscription:
     """Append the rest of a session's raw transcript from its stored audio, `block_seconds` of
     both channels at a time, in lockstep on the session timeline (echo dedupe compares mic and
@@ -82,6 +91,7 @@ class OfflineTranscription:
         hints: str | None,
         chunker_factory: ChunkerFactory | None,
         block_seconds: float = 10.0,
+        on_segment: Callable[[TranscriptSegment], None] | None = None,
     ) -> None:
         self._settings = settings
         self._store = store
@@ -92,6 +102,7 @@ class OfflineTranscription:
         self._hints = hints
         self._chunker_factory = chunker_factory or fixed_windows(settings)
         self._block_seconds = block_seconds
+        self._on_segment = on_segment  # also told every appended segment (CLI console)
 
     def remaining_seconds(self, session_id: str) -> float:
         """Audio seconds not transcribed yet, summed over the channels (for job weights)."""
@@ -119,7 +130,9 @@ class OfflineTranscription:
             return
         transcriber = self._transcriber_factory()
         try:
-            sink = self._store.open_transcript(session_id, self._labeler)
+            sink: TranscriptSink = self._store.open_transcript(session_id, self._labeler)
+            if self._on_segment is not None:
+                sink = CompositeSink([sink, _Notify(self._on_segment)])
             output = _Output(self._settings, sink, existing)
             try:
                 stitchers = self._stitchers(transcriber, existing, points)

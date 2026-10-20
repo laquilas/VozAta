@@ -301,6 +301,7 @@ def test_build_api_container_wires_real_providers(
     settings = _settings(tmp_path, llm_provider="fake")
     from vozata.api.system_info import GpuInfo
     from vozata.processing.gpu_gate import GpuGate, GpuUsage
+    from vozata.processing.live_lease import LiveModelTurn
     from vozata.processing.queue import ProcessingQueue
 
     monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(True, "RTX 3050", 6144))
@@ -326,6 +327,7 @@ def test_build_api_container_wires_real_providers(
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
     gate = built[0].pop("gate")
     assert isinstance(gate, GpuGate) and gate is queue._gate
+    assert isinstance(built[0].pop("live_models"), LiveModelTurn)  # shared by every session
     assert built == [
         {
             "language": None,

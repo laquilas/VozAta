@@ -33,7 +33,7 @@ from vozata.ports import (
 from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import ProcessingJob, run_job_inline
-from vozata.processing.live_lease import LiveGpuLease
+from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.session_finisher import SessionFinisher
 from vozata.session_meta import SessionMeta
@@ -80,6 +80,7 @@ class SessionComponents:
     title: str | None = None  # meeting title at start (phase 35), normalized; None = untitled
     gate: GpuGate | None = None  # shared with the processing queue (phase 40); None = no gate
     gpu_usage: GpuUsage | None = None  # which models use the local GPU (phase 40)
+    live_models: LiveModelTurn | None = None  # shared by `serve` sessions (phase 40); None = own
 
 
 class SessionStartError(RuntimeError):
@@ -207,23 +208,42 @@ class RecordingSession:
         Sources stop, `capture_ended_at` and the length are written, PortAudio is released and the
         status becomes `finalizing`. The returned event is set once the abandoned pipeline closed
         its transcript files and WAVs (and the GPU lease is given back); it is already set when
-        nothing was recording.
+        nothing was recording. A failing part (e.g. `session.json` locked by OneDrive) is logged
+        and the rest still runs: the pipeline is always abandoned, so the live model and the GPU
+        lease are always released and `closed` is always set.
         """
         closed = threading.Event()
         if self.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
             closed.set()
             return closed
-        if self.status is SessionStatus.PAUSED:
-            self._meta.pause_ended(self._c.clock.now())
-        for source in self._c.sources.values():
-            source.stop()
-        self._pipeline.stop_capture()
-        self._captured = self._c.clock.now()
-        self._meta.capture_ended(self._store.now(), self._captured)
-        self._release_audio()
-        self._set_status(SessionStatus.FINALIZING)
-        self._stop_heartbeat()  # the processing job owns `session.json` from now on
-        self._pipeline.abandon(lambda: self._pipeline_closed(closed))
+        paused = self.status is SessionStatus.PAUSED
+        captured = self._captured = self._c.clock.now()
+        self.status = SessionStatus.FINALIZING  # no second stop, whatever fails below
+        parts: list[tuple[str, Callable[[], None]]] = []
+        if paused:
+            parts.append(("Closing the open pause", lambda: self._meta.pause_ended(captured)))
+        parts += [("Stopping a source", source.stop) for source in self._c.sources.values()]
+        parts += [
+            ("Flushing the chunkers", self._pipeline.stop_capture),
+            (
+                "Saving the capture end",
+                lambda: self._meta.capture_ended(self._store.now(), captured),
+            ),
+            ("Releasing the audio backend", self._release_audio),
+            ("Saving the status", lambda: self._meta.set_status(SessionStatus.FINALIZING)),
+            ("Reporting the status", lambda: self._observer.on_status(self.status, captured)),
+            ("Stopping the autosave", self._stop_heartbeat),  # the job owns `session.json` now
+        ]
+        try:
+            for what, part in parts:
+                try:
+                    part()
+                except Exception:
+                    _log.exception("%s at stop failed", what)
+        finally:
+            if self._c.live_models is not None:
+                self._c.live_models.stopping(closed)
+            self._pipeline.abandon(lambda: self._pipeline_closed(closed))
         return closed
 
     def processing_job(self, closed: threading.Event | None) -> ProcessingJob:
@@ -264,6 +284,7 @@ class RecordingSession:
             self._lock,
             build_hints(self._c.vocabulary),
             self._c.chunker_factory,
+            on_segment=self._observer.on_segment,  # CLI: the lines after Stop are printed too
         )
 
     def _done(self) -> None:
@@ -272,9 +293,16 @@ class RecordingSession:
         self._observer.on_status(SessionStatus.DONE, self.duration_seconds)
 
     def _live_transcriber(self) -> Transcriber:
-        """The live model, loaded on the worker thread once the GPU gate was taken."""
-        self._gpu.hold()
+        """The live model, loaded on the worker thread once it may (see `_before_model`)."""
+        self._before_model()
         return self._c.transcriber_factory()
+
+    def _before_model(self) -> None:
+        """Before a live model loads: the previous session's live models are closed, then the GPU
+        gate is taken (pre-empting the queue's GPU step)."""
+        if self._c.live_models is not None:
+            self._c.live_models.wait()
+        self._gpu.hold()
 
     def recover(self, session_id: str, duration_seconds: float) -> None:
         """Finish an interrupted session whose audio and transcript were repaired (phase 17).
@@ -389,7 +417,7 @@ class RecordingSession:
             return None
 
         def build() -> SpeakerEmbedder:
-            self._gpu.hold()
+            self._before_model()
             try:
                 return factory()
             except Exception as error:

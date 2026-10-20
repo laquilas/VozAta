@@ -195,7 +195,7 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 17:30
+- **Updated:** 2026-10-20 18:30
 - **Next step:** Task 7 of `plans/40-background-processing.md` (Restart and recovery through the
   queue).
 
@@ -207,7 +207,7 @@ close-with-pending message; locale parity.
 - [x] Session finisher steps (0f2a1ad)
 - [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
 - [x] Processing job and queue (04afa22; fix round 1: this commit)
-- [x] Stop frees the recorder (c7756b8, this commit)
+- [x] Stop frees the recorder (c7756b8, dab272b; fix round 1: this commit)
 - [ ] Restart and recovery through the queue
 - [ ] API, events and other model users
 - [ ] UI client and recorder
@@ -239,3 +239,8 @@ close-with-pending message; locale parity.
   stops (it would race the job's writes). The transcribe weight is estimated from the raw
   transcript and the recorded length (the WAVs are not final yet at Stop); `finalize` is done by
   the abandoned pipeline, so the job has a single `mix` step.
+  Fix round 1: `stop_capture()` logs a failing part and always abandons the pipeline (the live
+  model and GPU lease are always released); a new recording's model load waits for the previous
+  session's `closed` (`LiveModelTurn`); the transcribe step leases the kept Whisper on the GPU
+  (`WHISPER_KEEP_LOADED`); the CLI still prints the lines transcribed after Stop; `before` warns
+  every 5 min while it waits; the job's composition moved to `bootstrap_processing.py`.
