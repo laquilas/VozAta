@@ -403,3 +403,121 @@ def test_tick_is_not_called_by_a_worker_that_never_started(
     worker.stop()
 
     assert ticks == []
+
+
+class _BlockingStitcher(FakeStitcher):
+    """Signals when it holds a chunk and waits for `release` before returning (phase 40)."""
+
+    def __init__(self, channel: Channel) -> None:
+        super().__init__(channel)
+        self.holding = threading.Event()
+        self.release = threading.Event()
+
+    def on_chunk(self, chunk: AudioChunk) -> list[TranscriptSegment]:
+        self.holding.set()
+        assert self.release.wait(5)
+        return super().on_chunk(chunk)
+
+
+def test_abandon_skips_backlog_and_flush_and_calls_on_exit(
+    chunks: queue.Queue[AudioChunk],
+) -> None:
+    mic = _BlockingStitcher(Channel.MIC)
+    sink = FakeTranscriptSink()
+    exits: list[str] = []
+    exited = threading.Event()
+    worker = TranscriptionWorker(chunks, {Channel.MIC: mic}, sink)
+    worker.start()
+    for start in (0, 5, 10):
+        chunks.put(chunk(Channel.MIC, start))
+    assert mic.holding.wait(5)
+
+    def on_exit() -> None:
+        exits.append(threading.current_thread().name)
+        exited.set()
+
+    worker.abandon(on_exit)  # returns while the chunk in hand is still being transcribed
+    assert not exited.is_set()
+    mic.release.set()
+
+    assert exited.wait(5)
+    assert mic.seen == [0]  # the chunk in hand is finished, the backlog skipped
+    assert ids(sink) == ["mic-0"]  # no flush
+    assert not mic.flushed
+    assert exits == ["transcription"]
+    assert not sink.closed  # the owner closes it in `on_exit`
+
+
+def test_abandon_during_model_load_returns_at_once(chunks: queue.Queue[AudioChunk]) -> None:
+    loading, loaded = threading.Event(), threading.Event()
+    exited = threading.Event()
+
+    def load() -> bool:
+        loading.set()
+        assert loaded.wait(5)
+        return True
+
+    mic = FakeStitcher(Channel.MIC)
+    sink = FakeTranscriptSink()
+    chunks.put(chunk(Channel.MIC, 0))
+    worker = TranscriptionWorker(chunks, {Channel.MIC: mic}, sink, load=load)
+    worker.start()
+    assert loading.wait(5)
+
+    started = time.monotonic()
+    worker.abandon(exited.set)
+    assert time.monotonic() - started < 0.5
+    assert not exited.is_set()  # the load is still running
+    loaded.set()
+
+    assert exited.wait(5)
+    assert mic.seen == []  # nothing transcribed after the load: the backlog is skipped
+    assert sink.segments == []
+
+
+def test_abandon_without_start_calls_on_exit_at_once(chunks: queue.Queue[AudioChunk]) -> None:
+    mic = FakeStitcher(Channel.MIC)
+    chunks.put(chunk(Channel.MIC, 0))
+    loads: list[str] = []
+    worker = TranscriptionWorker(
+        chunks, {Channel.MIC: mic}, FakeTranscriptSink(), load=lambda: bool(loads.append("x"))
+    )
+    exits: list[str] = []
+
+    worker.abandon(lambda: exits.append("exit"))
+
+    assert exits == ["exit"]
+    assert (loads, mic.seen, mic.flushed) == ([], [], False)
+
+
+def test_abandon_clears_a_shown_partial(chunks: queue.Queue[AudioChunk]) -> None:
+    sent: list[tuple[Channel, float, str]] = []
+    mic = FakeStitcher(Channel.MIC)
+    mic.preview_texts = [(0.0, "hello")]
+    options = PartialOptions(0.0, lambda channel: None, lambda c, s, t: sent.append((c, s, t)))
+    worker = TranscriptionWorker(chunks, {Channel.MIC: mic}, FakeTranscriptSink(), partials=options)
+    exited = threading.Event()
+    worker.start()
+    deadline = time.monotonic() + 5
+    while not sent and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    worker.abandon(exited.set)
+
+    assert exited.wait(5)
+    assert sent == [(Channel.MIC, 0.0, "hello"), (Channel.MIC, 0.0, "")]
+
+
+def test_a_failing_on_exit_is_logged(
+    chunks: queue.Queue[AudioChunk], caplog: pytest.LogCaptureFixture
+) -> None:
+    worker = TranscriptionWorker(
+        chunks, {Channel.MIC: FakeStitcher(Channel.MIC)}, FakeTranscriptSink()
+    )
+
+    def on_exit() -> None:
+        raise RuntimeError("close failed")
+
+    worker.abandon(on_exit)
+
+    assert "close failed" in caplog.text

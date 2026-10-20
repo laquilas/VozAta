@@ -290,6 +290,35 @@ class CapturePipeline:
         self._worker.stop()
         self._sink.close()
 
+    def abandon(self, on_closed: Callable[[], None]) -> None:
+        """Stop without draining (phase 40); returns at once.
+
+        The worker finishes the chunk (or model load) in hand and skips its backlog; then, on its
+        thread, the sinks are closed (the echo filter releases the mic segments it holds), the
+        loaded transcriber is closed, the WAVs are finalized and `on_closed()` runs. A failing
+        part is logged and the next one still runs.
+        """
+        self._accepting = False
+
+        def close() -> None:
+            for part, what in (
+                (self._sink.close, "Closing the transcript"),
+                (self._close_transcriber, "Releasing the transcriber"),
+                (self.finalize_wavs, "Finalizing the WAVs"),
+            ):
+                try:
+                    part()
+                except Exception:
+                    _log.exception("%s failed", what)
+            on_closed()
+
+        self._worker.abandon(close)
+
+    def _close_transcriber(self) -> None:
+        loaded = self._transcriber.loaded
+        if loaded is not None:
+            loaded.close()
+
     def finalize_wavs(self) -> None:
         """Pad every WAV to the longest one and close them."""
         writers = [track.writer for track in self._tracks.values()]
