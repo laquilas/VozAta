@@ -20,7 +20,7 @@ from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
 from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
-from vozata.api.session_manager import SessionManager, StartOptions
+from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
@@ -79,6 +79,10 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
+from vozata.processing.gpu_gate import GpuGate, GpuUsage, gpu_usage
+from vozata.processing.job import ProcessingJob
+from vozata.processing.queue import ProcessingQueue, ProcessingState
+from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
@@ -106,9 +110,10 @@ from vozata.storage.sqlite.search import SqliteSearch
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.language_lock import LanguageLock
+from vozata.transcription.offline import OfflineTranscription
 from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
-from vozata.vocabulary import VocabularyStore, merge_terms
+from vozata.vocabulary import VocabularyStore, build_hints, merge_terms
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
 AUDIO_CACHE_DIR = "cache"  # in `OUTPUT_DIR` (phase 32)
@@ -489,6 +494,8 @@ def build_session(
     env_file: Path | None = None,
     translate_to: TranslationTarget | None = None,
     title: str | None = None,
+    gate: GpuGate | None = None,
+    gpu_usage: GpuUsage | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -499,7 +506,9 @@ def build_session(
     stored in `session.json` even when minutes are off. `vocabulary` (this meeting's terms) is
     merged with the glossary file (`vocabulary_path(settings, env_file)`), session terms first.
     `translate_to` (default `TRANSLATE_TO`) is the live translation language (phase 29); `title`
-    (normalized, phase 35) is stored in the metadata.
+    (normalized, phase 35) is stored in the metadata. With a `gate` (`serve`), the session holds
+    its live GPU priority while recording when `gpu_usage` says its speech or speaker model runs on
+    the local GPU (phase 40).
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -554,6 +563,8 @@ def build_session(
         translate_to=translation_target,
         translator_factory=translator_factory,
         title=title,
+        gate=gate,
+        gpu_usage=gpu_usage,
     )
     return RecordingSession(
         settings,
@@ -580,20 +591,21 @@ def _no_transcriber() -> Transcriber:
 
 
 def _stored_components(
-    settings: Settings, store: SessionRepository, session_id: str
+    settings: Settings, store: SessionRepository, session_id: str, models: bool = True
 ) -> tuple[SessionComponents, dict[str, Any]]:
     """The stop-step components of a stored session, and its metadata.
 
     Nothing is captured or transcribed; the minutes template, glossary and mix mode come from
     the session's metadata, so the result matches what its own stop would have produced. The
-    search index is the one of `OUTPUT_DIR`, used only when the session lives there.
+    search index is the one of `OUTPUT_DIR`, used only when the session lives there. Without
+    `models` no language model or diarizer is built (steps that need neither, phase 40).
     """
     meta = store.read_meta(session_id)
     localizer = build_localizer(settings)
     template = stored_template(meta) or settings.minutes_template
     minutes = (
         build_minutes_generator(settings, localizer, template)
-        if settings.generate_minutes
+        if settings.generate_minutes and models
         else None
     )
     recorded = meta.get("settings")
@@ -610,7 +622,7 @@ def _stored_components(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        diarizer_factory=build_diarizer_factory(settings),
+        diarizer_factory=build_diarizer_factory(settings) if models else None,
         search_index=build_search_index(settings) if in_output_dir else None,
         minutes_template=template,
         vocabulary=tuple(stored_vocabulary(meta)),
@@ -641,13 +653,15 @@ def build_finisher(
     audio: SessionAudio,
     observer: SessionObserver,
     session_id: str,
+    models: bool = True,
 ) -> SessionFinisher:
     """The stop steps of a stored session (phase 40), with the components of its metadata.
 
     The title is read from `session.json` each time the minutes are written, so a rename made
-    while the session waits for its turn is used.
+    while the session waits for its turn is used. Without `models`, only `mix`, `index` and
+    `ended` do anything (no language model or diarizer is built).
     """
-    components, meta = _stored_components(settings, store, session_id)
+    components, meta = _stored_components(settings, store, session_id, models)
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
     return SessionFinisher(
         settings,
@@ -659,6 +673,81 @@ def build_finisher(
         LanguageLock(language, lambda detected: None),
         lambda: stored_title(store.read_meta(session_id)),
     )
+
+
+def build_processing_job(
+    settings: Settings,
+    store: SessionRepository,
+    audio: SessionAudio,
+    observer: SessionObserver,
+    session_id: str,
+    *,
+    repair: bool,
+    closed: threading.Event | None,
+    gate_usage: GpuUsage,
+) -> ProcessingJob:
+    """The processing job of a stopped (or crashed, `repair`) meeting (phase 40).
+
+    It starts once the abandoned live pipeline set `closed`. Each step builds its own providers
+    when it runs, from `settings` and the meeting's `session.json`: a redone step never reuses a
+    cancelled language model or diarizer. The rest of the transcript uses the conversation
+    language stored in the metadata (selected, or detected live), so it is not detected again.
+    """
+    meta = store.read_meta(session_id)
+    duration = float(meta.get("duration_seconds") or 0.0)
+
+    def finisher(models: bool) -> SessionFinisher:
+        return build_finisher(settings, store, audio, observer, session_id, models)
+
+    def transcription() -> OfflineTranscription:
+        stored = store.read_meta(session_id)
+        language = ConversationLanguage(stored.get("language", ConversationLanguage.AUTO.value))
+        transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
+        return OfflineTranscription(
+            settings,
+            store,
+            audio,
+            functools.partial(transcriber, settings),
+            build_labeler(settings, build_localizer(settings)),
+            LanguageLock(language, functools.partial(_detected, store, session_id)),
+            build_hints(tuple(stored_vocabulary(stored))),
+            functools.partial(CHUNKERS[settings.chunk_mode], settings),
+        )
+
+    def finished() -> None:
+        finisher(False).ended(store.now())
+        length = float(store.read_meta(session_id).get("duration_seconds") or 0.0)
+        observer.on_status(SessionStatus.DONE, length)
+
+    parts = JobParts(
+        finisher=finisher,
+        transcription=transcription,
+        diarize=settings.diarization_enabled,
+        minutes=settings.generate_minutes,
+        action_items=settings.generate_minutes and settings.extract_action_items,
+        repair=functools.partial(_repair, store, audio, session_id) if repair else None,
+    )
+    weight = transcribe_weight(store, session_id, duration)
+    return session_job(
+        session_id, parts, gate_usage, weight=weight, closed=closed, on_finished=finished
+    )
+
+
+def _detected(store: SessionRepository, session_id: str, language: ConversationLanguage) -> None:
+    """Store the language `auto` mode detected while the rest of a meeting was transcribed."""
+    meta = store.read_meta(session_id)
+    store.write_meta(
+        session_id, {**meta, "language": language.value, "language_source": "detected"}
+    )
+
+
+def _repair(store: SessionRepository, audio: SessionAudio, session_id: str) -> None:
+    """Make a crashed meeting's audio and transcript readable (phase 17) and store its length."""
+    repairs = [part for part in (audio, store) if isinstance(part, RecoverableStore)]
+    lengths = [length for part in repairs if (length := part.repair(session_id)) is not None]
+    if lengths:
+        meta = store.read_meta(session_id)
+        store.write_meta(session_id, {**meta, "duration_seconds": round(max(lengths), 3)})
 
 
 def build_recovery(
@@ -749,10 +838,36 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     if settings.whisper_keep_loaded:
         transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
         shared = SharedTranscriber(lambda: transcriber(settings))
+    gpu_info = functools.cache(query_gpu)  # the GPU does not change while running
+    gate = GpuGate()  # phase 40: live recordings pre-empt the queue's GPU steps
+
+    def usage(current: Settings) -> GpuUsage:
+        return gpu_usage(current, gpu_info().available)
+
+    def publish_processing(state: ProcessingState) -> None:
+        broadcaster.publish("processing", state.session_id, state.to_payload())
+
+    queue = ProcessingQueue(gate, publish_processing)
+    queue.start()
+
+    def job_factory(session_id: str, repair: bool, closed: threading.Event | None) -> ProcessingJob:
+        current = settings_file.current
+        observer = session_observer(broadcaster, labeler, session_id)
+        return build_processing_job(
+            current,
+            store,
+            audio,
+            observer,
+            session_id,
+            repair=repair,
+            closed=closed,
+            gate_usage=usage(current),
+        )
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
+        current = settings_file.current
         return build_session(
-            settings_file.current,
+            current,
             observer,
             language=options.language,
             mic_device=options.mic_device,
@@ -763,6 +878,8 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared=shared,
             translate_to=options.translate_to,
             title=options.title,
+            gate=gate,
+            gpu_usage=usage(current),
         )
 
     def minutes_generator(template: str | None = None) -> MinutesGenerator:
@@ -790,7 +907,14 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         before_finish=shared.release if shared is not None else lambda: None,
     )
     manager = SessionManager(
-        session_factory, store, broadcaster, labeler, recovery=recovery, localizer=localizer
+        session_factory,
+        store,
+        broadcaster,
+        labeler,
+        recovery=recovery,
+        localizer=localizer,
+        queue=queue,
+        job_factory=job_factory,
     )
 
     def answerer() -> MeetingAnswerer:
@@ -807,7 +931,6 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared.release()  # VRAM rule, as for answers
         return build_action_item_extractor(settings_file.current)  # current language
 
-    gpu_info = functools.cache(query_gpu)  # the GPU does not change while running
     options = build_setting_options(lambda: settings_file.current, lambda: gpu_info().available)
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True

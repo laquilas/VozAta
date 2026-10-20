@@ -1,4 +1,5 @@
-"""The API's single recording session: lifecycle, events and background finalization."""
+"""The API's single recording session: lifecycle, events, and the hand-over of a stopped
+meeting to the processing queue (phase 40)."""
 
 from __future__ import annotations
 
@@ -20,6 +21,8 @@ from vozata.domain import (
 )
 from vozata.labels import SpeakerLabeler
 from vozata.ports import Localizer, SessionObserver, SessionRepository
+from vozata.processing.job import ProcessingJob
+from vozata.processing.queue import ProcessingQueue
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
@@ -28,7 +31,8 @@ _log = logging.getLogger(__name__)
 
 
 class SessionConflictError(RuntimeError):
-    """A session is already recording, paused or finalizing (`409 session_already_active`)."""
+    """A session is already recording, paused or still stopping its capture, or one is being
+    recovered (`409 session_already_active`)."""
 
 
 class NoActiveSessionError(RuntimeError):
@@ -72,7 +76,7 @@ class Session(Protocol):
 
     def resume(self) -> None: ...
 
-    def stop(self) -> None: ...
+    def stop_capture(self) -> threading.Event: ...
 
     def set_title(self, title: str | None) -> None: ...
 
@@ -91,6 +95,8 @@ class StartOptions:
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]
+# (session id, repair first, the abandoned live pipeline's `closed` event) -> the meeting's job
+JobFactory = Callable[[str, bool, threading.Event | None], ProcessingJob]
 
 
 class _EventObserver:
@@ -160,11 +166,22 @@ class _EventObserver:
         self._publish(kind, self._session_id(), data)
 
 
-class SessionManager:
-    """Owns at most one active session (recording, paused or finalizing).
+def session_observer(
+    broadcaster: EventBroadcaster,
+    labeler: SpeakerLabeler,
+    session_id: str,
+    clock: Callable[[], float] = time.monotonic,
+) -> SessionObserver:
+    """The events of a meeting that is no longer recording (its processing job, phase 40)."""
+    return _EventObserver(broadcaster, labeler, lambda: session_id, clock)
 
-    `stop()` returns at once: finalization (transcript drain, WAVs, minutes) runs on a background
-    thread and reports through `status` events.
+
+class SessionManager:
+    """Owns at most one recording (or paused) session.
+
+    `stop()` returns at once: `stop_capture()` runs on a short-lived thread, then the slot is
+    released and the meeting's job (`job_factory`) is put on the processing `queue`, which finishes
+    it in the background and reports through `processing` and `status` events (phase 40).
     """
 
     def __init__(
@@ -177,6 +194,9 @@ class SessionManager:
         status_interval: float = STATUS_INTERVAL,
         recovery: Recovery | None = None,
         localizer: Localizer | None = None,
+        *,
+        queue: ProcessingQueue,
+        job_factory: JobFactory,
     ) -> None:
         self._factory = factory
         self._store = store
@@ -186,8 +206,11 @@ class SessionManager:
         self._status_interval = status_interval
         self._recovery = recovery
         self._localizer = localizer
+        self._queue = queue
+        self._job_factory = job_factory
         self._lock = threading.Lock()
         self._session: Session | None = None
+        self._stopping: Session | None = None  # stop accepted, `stop_capture()` running
         self._recovering: str | None = None  # id of the session being recovered (phase 17)
         self._finished = threading.Event()
 
@@ -197,9 +220,11 @@ class SessionManager:
 
     @property
     def busy(self) -> bool:
-        """A session records, is paused or finalizing, or one is being recovered (phase 33:
-        the folder import waits meanwhile)."""
-        return self._session is not None or self._recovering is not None
+        """A session records or is paused, one is being recovered, or meetings wait in the
+        processing queue (phase 33: the folder import waits meanwhile)."""
+        return (
+            self._session is not None or self._recovering is not None or bool(self._queue.pending())
+        )
 
     def start(self, options: StartOptions) -> dict[str, Any]:
         with self._lock:
@@ -228,11 +253,13 @@ class SessionManager:
         return self.summary(session)
 
     def stop(self) -> dict[str, Any]:
-        """Begin finalization on a background thread; the summary reports `finalizing`."""
-        session = self._active()
+        """Stop capture on a short-lived thread, then free the slot and queue the meeting; the
+        summary reports `finalizing`. A second stop meanwhile raises `NoActiveSessionError`."""
+        with self._lock:
+            session = self._active()
+            self._stopping = session
         summary = self.summary(session)
-        # Not a daemon: the process waits for the WAVs, transcript and minutes to be written.
-        threading.Thread(target=self._finalize, args=(session,), name="finalize").start()
+        threading.Thread(target=self._stop_capture, args=(session,), name="stop-capture").start()
         return {**summary, "status": SessionStatus.FINALIZING.value}
 
     def rename(self, session_id: str, title: str | None) -> dict[str, Any]:
@@ -306,6 +333,7 @@ class SessionManager:
             return []
         with self._lock:  # a session being started is not interrupted
             live = {self._recovering, _started_id([self._session] if self._session else [])}
+            live |= {state.session_id for state in self._queue.pending()}  # finalizing, queued
             try:
                 return self._recovery.find_interrupted({i for i in live if i is not None})
             except Exception:
@@ -313,8 +341,9 @@ class SessionManager:
                 return []
 
     def wait_until_finished(self, timeout: float | None = None) -> bool:
-        """Block until the last stopped or recovered session finished (tests, shutdown)."""
-        return self._finished.wait(timeout)
+        """Block until the last stopped meeting was queued (or the recovery ended) and the
+        processing queue is idle (tests)."""
+        return self._finished.wait(timeout) and self._queue.wait_idle(timeout)
 
     def summary(self, session: Session) -> dict[str, Any]:
         live = session.duration_seconds if session is self._session else None
@@ -330,18 +359,28 @@ class SessionManager:
 
     def _active(self) -> Session:
         session = self._session
-        if session is None or session.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+        recording = session is not None and session.status in (
+            SessionStatus.RECORDING,
+            SessionStatus.PAUSED,
+        )
+        if session is None or not recording or session is self._stopping:
             raise NoActiveSessionError
         return session
 
-    def _finalize(self, session: Session) -> None:
+    def _stop_capture(self, session: Session) -> None:
+        closed: threading.Event | None = None
         try:
-            session.stop()
+            closed = session.stop_capture()
         except Exception:
-            _log.exception("Finalizing session %s failed", session.id)
-        finally:
+            _log.exception("Stopping the capture of session %s failed", session.id)
+        try:
             with self._lock:
                 self._session = None
+                self._stopping = None
+                self._queue.enqueue(self._job_factory(session.id, False, closed))
+        except Exception:
+            _log.exception("Queueing session %s for processing failed", session.id)
+        finally:
             self._finished.set()
 
     def _recover(self, recovery: Recovery, session_id: str, observer: SessionObserver) -> None:

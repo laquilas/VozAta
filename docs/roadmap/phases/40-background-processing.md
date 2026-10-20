@@ -195,8 +195,9 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 16:00
-- **Next step:** Task 6 of `plans/40-background-processing.md` (Stop frees the recorder).
+- **Updated:** 2026-10-20 17:30
+- **Next step:** Task 7 of `plans/40-background-processing.md` (Restart and recovery through the
+  queue).
 
 ### Steps
 
@@ -206,7 +207,7 @@ close-with-pending message; locale parity.
 - [x] Session finisher steps (0f2a1ad)
 - [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
 - [x] Processing job and queue (04afa22; fix round 1: this commit)
-- [ ] Stop frees the recorder
+- [x] Stop frees the recorder (c7756b8, this commit)
 - [ ] Restart and recovery through the queue
 - [ ] API, events and other model users
 - [ ] UI client and recorder
@@ -228,3 +229,13 @@ close-with-pending message; locale parity.
   Fix round 2: the tail is skipped only when it ends in silence within 0.3 s; still voiced at the
   cap (likely the next word) it is kept, since a repeated fragment is better than a lost word
   start.
+- Stop (Task 6): `stop_capture()` abandons the live pipeline, which closes its sinks, transcriber
+  and WAVs on its own thread and then sets `closed`; the job's `before` waits for it. The job
+  (`processing/session_job.py`) is shared by `serve` (`bootstrap.build_processing_job`, providers
+  built from `session.json` per step attempt) and the CLI (`RecordingSession.stop()` runs it
+  inline with the session's own components). The live GPU lease is taken on the model-load
+  thread, not in `start()`, so `POST /sessions` never waits for the queue's step to stop. After
+  capture ends, `SessionMeta` merges its writes into the stored `session.json` and the heartbeat
+  stops (it would race the job's writes). The transcribe weight is estimated from the raw
+  transcript and the recorded length (the WAVs are not final yet at Stop); `finalize` is done by
+  the abandoned pipeline, so the job has a single `mix` step.

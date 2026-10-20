@@ -15,6 +15,9 @@ from vozata.api.ws import EventBroadcaster
 from vozata.domain import ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver
+from vozata.processing.gpu_gate import GpuGate
+from vozata.processing.job import ProcessingJob, Step, StepKind
+from vozata.processing.queue import ProcessingQueue
 from vozata.session import SessionStartError
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.session_store import SessionStore
@@ -58,6 +61,8 @@ class FakeSession:
         self.duration_seconds = 0.0
         self._id: str | None = None
         self.calls: list[str] = []
+        self.closed = threading.Event()  # the abandoned live pipeline; closed at once by default
+        self.closed.set()
 
     @property
     def id(self) -> str:
@@ -95,11 +100,18 @@ class FakeSession:
         self.meta["title"] = title
         self.store.write_meta(self.id, self.meta)
 
-    def stop(self) -> None:
-        self.calls.append("stop")
+    def stop_capture(self) -> threading.Event:
+        """`stop_gate` holds the stop inside `stop_capture()` (the slot is not released yet)."""
+        self.calls.append("stop_capture")
         self._set(SessionStatus.FINALIZING)
         if self.stop_gate is not None:
             assert self.stop_gate.wait(5)
+        return self.closed
+
+    def finish(self) -> None:
+        """What the processing job ends with: `ended_at` and `done`."""
+        self.calls.append("finish")
+        self.meta = self.store.read_meta(self.id)  # keeps a rename made meanwhile
         self.meta["ended_at"] = (self.moment + timedelta(seconds=90)).isoformat()
         self._set(SessionStatus.DONE)
 
@@ -129,6 +141,74 @@ class SessionFactory:
         return session
 
 
+class FakeJobs:
+    """The manager's `job_factory`: one step (held by `hold`), then the fake session finishes.
+
+    `seen_closed` records, per job, whether the abandoned pipeline was closed when its step ran.
+    """
+
+    def __init__(self, factory: SessionFactory) -> None:
+        self.factory = factory
+        self.calls: list[tuple[str, bool, threading.Event | None]] = []
+        self.hold: threading.Event | None = None
+        self.seen_closed: list[bool] = []
+
+    def __call__(
+        self, session_id: str, repair: bool, closed: threading.Event | None
+    ) -> ProcessingJob:
+        self.calls.append((session_id, repair, closed))
+        session = next(s for s in self.factory.sessions if s._id == session_id)
+        hold = self.hold
+
+        def step(token: object, progress: object) -> None:
+            self.seen_closed.append(closed is None or closed.is_set())
+            if hold is not None:
+                assert hold.wait(5)
+
+        def before() -> None:
+            if closed is not None:
+                assert closed.wait(5)
+
+        return ProcessingJob(
+            session_id=session_id,
+            steps=(Step(StepKind.INDEX, 1.0, False, step),),
+            on_finished=session.finish,
+            before=before,
+        )
+
+
+def processing_queue(broadcaster: EventBroadcaster | None = None) -> ProcessingQueue:
+    """A started queue that publishes `processing` events (when given a broadcaster)."""
+
+    def publish(state) -> None:  # type: ignore[no-untyped-def]
+        if broadcaster is not None:
+            broadcaster.publish("processing", state.session_id, state.to_payload())
+
+    queue = ProcessingQueue(GpuGate(), publish)
+    queue.start()
+    return queue
+
+
+def make_manager(
+    factory: SessionFactory,
+    store: FileSessionRepository,
+    broadcaster: EventBroadcaster,
+    *,
+    jobs: FakeJobs | None = None,
+    **options: Any,
+) -> SessionManager:
+    """A manager over the fakes with a real processing queue and `FakeJobs`."""
+    return SessionManager(
+        factory,
+        store,
+        broadcaster,
+        options.pop("labeler", None) or SpeakerLabeler(FakeLocalizer()),
+        queue=processing_queue(broadcaster),
+        job_factory=jobs or FakeJobs(factory),
+        **options,
+    )
+
+
 @pytest.fixture
 def store(tmp_path: Path) -> FileSessionRepository:
     return FileSessionRepository(SessionStore(tmp_path / "recordings"))
@@ -145,11 +225,18 @@ def broadcaster() -> RecordingBroadcaster:
 
 
 @pytest.fixture
+def jobs(factory: SessionFactory) -> FakeJobs:
+    return FakeJobs(factory)
+
+
+@pytest.fixture
 def manager(
-    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+    factory: SessionFactory,
+    store: FileSessionRepository,
+    broadcaster: RecordingBroadcaster,
+    jobs: FakeJobs,
 ) -> SessionManager:
-    labeler = SpeakerLabeler(FakeLocalizer())
-    return SessionManager(factory, store, broadcaster, labeler, status_interval=0.02)
+    return make_manager(factory, store, broadcaster, jobs=jobs, status_interval=0.02)
 
 
 START_ERROR = SessionStartError("device_timeout", "The mic did not open")
@@ -197,11 +284,13 @@ class Api:
         self.labeler = SpeakerLabeler(FakeLocalizer())
         from vozata.i18n import TomlLocalizer as _Localizer
 
-        self.manager = SessionManager(
+        self.jobs = FakeJobs(self.factory)
+        self.manager = make_manager(
             self.factory,
             self.store,
             self.broadcaster,
-            self.labeler,
+            jobs=self.jobs,
+            labeler=self.labeler,
             status_interval=60,
             recovery=recovery(self.store) if recovery is not None else None,  # phase 17
             localizer=_Localizer(self.settings.app_language),

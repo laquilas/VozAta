@@ -40,6 +40,7 @@ from vozata.ports import (
     SpeakerEmbedder,
     TranscriptSearch,
 )
+from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
 from vozata.storage.files.audio import FileAudioStore
@@ -132,6 +133,8 @@ class _Rig:
         vocabulary: tuple[str, ...] = (),
         embedder_factory: Callable[[], SpeakerEmbedder] | None = None,
         title: str | None = None,
+        gate: GpuGate | None = None,
+        gpu_usage: GpuUsage | None = None,
     ) -> None:
         self._load_gate = load_gate
         self._load_error = load_error
@@ -172,6 +175,8 @@ class _Rig:
                 vocabulary=vocabulary,
                 embedder_factory=embedder_factory,
                 title=title,
+                gate=gate,
+                gpu_usage=gpu_usage,
             ),
             self.observer,
             language,
@@ -237,7 +242,9 @@ def _wait_for(condition: Callable[[], bool]) -> None:
 def test_interim_text_previews_the_phrase_in_progress_then_the_segment_replaces_it(
     tmp_path: Path,
 ) -> None:
-    settings = dataclasses.replace(SETTINGS, live_partials=True, partial_interval_seconds=10)
+    settings = dataclasses.replace(
+        SETTINGS, live_partials=True, partial_interval_seconds=10, echo_dedupe_enabled=False
+    )  # no echo hold: the live segment is emitted at once
     rig = _Rig(
         tmp_path,
         results=[_words("Hel"), _words("Hello", " there.")],
@@ -250,12 +257,13 @@ def test_interim_text_previews_the_phrase_in_progress_then_the_segment_replaces_
     _wait_for(lambda: bool(rig.observer.of("partial")))
     rig.mic.push(_voice(1.0, 0.0), 2.0)  # the pause ends the phrase
     rig.clock.time = 3.0
+    _wait_for(lambda: bool(rig.observer.of("segment")))  # Stop no longer drains the backlog
+    audio = [len(samples) / RATE for samples, _, _ in rig.transcriber.calls]  # live calls
     rig.session.stop()
 
     assert rig.observer.of("partial") == [(Channel.MIC, "mic", 0.0, "Hel")]
     [(segment,)] = rig.observer.of("segment")
     assert segment.text == "Hello there."
-    audio = [len(samples) / RATE for samples, _, _ in rig.transcriber.calls]
     assert audio[0] == 2.0  # the uncut phrase
     assert len(audio) == 2  # the committed audio was never previewed again
     assert "partial" not in rig.paths_text()
@@ -278,10 +286,11 @@ def test_a_chunker_from_the_components_cuts_at_pauses(tmp_path: Path) -> None:
     rig.clock.time = 2.0
     rig.session.stop()
 
-    assert sorted(channels) == sorted([Channel.MIC, Channel.SYSTEM])
-    [(segment,)] = rig.observer.of("segment")
+    assert sorted(channels[:2]) == sorted([Channel.MIC, Channel.SYSTEM])  # live; then offline
+    [segment] = rig.store.load_transcript(rig.session.id)  # live or from the stored audio
     assert segment.text == "Hi there"
-    assert len(rig.transcriber.calls) == 1  # the trailing silence never reached the transcriber
+    # the trailing silence never reached the transcriber, live or from the stored audio
+    assert all(np.any(samples) for samples, _, _ in rig.transcriber.calls)
 
 
 def test_recording_starts_before_the_speech_model_has_loaded(tmp_path: Path) -> None:
@@ -371,7 +380,9 @@ def test_pause_drops_chunks_and_writes_silence(tmp_path: Path) -> None:
     assert (
         np.all(mic[:RATE] > 0) and np.all(mic[RATE : 2 * RATE] == 0) and np.all(mic[2 * RATE :] > 0)
     )
-    assert len(rig.transcriber.calls) == 2  # the paused second never reached the transcriber
+    # the paused second never reached the transcriber, live or from the stored audio
+    assert rig.transcriber.calls
+    assert all(np.all(samples > 0) for samples, _, _ in rig.transcriber.calls)
     statuses = [status for status, _ in rig.observer.of("status")]
     assert statuses[:3] == [SessionStatus.RECORDING, SessionStatus.PAUSED, SessionStatus.RECORDING]
     assert rig.store.read_meta(rig.session.id)["pauses"] == [{"start": 1.0, "end": 2.0}]
@@ -402,7 +413,7 @@ def test_stopping_while_paused_closes_the_open_pause(tmp_path: Path) -> None:
     assert rig.store.read_meta(rig.session.id)["pauses"] == [{"start": 1.0, "end": 4.0}]
 
 
-def test_stop_order_finalizes_wavs_then_mixes_then_frees_the_gpu_then_writes_minutes(
+def test_stop_order_releases_audio_frees_whisper_then_mixes_then_writes_minutes(
     tmp_path: Path,
 ) -> None:
     rig = _Rig(tmp_path, results=[_words("Hi.")])
@@ -414,7 +425,10 @@ def test_stop_order_finalizes_wavs_then_mixes_then_frees_the_gpu_then_writes_min
 
     assert "transcriber.load" in rig.log.entries  # on the worker thread, racing "release"
     finalization = [entry for entry in rig.log.entries if entry != "transcriber.load"]
-    assert finalization == ["release", "mix", "transcriber.close", "llm.generate"]
+    mix = finalization.index("mix")
+    assert finalization[0] == "release"
+    assert set(finalization[1:mix]) == {"transcriber.close"}  # live, then offline Whisper
+    assert finalization[mix:] == ["mix", "llm.generate"]
     assert rig.mixer.lengths == (int(2.5 * RATE), int(2.5 * RATE))  # padded to the longest
     assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
     assert rig.observer.of("minutes_ready") == [(rig.session.id,)]
@@ -826,3 +840,99 @@ def test_an_untitled_session_has_no_title_in_session_json(tmp_path: Path) -> Non
     rig.session.stop()
 
     assert "title" not in rig.store.read_meta(rig.session.id)
+
+
+def test_stop_capture_returns_closed_event_and_writes_capture_ended_at(tmp_path: Path) -> None:
+    gate = threading.Event()
+    rig = _Rig(tmp_path, results=[_words("Late", " words.")], load_gate=gate)
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+
+    closed = rig.session.stop_capture()  # returns while the model is still loading
+
+    assert not closed.is_set()
+    assert rig.session.status is SessionStatus.FINALIZING
+    meta = rig.store.read_meta(rig.session.id)
+    assert meta["status"] == "finalizing"
+    assert meta["capture_ended_at"] == "2026-10-15T20:30:00-03:00"
+    assert meta["duration_seconds"] == 1.0
+    assert rig.log.entries == ["release"]  # PortAudio released at once
+    assert rig.mic.stopped and rig.system.stopped
+    gate.set()
+
+    assert closed.wait(5)
+    assert len(rig.wav(Channel.MIC)) == RATE  # finalized by the abandoned pipeline
+    assert rig.observer.of("segment") == []  # the backlog was not transcribed live
+    assert "transcriber.close" in rig.log.entries
+    assert rig.session.stop_capture().is_set()  # a second call has nothing to stop
+
+
+def test_stop_while_model_loading_still_yields_a_full_transcript(tmp_path: Path) -> None:
+    gate = threading.Event()
+    rig = _Rig(tmp_path, results=[_words("Early", " words.")], load_gate=gate)
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    rig.clock.time = 1.0
+    stopping = threading.Thread(target=rig.session.stop)
+
+    stopping.start()  # the job waits for the abandoned pipeline, which waits for the load
+    _wait_for(lambda: rig.session.status is SessionStatus.FINALIZING)
+    gate.set()
+    stopping.join(10)
+
+    assert rig.session.status is SessionStatus.DONE
+    assert rig.paths.transcript_md.read_text(encoding="utf-8") == (
+        "[00:00:00] labels.mic: Early words.\n"
+    )
+    assert rig.paths.minutes_md.read_text(encoding="utf-8") == "# Minutes\n"
+
+
+def test_a_live_session_holds_the_gpu_gate_until_its_pipeline_closed(tmp_path: Path) -> None:
+    gate = GpuGate()
+    load = threading.Event()
+    usage = GpuUsage(speech=True, speakers=False, llm=False)
+    rig = _Rig(tmp_path, load_gate=load, gate=gate, gpu_usage=usage)
+    rig.session.start()
+    _wait_for(lambda: gate.priority_held)  # taken before the model loads
+
+    closed = rig.session.stop_capture()
+    assert gate.priority_held  # the abandoned model load still runs
+    load.set()
+
+    assert closed.wait(5)
+    assert not gate.priority_held
+
+
+def test_metadata_written_after_capture_keeps_changes_made_by_others(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, title="Draft")
+    rig.session.start()
+    closed = rig.session.stop_capture()
+    assert closed.wait(5)
+    meta = rig.store.read_meta(rig.session.id)
+    rig.store.write_meta(rig.session.id, {**meta, "title": "Renamed while queued"})
+
+    rig.session._meta.echo_dropped(3)
+
+    meta = rig.store.read_meta(rig.session.id)
+    assert (meta["title"], meta["echo_dropped"]) == ("Renamed while queued", 3)
+
+
+def test_a_failing_echo_count_save_still_closes_and_releases_the_gate(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    gate = GpuGate()
+    usage = GpuUsage(speech=True, speakers=False, llm=False)
+    rig = _Rig(tmp_path, gate=gate, gpu_usage=usage)
+    rig.session.start()
+    _wait_for(lambda: gate.priority_held)
+
+    def broken(count: int) -> None:
+        raise OSError("disk full")
+
+    rig.session._meta.echo_dropped = broken  # type: ignore[method-assign]
+    closed = rig.session.stop_capture()
+
+    assert closed.wait(5)
+    assert not gate.priority_held
+    assert "Saving the echo count failed" in caplog.text

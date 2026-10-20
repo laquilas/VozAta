@@ -8,12 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from tests.api.conftest import Api, RecordingBroadcaster
-from tests.fakes import FakeLocalizer
+from tests.api.conftest import Api, RecordingBroadcaster, make_manager
 from tests.test_session_recover import make_session_folder
-from vozata.api.session_manager import SessionManager
 from vozata.domain import Channel, SessionStatus
-from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repository import FileSessionRepository
@@ -200,11 +197,10 @@ class _BrokenRecovery:
 def test_manager_failures_are_logged_and_reported_without_a_localizer(
     store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
-    manager = SessionManager(
-        lambda observer, options: None,  # type: ignore[arg-type, return-value]
+    manager = make_manager(
+        lambda observer, options: None,  # type: ignore[arg-type]
         store,
         broadcaster,
-        SpeakerLabeler(FakeLocalizer()),
         recovery=_BrokenRecovery(),
     )
 

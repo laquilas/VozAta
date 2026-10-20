@@ -32,3 +32,57 @@ def test_only_hidden_kinds_report_nothing():
 def test_job_before_defaults_to_a_no_op():
     job = ProcessingJob("s1", (), on_finished=lambda: None)
     assert job.before() is None
+
+
+def test_run_job_inline_runs_before_every_step_then_on_finished(caplog):
+    from vozata.processing.job import run_job_inline
+
+    log: list[str] = []
+
+    def broken(token, progress):
+        raise RuntimeError("step broke")
+
+    def run(name):
+        def step(token, progress):
+            assert not token.cancelled
+            progress(1.0)
+            log.append(name)
+
+        return step
+
+    job = ProcessingJob(
+        session_id="s1",
+        steps=(
+            Step(StepKind.TRANSCRIBE, 1.0, True, run("transcribe")),
+            Step(StepKind.MINUTES, 1.0, True, broken),
+            Step(StepKind.INDEX, 1.0, False, run("index")),
+        ),
+        on_finished=lambda: log.append("finished"),
+        before=lambda: log.append("before"),
+    )
+
+    run_job_inline(job)
+
+    assert log == ["before", "transcribe", "index", "finished"]
+    assert "step broke" in caplog.text
+
+
+def test_run_job_inline_continues_after_a_failing_before(caplog):
+    from vozata.processing.job import run_job_inline
+
+    log: list[str] = []
+
+    def before():
+        raise RuntimeError("wait broke")
+
+    job = ProcessingJob(
+        session_id="s1",
+        steps=(Step(StepKind.INDEX, 1.0, False, lambda t, p: log.append("index")),),
+        on_finished=lambda: log.append("finished"),
+        before=before,
+    )
+
+    run_job_inline(job)
+
+    assert log == ["index", "finished"]
+    assert "wait broke" in caplog.text

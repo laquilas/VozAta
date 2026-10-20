@@ -299,10 +299,18 @@ def test_build_api_container_wires_real_providers(
         bootstrap, "build_session", lambda settings, observer, **kwargs: built.append(kwargs)
     )
     settings = _settings(tmp_path, llm_provider="fake")
+    from vozata.api.system_info import GpuInfo
+    from vozata.processing.gpu_gate import GpuGate, GpuUsage
+    from vozata.processing.queue import ProcessingQueue
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(True, "RTX 3050", 6144))
 
     container = bootstrap.build_api_container(settings)
 
     assert container.settings is settings
+    queue = container.manager._queue
+    assert isinstance(queue, ProcessingQueue)  # phase 40: started, shares the live gate
+    assert queue._thread is not None and queue._thread.daemon
     assert isinstance(container.devices, WasapiCatalog)
     assert isinstance(container.regenerate_minutes, MinutesJob)
     assert container.llm_reachable() is False
@@ -316,6 +324,8 @@ def test_build_api_container_wires_real_providers(
     assert container.migration is not None  # phase 33, started by the app's lifespan
     assert container.migration.summary()["state"] == "idle"
     container.manager._factory(FakeSessionObserver(), StartOptions(mic_device=3, template="daily"))
+    gate = built[0].pop("gate")
+    assert isinstance(gate, GpuGate) and gate is queue._gate
     assert built == [
         {
             "language": None,
@@ -327,6 +337,7 @@ def test_build_api_container_wires_real_providers(
             "shared": None,
             "translate_to": None,
             "title": None,
+            "gpu_usage": GpuUsage(speech=True, speakers=False, llm=False),  # LLM "fake"
         }
     ]
     generator = container.regenerate_minutes._build_generator()
@@ -644,3 +655,41 @@ def test_build_session_passes_the_translation_to_the_session(
 
     assert session._c.translate_to == "pt"
     assert session._c.translator_factory is not None
+
+
+def test_the_api_container_queues_stopped_meetings_with_their_events(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from datetime import datetime
+
+    from vozata.api.system_info import GpuInfo
+    from vozata.processing.job import StepKind
+    from vozata.processing.queue import ProcessingState
+
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    container = bootstrap.build_api_container(
+        _settings(tmp_path, llm_provider="fake", generate_minutes=False)
+    )
+    published: list[tuple[str, str | None, dict[str, Any]]] = []
+    monkeypatch.setattr(
+        container.broadcaster,
+        "publish",
+        lambda kind, sid, data: published.append((kind, sid, data)),
+    )
+    session_id = container.store.create(datetime(2026, 10, 15, 20, 23, 58).astimezone())
+    container.store.write_meta(session_id, {"id": session_id, "status": "finalizing"})
+
+    job = container.manager._job_factory(session_id, False, None)
+    container.manager._queue._publish(ProcessingState(session_id, "running", 40, None, None))
+    job.on_finished()
+
+    assert [step.kind for step in job.steps] == [StepKind.TRANSCRIBE, StepKind.MIX, StepKind.INDEX]
+    assert not any(step.gpu for step in job.steps)  # no CUDA: nothing is gated
+    assert published[0] == (
+        "processing",
+        session_id,
+        {"state": "running", "percent": 40, "step": None},
+    )
+    assert published[1] == ("status", session_id, {"status": "done", "duration_seconds": 0.0})
+    assert container.store.read_meta(session_id)["status"] == "done"

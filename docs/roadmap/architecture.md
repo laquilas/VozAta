@@ -260,7 +260,7 @@ source language is the session's `LanguageLock`: in `auto`, segments wait until 
 more at stop). Segments already in the target language and blank texts are skipped. The first
 failure (missing extra, download, model error) reports `error` `translation_failed` once and
 disables translation for the session; transcription is never affected. Closing the composite at
-stop step 2 translates what is still queued, then frees the translator. Provider choice: §14.
+stop step 1 translates what is still queued, then frees the translator. Provider choice: §14.
 
 **Chunkers**: `CHUNKERS[CHUNK_MODE]` in `bootstrap.py` builds one per channel through
 `SessionComponents.chunker_factory`. `VadChunker` (27, default) asks a `SpeechDetector`
@@ -282,7 +282,7 @@ arrive, and is dropped when at least `ECHO_SIMILARITY` of its words (lowercased,
 `difflib.SequenceMatcher` on word lists) are found, in order, in the system words spoken within
 its span ± 1 s. Partial echo (the user talking over the remote speaker) stays below the threshold
 and is kept. The worker calls `EchoFilter.tick()` after every chunk and idle wait to release
-expired holds; closing the sink at stop (step 2) releases whatever is still held. Cost: **mic
+expired holds; closing the sink at stop (step 1) releases whatever is still held. Cost: **mic
 lines reach the transcript files and the UI up to `ECHO_HOLD_SECONDS` later** than system lines
 (system lines are never delayed), so `transcript.jsonl` is not strictly ordered by `start`. A
 dropped mic segment also clears the mic interim text. The drop count is `session.json`
@@ -300,7 +300,7 @@ previous speaker. The embedder loads on a second thread (lines before it is read
 a failed load reports `error` `live_diarization_failed`. An embedding slower than
 `CHUNK_SECONDS`, or an embedder error, turns the tagger off with a warning for the rest of the
 session. Live speakers are written to `transcript.jsonl` and sent in `segment` events; closing
-the sink at stop (step 2) forwards what is queued and ends the embedder process.
+the sink at stop (step 1) forwards what is queued and ends the embedder process.
 
 **Threads**: one capture callback + one consumer thread per source; one transcription worker;
 the API runs in the asyncio loop and receives events through a thread-safe broadcaster. If the
@@ -321,28 +321,71 @@ streams opened from another thread fail with "Unanticipated host error" (-9999).
 creates one `PortAudioThread` per session that owns the `PyAudio` instance and runs device lookups,
 stream opens and `terminate()`; the session releases it once capture has stopped.
 
-**Stop order** (fixed, enforced by `RecordingSession.stop()`):
-1. Stop sources; flush chunkers (last partial window); `status = finalizing`.
-2. Drain the queue; `stitcher.flush()` for each channel.
-3. Finalize the tracks to the same length (max written samples); run `AudioMixer` →
-   `mixed.wav` (file backend; with `sqlite` the mix is computed on read and nothing is written).
-4. `transcriber.close()` (free VRAM).
-5. If enabled (`DIARIZATION_ENABLED`) and the transcript has system speech: diarize the system
-   track (`materialize_wav(id, system)`: `system.wav`, or with `sqlite` a WAV built in the cache)
-   → `assign_speakers` → `transcript.diarized.jsonl` + `speakers.json` → `diarizer.close()` →
-   `speakers_relabeled` (15: clients reload the transcript; these speakers replace the live ones).
-   A failure (missing extra or `HF_TOKEN`, model error) logs a warning, reports `error`
-   `diarization_failed` (with the `python -m vozata diarize` retry command), keeps the
-   `system` labels and continues to step 6.
-6. If enabled: `MinutesGenerator` → `minutes.md`, then `llm.release()` (Ollama unloads per
-   `OLLAMA_KEEP_ALIVE`, also after a failed job); if `EXTRACT_ACTION_ITEMS` too:
-   `ActionItemExtractor` → `action_items.json` (items already exported are kept), then
-   `llm.release()`, `on_action_items_ready` (23; a failure reports `action_items_failed`); index
-   the session for search.
-7. `status = done`, `ended_at` set in `session.json`.
+**Stop order** (phase 40: Stop frees the recorder; the rest runs in the processing queue):
+1. `RecordingSession.stop_capture()` (returns at once): stop sources; flush chunkers (last partial
+   window); `duration_seconds` and `capture_ended_at` in `session.json`; release PortAudio;
+   `status = finalizing`; stop the heartbeat; **abandon** the live pipeline: the transcription
+   worker finishes the chunk (or model load) in hand and skips its backlog and stitcher flush;
+   then, on its thread, the sinks close (the echo filter releases held mic segments, translation
+   and live speakers end), `transcriber.close()` (free VRAM), the tracks are finalized to the same
+   length (max written samples), `echo_dropped` is saved and the session's live GPU lease is
+   released; last, the returned `closed` event is set. From capture end on, `SessionMeta` merges
+   every change into the stored `session.json` (a rename or the job may write it meanwhile).
+2. `serve`: `SessionManager.stop()` runs step 1 on a short-lived thread, then (under its lock)
+   frees the recording slot and puts the meeting's `ProcessingJob` on the `ProcessingQueue`
+   (`bootstrap.build_processing_job`). `POST /sessions` is refused (`409
+   session_already_active`) only until the slot is free. CLI `record`: `RecordingSession.stop()`
+   runs the same job inline (`run_job_inline`), with the session's own components.
+3. The job (`processing/session_job.py`) waits for `closed` (`before`), then runs its steps in
+   order; each builds the providers it uses when it runs:
+   - `repair` (crash recovery only): the `RecoverableStore`s of the backend, length stored.
+   - `transcribe` (GPU when speech runs on CUDA): `OfflineTranscription` transcribes, from the
+     stored tracks, whatever the raw transcript does not cover yet (each channel from its last
+     segment; the whole meeting when the model was still loading at Stop), in the conversation
+     language stored in `session.json`. Weight `2 + 60 × left / duration`.
+   - `mix`: `AudioMixer` → `mixed.wav` (file backend; with `sqlite` the mix is computed on read).
+   - `diarize` (if `DIARIZATION_ENABLED`; GPU when pyannote runs on CUDA): diarize the system
+     track (`materialize_wav(id, system)`: `system.wav`, or with `sqlite` a WAV built in the
+     cache) → `assign_speakers` → `transcript.diarized.jsonl` + `speakers.json` →
+     `diarizer.close()` → `speakers_relabeled` (15: clients reload the transcript; these speakers
+     replace the live ones). A failure (missing extra or `HF_TOKEN`, model error) logs a warning,
+     reports `error` `diarization_failed` (with the `python -m vozata diarize` retry command) and
+     keeps the `system` labels.
+   - `minutes` (if `GENERATE_MINUTES`; GPU with local Ollama): `MinutesGenerator` → `minutes.md`,
+     then `llm.release()` (Ollama unloads per `OLLAMA_KEEP_ALIVE`, also after a failed job).
+   - `action_items` (if `EXTRACT_ACTION_ITEMS` too): `ActionItemExtractor` → `action_items.json`
+     (items already exported are kept), `on_action_items_ready` (23; a failure reports
+     `action_items_failed`).
+   - `index`: the session for search.
+4. `on_finished`: `status = done`, `ended_at` set in `session.json`, `status: done` event.
 
-Steps 3 (mix) to 7 are one sequence, `RecordingSession._finish()`, which crash recovery reuses
-(below): a new stop step goes there, so recovered sessions get it too.
+A failing step reports its `error` event and the job continues with the next one; the queue never
+stops on one meeting's failure.
+
+```mermaid
+graph LR
+  S[Stop] --> C["stop_capture(): sources, capture_ended_at, PortAudio, finalizing"]
+  C --> A["abandon live pipeline (thread): sinks, transcriber.close, WAVs, release GPU lease"]
+  C --> Q["slot free; ProcessingJob queued"]
+  A -- closed --> J
+  Q --> J["job: repair? → transcribe rest → mix → diarize → minutes → action items → index"]
+  J --> D[done]
+```
+
+**Processing queue** (phase 40, `processing/queue.py`): one daemon worker thread runs one job at a
+time, FIFO in stop order, and publishes a `ProcessingState` (queued with position / running /
+paused / done / failed, step-weighted percent that never goes down) on every state or step change
+and at most once per second while the percent moves.
+
+**GPU gate** (phase 40, `processing/gpu_gate.py`, one per engine, built in `bootstrap.py`):
+`gpu_usage(settings, cuda)` says which model families run on the local GPU (speech: faster-whisper
+not on CPU; speakers: pyannote not on CPU; LLM: Ollama); without CUDA nothing is gated. Priority:
+live recording > Ask > Config tests > queue. A live session whose speech or speaker model uses the
+GPU takes `gate.priority(LIVE)` on its worker thread before its first model loads
+(`LiveGpuLease`) and gives it back once its abandoned pipeline closed. Taking a priority cancels
+the queue's running GPU step (it must stop within 5 s; its partial output is discarded) and the job
+shows `paused`; the step is redone from its start, with fresh providers, once no priority is held
+(the transcribe step resumes from what it already wrote). Steps without GPU are never cancelled.
 
 **Crash recovery** (phase 17): while a session is active (from `recording` until `done`) a
 heartbeat rewrites `session.json` every `AUTOSAVE_SECONDS` with `last_heartbeat_at` and
@@ -376,8 +419,8 @@ holds the single-session slot (VRAM rule): `POST /sessions` meanwhile answers
 `409 session_already_active`. Recovering is idempotent: a `done` session is never touched again.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
-time; steps 4 → 5 → 6 enforce that. The live speaker embedder (15, ~30 MB model plus the
-child's CUDA context) is the one exception next to Whisper while recording; it ends at step 2. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
+time; the job's step order (each step closes its model) and the GPU gate enforce that. The live speaker embedder (15, ~30 MB model plus the
+child's CUDA context) is the one exception next to Whisper while recording; it ends at step 1. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
 `SharedTranscriber` keeps Whisper between sessions only when neither minutes nor speaker
 identification follow; it is unloaded
 before session minutes, before `POST /sessions/{id}/minutes` and when the API stops.
@@ -553,7 +596,7 @@ else goes through the storage ports (§5):
 
 `OUTPUT_DIR/index.db` — SQLite FTS5 search index of the file backend (22): table `segments(session_id, segment_id,
 start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`
-(case- and accent-insensitive). It is derived data: stop step 6 replaces the session's rows with
+(case- and accent-insensitive). It is derived data: the processing job's index step replaces the session's rows with
 its best transcript (precedence below), `python -m vozata reindex` rebuilds it from every session,
 and `serve` rebuilds it in the background when it is missing but sessions exist. User text becomes
 a safe FTS query (every word quoted, prefix `*` on the last one), so FTS syntax is never
@@ -569,7 +612,8 @@ interpreted. Snippets mark matches with `U+0002` … `U+0003`.
   "started_at": "2026-10-15T20:23:58-03:00",
   "ended_at": "2026-10-15T21:10:02-03:00",
   "duration_seconds": 2764.2,
-  "last_heartbeat_at": "2026-10-15T21:10:02-03:00",
+  "capture_ended_at": "2026-10-15T21:09:40-03:00",
+  "last_heartbeat_at": "2026-10-15T21:09:40-03:00",
   "language": "pt", "language_source": "selected",
   "app_language": "en",
   "template": "general",
@@ -607,7 +651,10 @@ of `transcript.edited.jsonl` → `transcript.diarized.jsonl` → `transcript.jso
 session short; recovery takes it to `finalizing` and `done`, or leaves it `interrupted` with
 `recovery_error`, the reason its files could not be repaired, removed by the next successful
 recovery). `last_heartbeat_at` (17) is the last autosave, every `AUTOSAVE_SECONDS` while the session
-is active; with it, `duration_seconds` is the length so far.
+is active, until capture ends; with it, `duration_seconds` is the length so far.
+`capture_ended_at` (40) is when capture stopped, written by `stop_capture()` with the recorded
+length: a `finalizing` session that has it only waits for its processing job (absent: the
+session was cut short while recording).
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
 written at stop (after a crash: the length of the repaired WAVs); `ended_at` is later, after
 finalization. `language` / `language_source` are written only when known: at start for a fixed language
@@ -619,7 +666,7 @@ terms (from `POST /sessions`) followed by the glossary file, deduplicated case-i
 at start (an empty list when there are none); it is the minutes glossary at stop and on
 regeneration.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
-the transcript is final (step 2); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
+the transcript is final (stop step 1); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.
 `title` (35) is the meeting title (`session_title.py`: trimmed, one line, at most 200 characters):
 written at start when given, changed by `PATCH /sessions/{id}` (through the live session's

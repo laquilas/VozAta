@@ -56,9 +56,10 @@ def test_whisper_is_released_before_diarizing_and_the_diarizer_before_the_minute
     rig.session.stop()
 
     steps = [entry for entry in rig.log.entries if entry not in ("transcriber.load", "release")]
-    assert steps == [
+    mix = steps.index("mix")
+    assert "transcriber.close" in steps[:mix]  # live (and offline) Whisper closed before the mix
+    assert steps[mix:] == [
         "mix",
-        "transcriber.close",
         "diarizer.load",
         "diarizer.diarize",
         "diarizer.close",
