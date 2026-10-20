@@ -385,7 +385,10 @@ graph LR
 **Processing queue** (phase 40, `processing/queue.py`): one daemon worker thread runs one job at a
 time, FIFO in stop order, and publishes a `ProcessingState` (queued with position / running /
 paused / done / failed, step-weighted percent that never goes down) on every state or step change
-and at most once per second while the percent moves.
+and at most once per second while the percent moves. At `serve` shutdown (app lifespan, before
+the kept Whisper is released) `queue.stop()` cancels the running step attempt (an LLM request
+closed, a diarizer child terminated, transcription stopped between blocks) and runs no further
+step or job; the meeting stays `finalizing` and the next start resumes it.
 
 **GPU gate** (phase 40, `processing/gpu_gate.py`, one per engine, built in `bootstrap.py`):
 `gpu_usage(settings, cuda)` says which model families run on the local GPU (speech: faster-whisper

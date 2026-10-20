@@ -19,6 +19,10 @@ log = logging.getLogger(__name__)
 State = Literal["queued", "running", "paused", "done", "failed"]
 
 
+class _Stopped(Exception):  # noqa: N818 - the queue stops, not an error
+    """The queue is stopping: the running job ends where it is (resumed at the next start)."""
+
+
 @dataclass(frozen=True)
 class ProcessingState:
     session_id: str
@@ -55,6 +59,7 @@ class ProcessingQueue:
         self._states: dict[str, ProcessingState] = {}
         self._current: str | None = None
         self._stopping = False
+        self._token: CancelToken | None = None  # the running step attempt's
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
@@ -63,12 +68,18 @@ class ProcessingQueue:
         self._thread = threading.Thread(target=self._loop, name="processing", daemon=True)
         self._thread.start()
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 5.0) -> None:
+        """Stop the worker (engine shutdown): the running step attempt is cancelled (an LLM call
+        closed, a diarizer child terminated, the transcription stopped between blocks), no further
+        step or job runs, and the meeting stays `finalizing` so the next start resumes it."""
         with self._cond:
             self._stopping = True
+            token = self._token
             self._cond.notify_all()
+        if token is not None:
+            token.cancel()
         if self._thread is not None:
-            self._thread.join(5.0)
+            self._thread.join(timeout)
 
     def enqueue(self, job: ProcessingJob) -> bool:
         """Queue `job`; False when its meeting is already queued or running."""
@@ -121,6 +132,8 @@ class ProcessingQueue:
                 for state in moved:
                     self._emit(state)
                 self._process(job)
+            except _Stopped:
+                log.info("processing of meeting %s stopped with the engine", job.session_id)
             except Exception:
                 log.exception("processing of meeting %s crashed", job.session_id)
                 self._set(job.session_id, "failed")
@@ -162,6 +175,8 @@ class ProcessingQueue:
             return int(round(min(done_weight + fraction * current.weight, total) / total * 100))
 
         for index, step in enumerate(job.steps):
+            if self._stopping:
+                raise _Stopped
             current = step
             kind = shown_kind(job.steps, index)
 
@@ -202,6 +217,10 @@ class ProcessingQueue:
         sid = job.session_id
         while True:
             token = CancelToken()  # a cancelled token stays cancelled: one per attempt
+            with self._cond:
+                if self._stopping:
+                    raise _Stopped
+                self._token = token
             gpu = step.uses_gpu()
             try:
                 if gpu:
@@ -215,6 +234,8 @@ class ProcessingQueue:
             except AbortJob:
                 raise
             except StepCancelled:
+                if self._stopping:
+                    raise _Stopped from None
                 if not (gpu and token.cancelled):
                     log.error(
                         "step %s of meeting %s raised a cancel it was not given",
@@ -226,3 +247,6 @@ class ProcessingQueue:
             except Exception:
                 log.exception("step %s of meeting %s failed", step.kind.value, sid)
                 return
+            finally:
+                with self._cond:
+                    self._token = None  # the attempt is over: a stop has nothing to cancel

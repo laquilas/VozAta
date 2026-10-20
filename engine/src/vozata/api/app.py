@@ -44,6 +44,7 @@ def create_app(container: ApiContainer) -> FastAPI:
         if container.migration is not None:
             container.migration.start()  # phase 33: after `bind`, so its events reach clients
         yield
+        await asyncio.to_thread(container.stop_processing)  # 40: e.g. ends a diarizer child
         container.release_models()
 
     # /docs and /redoc come from the branding router so they show the VozAta favicon

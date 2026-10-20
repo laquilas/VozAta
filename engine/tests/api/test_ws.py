@@ -121,6 +121,20 @@ def test_models_are_released_when_the_api_shuts_down(api: Api) -> None:
     assert released == [True]
 
 
+def test_the_processing_queue_is_stopped_before_the_models_are_released(api: Api) -> None:
+    calls: list[str] = []
+    container = dataclasses.replace(
+        api.app.state.container,
+        stop_processing=lambda: calls.append("stop_processing"),
+        release_models=lambda: calls.append("release_models"),
+    )
+
+    with TestClient(create_app(container)):
+        assert calls == []
+
+    assert calls == ["stop_processing", "release_models"]
+
+
 def test_ws_connect_sends_processing_snapshot_after_status(api: Api) -> None:
     running = hold_in_queue(api.manager, "20261014_090000")
     queued = hold_in_queue(api.manager, SESSION)

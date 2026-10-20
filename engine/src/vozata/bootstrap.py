@@ -879,6 +879,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             index=index,
         ),
         release_models=shared.release if shared is not None else lambda: None,
+        stop_processing=queue.stop,
         exporters={name: build() for name, build in EXPORTERS.items()},
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),

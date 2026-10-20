@@ -63,6 +63,8 @@ class ApiContainer:
     # `minutes_ready`
     regenerate_minutes: Callable[[str, str | None], bool]
     release_models: Callable[[], None] = lambda: None  # at shutdown (kept Whisper, phase 26)
+    # at shutdown, first (phase 40): cancel the queue's running step and stop its worker
+    stop_processing: Callable[[], None] = lambda: None
     exporters: Mapping[str, DocumentExporter] = field(default_factory=dict)  # by format (11)
     search_index: TranscriptSearch | None = None  # `GET /search` (22); None: no hits
     templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)

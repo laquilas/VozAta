@@ -439,3 +439,57 @@ def test_a_step_aborting_the_job_ends_it_failed_without_later_steps_or_on_finish
     assert ran == ["b"]  # the queue goes on with the next meeting
     assert rec.of("a")[-1].state == "failed"
     assert queue.contains("a") is False
+
+
+def test_stop_cancels_the_running_step_and_runs_nothing_more():
+    queue, recorder = _make()
+    started = threading.Event()
+    log: list[str] = []
+    finished: list[str] = []
+
+    def cancellable(token, progress):  # e.g. a CPU diarizer child, terminated on cancel
+        started.set()
+        cancelled = threading.Event()
+        token.on_cancel(cancelled.set)
+        assert cancelled.wait(TIMEOUT)
+        log.append("cancelled")
+        raise StepCancelled
+
+    steps = [_step(StepKind.DIARIZE, run=cancellable), _step(run=lambda t, p: log.append("index"))]
+    queue.enqueue(_job("a", steps, on_finished=lambda: finished.append("a")))
+    queue.enqueue(_job("b", [_step(run=lambda t, p: log.append("b"))]))
+    queue.start()
+    assert started.wait(TIMEOUT)
+
+    queue.stop()
+
+    assert log == ["cancelled"]  # no later step, no later job
+    assert finished == []  # the meeting stays finalizing: resumed at the next start
+    assert not [s for s in recorder.of("a") if s.state in ("done", "failed")]
+
+
+def test_a_step_that_ignores_the_cancel_still_stops_the_job_at_the_next_step():
+    queue, _ = _make()
+    started = threading.Event()
+    log: list[str] = []
+
+    def stubborn(token, progress):
+        started.set()
+        while not token.cancelled:
+            threading.Event().wait(0.01)
+        log.append("returned")  # e.g. a failure reported as an error, not a cancel
+
+    queue.enqueue(_job("a", [_step(run=stubborn), _step(run=lambda t, p: log.append("next"))]))
+    queue.start()
+    assert started.wait(TIMEOUT)
+
+    queue.stop()
+
+    assert log == ["returned"]
+
+
+def test_stop_before_any_job_is_harmless():
+    queue, _ = _make()
+    queue.stop()  # never started
+    queue.start()
+    queue.stop()
