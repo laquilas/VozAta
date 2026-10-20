@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fakes import FakeLanguageModel, FakeSessionObserver
+from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
 from tests.test_session_recover import make_session_folder
 from vozata import bootstrap
 from vozata.audio.mixer import MonoMixer, StereoMixer
@@ -167,8 +167,13 @@ def test_the_api_container_recovers_through_its_session_manager(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keep_loaded: bool
 ) -> None:
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
     settings = _settings(
-        tmp_path, llm_provider="fake", generate_minutes=False, whisper_keep_loaded=keep_loaded
+        tmp_path,
+        llm_provider="fake",
+        stt_provider="fake",
+        generate_minutes=False,
+        whisper_keep_loaded=keep_loaded,
     )
     container = bootstrap.build_api_container(settings, env_file=tmp_path / ".env")
     session_id = make_session_folder(container.store, status="finalizing")

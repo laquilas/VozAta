@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import threading
 import time
+from datetime import datetime
+from typing import Any
 
 import pytest
 
@@ -12,6 +14,7 @@ from tests.api.conftest import (
     SessionFactory,
     make_manager,
 )
+from tests.test_session_recover import make_session_folder
 from vozata.api.session_manager import (
     NoActiveSessionError,
     SessionConflictError,
@@ -19,6 +22,7 @@ from vozata.api.session_manager import (
     StartOptions,
 )
 from vozata.domain import Channel, ConversationLanguage, TranscriptSegment
+from vozata.processing.job import ProcessingJob, Step, StepKind
 from vozata.session import SessionStartError
 from vozata.storage.files.repository import FileSessionRepository
 
@@ -418,3 +422,109 @@ def test_translations_are_published_as_translation_events(
             {"segment_id": "system-000003", "language": "en", "text": "Good morning"},
         )
     ]
+
+
+class _ResumeJobs:
+    """A `job_factory` for meetings the manager did not record: one step, then `done`."""
+
+    def __init__(self, store: FileSessionRepository) -> None:
+        self.store = store
+        self.calls: list[tuple[str, bool, threading.Event | None]] = []
+        self.fail_for: set[str] = set()
+
+    def __call__(
+        self, session_id: str, repair: bool, closed: threading.Event | None
+    ) -> ProcessingJob:
+        self.calls.append((session_id, repair, closed))
+        if session_id in self.fail_for:
+            raise RuntimeError("cannot build the job")
+
+        def finished() -> None:
+            meta = self.store.read_meta(session_id)
+            self.store.write_meta(session_id, {**meta, "status": "done"})
+
+        step = Step(StepKind.INDEX, 1.0, False, lambda token, progress: None)
+        return ProcessingJob(session_id, (step,), on_finished=finished)
+
+
+def _resume_manager(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> tuple[SessionManager, _ResumeJobs]:
+    jobs = _ResumeJobs(store)
+    manager = make_manager(factory, store, broadcaster, jobs=jobs)  # type: ignore[arg-type]
+    return manager, jobs
+
+
+def _folder(store: FileSessionRepository, status: str, **meta: Any) -> str:
+    return make_session_folder(store, status=status, **meta)
+
+
+def test_resume_pending_enqueues_finalizing_sessions_with_capture_ended_oldest_first(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    late = _folder(store, "finalizing", capture_ended_at="2026-10-15T21:00:00-03:00")
+    early = _folder(store, "finalizing", capture_ended_at="2026-10-15T20:10:00-03:00")
+    _folder(store, "finalizing")  # crashed during capture: interrupted, not resumed
+    _folder(store, "done", capture_ended_at="2026-10-15T20:00:00-03:00")
+    _folder(store, "interrupted", capture_ended_at="2026-10-15T20:00:00-03:00")
+    manager, jobs = _resume_manager(factory, store, broadcaster)
+
+    resumed = manager.resume_pending()
+
+    assert resumed == [early, late]
+    assert jobs.calls == [(early, True, None), (late, True, None)]
+    assert manager.wait_until_finished(5)
+    assert [store.read_meta(i)["status"] for i in (early, late)] == ["done", "done"]
+    assert manager.resume_pending() == []  # nothing left unfinished
+
+
+def test_resume_pending_skips_live_queued_and_unreadable_sessions(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    queued = _folder(store, "finalizing", capture_ended_at="2026-10-15T20:10:00-03:00")
+    bad = store.paths(store.create(datetime(2026, 10, 1, 9, 0)))
+    bad.meta.write_text("{not json", encoding="utf-8")
+    manager, jobs = _resume_manager(factory, store, broadcaster)
+    hold = threading.Event()
+    step = Step(StepKind.INDEX, 1.0, False, lambda token, progress: hold.wait(5))
+    manager._queue.enqueue(ProcessingJob(queued, (step,), on_finished=lambda: None))
+
+    assert manager.resume_pending() == []
+
+    hold.set()
+    assert manager.wait_until_finished(5)
+    assert jobs.calls == []
+
+
+def test_resume_pending_requeues_a_meeting_whose_job_factory_raised_at_stop(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    jobs = _ResumeJobs(store)
+    manager = make_manager(factory, store, broadcaster, jobs=jobs)  # type: ignore[arg-type]
+    manager.start(OPTIONS)
+    session_id = factory.sessions[0].id
+    jobs.fail_for.add(session_id)
+    manager.stop()
+    assert manager.wait_until_finished(5)
+    meta = store.read_meta(session_id)
+    assert meta["status"] == "finalizing" and not manager._queue.contains(session_id)
+    store.write_meta(session_id, {**meta, "capture_ended_at": "2026-10-15T20:25:00-03:00"})
+    jobs.fail_for.clear()  # after the restart the job can be built
+
+    assert manager.resume_pending() == [session_id]
+
+    assert manager.wait_until_finished(5)
+    assert store.read_meta(session_id)["status"] == "done"
+    assert jobs.calls[-1] == (session_id, True, None)
+
+
+def test_resume_pending_goes_on_when_one_job_cannot_be_built(
+    factory: SessionFactory, store: FileSessionRepository, broadcaster: RecordingBroadcaster
+) -> None:
+    broken = _folder(store, "finalizing", capture_ended_at="2026-10-15T20:00:00-03:00")
+    fine = _folder(store, "finalizing", capture_ended_at="2026-10-15T20:30:00-03:00")
+    manager, jobs = _resume_manager(factory, store, broadcaster)
+    jobs.fail_for.add(broken)
+
+    assert manager.resume_pending() == [fine]
+    assert manager.wait_until_finished(5)

@@ -396,17 +396,31 @@ shows `paused`; the step is redone from its start, with fresh providers, once no
 heartbeat rewrites `session.json` every `AUTOSAVE_SECONDS` with `last_heartbeat_at` and
 `duration_seconds`, and `JsonlSink` fsyncs every segment. On the next start, a session still
 `recording` / `paused` / `finalizing` that is not live is marked `interrupted`
-(`storage/recovery.find_interrupted`; `serve`: not live in this process, sent to each WebSocket
+(`storage/recovery.find_interrupted`; one with `capture_ended_at` is skipped, it is re-queued instead, see below; `serve`: not live in this process, sent to each WebSocket
 client as `recovery_available`; CLI: also no heartbeat for `2 * AUTOSAVE_SECONDS + 5` s, so a
-session another process records is left alone). Recovering (`POST /sessions/{id}/recover`,
-`python -m vozata recover [<dir> | --all]`):
+session another process records is left alone; the heartbeat stops at capture end, so a CLI
+`record` meeting still in its inline job is not mistaken for a crash by another process's
+`recover --all`).
+
+**Restart** (phase 40): `SessionManager.resume_pending()` runs at `serve` start, before the folder
+import and before `recovery_available` is first computed. Every session `finalizing` with
+`capture_ended_at` that is not live is enqueued, oldest first, with the `repair` step first; that
+includes a meeting whose job could not be created at Stop. `POST /sessions/{id}/recover` enqueues
+the same job for an `interrupted` session and also makes it `finalizing` with a `capture_ended_at`
+once repaired, so a further restart resumes it. The repair step is `SessionRecovery.repair` (files
+and transcript, below); when it fails the step stores `recovery_error`, marks the session
+`interrupted`, sends `error` `recovery_failed` and aborts the job (`AbortJob`): it ends `failed`
+and no later step runs. The transcribe step then continues from each channel's last committed
+segment (`resume_points`), after the repair set a half-written last line aside. Recovering
+(`POST /sessions/{id}/recover`, `python -m vozata recover [<dir> | --all]`; the CLI runs the
+older inline path):
 
 ```mermaid
 graph LR
   I[interrupted] --> R[repair_wav both tracks: RIFF/data sizes from the file size]
   R --> P[pad_wav to the longest track]
   P --> T[unreadable transcript.jsonl lines moved to transcript.jsonl.damaged]
-  T --> F["RecordingSession.recover(): status finalizing, then _finish() = stop steps 3-7"]
+  T --> F["status finalizing; CLI: RecordingSession.recover(), serve: transcribe + stop steps in the queue"]
   F --> D[done]
   R -- header unreadable --> E[stays interrupted + recovery_error]
 ```
@@ -419,9 +433,9 @@ longer one and returns the length. Audio lost in a crash is at most the chunk be
 The recovered session uses the template, glossary and `MIX_MODE` stored in its `session.json`
 and the current settings for the rest (diarization, minutes on/off). Nothing is deleted: a
 missing or empty WAV becomes a valid empty one; the transcript lines already flushed are kept and
-only the last unfinished window (≤ `CHUNK_SECONDS` + carry) is lost. In `serve` a recovery
-holds the single-session slot (VRAM rule): `POST /sessions` meanwhile answers
-`409 session_already_active`. Recovering is idempotent: a `done` session is never touched again.
+only the last unfinished window (≤ `CHUNK_SECONDS` + carry) is lost. In `serve` a recovery is a
+queue job: it never holds the recording slot, and the GPU gate keeps its GPU steps off a live
+recording (VRAM rule). Recovering is idempotent: a `done` session is never touched again.
 
 **VRAM rule (6 GB)**: never keep Whisper, the diarizer and the Ollama model loaded at the same
 time; the job's step order (each step closes its model) and the GPU gate enforce that. The live speaker embedder (15, ~30 MB model plus the

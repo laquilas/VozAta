@@ -844,7 +844,6 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         broadcaster,
         labeler,
         recovery=recovery,
-        localizer=localizer,
         queue=queue,
         job_factory=job_factory,
     )

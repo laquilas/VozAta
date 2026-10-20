@@ -40,6 +40,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         container.broadcaster.bind(asyncio.get_running_loop())
+        container.manager.resume_pending()  # phase 40: unfinished meetings, before the import
         if container.migration is not None:
             container.migration.start()  # phase 33: after `bind`, so its events reach clients
         yield

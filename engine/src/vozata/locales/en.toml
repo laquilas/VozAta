@@ -70,7 +70,6 @@ action_items_unavailable = "Extracting action items is not available in this eng
 session_not_interrupted = "Session \"{id}\" was not interrupted, so there is nothing to recover."
 recovery_failed = "Session \"{id}\" could not be recovered ({reason}). Its files were kept; the reason is saved in session.json."
 title_too_long = "The title can have at most {max} characters."
-session_being_recovered = "Session \"{id}\" is being recovered. Rename it when the recovery finishes."
 
 [languages]
 en = "English"

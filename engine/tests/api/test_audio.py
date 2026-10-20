@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.api.conftest import Api
+from tests.api.conftest import Api, hold_in_queue
 from vozata.audio.mixer import StereoMixer
 from vozata.audio.wav_writer import to_pcm16
 from vozata.domain import Channel
@@ -226,10 +226,11 @@ def test_deleting_the_audio_of_the_session_being_recorded_is_409(api: Api) -> No
     assert response.json()["error"]["code"] == "session_still_active"
 
 
-def test_deleting_the_audio_of_the_session_being_recovered_is_409(api: Api, recorded: str) -> None:
-    api.manager._recovering = recorded
+def test_deleting_the_audio_of_a_queued_session_is_409(api: Api, recorded: str) -> None:
+    release = hold_in_queue(api.manager, recorded)
 
     response = api.client.delete(f"/sessions/{recorded}/audio")
 
-    api.manager._recovering = None
+    release.set()
+    assert api.manager._queue.wait_idle(5)
     assert response.status_code == 409

@@ -121,3 +121,25 @@ def test_the_job_waits_for_the_live_pipeline_and_warns_while_it_does(caplog):
 
     assert not waiting.is_alive()
     assert "still waiting for the live pipeline of meeting s1" in caplog.text
+
+
+def test_run_job_inline_stops_at_an_aborting_step_without_on_finished():
+    from vozata.processing.job import AbortJob, run_job_inline
+
+    ran: list[str] = []
+
+    def abort(token, progress):
+        raise AbortJob("repair failed")
+
+    job = ProcessingJob(
+        "a",
+        (
+            Step(StepKind.REPAIR, 1.0, False, abort),
+            Step(StepKind.INDEX, 1.0, False, lambda t, p: ran.append("index")),
+        ),
+        on_finished=lambda: ran.append("finished"),
+    )
+
+    run_job_inline(job)
+
+    assert ran == []

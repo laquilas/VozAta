@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.gpu_gate import GpuGate
-from vozata.processing.job import ProcessingJob, Step, StepKind, shown_kind
+from vozata.processing.job import AbortJob, ProcessingJob, Step, StepKind, shown_kind
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +173,12 @@ class ProcessingQueue:
                     self._set(job.session_id, "running", percent=value, step=kind)
 
             self._set(job.session_id, "running", step=kind)
-            self._run_step(job, step, kind, progress)
+            try:
+                self._run_step(job, step, kind, progress)
+            except AbortJob:
+                log.error("step %s aborted the job of meeting %s", step.kind.value, job.session_id)
+                self._set(job.session_id, "failed")
+                return
             done_weight += step.weight
             value = max(last["percent"], percent_of(0.0))
             last["percent"], last["at"] = value, self._clock()
@@ -206,6 +211,8 @@ class ProcessingQueue:
                 else:
                     step.run(token, progress)
                 return
+            except AbortJob:
+                raise
             except StepCancelled:
                 if not (step.gpu and token.cancelled):
                     log.error(

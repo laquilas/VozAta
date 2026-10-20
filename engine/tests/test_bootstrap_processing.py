@@ -22,8 +22,9 @@ from vozata.domain import (
     Word,
 )
 from vozata.processing.cancel import CancelToken
-from vozata.processing.gpu_gate import GpuUsage
+from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import StepKind, run_job_inline
+from vozata.processing.queue import ProcessingQueue
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.transcription.shared import SharedTranscriber
 
@@ -286,3 +287,79 @@ def test_without_gpu_speech_the_transcribe_step_loads_its_own_model(
 
     assert loads == []  # not gated: a live session may be using the shared model on the CPU
     assert transcriber.calls
+
+
+def test_repair_success_marks_the_session_finalizing_with_a_capture_end(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, generate_minutes=False)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, status="interrupted", recovery_error="old")  # crashed
+    [repair] = [step for step in _job(settings, store, session_id, repair=True).steps][:1]
+
+    repair.run(CancelToken(), lambda fraction: None)
+
+    meta = store.read_meta(session_id)
+    assert meta["status"] == "finalizing"  # a restart now resumes it
+    assert meta["capture_ended_at"] is not None
+    assert "recovery_error" not in meta
+
+
+def test_repair_failure_marks_interrupted_and_fails_the_job(
+    tmp_path: Path, transcriber: FakeTranscriber
+) -> None:
+    settings = _settings(tmp_path, generate_minutes=False)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(
+        store, status="finalizing", capture_ended_at="2026-10-15T20:30:00-03:00"
+    )
+    store.paths(session_id).wav(Channel.SYSTEM).write_bytes(b"garbage")
+    observer = FakeSessionObserver()
+    states: list[str] = []
+    queue = ProcessingQueue(GpuGate(), lambda state: states.append(state.state))
+    queue.enqueue(_job(settings, store, session_id, observer, repair=True))
+    queue.start()
+
+    assert queue.wait_idle(5)
+    queue.stop()
+
+    assert states[-1] == "failed"
+    assert "done" not in states
+    assert transcriber.calls == []  # no later step ran
+    meta = store.read_meta(session_id)
+    assert meta["status"] == "interrupted"
+    assert "RIFF" in meta["recovery_error"]
+    assert observer.of("status") == []  # never reported done
+    [(code, message)] = observer.of("error")
+    assert code == "recovery_failed"
+    assert message.startswith(f'Session "{session_id}" could not be recovered (')
+
+
+def test_resumed_job_transcribes_from_the_last_committed_segment(
+    tmp_path: Path, transcriber: FakeTranscriber
+) -> None:
+    settings = _settings(tmp_path, generate_minutes=False)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(  # committed: mic to 0.6 s, system to 1.1 s; 3 s recorded
+        store,
+        status="finalizing",
+        capture_ended_at="2026-10-15T20:30:00-03:00",
+        mic_seconds=3.0,
+        system_seconds=3.0,
+        duration_seconds=3.0,
+    )
+    write_wav(store.paths(session_id).wav(Channel.SYSTEM), 3.0, level=0)  # no echo to drop
+    transcript = store.paths(session_id).transcript_jsonl
+    with transcript.open("a", encoding="utf-8", newline=chr(10)) as file:
+        file.write('{"segment_id": "mic-0000')  # the crash cut the last line
+
+    run_job_inline(_job(settings, store, session_id, repair=True))
+
+    assert transcript.with_name("transcript.jsonl.damaged").exists()  # repaired first
+    segments = store.load_raw_transcript(session_id)
+    assert [s.segment_id for s in segments[:2]] == ["mic-000001", "system-000002"]
+    added = segments[2:]
+    assert added  # the rest was transcribed
+    first = {Channel.MIC: 0.6, Channel.SYSTEM: 1.1}
+    assert all(s.start >= first[s.channel] - 1e-6 for s in added)  # nothing before the commit
+    assert {s.segment_id for s in added}.isdisjoint({"mic-000001", "system-000002"})
+    meta = store.read_meta(session_id)
+    assert meta["status"] == "done"

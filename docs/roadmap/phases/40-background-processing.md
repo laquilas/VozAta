@@ -195,9 +195,9 @@ close-with-pending message; locale parity.
 
 - **Branch:** `feature/40-background-processing`
 - **Status:** in progress
-- **Updated:** 2026-10-20 19:00
-- **Next step:** Task 7 of `plans/40-background-processing.md` (Restart and recovery through the
-  queue).
+- **Updated:** 2026-10-20 20:00
+- **Next step:** Task 8 of `plans/40-background-processing.md` (API, events and other model
+  users).
 
 ### Steps
 
@@ -208,7 +208,7 @@ close-with-pending message; locale parity.
 - [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
 - [x] Processing job and queue (04afa22; fix round 1: this commit)
 - [x] Stop frees the recorder (c7756b8, dab272b; fix round 1: ddaf3fb; fix round 2: this commit)
-- [ ] Restart and recovery through the queue
+- [x] Restart and recovery through the queue (this commit)
 - [ ] API, events and other model users
 - [ ] UI client and recorder
 - [ ] Meetings and meeting page indicators
@@ -216,6 +216,14 @@ close-with-pending message; locale parity.
 - [ ] Full suites, manual check
 
 ### Decisions and notes
+
+- Restart and recovery (Task 7): `SessionManager.resume_pending()` runs in the app lifespan before
+  the migration job; `find_interrupted` skips active sessions with `capture_ended_at`; `/recover`
+  enqueues a `repair=True` job and no longer holds a slot (`_recovering`, `SessionBeingRecoveredError`
+  and the `session_being_recovered` locale key are gone; delete and audio removal answer 409 while
+  the meeting is queued). A repair that fails raises `AbortJob`: the job ends `failed`, the session
+  stays `interrupted` with `recovery_error`. `transcribe_weight` tolerates a half-written last
+  transcript line (the repair step runs after the job is built).
 
 - Designed with the user on 2026-10-20: a new live recording interrupts the queue's running GPU step
   (redone later); after Stop the rest of the transcript comes from the stored audio; processing

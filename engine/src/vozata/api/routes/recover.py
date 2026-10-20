@@ -15,11 +15,11 @@ Container = Annotated[ApiContainer, Depends(container)]
 
 @router.post("/sessions/{session_id}/recover", status_code=status.HTTP_202_ACCEPTED)
 def recover_session(session_id: str, c: Container) -> None:
-    """Repair an `interrupted` session and run its stop steps in the background.
+    """Queue an `interrupted` session's recovery job (repair, then the stop steps).
 
-    Progress: `status` events (`finalizing` → `done`) with the session id; a failed repair sends
-    `error` `recovery_failed` and the session stays `interrupted`. `409 session_not_interrupted`,
-    `409 session_already_active` (a recording or another recovery is running),
+    It never blocks a recording. Progress: `processing` events and `status` (`finalizing` →
+    `done`) with the session id; a failed repair sends `error` `recovery_failed`, the job ends
+    `failed` and the session stays `interrupted`. `409 session_not_interrupted`,
     `404 session_not_found`.
     """
     c.manager.recover(session_id)

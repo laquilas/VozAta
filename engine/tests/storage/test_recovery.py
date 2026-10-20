@@ -84,6 +84,40 @@ def test_an_active_session_nobody_runs_is_marked_interrupted(tmp_path: Path, sta
     assert meta["vocabulary"] == ["Avalonia"]  # nothing else changes
 
 
+def test_finalizing_without_capture_ended_is_still_interrupted(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    session_id = make_session_folder(store, status="finalizing")  # crashed during capture
+
+    assert find_interrupted(store) == [session_id]
+    assert _status(store, session_id) == "interrupted"
+
+
+@pytest.mark.parametrize("stale_after", [0.0, 25.0])
+def test_finalizing_with_capture_ended_is_requeued_not_interrupted(
+    tmp_path: Path, stale_after: float
+) -> None:
+    store = _store(tmp_path)
+    # the heartbeat stopped at capture end, so another process's `recover --all` sees it stale
+    stopped = make_session_folder(
+        store,
+        status="finalizing",
+        capture_ended_at=(ENDED - timedelta(minutes=5)).isoformat(),
+        last_heartbeat_at=(ENDED - timedelta(minutes=10)).isoformat(),
+    )
+
+    assert find_interrupted(store, stale_after=stale_after) == []
+    assert _status(store, stopped) == "finalizing"
+
+
+def test_a_failed_repair_with_capture_ended_is_still_listed(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    session_id = make_session_folder(
+        store, status="interrupted", capture_ended_at=ENDED.isoformat()
+    )
+
+    assert find_interrupted(store) == [session_id]
+
+
 def test_done_sessions_are_left_alone_and_interrupted_ones_are_listed(tmp_path: Path) -> None:
     store = _store(tmp_path)
     done = make_session_folder(store, status="done")
@@ -268,3 +302,25 @@ def test_recover_runs_the_real_stop_steps_on_a_crashed_folder(tmp_path: Path) ->
         "system-000002",
     ]
     assert recovery.recover(session_id, rig.observer) is False  # idempotent
+
+
+def test_repair_is_public_and_returns_the_longest_length(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    session_id = make_session_folder(store, mic_seconds=0.5, system_seconds=1.0)
+    _break_header(store.paths(session_id).wav(Channel.SYSTEM))
+    recovery, spy, _ = _recovery(store)
+
+    assert recovery.repair(session_id) == 1.0
+    assert _frames(store.paths(session_id).wav(Channel.MIC)) == RATE
+    assert spy.calls == []  # only the files: the stop steps are the processing job's
+
+
+def test_fail_stores_the_reason_and_marks_the_session_interrupted(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    session_id = make_session_folder(store, status="finalizing")
+    recovery, _, _ = _recovery(store)
+
+    recovery.fail(session_id, "bad header")
+
+    meta = store.read_meta(session_id)
+    assert (meta["status"], meta["recovery_error"]) == ("interrupted", "bad header")

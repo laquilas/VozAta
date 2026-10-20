@@ -54,7 +54,10 @@ def find_interrupted(
     `live_ids` are the sessions this process is running (recording or being recovered). Any other
     session still `recording` / `paused` / `finalizing` is marked `interrupted` first. With
     `stale_after` > 0 it must also have had no heartbeat (else no start) for that many seconds, so
-    a session another process is recording right now is left alone.
+    a session another process is recording right now is left alone. A session with
+    `capture_ended_at` is never marked: capture ended cleanly and its processing job is queued (or,
+    for the CLI `record`, running inline in another process, whose heartbeat has stopped); the
+    server re-queues it at start (`SessionManager.resume_pending`).
     """
     found: list[str] = []
     for session_id in store.list_sessions():
@@ -67,6 +70,8 @@ def find_interrupted(
         if session_id in live_ids:
             continue
         if status in _ACTIVE:
+            if meta.get("capture_ended_at"):
+                continue
             if stale_after > 0 and not _stale(meta, store.now(), stale_after):
                 continue
             store.write_meta(session_id, {**meta, "status": SessionStatus.INTERRUPTED.value})
@@ -114,7 +119,7 @@ class SessionRecovery:
         if not self.is_interrupted(session_id):
             return False
         try:
-            duration = self._repair(session_id)
+            duration = self.repair(session_id)
         except StoreRepairError as error:
             _log.warning("Recovering %s failed: %s", session_id, error)
             self._set_error(session_id, str(error))
@@ -123,10 +128,20 @@ class SessionRecovery:
         self._build_session(session_id, observer).recover(session_id, duration)
         return True
 
-    def _repair(self, session_id: str) -> float:
-        """Run every repair in order; the recorded length is the longest one reported."""
+    def repair(self, session_id: str) -> float:
+        """Repair the session's files (not its stop steps) and return its recorded length.
+
+        Runs every repair in order and stops at the first failure (`StoreRepairError`); the
+        recorded length is the longest one reported."""
         lengths = [repair.repair(session_id) for repair in self._repairs]  # stops at a failure
         return max((length for length in lengths if length is not None), default=0.0)
+
+    def fail(self, session_id: str, reason: str) -> None:
+        """Keep the session `interrupted` with `reason` as `recovery_error` (repair failed)."""
+        meta = self._store.read_meta(session_id)
+        meta["status"] = SessionStatus.INTERRUPTED.value
+        meta["recovery_error"] = reason
+        self._store.write_meta(session_id, meta)
 
     def _set_error(self, session_id: str, reason: str | None) -> None:
         """Save (or clear, with None) `recovery_error` in `session.json`."""

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.api.conftest import Api
+from tests.api.conftest import Api, hold_in_queue
 
 SESSION = "20261015_202358"
 
@@ -145,16 +145,15 @@ def test_patch_rejects_other_fields_and_a_missing_title(api: Api, body: dict[str
     assert response.json()["error"]["code"] == "invalid_request"
 
 
-def test_patch_of_a_session_being_recovered_is_409(api: Api) -> None:
+def test_patch_of_a_queued_session_is_allowed(api: Api) -> None:
     _start(api)
     api.client.post("/sessions/current/stop")
     assert api.manager.wait_until_finished(5)
-    api.manager._recovering = SESSION
-    try:
-        response = _rename(api, "Retro")
-    finally:
-        api.manager._recovering = None
+    release = hold_in_queue(api.manager, SESSION)  # e.g. a recovery job
 
-    assert response.status_code == 409
-    assert response.json()["error"]["code"] == "session_being_recovered"
-    assert "title" not in api.store.read_meta(SESSION)
+    response = _rename(api, "Retro")
+
+    release.set()
+    assert api.manager.wait_until_finished(5)
+    assert response.status_code == 200
+    assert api.store.read_meta(SESSION)["title"] == "Retro"

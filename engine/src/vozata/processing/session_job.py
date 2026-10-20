@@ -57,10 +57,15 @@ class JobParts:
 def transcribe_weight(store: SessionRepository, session_id: str, duration: float) -> float:
     """`2 + 60 × remaining / duration`: remaining is the audio the raw transcript does not cover
     yet, averaged over the channels. Estimated from the transcript alone, since at Stop the
-    WAVs may not be final yet (the abandoned pipeline finalizes them)."""
+    WAVs may not be final yet (the abandoned pipeline finalizes them). A transcript that cannot be
+    read yet (a crash cut its last line) counts as empty: only the estimate is pessimistic."""
     if duration <= 0:
         return 2.0
-    points = resume_points(store.load_raw_transcript(session_id), CHANNELS)
+    try:
+        segments = store.load_raw_transcript(session_id)
+    except ValueError:  # a half-written last line after a crash: the repair step sets it aside
+        segments = []
+    points = resume_points(segments, CHANNELS)
     left = sum(max(0.0, duration - point.start) for point in points.values()) / len(points)
     return 2.0 + 60.0 * min(left, duration) / duration
 

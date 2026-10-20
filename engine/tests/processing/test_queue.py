@@ -2,7 +2,7 @@ import threading
 
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.gpu_gate import GpuGate, GpuUser
-from vozata.processing.job import ProcessingJob, Step, StepKind
+from vozata.processing.job import AbortJob, ProcessingJob, Step, StepKind
 from vozata.processing.queue import ProcessingQueue, ProcessingState
 
 TIMEOUT = 3.0
@@ -416,3 +416,26 @@ def test_enqueue_reports_whether_the_meeting_was_accepted():
     queue, _ = _make()
     assert queue.enqueue(_job("a", [_step()])) is True
     assert queue.enqueue(_job("a", [_step()])) is False
+
+
+def test_a_step_aborting_the_job_ends_it_failed_without_later_steps_or_on_finished():
+    queue, rec = _make()
+    ran: list[str] = []
+
+    def abort(token, progress):
+        raise AbortJob("repair failed")
+
+    queue.enqueue(
+        _job(
+            "a",
+            [_step(run=abort), _step(run=lambda t, p: ran.append("later"))],
+            on_finished=lambda: ran.append("finished"),
+        )
+    )
+    queue.enqueue(_job("b", [_step(run=lambda t, p: ran.append("b"))]))
+    queue.start()
+    assert queue.wait_idle(TIMEOUT)
+    queue.stop()
+    assert ran == ["b"]  # the queue goes on with the next meeting
+    assert rec.of("a")[-1].state == "failed"
+    assert queue.contains("a") is False

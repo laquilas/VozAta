@@ -189,6 +189,15 @@ def processing_queue(broadcaster: EventBroadcaster | None = None) -> ProcessingQ
     return queue
 
 
+def hold_in_queue(manager: SessionManager, session_id: str) -> threading.Event:
+    """Put a job for `session_id` on the manager's queue that runs until the event is set."""
+    release = threading.Event()
+    step = Step(StepKind.INDEX, 1.0, False, lambda token, progress: release.wait(5))
+    job = ProcessingJob(session_id, (step,), on_finished=lambda: None)
+    assert manager._queue.enqueue(job)
+    return release
+
+
 def make_manager(
     factory: SessionFactory,
     store: FileSessionRepository,
@@ -267,7 +276,12 @@ class Api:
     """The real app over fakes, plus handles on the fakes for assertions."""
 
     def __init__(
-        self, tmp_path: Path, settings: Any = None, recovery: Any = None, migration: Any = None
+        self,
+        tmp_path: Path,
+        settings: Any = None,
+        recovery: Any = None,
+        migration: Any = None,
+        jobs: Any = None,
     ) -> None:
         from fastapi.testclient import TestClient
 
@@ -282,9 +296,7 @@ class Api:
         self.factory = SessionFactory(self.store)
         self.broadcaster = RecordingBroadcaster()
         self.labeler = SpeakerLabeler(FakeLocalizer())
-        from vozata.i18n import TomlLocalizer as _Localizer
-
-        self.jobs = FakeJobs(self.factory)
+        self.jobs = jobs(self) if jobs is not None else FakeJobs(self.factory)
         self.manager = make_manager(
             self.factory,
             self.store,
@@ -293,7 +305,6 @@ class Api:
             labeler=self.labeler,
             status_interval=60,
             recovery=recovery(self.store) if recovery is not None else None,  # phase 17
-            localizer=_Localizer(self.settings.app_language),
         )
         self.devices = FakeDevices()
         self.gpu = GpuInfo(True, "RTX 3050", 6144)

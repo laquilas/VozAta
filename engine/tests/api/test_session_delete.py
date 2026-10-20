@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.api.conftest import Api
+from tests.api.conftest import Api, hold_in_queue
 from tests.fakes import FakeLocalizer
 from tests.storage.repository_contract import RAW
 from vozata.domain import ActionItem, StorageInfo, TranscriptSegment
@@ -135,13 +135,14 @@ def test_delete_of_another_session_while_recording_works(api: Api) -> None:
     assert api.client.delete(f"/sessions/{older}").status_code == 204
 
 
-def test_delete_while_recovering_is_409(api: Api) -> None:
+def test_delete_while_queued_or_recovering_is_409(api: Api) -> None:
     session_id = _full(api)
-    api.manager._recovering = session_id  # a recovery is running for it (phase 17)
+    release = hold_in_queue(api.manager, session_id)  # a recovery job (phase 17/40)
 
     response = api.client.delete(f"/sessions/{session_id}")
 
-    api.manager._recovering = None
+    release.set()
+    assert api.manager._queue.wait_idle(5)
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "session_still_active"
 

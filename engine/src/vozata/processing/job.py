@@ -27,6 +27,11 @@ class StepKind(StrEnum):
 HIDDEN_KINDS = frozenset({StepKind.FINALIZE, StepKind.MIX})
 
 
+class AbortJob(Exception):
+    """Raised by a step that makes every later step pointless (a crashed meeting that cannot be
+    repaired): the job ends `failed` without them and without `on_finished`."""
+
+
 @dataclass(frozen=True)
 class Step:
     kind: StepKind
@@ -69,6 +74,9 @@ def run_job_inline(job: ProcessingJob) -> None:
     for step in job.steps:
         try:
             step.run(token, lambda fraction: None)
+        except AbortJob:
+            log.error("meeting %s: step %s aborted its job", job.session_id, step.kind.value)
+            return
         except Exception:
             log.exception("step %s of meeting %s failed", step.kind.value, job.session_id)
     job.on_finished()
