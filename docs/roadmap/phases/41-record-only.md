@@ -115,8 +115,8 @@ translation disabled, locale parity.
 - **Branch:** `feature/41-record-only`
 - **Status:** in progress
 - **Updated:** 2026-10-20 21:00
-- **Next step:** Finish the final review fixes, then the full suites and the manual check
-  (Task 5 of `plans/41-record-only.md`).
+- **Next step:** The manual check (Task 5 of `plans/41-record-only.md`); the full suites pass
+  after the final review fixes.
 
 ### Steps
 
@@ -125,9 +125,9 @@ translation disabled, locale parity.
 - [x] Audio-only capture
 - [x] `python -m vozata transcribe <id>`
 - [x] UI checkbox, preference and notices
-- [ ] Final review fixes: no leaked test threads, setting comment, CLI
+- [x] Final review fixes: no leaked test threads, setting comment, CLI
       refuses interrupted, pre-empted audio-only
-      transcription resumes, recorder notice follows the recording's mode (this commit)
+      transcription resumes, recorder notice follows the recording's mode
 - [ ] Full suites, manual check
 
 ### Decisions and notes
