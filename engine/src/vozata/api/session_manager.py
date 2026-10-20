@@ -1,4 +1,5 @@
-"""The API's single recording session: lifecycle, events and background finalization."""
+"""The API's single recording session: lifecycle, events, and the hand-over of a stopped
+meeting to the processing queue (phase 40)."""
 
 from __future__ import annotations
 
@@ -7,6 +8,7 @@ import threading
 import time
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Protocol
 
 from vozata.api.payloads import segment_payload, session_summary
@@ -19,16 +21,21 @@ from vozata.domain import (
     TranslationTarget,
 )
 from vozata.labels import SpeakerLabeler
-from vozata.ports import Localizer, SessionObserver, SessionRepository
+from vozata.ports import SessionObserver, SessionRepository
+from vozata.processing.job import ProcessingJob
+from vozata.processing.queue import ProcessingQueue
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
+STOP_WAIT = 10.0  # how long `start()` waits for a stop in progress to free the slot
+_PENDING = frozenset({"queued", "running", "paused"})  # processing states clients are sent
 
 _log = logging.getLogger(__name__)
 
 
 class SessionConflictError(RuntimeError):
-    """A session is already recording, paused or finalizing (`409 session_already_active`)."""
+    """A session is already recording, paused or still stopping its capture
+    (`409 session_already_active`)."""
 
 
 class NoActiveSessionError(RuntimeError):
@@ -39,22 +46,17 @@ class SessionNotInterruptedError(RuntimeError):
     """`POST /sessions/{id}/recover` on a session that is not `interrupted` (phase 17)."""
 
 
-class SessionBeingRecoveredError(RuntimeError):
-    """The session is being recovered right now (`409 session_being_recovered`, phase 35)."""
-
-
 class SessionStillActiveError(RuntimeError):
-    """Delete of the session being recorded, finalized or recovered (`409`, phase 36)."""
+    """Delete of the session being recorded, finalized, queued or processed (`409`, phase 36)."""
 
 
 class Recovery(Protocol):
-    """Crash recovery (`storage.recovery.SessionRecovery`, phase 17)."""
+    """Crash recovery (`storage.recovery.SessionRecovery`, phase 17); the repair and the stop
+    steps themselves run as a processing job (phase 40)."""
 
     def find_interrupted(self, live_ids: Collection[str] = ()) -> list[str]: ...
 
     def is_interrupted(self, session_id: str) -> bool: ...
-
-    def recover(self, session_id: str, observer: SessionObserver) -> bool: ...
 
 
 class Session(Protocol):
@@ -72,7 +74,7 @@ class Session(Protocol):
 
     def resume(self) -> None: ...
 
-    def stop(self) -> None: ...
+    def stop_capture(self) -> threading.Event: ...
 
     def set_title(self, title: str | None) -> None: ...
 
@@ -91,6 +93,8 @@ class StartOptions:
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]
+# (session id, repair first, the abandoned live pipeline's `closed` event) -> the meeting's job
+JobFactory = Callable[[str, bool, threading.Event | None], ProcessingJob]
 
 
 class _EventObserver:
@@ -160,11 +164,22 @@ class _EventObserver:
         self._publish(kind, self._session_id(), data)
 
 
-class SessionManager:
-    """Owns at most one active session (recording, paused or finalizing).
+def session_observer(
+    broadcaster: EventBroadcaster,
+    labeler: SpeakerLabeler,
+    session_id: str,
+    clock: Callable[[], float] = time.monotonic,
+) -> SessionObserver:
+    """The events of a meeting that is no longer recording (its processing job, phase 40)."""
+    return _EventObserver(broadcaster, labeler, lambda: session_id, clock)
 
-    `stop()` returns at once: finalization (transcript drain, WAVs, minutes) runs on a background
-    thread and reports through `status` events.
+
+class SessionManager:
+    """Owns at most one recording (or paused) session.
+
+    `stop()` returns at once: `stop_capture()` runs on a short-lived thread, then the slot is
+    released and the meeting's job (`job_factory`) is put on the processing `queue`, which finishes
+    it in the background and reports through `processing` and `status` events (phase 40).
     """
 
     def __init__(
@@ -176,7 +191,10 @@ class SessionManager:
         clock: Callable[[], float] = time.monotonic,
         status_interval: float = STATUS_INTERVAL,
         recovery: Recovery | None = None,
-        localizer: Localizer | None = None,
+        *,
+        queue: ProcessingQueue,
+        job_factory: JobFactory,
+        stop_wait: float = STOP_WAIT,
     ) -> None:
         self._factory = factory
         self._store = store
@@ -185,11 +203,14 @@ class SessionManager:
         self._clock = clock
         self._status_interval = status_interval
         self._recovery = recovery
-        self._localizer = localizer
+        self._queue = queue
+        self._job_factory = job_factory
+        self._stop_wait = stop_wait
         self._lock = threading.Lock()
         self._session: Session | None = None
-        self._recovering: str | None = None  # id of the session being recovered (phase 17)
+        self._stopping: Session | None = None  # stop accepted, `stop_capture()` running
         self._finished = threading.Event()
+        self._finished.set()  # nothing is being stopped; `start()` clears it
 
     @property
     def current(self) -> Session | None:
@@ -197,13 +218,20 @@ class SessionManager:
 
     @property
     def busy(self) -> bool:
-        """A session records, is paused or finalizing, or one is being recovered (phase 33:
+        """A session records or is paused, or meetings wait in the processing queue (phase 33:
         the folder import waits meanwhile)."""
-        return self._session is not None or self._recovering is not None
+        return self._session is not None or bool(self._queue.pending())
 
     def start(self, options: StartOptions) -> dict[str, Any]:
+        """Start a recording. While a stop is still releasing its capture (sources, PortAudio),
+        wait up to `stop_wait` seconds (outside the lock) for the slot, so a Start right after the
+        stop was accepted succeeds; `SessionConflictError` when the slot is still taken."""
         with self._lock:
-            if self._session is not None or self._recovering is not None:
+            stopping = self._stopping is not None
+        if stopping:
+            self._finished.wait(self._stop_wait)
+        with self._lock:
+            if self._session is not None:
                 raise SessionConflictError
             holder: list[Session] = []
             observer = _EventObserver(
@@ -228,11 +256,13 @@ class SessionManager:
         return self.summary(session)
 
     def stop(self) -> dict[str, Any]:
-        """Begin finalization on a background thread; the summary reports `finalizing`."""
-        session = self._active()
+        """Stop capture on a short-lived thread, then free the slot and queue the meeting; the
+        summary reports `finalizing`. A second stop meanwhile raises `NoActiveSessionError`."""
+        with self._lock:
+            session = self._active()
+            self._stopping = session
         summary = self.summary(session)
-        # Not a daemon: the process waits for the WAVs, transcript and minutes to be written.
-        threading.Thread(target=self._finalize, args=(session,), name="finalize").start()
+        threading.Thread(target=self._stop_capture, args=(session,), name="stop-capture").start()
         return {**summary, "status": SessionStatus.FINALIZING.value}
 
     def rename(self, session_id: str, title: str | None) -> dict[str, Any]:
@@ -240,72 +270,98 @@ class SessionManager:
 
         The session being recorded or finalized renames itself, because it rewrites its metadata
         until it is done; any other session is rewritten through the repository. A session being
-        recovered raises `SessionBeingRecoveredError`; an unknown one `SessionNotFoundError`.
+        queued or processed may be renamed too; an unknown one raises `SessionNotFoundError`.
         """
         with self._lock:
             session = self._session
             if session is not None and _started_id([session]) == session_id:
                 session.set_title(title)
                 return self.summary(session)
-            if self._recovering == session_id:
-                raise SessionBeingRecoveredError(session_id)
             meta = self._store.read_meta(session_id)
             self._store.write_meta(session_id, {**meta, "title": title})
-        return session_summary(self._store, session_id)
+        return session_summary(self._store, session_id, processing=self.processing(session_id))
 
     def delete(self, session_id: str) -> None:
         """Delete a finished session through the repository (phase 36). The session being
-        recorded, finalized or recovered raises `SessionStillActiveError`; held under the lock,
-        so it cannot start being recovered meanwhile."""
+        recorded, finalized, queued or processed raises `SessionStillActiveError`; held under the
+        lock, so it cannot be queued meanwhile."""
         with self._lock:
             self._check_not_live(session_id)
             self._store.delete(session_id)
 
     def check_finished(self, session_id: str) -> None:
-        """`SessionStillActiveError` for the session being recorded, finalized or recovered."""
+        """`SessionStillActiveError` for a session being recorded, finalized, queued or run."""
         with self._lock:
             self._check_not_live(session_id)
 
     def _check_not_live(self, session_id: str) -> None:
         session = self._session
         live = session is not None and _started_id([session]) == session_id
-        if live or self._recovering == session_id:
+        if live or self._queue.contains(session_id):
             raise SessionStillActiveError(session_id)
 
     def discard_audio(self, session_id: str, discard: Callable[[str], None]) -> None:
         """Remove a finished session's audio with `discard` (phase 39), under the same rule and
-        lock as `delete`: the session being recorded, finalized or recovered raises
+        lock as `delete`: the session being recorded, finalized, queued or processed raises
         `SessionStillActiveError`."""
         with self._lock:
             self._check_not_live(session_id)
             discard(session_id)
 
     def recover(self, session_id: str) -> None:
-        """Finish an `interrupted` session on a background thread (phase 17).
+        """Queue an `interrupted` session's job, which starts with the repair step (phase 17/40).
 
-        It takes the place of the active session until done (VRAM rule: never next to a
-        recording), so `start()` meanwhile raises `SessionConflictError`. Progress arrives as
-        `status` events with the session's id; a failed repair as an `error` event.
+        It does not take the recording slot: the queue processes it in the background, reporting
+        through `processing` and `status` events; a failed repair ends the job `failed` with an
+        `error` event and the session stays `interrupted`. A session already queued is left as is.
         """
         recovery = self._recovery
         with self._lock:
-            if self._session is not None or self._recovering is not None:
-                raise SessionConflictError
             if recovery is None or not recovery.is_interrupted(session_id):
                 raise SessionNotInterruptedError(session_id)
-            self._recovering = session_id
-            self._finished.clear()
-        observer = _EventObserver(self._broadcaster, self._labeler, lambda: session_id, self._clock)
-        threading.Thread(
-            target=self._recover, args=(recovery, session_id, observer), name="recover"
-        ).start()
+            if not self._queue.contains(session_id):
+                self._queue.enqueue(self._job_factory(session_id, True, None))
+
+    def resume_pending(self) -> list[str]:
+        """Queue the meetings a restart (or a crash after Stop) left unfinished; return their ids.
+
+        Every session `finalizing` with `capture_ended_at` that is not live is enqueued, oldest
+        first, with the repair step first (phase 40). That also covers a meeting whose job could
+        not be created at Stop. Call it at start, before `interrupted_sessions()`.
+        """
+        with self._lock:
+            pending: list[tuple[float, str]] = []
+            live = {_started_id([self._session] if self._session else [])}
+            for session_id in self._store.list_sessions():
+                try:
+                    meta = self._store.read_meta(session_id)
+                except (OSError, ValueError):
+                    _log.warning("Skipping %s: unreadable session.json", session_id)
+                    continue
+                ended = meta.get("capture_ended_at")
+                if (
+                    meta.get("status") == SessionStatus.FINALIZING.value
+                    and ended
+                    and session_id not in live
+                    and not self._queue.contains(session_id)
+                ):
+                    pending.append((_moment(str(ended)), session_id))
+            queued: list[str] = []
+            for _, session_id in sorted(pending):
+                try:
+                    if self._queue.enqueue(self._job_factory(session_id, True, None)):
+                        queued.append(session_id)
+                except Exception:
+                    _log.exception("Resuming session %s failed", session_id)
+            return queued
 
     def interrupted_sessions(self) -> list[str]:
         """Sessions a crash cut short (marked `interrupted` now if needed); `[]` on failure."""
         if self._recovery is None:
             return []
         with self._lock:  # a session being started is not interrupted
-            live = {self._recovering, _started_id([self._session] if self._session else [])}
+            live = {_started_id([self._session] if self._session else [])}
+            live |= {state.session_id for state in self._queue.pending()}  # finalizing, queued
             try:
                 return self._recovery.find_interrupted({i for i in live if i is not None})
             except Exception:
@@ -313,12 +369,28 @@ class SessionManager:
                 return []
 
     def wait_until_finished(self, timeout: float | None = None) -> bool:
-        """Block until the last stopped or recovered session finished (tests, shutdown)."""
-        return self._finished.wait(timeout)
+        """Block until the last stopped meeting was queued and the processing queue is idle
+        (tests)."""
+        return self._finished.wait(timeout) and self._queue.wait_idle(timeout)
 
     def summary(self, session: Session) -> dict[str, Any]:
         live = session.duration_seconds if session is self._session else None
-        return session_summary(self._store, session.id, live)
+        return session_summary(self._store, session.id, live, self.processing(session.id))
+
+    def processing(self, session_id: str) -> dict[str, Any] | None:
+        """The `processing` field of a meeting (phase 40): its queue state, or None when it is
+        not queued or processed (a job that just ended `done`/`failed` counts as gone)."""
+        state = self._queue.state(session_id)
+        return state.to_payload() if state is not None and state.state in _PENDING else None
+
+    def processing_messages(self) -> list[dict[str, Any]]:
+        """One `processing` envelope per meeting still queued or processed, running first (the
+        snapshot a client gets when it connects, phase 40)."""
+        return [
+            {"type": "processing", "session_id": state.session_id, "data": state.to_payload()}
+            for state in self._queue.pending()
+            if state.state in _PENDING
+        ]
 
     def status_message(self) -> dict[str, Any]:
         """The `status` envelope sent to a client when it connects."""
@@ -330,34 +402,28 @@ class SessionManager:
 
     def _active(self) -> Session:
         session = self._session
-        if session is None or session.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+        recording = session is not None and session.status in (
+            SessionStatus.RECORDING,
+            SessionStatus.PAUSED,
+        )
+        if session is None or not recording or session is self._stopping:
             raise NoActiveSessionError
         return session
 
-    def _finalize(self, session: Session) -> None:
+    def _stop_capture(self, session: Session) -> None:
+        closed: threading.Event | None = None
         try:
-            session.stop()
+            closed = session.stop_capture()
         except Exception:
-            _log.exception("Finalizing session %s failed", session.id)
-        finally:
+            _log.exception("Stopping the capture of session %s failed", session.id)
+        try:
             with self._lock:
                 self._session = None
-            self._finished.set()
-
-    def _recover(self, recovery: Recovery, session_id: str, observer: SessionObserver) -> None:
-        try:
-            recovery.recover(session_id, observer)
-        except Exception as error:
-            _log.exception("Recovering session %s failed", session_id)
-            message = (
-                self._localizer.t("errors.api.recovery_failed", id=session_id, reason=error)
-                if self._localizer is not None
-                else str(error)
-            )
-            observer.on_error("recovery_failed", message)
+                self._stopping = None
+                self._queue.enqueue(self._job_factory(session.id, False, closed))
+        except Exception:
+            _log.exception("Queueing session %s for processing failed", session.id)
         finally:
-            with self._lock:
-                self._recovering = None
             self._finished.set()
 
     def _heartbeat(self, session: Session) -> None:
@@ -366,6 +432,14 @@ class SessionManager:
                 return
             data = {"status": session.status.value, "duration_seconds": session.duration_seconds}
             self._broadcaster.publish("status", session.id, data)
+
+
+def _moment(stamp: str) -> float:
+    """`capture_ended_at` as a timestamp (offsets and DST compared properly); 0 if unreadable."""
+    try:
+        return datetime.fromisoformat(stamp).timestamp()
+    except ValueError:
+        return 0.0
 
 
 def _started_id(holder: list[Session]) -> str | None:

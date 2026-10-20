@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.api.conftest import Api
+from tests.api.conftest import Api, hold_in_queue
 from vozata.audio.mixer import StereoMixer
 from vozata.audio.wav_writer import to_pcm16
 from vozata.domain import Channel
@@ -226,10 +226,30 @@ def test_deleting_the_audio_of_the_session_being_recorded_is_409(api: Api) -> No
     assert response.json()["error"]["code"] == "session_still_active"
 
 
-def test_deleting_the_audio_of_the_session_being_recovered_is_409(api: Api, recorded: str) -> None:
-    api.manager._recovering = recorded
+def test_deleting_the_audio_of_a_queued_session_is_409(api: Api, recorded: str) -> None:
+    release = hold_in_queue(api.manager, recorded)
 
     response = api.client.delete(f"/sessions/{recorded}/audio")
 
-    api.manager._recovering = None
+    release.set()
+    assert api.manager._queue.wait_idle(5)
     assert response.status_code == 409
+
+
+def test_delete_and_delete_audio_refused_while_queued_then_allowed(
+    api: Api, recorded: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # `recorded` swaps only the container to the SQLite store; the manager deletes through its own
+    monkeypatch.setattr(api.manager, "_store", api.app.state.container.store)
+    release = hold_in_queue(api.manager, recorded)
+
+    audio_refused = api.client.delete(f"/sessions/{recorded}/audio")
+    delete_refused = api.client.delete(f"/sessions/{recorded}")
+
+    release.set()
+    assert api.manager._queue.wait_idle(5)
+    assert (audio_refused.status_code, delete_refused.status_code) == (409, 409)
+    assert audio_refused.json()["error"]["code"] == "session_still_active"
+    assert delete_refused.json()["error"]["code"] == "session_still_active"
+    assert api.client.delete(f"/sessions/{recorded}/audio").status_code == 204
+    assert api.client.delete(f"/sessions/{recorded}").status_code == 204

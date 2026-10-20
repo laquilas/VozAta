@@ -109,7 +109,7 @@ public sealed class MainViewModelTests
         var request = _client.StartRequests.Single();
         Assert.Equal((1, 7), (request.MicDeviceId, request.SystemDeviceId));
         Assert.False(viewModel.Recorder.Devices.IsEnabled);
-        await SendAsync(viewModel, new StatusEvent("s", "done", 3));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 3));
         Assert.True(viewModel.Recorder.Devices.IsEnabled);
     }
 
@@ -129,7 +129,7 @@ public sealed class MainViewModelTests
         _timer.Tick();
         Assert.True(viewModel.Recorder.MicMeter.Level < 0.75);
 
-        await SendAsync(viewModel, new StatusEvent("s", "done", 3));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 3));
         Assert.Equal(0, _timer.Running);
         Assert.Equal(0, viewModel.Recorder.MicMeter.Level);
     }
@@ -139,12 +139,12 @@ public sealed class MainViewModelTests
     {
         var viewModel = await ReadyAsync();
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
-        await SendAsync(viewModel, new StatusEvent("s", "paused", 1));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "paused", 1));
 
         _clock.Advance(TimeSpan.FromSeconds(31));
         _timer.Tick();
         Assert.False(viewModel.Recorder.SystemMeter.NoSignal);
-        await SendAsync(viewModel, new StatusEvent("s", "recording", 32));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "recording", 32));
         _clock.Advance(TimeSpan.FromSeconds(30));
         _timer.Tick();
 
@@ -187,9 +187,9 @@ public sealed class MainViewModelTests
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await viewModel.HistoryRefresh;
         Assert.Equal(2, _client.ListRequests.Count);
-        await SendAsync(viewModel, new StatusEvent("s", "paused", 3));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "paused", 3));
         Assert.Equal(2, _client.ListRequests.Count);  // still the same session
-        await SendAsync(viewModel, new StatusEvent("s", "done", 5));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 5));
         await viewModel.HistoryRefresh;
 
         Assert.Equal(3, _client.ListRequests.Count);
@@ -421,12 +421,12 @@ public sealed class MainViewModelTests
     {
         var viewModel = await ReadyAsync();
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
-        await SendAsync(viewModel, new StatusEvent("s", "recording", 10));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "recording", 10));
 
-        await SendAsync(viewModel, new StatusEvent("s", "paused", 12));
-        await SendAsync(viewModel, new StatusEvent("s", "paused", 40));  // heartbeat while paused
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "paused", 12));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "paused", 40));  // heartbeat while paused
         Assert.Equal("00:00:12", viewModel.Recorder.Elapsed);
-        await SendAsync(viewModel, new StatusEvent("s", "recording", 41));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "recording", 41));
 
         Assert.Equal("00:00:41", viewModel.Recorder.Elapsed);
     }
@@ -542,15 +542,16 @@ public sealed class MainViewModelTests
         var viewModel = await ReadyAsync();
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
 
-        await SendAsync(viewModel, new StatusEvent("s", "recording", 3725.4));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "recording", 3725.4));
         Assert.Equal("01:02:05", viewModel.Recorder.Elapsed);
-        await SendAsync(viewModel, new StatusEvent("s", "paused", 3726));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "paused", 3726));
         Assert.Equal(RecordingState.Paused, viewModel.Recorder.State);
         Assert.Equal(_localization["StatePaused"], viewModel.Recorder.StatusText);
         await viewModel.Recorder.StopCommand.ExecuteAsync(null);
-        Assert.Equal(RecordingState.Finalizing, viewModel.Recorder.State);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
         Assert.False(viewModel.Recorder.StopCommand.CanExecute(null));
-        await SendAsync(viewModel, new StatusEvent("s", "done", 3730));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "finalizing", 3729));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 3730));
 
         Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
         Assert.True(viewModel.Recorder.StartCommand.CanExecute(null));
@@ -561,7 +562,7 @@ public sealed class MainViewModelTests
     {
         var viewModel = await ReadyAsync();
 
-        await SendAsync(viewModel, new StatusEvent("s", "recording", 10));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "recording", 10));
 
         Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
         await SendAsync(viewModel, new StatusEvent(null, "idle", null));
@@ -641,7 +642,7 @@ public sealed class MainViewModelTests
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         Assert.Empty(viewModel.Recorder.Partials);
         await SendAsync(viewModel, new PartialEvent("s", "mic", "mic", "Eu", 1, "Hel"));
-        await SendAsync(viewModel, new StatusEvent("s", "done", 5));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 5));
 
         Assert.Empty(viewModel.Recorder.Partials);
         Assert.True(viewModel.Recorder.IsTranscriptEmpty);
@@ -670,7 +671,7 @@ public sealed class MainViewModelTests
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new ModelLoadingEvent("s", true));
 
-        await SendAsync(viewModel, new StatusEvent("s", "done", 5));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 5));
 
         Assert.False(viewModel.Recorder.IsModelLoading);
         Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
@@ -731,9 +732,124 @@ public sealed class MainViewModelTests
 
         Assert.True(await viewModel.ConfirmCloseAsync());
 
-        Assert.Equal([_localization["ConfirmCloseTitle"]], _dialogs.Asked);
-        Assert.Equal("stop", _client.Calls[^1]);
-        Assert.Equal(RecordingState.Finalizing, viewModel.Recorder.State);
+        Assert.Equal([_localization["ConfirmCloseTitle"], _localization["AppTitle"]], _dialogs.Asked);
+        Assert.Contains("stop", _client.Calls);
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State);
+    }
+
+    [Fact]
+    public async Task Close_with_pending_processing_warns_once_and_closes()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        await SendAsync(viewModel, new ProcessingEvent("b", new ProcessingInfo("queued", 0, null, 1)));
+
+        Assert.Equal(2, viewModel.PendingProcessing);
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal([_localization["AppTitle"]], _dialogs.Asked);
+        Assert.Equal([_localization.Format("Close_PendingProcessing", 2)], _dialogs.Messages);
+        Assert.Equal([(_localization["TrayQuit"], _localization["Close_Cancel"])], _dialogs.Buttons);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_pending_processing_warning_keeps_the_app_open()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        _dialogs.Answer = false;
+
+        Assert.False(await viewModel.ConfirmCloseAsync());
+    }
+
+    [Fact]
+    public async Task Finished_processing_does_not_warn_on_close()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("done", 100, null)));
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal(0, viewModel.PendingProcessing);
+        Assert.Empty(_dialogs.Asked);
+    }
+
+    [Fact]
+    public async Task Recording_and_pending_processing_ask_both_questions()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("queued", 0, null, 1)));
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal([_localization["ConfirmCloseTitle"], _localization["AppTitle"]], _dialogs.Asked);
+    }
+
+    [Fact]
+    public async Task Recording_with_an_empty_queue_counts_the_recorded_meeting_in_the_warning()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal(_localization.Format("Close_PendingProcessing", 1), _dialogs.Messages[^1]);
+        Assert.Contains("stop", _client.Calls);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_pending_warning_while_recording_stops_nothing()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        _dialogs.Answers = new Queue<bool>([true, false]);
+
+        Assert.False(await viewModel.ConfirmCloseAsync());
+
+        Assert.DoesNotContain("stop", _client.Calls);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
+    }
+
+    [Fact]
+    public async Task A_duplicate_processing_event_does_not_change_the_pending_count()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 10, "transcribe")));
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 20, "transcribe")));
+
+        Assert.Equal(1, viewModel.PendingProcessing);
+    }
+
+    [Fact]
+    public async Task Losing_the_engine_connection_clears_the_processing_indicator()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        Assert.True(viewModel.Processing.IsVisible);
+
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+
+        Assert.False(viewModel.Processing.IsVisible);
+        Assert.Equal(0, viewModel.PendingProcessing);
+    }
+
+    [Fact]
+    public async Task Losing_the_engine_clears_the_meeting_rows_processing_badges()
+    {
+        var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9));
+        _client.Sessions.Add(new SessionSummary("20261015_090000", "finalizing", started, null, 5, "en", false)
+        {
+            Processing = new ProcessingInfo("running", 40, "transcribe"),
+        });
+        var viewModel = await ReadyAsync();
+        var row = viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single();
+        Assert.True(row.IsProcessing);
+
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+
+        Assert.False(row.IsProcessing); // the snapshot on reconnect brings it back
     }
 
     [Fact]
@@ -770,20 +886,31 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task Shutdown_waits_for_finalization_before_stopping_the_engine()
+    public async Task Shutdown_does_not_wait_for_a_stopped_meeting_to_finish_processing()
     {
         var viewModel = await ReadyAsync();
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
         await viewModel.Recorder.StopCommand.ExecuteAsync(null);
 
-        var shutdown = viewModel.ShutdownAsync(TimeSpan.FromSeconds(5));
-        await Task.Delay(50);
-        Assert.False(shutdown.IsCompleted);
-        Assert.Equal(0, _process.Stops);
-        await SendAsync(viewModel, new StatusEvent("s", "done", 10));
-        await shutdown;
+        await viewModel.ShutdownAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(1, _process.Stops);
+    }
+
+    [Fact]
+    public async Task A_background_meeting_finishing_does_not_change_the_shared_recording_state()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        await viewModel.Recorder.StopCommand.ExecuteAsync(null);
+        _client.NextSessionId = "20261016_091000";
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "finalizing", 30));
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "done", 30));
+
+        Assert.Equal(RecordingState.Recording, viewModel.Session.State);
+        Assert.Equal("20261016_091000", viewModel.Session.SessionId);
     }
 
     [Fact]
@@ -791,8 +918,6 @@ public sealed class MainViewModelTests
     {
         var viewModel = await ReadyAsync();
         await viewModel.Recorder.StartCommand.ExecuteAsync(null);
-        await viewModel.Recorder.StopCommand.ExecuteAsync(null);
-
         await viewModel.ShutdownAsync(TimeSpan.FromMilliseconds(50));
 
         Assert.Equal(1, _process.Stops);
@@ -847,8 +972,8 @@ public sealed class MainViewModelTests
 
         await viewModel.Recovery.RecoverCommand.ExecuteAsync(null);
         await SendAsync(viewModel, new StatusEvent(id, "finalizing", 90));
-        Assert.Equal(RecordingState.Finalizing, viewModel.Recorder.State); // Start waits for the recovery
-        Assert.False(viewModel.Recorder.StartCommand.CanExecute(null));
+        Assert.Equal(RecordingState.Idle, viewModel.Recorder.State); // recovery runs in the queue and never blocks Start
+        Assert.True(viewModel.Recorder.StartCommand.CanExecute(null));
 
         await SendAsync(viewModel, new StatusEvent(id, "done", 90));
         await viewModel.RecoveryRefresh;
@@ -901,5 +1026,55 @@ public sealed class MainViewModelTests
         await SendAsync(viewModel, new MigrationProgressEvent(null, 0, 1, "x", false));
         await SendAsync(viewModel, new ConnectionChangedEvent(false));
         Assert.False(viewModel.Migration.IsVisible);
+    }
+
+    [Fact]
+    public async Task Processing_events_update_the_meetings_row_and_a_background_done_refreshes_the_list()
+    {
+        var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9));
+        const string id = "20261015_100000";
+        _client.Sessions.Add(new SessionSummary(id, "finalizing", started, null, 60, "pt", false));
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null); // a new meeting is recorded meanwhile
+        var row = viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single();
+
+        await SendAsync(viewModel, new ProcessingEvent(id, new ProcessingInfo("running", 42, "transcribe")));
+        Assert.Equal("Processing 42 %", row.ProcessingText);
+
+        var requests = _client.DayRequests.Count;
+        _client.Sessions[0] = _client.Sessions[0] with { Status = "done", SpeakerCount = 2 };
+        await SendAsync(viewModel, new StatusEvent(id, "done", 60));
+        await viewModel.HistoryRefresh;
+
+        Assert.True(_client.DayRequests.Count > requests);
+        Assert.Equal(2, viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single().SpeakerCount);
+        Assert.Equal(RecordingState.Recording, viewModel.Recorder.State);
+
+        await SendAsync(viewModel, new ProcessingEvent(id, new ProcessingInfo("done", 100, null)));
+        await viewModel.HistoryRefresh;
+        Assert.True(viewModel.Meetings.Weeks.Single().Days.Single().Rows.Single().ShowsDoneCheck);
+    }
+
+    [Fact]
+    public async Task An_open_meeting_page_keeps_its_instance_and_shows_the_done_check_when_processing_ends()
+    {
+        const string id = "20261015_100000";
+        var queued = new ProcessingInfo("running", 90, "index");
+        _client.Sessions.Add(new SessionSummary(id, "finalizing", null, null, 60, "pt", false, Processing: queued));
+        _client.Details[id] = new SessionDetail(id, "finalizing", null, null, 60, "pt", false, [], @"C:\rec", Processing: queued);
+        _client.Transcripts[id] = new Transcript("raw", [Line("mic", "Me", 1, "Hi.")]);
+        var viewModel = await ReadyAsync();
+        viewModel.History.Selected = viewModel.History.Rows[0];
+        await viewModel.History.DetailLoading;
+        var page = viewModel.History.Detail;
+        Assert.True(page?.IsProcessing);
+
+        _client.Sessions[0] = _client.Sessions[0] with { Status = "done", Processing = null };
+        _client.MinutesText[id] = "## Done minutes";
+        await SendAsync(viewModel, new ProcessingEvent(id, new ProcessingInfo("done", 100, null)));
+        await viewModel.HistoryRefresh;
+
+        Assert.Same(page, viewModel.History.Detail);
+        Assert.Equal((false, true, true), (page!.IsProcessing, page.ShowsDoneCheck, page.HasMinutes));
     }
 }

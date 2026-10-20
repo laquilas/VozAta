@@ -171,3 +171,19 @@ def test_parse_reply_strips_the_brackets_the_model_copies_from_the_line_ids() ->
     reply = '{"items": [{"description": "Fix", "source_segment_ids": ' + ids + "}]}"
 
     assert parse_reply(reply) == [("Fix", None, None, ["system-000004", "mic-1"])]
+
+
+def test_extractor_cancel_forwards_to_cancellable_model() -> None:
+    llm = FakeLanguageModel()
+
+    ActionItemExtractor(llm, FakeLocalizer(), 1000).cancel()
+
+    assert llm.cancels == 1
+
+
+def test_extractor_cancel_without_cancellable_model_is_noop() -> None:
+    class Plain:
+        def release(self) -> None:
+            pass
+
+    ActionItemExtractor(Plain(), FakeLocalizer(), 1000).cancel()  # type: ignore[arg-type]

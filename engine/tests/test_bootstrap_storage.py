@@ -8,12 +8,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.fakes import FakeLocalizer, FakeSessionObserver
-from tests.test_session_recover import SEGMENTS, interrupted_meta
+from tests.fakes import FakeLocalizer, FakeSessionObserver, FakeTranscriber
+from tests.session_folders import SEGMENTS, interrupted_meta
 from vozata import bootstrap
+from vozata.bootstrap_processing import build_resume_job
 from vozata.config import Settings
 from vozata.domain import Channel, StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
+from vozata.processing.job import run_job_inline
 from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.bundle_import import FileBundleImporter
@@ -158,10 +160,14 @@ def test_a_session_folder_on_the_command_line_opens_the_storage_of_its_parent(
         assert folder.minutes_file == folder.path / "minutes.md"
 
 
-def test_sqlite_recovery_pads_the_audio_and_finishes_the_session(tmp_path: Path) -> None:
+def test_sqlite_recovery_pads_the_audio_and_finishes_the_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A crash with the SQLite backend: the row says `recording`; the committed chunks are the
-    audio (phase 32) and the committed segments the transcript (phase 31)."""
-    settings = _settings(tmp_path, generate_minutes=False)
+    audio (phase 32) and the committed segments the transcript (phase 31). The processing job
+    (repair, transcribe the rest, stop steps) finishes it (phase 40)."""
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    settings = _settings(tmp_path, generate_minutes=False, stt_provider="fake")
     recovery = bootstrap.build_recovery(settings)
     store = recovery.store
     assert isinstance(store, SqliteSessionRepository)
@@ -178,7 +184,7 @@ def test_sqlite_recovery_pads_the_audio_and_finishes_the_session(tmp_path: Path)
         writer.finalize(0)
 
     assert recovery.find_interrupted() == [session_id]
-    assert recovery.recover(session_id, FakeSessionObserver()) is True
+    run_job_inline(build_resume_job(settings, None, session_id, FakeSessionObserver()))
 
     meta = store.read_meta(session_id)
     assert (meta["status"], meta["duration_seconds"]) == ("done", 1.0)

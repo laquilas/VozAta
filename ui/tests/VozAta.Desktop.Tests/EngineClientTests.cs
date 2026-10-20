@@ -155,6 +155,29 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task Summary_deserializes_processing_or_null()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"items": [
+              {"id": "a", "status": "done", "started_at": null, "ended_at": null, "duration_seconds": 1,
+               "language": "en", "has_minutes": false,
+               "processing": {"state": "running", "percent": 55, "step": "minutes"}},
+              {"id": "b", "status": "done", "started_at": null, "ended_at": null, "duration_seconds": 1,
+               "language": "en", "has_minutes": false, "processing": null},
+              {"id": "c", "status": "done", "started_at": null, "ended_at": null, "duration_seconds": 1,
+               "language": "en", "has_minutes": false,
+               "processing": {"state": "queued", "percent": 0, "step": null, "position": 1}}],
+             "total": 3}
+            """);
+
+        var page = await new EngineClient(handler.Client()).ListSessionsAsync();
+
+        Assert.Equal(new ProcessingInfo("running", 55, "minutes", null), page.Items[0].Processing);
+        Assert.Null(page.Items[1].Processing);
+        Assert.Equal(new ProcessingInfo("queued", 0, null, 1), page.Items[2].Processing);
+    }
+
+    [Fact]
     public async Task A_summary_without_the_phase_36_fields_has_defaults()
     {
         var handler = FakeHttpHandler.Json(Summary, HttpStatusCode.Created);

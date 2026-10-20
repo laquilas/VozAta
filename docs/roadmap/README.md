@@ -89,10 +89,14 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 37 | [Session detail page and audio player](phases/37-detail-and-player.md) | 36, 32 | done |
 | 38 | [Config page redesign](phases/38-config-page.md) | 35 | done |
 | 39 | [Audio delete, export and import](phases/39-audio-export-delete.md) | 32, 37 | done |
+| 40 | [Background processing queue](phases/40-background-processing.md) | 17, 26, 37 | done |
+| 41 | [Live transcription toggle](phases/41-record-only.md) | 40 | todo |
+| 42 | [Model download progress bar](phases/42-download-progress.md) | 26, 35 | todo |
+| 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | todo |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·
-32 / 36 / 38 · 33 / 37.
+32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43.
 
 **Milestones**
 - **M1 — CLI MVP** (00–05): record, live transcript in the terminal, three WAVs, minutes.
@@ -105,6 +109,9 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 - **M6 — Storage and UI refresh** (30–39): sessions, transcripts and audio in one SQLite database
   (`vozata.db`) with automatic migration of old folders; a Toggl Track–style desktop UI (sidebar,
   timer bar, meetings by day, in-app player) and a redesigned Config page (`.env` stays the source).
+- **M7 — Back-to-back meetings** (40–43): Stop frees the recorder and meetings are processed in a
+  background queue with progress; optional audio-only recording; model download progress;
+  minutes on an Ollama server elsewhere on the local network.
 
 ## Dependency graph
 
@@ -167,6 +174,13 @@ graph LR
   P35 --> P38[38 Config page]
   P32 --> P39[39 Audio export/import]
   P37 --> P39
+  P17 --> P40[40 Background queue]
+  P26 --> P40
+  P37 --> P40
+  P40 --> P41[41 Live transcription toggle]
+  P26 --> P42[42 Download progress]
+  P35 --> P42
+  P40 --> P43[43 Remote Ollama]
 ```
 
 ## Backlog (not scheduled)

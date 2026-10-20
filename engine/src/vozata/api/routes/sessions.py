@@ -163,7 +163,8 @@ def regenerate_minutes(
     current = c.manager.current
     if current is not None and current.status is not None and current.id == session_id:
         raise ApiError(409, "session_still_recording", id=session_id)
-    c.regenerate_minutes(session_id, template)
+    if not c.regenerate_minutes(session_id, template):  # phase 40: a queue job
+        raise ApiError(409, "session_still_active", id=session_id)
 
 
 def _title(raw: str | None) -> str | None:
@@ -190,4 +191,4 @@ def _summary(c: ApiContainer, session_id: str) -> dict[str, Any]:
     current = c.manager.current
     if current is not None and current.status is not None and current.id == session_id:
         return c.manager.summary(current)
-    return session_summary(c.store, session_id)
+    return session_summary(c.store, session_id, processing=c.manager.processing(session_id))

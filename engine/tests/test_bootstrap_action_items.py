@@ -46,7 +46,7 @@ def test_the_api_container_extracts_and_exports_with_current_settings(
     assert isinstance(container.extract_action_items, ActionItemsJob)
     container.manager._factory(FakeSessionObserver(), StartOptions())
     [shared] = shared_seen
-    shared.lease(keep=True)
+    shared.lease(keep=True).close()  # an idle, kept Whisper
     extractor = container.extract_action_items._build()  # idle: Whisper is freed first
     assert isinstance(extractor, ActionItemExtractor)
     assert extractor._llm is llm

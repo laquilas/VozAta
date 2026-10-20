@@ -8,46 +8,45 @@ from pathlib import Path
 
 import pytest
 
-from tests.api.conftest import Api, RecordingBroadcaster
-from tests.fakes import FakeLocalizer
-from tests.test_session_recover import make_session_folder
-from vozata.api.session_manager import SessionManager
-from vozata.domain import Channel, SessionStatus
-from vozata.labels import SpeakerLabeler
-from vozata.ports import SessionObserver
+from tests.api.conftest import Api, RecordingBroadcaster, make_manager
+from tests.session_folders import make_session_folder
+from vozata.api.session_manager import session_observer
+from vozata.domain import SessionStatus
+from vozata.processing.job import ProcessingJob, Step, StepKind
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repository import FileSessionRepository
 from vozata.storage.recovery import SessionRecovery
 
 
-class _FinishingSession:
-    """Stands in for `RecordingSession.recover`: status events, an optional gate, `done`."""
-
-    def __init__(
-        self, store: FileSessionRepository, observer: SessionObserver, gate: threading.Event
-    ):
-        self.store = store
-        self.observer = observer
-        self.gate = gate
-
-    def recover(self, session_id: str, duration_seconds: float) -> None:
-        self.observer.on_status(SessionStatus.FINALIZING, duration_seconds)
-        assert self.gate.wait(5)
-        self.store.write_meta(session_id, {**self.store.read_meta(session_id), "status": "done"})
-        self.observer.on_status(SessionStatus.DONE, duration_seconds)
-
-
 class _Rig:
+    """The real app over fakes; a recovery job ends by marking the session `done`."""
+
     def __init__(self, tmp_path: Path) -> None:
         self.gate = threading.Event()
         self.gate.set()
-        self.api = Api(tmp_path, recovery=self._recovery)
+        self.repaired: list[tuple[str, bool]] = []
+        self.api = Api(tmp_path, recovery=self._recovery, jobs=self._jobs)
 
     def _recovery(self, store: FileSessionRepository) -> SessionRecovery:
-        def build(session_id: str, observer: SessionObserver) -> _FinishingSession:
-            return _FinishingSession(store, observer, self.gate)
+        return SessionRecovery(store, [FileAudioStore(store.store, 16000), store])
 
-        return SessionRecovery(store, [FileAudioStore(store.store, 16000), store], build)
+    def _jobs(self, api: Api):  # type: ignore[no-untyped-def]
+        def make(session_id: str, repair: bool, closed: threading.Event | None) -> ProcessingJob:
+            self.repaired.append((session_id, repair))
+            observer = session_observer(api.broadcaster, api.labeler, session_id)
+
+            def step(token: object, progress: object) -> None:
+                observer.on_status(SessionStatus.FINALIZING, 1.0)
+                assert self.gate.wait(5)
+
+            def finished() -> None:
+                meta = api.store.read_meta(session_id)
+                api.store.write_meta(session_id, {**meta, "status": "done"})
+                observer.on_status(SessionStatus.DONE, 1.0)
+
+            return ProcessingJob(session_id, (Step(StepKind.INDEX, 1.0, False, step),), finished)
+
+        return make
 
 
 @pytest.fixture
@@ -56,10 +55,7 @@ def rig(tmp_path: Path) -> Iterator[_Rig]:
     with rig.api.client:
         yield rig
     rig.gate.set()
-    for _ in range(500):  # a recovery a test left running ends once the gate opens
-        if rig.api.manager._recovering is None:
-            break
-        threading.Event().wait(0.01)
+    rig.api.manager.wait_until_finished(5)  # a recovery a test left running ends once released
 
 
 def test_connect_offers_the_sessions_a_crash_cut_short(rig: _Rig) -> None:
@@ -105,10 +101,12 @@ def test_recover_returns_202_and_reports_progress_through_status_events(rig: _Ri
 
     assert response.status_code == 202
     assert rig.api.manager.wait_until_finished(5)
+    assert rig.repaired == [(session_id, True)]  # the job starts with the repair step
     assert rig.api.broadcaster.of("status") == [
         (session_id, {"status": "finalizing", "duration_seconds": 1.0}),
         (session_id, {"status": "done", "duration_seconds": 1.0}),
     ]
+    assert [d["state"] for sid, d in rig.api.broadcaster.of("processing")][-1] == "done"
     assert rig.api.store.read_meta(session_id)["status"] == "done"
     second = rig.api.client.post(f"/sessions/{session_id}/recover")
     assert (second.status_code, second.json()["error"]["code"]) == (409, "session_not_interrupted")
@@ -128,51 +126,36 @@ def test_recover_refuses_unknown_and_not_interrupted_sessions(rig: _Rig) -> None
     assert (unknown.status_code, unknown.json()["error"]["code"]) == (404, "session_not_found")
 
 
-def test_a_recovery_holds_the_single_session_slot(rig: _Rig) -> None:
+def test_recover_enqueues_instead_of_taking_the_slot(rig: _Rig) -> None:
     first = make_session_folder(rig.api.store, status="interrupted")
     second = make_session_folder(rig.api.store, status="interrupted")
     rig.gate.clear()
 
     assert rig.api.client.post(f"/sessions/{first}/recover").status_code == 202
-    start = rig.api.client.post("/sessions", json={})
+    start = rig.api.client.post("/sessions", json={})  # not refused: recovery is a queue job
     again = rig.api.client.post(f"/sessions/{second}/recover")
     offered = rig.api.manager.interrupted_sessions()
+    rig.api.client.post("/sessions/current/stop")
     rig.gate.set()
 
-    assert (start.status_code, start.json()["error"]["code"]) == (409, "session_already_active")
-    assert (again.status_code, again.json()["error"]["code"]) == (409, "session_already_active")
-    assert offered == [second]  # the one being recovered is live
+    assert start.status_code == 201
+    assert again.status_code == 202
+    assert offered == []  # both are in the queue: not offered again
     assert rig.api.manager.wait_until_finished(5)
+    assert [sid for sid, repair in rig.repaired if repair] == [first, second]
 
 
-def test_no_recovery_while_recording(rig: _Rig) -> None:
+def test_recovering_a_session_already_queued_does_not_queue_it_twice(rig: _Rig) -> None:
     session_id = make_session_folder(rig.api.store, status="interrupted")
-    rig.api.client.post("/sessions", json={})
+    rig.gate.clear()
 
-    response = rig.api.client.post(f"/sessions/{session_id}/recover")
+    first = rig.api.client.post(f"/sessions/{session_id}/recover")
+    again = rig.api.client.post(f"/sessions/{session_id}/recover")
+    rig.gate.set()
 
-    assert (response.status_code, response.json()["error"]["code"]) == (
-        409,
-        "session_already_active",
-    )
-    rig.api.client.post("/sessions/current/stop")
-
-
-def test_a_failed_repair_sends_a_localized_error_and_frees_the_slot(rig: _Rig) -> None:
-    store = rig.api.store
-    session_id = make_session_folder(store, status="interrupted")
-    store.paths(session_id).wav(Channel.SYSTEM).write_bytes(b"garbage")
-
-    assert rig.api.client.post(f"/sessions/{session_id}/recover").status_code == 202
+    assert (first.status_code, again.status_code) == (202, 202)
     assert rig.api.manager.wait_until_finished(5)
-
-    [(event_session, data)] = rig.api.broadcaster.of("error")
-    assert event_session == session_id
-    assert data["code"] == "recovery_failed"
-    assert data["message"].startswith(f'Session "{session_id}" could not be recovered (')
-    assert store.read_meta(session_id)["status"] == "interrupted"
-    assert rig.api.client.post("/sessions", json={}).status_code == 201
-    rig.api.client.post("/sessions/current/stop")
+    assert rig.repaired == [(session_id, True)]
 
 
 def test_without_recovery_nothing_is_offered_or_recovered(api: Api) -> None:
@@ -193,25 +176,48 @@ class _BrokenRecovery:
     def is_interrupted(self, session_id: str) -> bool:
         return True
 
-    def recover(self, session_id: str, observer: SessionObserver) -> bool:
-        raise RuntimeError("boom")
 
-
-def test_manager_failures_are_logged_and_reported_without_a_localizer(
+def test_a_failing_search_for_interrupted_sessions_is_logged_and_offers_none(
     store: FileSessionRepository, broadcaster: RecordingBroadcaster
 ) -> None:
-    manager = SessionManager(
-        lambda observer, options: None,  # type: ignore[arg-type, return-value]
+    manager = make_manager(
+        lambda observer, options: None,  # type: ignore[arg-type]
         store,
         broadcaster,
-        SpeakerLabeler(FakeLocalizer()),
         recovery=_BrokenRecovery(),
     )
 
     assert manager.interrupted_sessions() == []
-    manager.recover("20261015_202358")
-    assert manager.wait_until_finished(5)
 
-    assert broadcaster.of("error") == [
-        ("20261015_202358", {"code": "recovery_failed", "message": "boom"})
-    ]
+
+def test_startup_resumes_unfinished_meetings_before_the_migration_starts_and_offers(
+    tmp_path: Path,
+) -> None:
+    order: list[str] = []
+
+    class _Migration:
+        def start(self) -> None:
+            order.append("migration")
+
+        def is_running(self) -> bool:
+            return False
+
+    rig = _Rig(tmp_path)
+    api = Api(tmp_path, recovery=rig._recovery, jobs=rig._jobs, migration=lambda a: _Migration())
+    stopped = make_session_folder(
+        api.store, status="finalizing", capture_ended_at="2026-10-15T20:30:00-03:00"
+    )
+    crashed = make_session_folder(api.store, status="recording")
+    original = api.manager.resume_pending
+    api.manager.resume_pending = lambda: order.append("resume") or original()  # type: ignore[method-assign]
+
+    with api.client:
+        assert api.manager.wait_until_finished(5)
+        with api.client.websocket_connect("/ws") as ws:
+            ws.receive_json()  # status
+            offer = ws.receive_json()
+
+    assert order == ["resume", "migration"]
+    assert rig.repaired == [(stopped, True)]
+    assert api.store.read_meta(stopped)["status"] == "done"
+    assert offer["data"] == {"session_ids": [crashed]}  # only the crash during capture

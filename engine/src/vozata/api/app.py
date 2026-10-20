@@ -40,9 +40,11 @@ def create_app(container: ApiContainer) -> FastAPI:
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         container.broadcaster.bind(asyncio.get_running_loop())
+        container.manager.resume_pending()  # phase 40: unfinished meetings, before the import
         if container.migration is not None:
             container.migration.start()  # phase 33: after `bind`, so its events reach clients
         yield
+        await asyncio.to_thread(container.stop_processing)  # 40: e.g. ends a diarizer child
         container.release_models()
 
     # /docs and /redoc come from the branding router so they show the VozAta favicon
@@ -79,6 +81,8 @@ def create_app(container: ApiContainer) -> FastAPI:
         client = container.broadcaster.subscribe()
         try:
             await websocket.send_json(container.manager.status_message())
+            for message in container.manager.processing_messages():  # phase 40
+                await websocket.send_json(message)
             if container.migration is not None and container.migration.is_running():
                 await websocket.send_json(container.migration.progress_message())  # phase 33
             interrupted = await asyncio.to_thread(container.manager.interrupted_sessions)

@@ -211,10 +211,127 @@ public sealed class RecorderPageViewModelTests
         Assert.Equal((false, true), (recorder.CanEditOptions, recorder.CanEditTitle));
 
         await recorder.StopCommand.ExecuteAsync(null);
-        Assert.Equal((false, false), (recorder.CanEditOptions, recorder.CanEditTitle)); // finalizing
+        Assert.Equal((true, true), (recorder.CanEditOptions, recorder.CanEditTitle)); // free again at once
+    }
 
-        recorder.Handle(new StatusEvent(SessionId, "done", 3));
-        Assert.Equal((true, true), (recorder.CanEditOptions, recorder.CanEditTitle));
+    [Fact]
+    public async Task Stop_returns_to_idle_when_engine_accepts()
+    {
+        var recorder = await RecordingAsync();
+        Assert.False(recorder.Idle.IsCompleted);
+
+        await recorder.StopCommand.ExecuteAsync(null);
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.True(recorder.Idle.IsCompleted);
+        Assert.Null(_session.SessionId);
+        Assert.True(recorder.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_refused_stop_keeps_recording()
+    {
+        var recorder = await RecordingAsync();
+        _client.StopError = FakeEngineClient.ApiError("not_recording", "Nothing to stop.");
+
+        await recorder.StopCommand.ExecuteAsync(null);
+
+        Assert.Equal(RecordingState.Recording, recorder.State);
+        Assert.False(recorder.Idle.IsCompleted);
+    }
+
+    [Fact]
+    public async Task Status_of_another_session_does_not_change_state()
+    {
+        var recorder = await RecordingAsync();
+
+        recorder.Handle(new StatusEvent("20250101_000000", "done", 99));
+        recorder.Handle(new StatusEvent("20250101_000000", "finalizing", 99));
+
+        Assert.Equal(RecordingState.Recording, recorder.State);
+        Assert.Equal(SessionId, _session.SessionId);
+        Assert.NotEqual("00:01:39", _session.Elapsed);
+    }
+
+    [Fact]
+    public async Task Finalizing_status_of_stopped_session_keeps_idle()
+    {
+        var recorder = await RecordingAsync();
+        await recorder.StopCommand.ExecuteAsync(null);
+
+        recorder.Handle(new StatusEvent(SessionId, "finalizing", 5));
+        recorder.Handle(new StatusEvent(SessionId, "done", 5));
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.True(recorder.Idle.IsCompleted);
+    }
+
+    [Fact]
+    public async Task A_meeting_stopped_elsewhere_frees_the_recorder_when_it_starts_finalizing()
+    {
+        var recorder = await RecordingAsync(); // e.g. stopped through the API, not this page's Stop
+
+        recorder.Handle(new StatusEvent(SessionId, "finalizing", 15));
+        recorder.Handle(new StatusEvent(SessionId, "recording", 15)); // a late heartbeat
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.True(recorder.Idle.IsCompleted);
+        Assert.Null(_session.SessionId);
+        Assert.True(recorder.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Late_recording_status_of_a_stopped_meeting_while_idle_is_ignored()
+    {
+        var recorder = await RecordingAsync();
+        await recorder.StopCommand.ExecuteAsync(null);
+
+        recorder.Handle(new StatusEvent(SessionId, "recording", 7)); // a heartbeat that crossed the 202
+        recorder.Handle(new StatusEvent(SessionId, "paused", 7));
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.Null(_session.SessionId);
+        Assert.True(recorder.StartCommand.CanExecute(null));
+
+        recorder.Handle(new StatusEvent("20261016_100000", "recording", 1)); // another meeting is still adopted
+        Assert.Equal(RecordingState.Recording, recorder.State);
+    }
+
+    [Fact]
+    public async Task A_new_recording_ignores_the_old_meeting_finishing_in_the_background()
+    {
+        var recorder = await RecordingAsync();
+        await recorder.StopCommand.ExecuteAsync(null);
+        _client.NextSessionId = "20261016_091000";
+        await recorder.StartCommand.ExecuteAsync(null);
+
+        recorder.Handle(new StatusEvent(SessionId, "finalizing", 5));
+        recorder.Handle(new StatusEvent(SessionId, "done", 5));
+
+        Assert.Equal(RecordingState.Recording, recorder.State);
+        Assert.Equal("20261016_091000", _session.SessionId);
+        Assert.False(recorder.Idle.IsCompleted);
+    }
+
+    [Fact]
+    public void An_idle_recorder_ignores_the_background_status_of_an_unknown_session()
+    {
+        var recorder = Create();
+
+        recorder.Handle(new StatusEvent("20250101_000000", "finalizing", 9));
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
+        Assert.Null(_session.SessionId);
+    }
+
+    [Fact]
+    public async Task A_status_without_a_session_id_still_ends_the_recording()
+    {
+        var recorder = await RecordingAsync();
+
+        recorder.Handle(new StatusEvent(null, "idle", null));
+
+        Assert.Equal(RecordingState.Idle, recorder.State);
     }
 
     [Theory]

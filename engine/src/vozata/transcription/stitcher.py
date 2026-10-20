@@ -8,7 +8,7 @@ one and transcribed again; committed audio is dropped, so no text is duplicated.
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Protocol
 
 import numpy as np
@@ -21,7 +21,7 @@ from vozata.transcription.context import RollingContext
 _SENTENCE_END = (".", "?", "!", "…")
 MAX_WORD_TAIL_SECONDS = 0.3  # Whisper word ends run early; voiced audio may continue this long
 MIN_PARTIAL_SPEECH_SECONDS = 1.0  # interim text needs this much voiced audio
-_FRAME_SECONDS = 0.01
+FRAME_SECONDS = 0.01
 
 
 class LanguageProvider(Protocol):
@@ -31,10 +31,15 @@ class LanguageProvider(Protocol):
 
 
 class SegmentIds:
-    """Session-wide segment ids: `<channel>-<6-digit counter>`, counted per channel."""
+    """Session-wide segment ids: `<channel>-<6-digit counter>`, counted per channel.
 
-    def __init__(self) -> None:
-        self._counts: Counter[Channel] = Counter()
+    `start` gives a channel's next number (resuming a transcript); other channels start at 1.
+    """
+
+    def __init__(self, start: Mapping[Channel, int] | None = None) -> None:
+        self._counts: Counter[Channel] = Counter(
+            {channel: number - 1 for channel, number in (start or {}).items()}
+        )
 
     def next(self, channel: Channel) -> str:
         self._counts[channel] += 1
@@ -92,7 +97,12 @@ class CarryOverStitcher:
         if next_word is not None:
             cut_time = (cut_word.end + next_word.start) / 2
         else:
-            cut_time = self._voiced_end(audio, cut_word.end, duration)
+            cut_time = voiced_end(
+                audio,
+                cut_word.end,
+                self._settings.sample_rate,
+                self._settings.silence_rms_threshold,
+            )
         self._pending = audio[round(cut_time * self._settings.sample_rate) :]
         self._pending_start = audio_start + cut_time
         return [self._segment(words[: cut + 1], audio_start)]
@@ -154,23 +164,10 @@ class CarryOverStitcher:
         return None
 
     def _voiced_seconds(self, audio: np.ndarray) -> float:
-        frame = round(_FRAME_SECONDS * self._settings.sample_rate)
+        frame = round(FRAME_SECONDS * self._settings.sample_rate)
         frames = audio[: len(audio) // frame * frame].reshape(-1, frame).astype(np.float64)
         rms = np.sqrt(np.mean(np.square(frames), axis=1))
-        return float(np.count_nonzero(rms >= self._settings.silence_rms_threshold)) * _FRAME_SECONDS
-
-    def _voiced_end(self, audio: np.ndarray, start: float, duration: float) -> float:
-        """Extend `start` through still-voiced 10 ms frames, at most `MAX_WORD_TAIL_SECONDS`."""
-        rate = self._settings.sample_rate
-        frame = round(_FRAME_SECONDS * rate)
-        end = start
-        limit = min(duration, start + MAX_WORD_TAIL_SECONDS)
-        while end + _FRAME_SECONDS <= limit + 1e-9:
-            first = round(end * rate)
-            if _rms(audio[first : first + frame]) < self._settings.silence_rms_threshold:
-                break
-            end += _FRAME_SECONDS
-        return end
+        return float(np.count_nonzero(rms >= self._settings.silence_rms_threshold)) * FRAME_SECONDS
 
     def _segment(self, words: Sequence[Word], offset: float) -> TranscriptSegment:
         absolute = tuple(
@@ -192,6 +189,24 @@ class CarryOverStitcher:
     def _clear(self) -> None:
         self._pending = np.zeros(0, dtype=np.float32)
         self._pending_start = 0.0
+
+
+def voiced_end(audio: np.ndarray, start: float, rate: int, threshold: float) -> float:
+    """Extend `start` (seconds into `audio`) through still-voiced 10 ms frames (RMS at or above
+    `threshold`), at most `MAX_WORD_TAIL_SECONDS` and never past the end of `audio`.
+
+    The stitcher cuts after a window's last committed word there, so the word's tail is dropped
+    with it rather than carried (architecture §7); resuming a transcript skips it the same way.
+    """
+    frame = round(FRAME_SECONDS * rate)
+    end = start
+    limit = min(len(audio) / rate, start + MAX_WORD_TAIL_SECONDS)
+    while end + FRAME_SECONDS <= limit + 1e-9:
+        first = round(end * rate)
+        if _rms(audio[first : first + frame]) < threshold:
+            break
+        end += FRAME_SECONDS
+    return end
 
 
 def _rms(samples: np.ndarray) -> float:

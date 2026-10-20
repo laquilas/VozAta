@@ -51,6 +51,11 @@ class TranscriptionWorker:
 
     `tick` (optional) runs on this thread after every chunk and every idle wait (~50 ms), e.g. to
     release mic segments the echo filter held (phase 18).
+
+    `abandon(on_exit)` (phase 40) is the stop without drain: it returns at once, the thread
+    finishes the chunk (or the model load) in hand, skips the backlog and the stitcher flush, clears
+    a shown partial and calls `on_exit` on its own thread. A worker abandoned before its `load`
+    started never loads.
     """
 
     def __init__(
@@ -75,6 +80,7 @@ class TranscriptionWorker:
         self._backlog_limit = backlog_per_channel * len(stitchers)
         self._behind = False
         self._stopping = threading.Event()
+        self._on_exit: Callable[[], None] | None = None  # set by `abandon()`
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
@@ -90,9 +96,17 @@ class TranscriptionWorker:
             self._thread.join()
             self._thread = None
 
+    def abandon(self, on_exit: Callable[[], None]) -> None:
+        """Stop without draining; `on_exit` runs once the thread is done (at once without one)."""
+        self._on_exit = on_exit
+        self._stopping.set()
+        if self._thread is None:
+            self._exit(on_exit)
+
     def _run(self) -> None:
         if self._load is not None:
-            self._usable = self._load()
+            # abandoned before the load started: never load a model only to close it
+            self._usable = not self._stopping.is_set() and self._load()
             self._behind = True  # catching up on audio queued while loading is not "slow"
         while not self._stopping.is_set():
             try:
@@ -100,7 +114,19 @@ class TranscriptionWorker:
             except queue.Empty:
                 self._preview()
             self._tick()
-        self._finish()
+        if self._on_exit is not None:
+            self._exit(self._on_exit)
+        else:
+            self._finish()
+
+    def _exit(self, on_exit: Callable[[], None]) -> None:
+        """The abandoned worker's end: clear shown partials, then hand over to the owner."""
+        for channel in list(self._shown):
+            self._clear(channel, 0.0)
+        try:
+            on_exit()
+        except Exception:
+            _log.exception("Closing the abandoned transcription failed")
 
     def _finish(self) -> None:
         while True:

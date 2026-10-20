@@ -152,12 +152,12 @@ public sealed class ShellViewModelTests
         var changed = new List<string?>();
         shell.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
 
-        _events.Send(new StatusEvent("s", "recording", 125));
+        _events.Send(new StatusEvent("20261016_090000", "recording", 125));
         await WaitAsync(() => main.Session.Elapsed == "00:02:05");
         Assert.Equal("Recording 00:02:05 — open the recorder", shell.RecordingBannerText);
         Assert.Contains(nameof(ShellViewModel.RecordingBannerText), changed);
 
-        _events.Send(new StatusEvent("s", "done", 130));
+        _events.Send(new StatusEvent("20261016_090000", "done", 130));
         await WaitAsync(() => !main.Session.IsRecording);
         Assert.False(shell.IsRecordingElsewhere);
         Assert.Contains(nameof(ShellViewModel.IsRecordingElsewhere), changed);

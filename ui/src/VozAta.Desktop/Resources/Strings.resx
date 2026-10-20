@@ -1266,4 +1266,31 @@
   <data name="PlayLine" xml:space="preserve">
     <value>Play from here</value>
   </data>
+  <data name="Processing_Queued" xml:space="preserve">
+    <value>Queued ({0})</value>
+  </data>
+  <data name="Processing_Running" xml:space="preserve">
+    <value>Processing {0} %</value>
+  </data>
+  <data name="Processing_Paused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="Processing_Done" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Processing_TabPending" xml:space="preserve">
+    <value>This part is still being processed.</value>
+  </data>
+  <data name="ProcessingIndicator_Text" xml:space="preserve">
+    <value>Processing {0} meeting(s) · {1} %</value>
+  </data>
+  <data name="ProcessingIndicator_Queued" xml:space="preserve">
+    <value>+{0} queued</value>
+  </data>
+  <data name="Close_PendingProcessing" xml:space="preserve">
+    <value>{0} meeting(s) are still being processed. Processing resumes the next time VozAta opens.</value>
+  </data>
+  <data name="Close_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
 </root>

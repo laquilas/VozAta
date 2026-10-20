@@ -23,6 +23,10 @@ class Extractor(Protocol):
         meeting_date: str | None = None,
     ) -> list[ActionItem]: ...
 
+    def cancel(self) -> None: ...
+
+    def close(self) -> None: ...
+
 
 def write_session_action_items(
     store: SessionRepository, session_id: str, extractor: Extractor, labeler: SpeakerLabeler

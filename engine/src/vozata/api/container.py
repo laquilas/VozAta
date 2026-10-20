@@ -59,8 +59,12 @@ class ApiContainer:
     devices: DeviceCatalog
     gpu_info: Callable[[], GpuInfo]
     llm_reachable: Callable[[], bool]
-    regenerate_minutes: Callable[[str, str | None], None]  # (id, template); then `minutes_ready`
+    # (id, template) -> queued (phase 40: False when the meeting is already in the queue); then
+    # `minutes_ready`
+    regenerate_minutes: Callable[[str, str | None], bool]
     release_models: Callable[[], None] = lambda: None  # at shutdown (kept Whisper, phase 26)
+    # at shutdown, first (phase 40): cancel the queue's running step and stop its worker
+    stop_processing: Callable[[], None] = lambda: None
     exporters: Mapping[str, DocumentExporter] = field(default_factory=dict)  # by format (11)
     search_index: TranscriptSearch | None = None  # `GET /search` (22); None: no hits
     templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)
@@ -68,7 +72,7 @@ class ApiContainer:
     ask: AskRunner | None = None  # `POST /ask` (24); None: 503 ask_unavailable
     # Action items (23): background extraction (then `action_items_ready`; None: 503), the
     # configured export targets, and an exporter per target (None when not configured).
-    extract_action_items: Callable[[str], None] | None = None
+    extract_action_items: Callable[[str], bool] | None = None  # False: already queued (40)
     task_targets: Callable[[], list[str]] = list
     task_exporter: Callable[[str], TaskExporter | None] = lambda target: None
     # The storage backend (31): `GET /health` and the `storage` field of a session.

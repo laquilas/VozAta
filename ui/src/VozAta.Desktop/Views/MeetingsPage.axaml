@@ -95,6 +95,14 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <!-- Background processing (phase 40): Queued (n) / Processing 42 % / Paused, then a green check -->
+                <Border Classes="tag" Classes.running="{Binding IsRunning}" VerticalAlignment="Center"
+                        IsVisible="{Binding IsProcessing}">
+                  <TextBlock Text="{Binding ProcessingText}" />
+                </Border>
+                <PathIcon Data="{StaticResource Icon.Check}" Width="14" Height="14" VerticalAlignment="Center"
+                          Foreground="{DynamicResource Brush.SuccessText}" IsVisible="{Binding ShowsDoneCheck}"
+                          ToolTip.Tip="{Binding DoneText}" AutomationProperties.Name="{Binding DoneText}" />
               </StackPanel>
             </Button>
             <!-- Inline rename: Enter saves (PATCH), Esc cancels -->

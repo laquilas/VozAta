@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from typing import Protocol
 
 from vozata.api.ws import EventBroadcaster
 from vozata.ports import LanguageModelError, Localizer
+from vozata.processing.gpu_gate import GpuGate, GpuUser
 from vozata.qa.answerer import Answer
 
 _log = logging.getLogger(__name__)
@@ -28,14 +31,23 @@ AnswererFactory = Callable[[], Answerer]
 class AskJob:
     """One question at a time: `start` returns False while another answer is streaming.
 
+    With a `gate` and `uses_gpu()` true, the answer holds the Ask GPU priority (phase 40).
     Events carry the scope as `session_id` (None for all sessions). `answer_done` always closes an
     answer; on failure it has no citations and a localized `error`.
     """
 
     def __init__(
-        self, build_answerer: AnswererFactory, broadcaster: EventBroadcaster, localizer: Localizer
+        self,
+        build_answerer: AnswererFactory,
+        broadcaster: EventBroadcaster,
+        localizer: Localizer,
+        *,
+        gate: GpuGate | None = None,
+        uses_gpu: Callable[[], bool] = lambda: False,
     ) -> None:
         self._build = build_answerer
+        self._gate = gate
+        self._uses_gpu = uses_gpu
         self._broadcaster = broadcaster
         self._t = localizer.t
         self._lock = threading.Lock()
@@ -60,18 +72,26 @@ class AskJob:
             return not self._thread.is_alive()
         return True
 
+    def _priority(self) -> AbstractContextManager[None]:
+        """Ask before the queue (phase 40): with the language model on the local GPU, the queue's
+        running GPU step is cancelled (redone later) and waits until the answer is done."""
+        if self._gate is not None and self._uses_gpu():
+            return self._gate.priority(GpuUser.ASK)
+        return contextlib.nullcontext()
+
     def _run(self, answer_id: str, question: str, session_id: str | None) -> None:
         publish = self._broadcaster.publish
         citations: list[dict[str, object]] = []
         error: str | None = None
         try:
-            answer = self._build().answer(
-                question,
-                session_id,
-                lambda text: publish(
-                    "answer_chunk", session_id, {"answer_id": answer_id, "text": text}
-                ),
-            )
+            with self._priority():
+                answer = self._build().answer(
+                    question,
+                    session_id,
+                    lambda text: publish(
+                        "answer_chunk", session_id, {"answer_id": answer_id, "text": text}
+                    ),
+                )
             citations = [citation.to_dict() for citation in answer.citations]
         except LanguageModelError as failure:
             _log.warning("Answering %s failed: %s", answer_id, failure)

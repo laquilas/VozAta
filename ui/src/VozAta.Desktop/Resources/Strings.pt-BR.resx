@@ -1266,4 +1266,31 @@
   <data name="PlayLine" xml:space="preserve">
     <value>Reproduzir a partir daqui</value>
   </data>
+  <data name="Processing_Queued" xml:space="preserve">
+    <value>Na fila ({0})</value>
+  </data>
+  <data name="Processing_Running" xml:space="preserve">
+    <value>Processando {0} %</value>
+  </data>
+  <data name="Processing_Paused" xml:space="preserve">
+    <value>Pausado</value>
+  </data>
+  <data name="Processing_Done" xml:space="preserve">
+    <value>Pronto</value>
+  </data>
+  <data name="Processing_TabPending" xml:space="preserve">
+    <value>Esta parte ainda está sendo processada.</value>
+  </data>
+  <data name="ProcessingIndicator_Text" xml:space="preserve">
+    <value>Processando {0} reunião(ões) · {1} %</value>
+  </data>
+  <data name="ProcessingIndicator_Queued" xml:space="preserve">
+    <value>+{0} na fila</value>
+  </data>
+  <data name="Close_PendingProcessing" xml:space="preserve">
+    <value>{0} reunião(ões) ainda está(ão) sendo processada(s). O processamento continua na próxima vez que o VozAta abrir.</value>
+  </data>
+  <data name="Close_Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
 </root>

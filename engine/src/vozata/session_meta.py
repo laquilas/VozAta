@@ -14,6 +14,8 @@ SCHEMA_VERSION = 1
 
 
 class MetaStore(Protocol):
+    def read_meta(self, session_id: str) -> dict[str, Any]: ...
+
     def write_meta(self, session_id: str, meta: dict[str, Any]) -> None: ...
 
 
@@ -35,7 +37,9 @@ class SessionMeta:
     """Thread-safe metadata, saved on every change (language may be detected on another thread).
 
     The conversation language is written only when known: a fixed language at start, or the
-    language `auto` mode detected.
+    language `auto` mode detected. Once capture ended (`capture_ended`) the session no longer owns
+    `session.json` alone (a rename, the processing job): every later change is merged into the
+    stored metadata instead of rewriting it from memory.
     """
 
     def __init__(
@@ -49,6 +53,7 @@ class SessionMeta:
         self._store = store
         self._id = session_id
         self._lock = threading.Lock()
+        self._merge = False
         names = components.device_names
         self._meta: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
@@ -78,6 +83,7 @@ class SessionMeta:
         restored._store = store
         restored._id = session_id
         restored._lock = threading.Lock()
+        restored._merge = False
         restored._meta = dict(meta)
         return restored
 
@@ -114,6 +120,16 @@ class SessionMeta:
         """Recorded length (session time when capture stopped), pauses included."""
         self._update(duration_seconds=round(duration_seconds, 3))
 
+    def capture_ended(self, at: datetime, duration_seconds: float) -> None:
+        """Capture stopped (phase 40): the recorded length and `capture_ended_at`, which tells a
+        restarted engine the meeting only waits for its processing."""
+        self._update(
+            duration_seconds=round(duration_seconds, 3),
+            capture_ended_at=at.isoformat(timespec="seconds"),
+        )
+        with self._lock:
+            self._merge = True
+
     def echo_dropped(self, count: int) -> None:
         """Mic segments the echo filter dropped (phase 18), written once the transcript is final."""
         self._update(echo_dropped=count)
@@ -130,6 +146,8 @@ class SessionMeta:
 
     def _update(self, **fields: Any) -> None:
         with self._lock:
+            if self._merge:
+                self._meta = self._store.read_meta(self._id)
             self._meta.update(fields)
             self._save()
 

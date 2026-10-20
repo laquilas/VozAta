@@ -45,8 +45,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IThemeService theme,
         IPathPicker? paths = null,
         Func<IAudioPlayer>? players = null,
-        Uri? engineUri = null)
+        Uri? engineUri = null,
+        IProcessingMarkers? markers = null)
     {
+        markers ??= new ProcessingMarkers();
         _client = client;
         _events = events;
         _process = process;
@@ -58,14 +60,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var templates = new MinutesTemplatesViewModel(client);
         Recorder = new RecorderPageViewModel(
             client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token);
-        History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs);
+        History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs, markers: markers);
         Health = new HealthViewModel(client, localization);
+        Processing = new ProcessingIndicatorViewModel(localization);
         Settings = new SettingsViewModel(client, process, localization, paths);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
-        Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates);
+        Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates, markers: markers);
         History.Players = players is null ? null : (id, tracks) => new PlayerBarViewModel(
             players(), dispatcher, track => AudioUri(engineUri, id, track), tracks, localization);
         History.Renamed = Meetings.OnRenamedAsync;
@@ -111,6 +114,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ShellViewModel Shell { get; }
 
     public HistoryViewModel History { get; }
+
+    /// <summary>The sidebar indicator of the background processing queue (phase 40).</summary>
+    public ProcessingIndicatorViewModel Processing { get; }
+
+    /// <summary>Meetings still queued, running or paused; closing the app interrupts them until the next start.</summary>
+    public int PendingProcessing => Processing.PendingCount;
 
     /// <summary>The Meetings page (phase 36): meetings by day, with the history detail on the right.</summary>
     public MeetingsPageViewModel Meetings { get; }
@@ -227,7 +236,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         EventLoop = FollowEventsAsync();
     }
 
-    /// <summary>Whether the window may close: asks about unsaved transcript edits, and while recording asks and stops the session first.</summary>
+    /// <summary>Whether the window may close: asks about unsaved transcript edits, while recording asks and stops the session first, and warns once when meetings are still being processed.</summary>
     public async Task<bool> ConfirmCloseAsync()
     {
         if (!await History.ConfirmLeaveAsync())
@@ -235,22 +244,32 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return false; // unsaved transcript edits (phase 21)
         }
 
-        if (!Session.IsRecording)
+        // Every question comes before anything is stopped: cancelling at any point changes nothing.
+        var recording = Session.IsRecording;
+        if (recording && !await _dialogs.ConfirmAsync(
+            _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]))
         {
-            return true;
+            return false;
         }
 
-        var confirmed = await _dialogs.ConfirmAsync(
-            _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]);
-        if (confirmed)
+        // Pending background processing resumes on the next start (the engine re-queues it): tell the user once.
+        // The meeting being recorded joins the queue at Stop, so it counts too.
+        var pending = PendingProcessing + (recording ? 1 : 0);
+        if (pending > 0 && !await _dialogs.ConfirmAsync(
+            _localization["AppTitle"], _localization.Format("Close_PendingProcessing", pending), _localization["TrayQuit"], _localization["Close_Cancel"]))
+        {
+            return false;
+        }
+
+        if (recording)
         {
             await Recorder.StopCommand.ExecuteAsync(null);
         }
 
-        return confirmed;
+        return true;
     }
 
-    /// <summary>Wait (at most <paramref name="maxWait"/>) for finalization, then release the engine.</summary>
+    /// <summary>Save the window size, commit a pending delete, wait (at most <paramref name="maxWait"/>) for the recorder to stop, then release the engine. Background processing is not waited for.</summary>
     public async Task ShutdownAsync(TimeSpan maxWait)
     {
         _preferences.Save(_preferences.Load() with { WindowWidth = WindowWidth, WindowHeight = WindowHeight });
@@ -392,6 +411,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 EngineStatus = connection.Connected ? EngineStatus.Connected : EngineStatus.Disconnected;
                 if (!connection.Connected)
                 {
+                    Processing.Clear(); // the snapshot on reconnect rebuilds it
+                    Meetings.OnConnectionLost(); // the rows' badges too
                     History.Ask.OnConnectionLost();
                     Recovery.OnConnectionLost();
                     Migration.OnConnectionLost();
@@ -411,8 +432,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 History.Detail?.Ask.OnAnswerDone(done);
                 break;
             case StatusEvent status:
+                var wasIdle = Session.IsIdle;
                 Recorder.Handle(status);
                 RecoveryRefresh = Recovery.OnStatusAsync(status);
+                if (status is { Status: "done", SessionId: { } finished } && (wasIdle || !Session.IsIdle))
+                {
+                    // A meeting finished in the background: show its minutes and speakers (phase 40).
+                    // The recorder going idle already refreshes the list for the one it was recording.
+                    HistoryRefresh = Task.WhenAll(History.LoadAsync(), Meetings.OnSessionDoneAsync(finished));
+                }
+
+                break;
+            case ProcessingEvent processing:
+                Processing.OnProcessing(processing);
+                HistoryRefresh = processing.Info.State is "done" or "failed"
+                    ? Task.WhenAll(History.LoadAsync(), Meetings.OnProcessingAsync(processing))
+                    : Meetings.OnProcessingAsync(processing);
                 break;
             case MigrationProgressEvent progress:
                 Migration.OnProgress(progress);
@@ -474,6 +509,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Config.RefreshTexts();
         Tray.RefreshTexts();
         Shell.RefreshTexts();
+        Processing.RefreshTexts();
         Migration.RefreshTexts();
         History.Detail?.Player?.RefreshTexts();
     }

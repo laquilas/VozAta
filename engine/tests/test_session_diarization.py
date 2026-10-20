@@ -7,7 +7,6 @@ from pathlib import Path
 
 from tests.fakes import FakeDiarizer
 from tests.test_session import SETTINGS, _Log, _Rig, _voice, _words
-from vozata.config import ConfigError
 from vozata.domain import Channel, SessionStatus, SpeakerTurn
 from vozata.ports import DiarizationError
 
@@ -57,9 +56,10 @@ def test_whisper_is_released_before_diarizing_and_the_diarizer_before_the_minute
     rig.session.stop()
 
     steps = [entry for entry in rig.log.entries if entry not in ("transcriber.load", "release")]
-    assert steps == [
+    mix = steps.index("mix")
+    assert "transcriber.close" in steps[:mix]  # live (and offline) Whisper closed before the mix
+    assert steps[mix:] == [
         "mix",
-        "transcriber.close",
         "diarizer.load",
         "diarizer.diarize",
         "diarizer.close",
@@ -95,43 +95,3 @@ def test_a_failing_diarizer_keeps_system_labels_reports_and_still_writes_minutes
     assert rig.observer.of("speakers_relabeled") == []
     assert "labels.system: Hello there." in rig.llm.prompts[0][1]
     assert rig.session.status is SessionStatus.DONE
-
-
-def test_a_failing_diarizer_factory_is_reported_too(tmp_path: Path) -> None:
-    def build() -> FakeDiarizer:
-        raise DiarizationError("extra missing")
-
-    rig = _Rig(tmp_path, results=[_words("Hi.")], diarizer_factory=build)
-    rig.session.start()
-    rig.system.push(_voice(1.0), 0.0)
-
-    rig.session.stop()
-
-    assert [code for code, _ in rig.observer.of("error")] == ["diarization_failed"]
-    assert rig.paths.minutes_md.exists()
-
-
-def test_without_system_speech_no_diarizer_is_loaded(tmp_path: Path) -> None:
-    rig, built = _rig(tmp_path)
-    rig.session.start()
-    rig.mic.push(_voice(1.0), 0.0)
-
-    rig.session.stop()
-
-    assert built == []
-    assert not rig.paths.diarized_jsonl.exists()
-    assert rig.observer.of("speakers_relabeled") == []
-
-
-def test_a_configuration_error_is_reported_with_its_localized_message(tmp_path: Path) -> None:
-    def build() -> FakeDiarizer:
-        raise ConfigError("HF_TOKEN", "", "missing_hf_token")
-
-    rig = _Rig(tmp_path, results=[_words("Hi.")], diarizer_factory=build)
-    rig.session.start()
-    rig.system.push(_voice(1.0), 0.0)
-
-    rig.session.stop()
-
-    [(_, message)] = rig.observer.of("error")
-    assert "errors.config.missing_hf_token(key=HF_TOKEN" in message

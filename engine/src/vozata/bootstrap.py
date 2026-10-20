@@ -5,21 +5,24 @@ New providers are added to a registry here; orchestrators never change.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import functools
 import logging
 import os
 import threading
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
 from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
-from vozata.api.session_manager import SessionManager, StartOptions
+from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
@@ -78,9 +81,15 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
+from vozata.processing.gpu_gate import GpuGate, GpuUsage, GpuUser, gpu_usage
+from vozata.processing.job import ProcessingJob, StepKind
+from vozata.processing.live_lease import LiveModelTurn
+from vozata.processing.queue import ProcessingQueue, ProcessingState
 from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
+from vozata.session_finisher import SessionFinisher
+from vozata.session_title import stored_title
 from vozata.settings_file import SettingsFile
 from vozata.settings_options import SettingsOptions
 from vozata.storage.audio_cache import WavCache
@@ -102,6 +111,7 @@ from vozata.storage.sqlite.repository import SqliteSessionRepository
 from vozata.storage.sqlite.search import SqliteSearch
 from vozata.transcription import openai_compatible
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
+from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
@@ -485,6 +495,9 @@ def build_session(
     env_file: Path | None = None,
     translate_to: TranslationTarget | None = None,
     title: str | None = None,
+    gate: GpuGate | None = None,
+    gpu_usage: GpuUsage | None = None,
+    live_models: LiveModelTurn | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -495,7 +508,10 @@ def build_session(
     stored in `session.json` even when minutes are off. `vocabulary` (this meeting's terms) is
     merged with the glossary file (`vocabulary_path(settings, env_file)`), session terms first.
     `translate_to` (default `TRANSLATE_TO`) is the live translation language (phase 29); `title`
-    (normalized, phase 35) is stored in the metadata.
+    (normalized, phase 35) is stored in the metadata. With a `gate` (`serve`), the session holds
+    its live GPU priority while recording when `gpu_usage` says its speech or speaker model runs on
+    the local GPU (phase 40); with `live_models` its models load only once the previous
+    session's abandoned pipeline closed.
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
     localizer = build_localizer(settings)
@@ -550,6 +566,9 @@ def build_session(
         translate_to=translation_target,
         translator_factory=translator_factory,
         title=title,
+        gate=gate,
+        gpu_usage=gpu_usage,
+        live_models=live_models,
     )
     return RecordingSession(
         settings,
@@ -575,27 +594,31 @@ def _no_transcriber() -> Transcriber:
     raise RuntimeError("A recovered session is not transcribed again")
 
 
-def build_recovery_session(
+def _stored_components(
     settings: Settings,
     store: SessionRepository,
-    audio: SessionAudio,
-    observer: SessionObserver,
     session_id: str,
-) -> RecordingSession:
-    """A `RecordingSession` that finishes an interrupted session (phase 17).
+    models: Collection[StepKind] | None = None,
+) -> tuple[SessionComponents, dict[str, Any]]:
+    """The stop-step components of a stored session, and its metadata.
 
-    Nothing is captured or transcribed; the minutes template, glossary and mix mode come from the
-    session's metadata, so the result matches what its own stop would have produced. The search
-    index is the one of `OUTPUT_DIR`, used only when the session lives there.
+    Nothing is captured or transcribed; the minutes template, glossary and mix mode come from
+    the session's metadata, so the result matches what its own stop would have produced. The
+    search index is the one of `OUTPUT_DIR`, used only when the session lives there. `models`
+    names the steps whose model is built (`diarize`: the diarizer, `minutes`: the minutes
+    generator, `action_items`: the extractor; each its own language model client); None builds
+    every configured one, an empty collection none (phase 40: one step per attempt).
     """
+    wanted = set(StepKind) if models is None else set(models)
     meta = store.read_meta(session_id)
     localizer = build_localizer(settings)
     template = stored_template(meta) or settings.minutes_template
     minutes = (
         build_minutes_generator(settings, localizer, template)
-        if settings.generate_minutes
+        if settings.generate_minutes and StepKind.MINUTES in wanted
         else None
     )
+    extract = settings.generate_minutes and settings.extract_action_items
     recorded = meta.get("settings")
     mix_value = recorded.get("MIX_MODE") if isinstance(recorded, dict) else None
     mix_mode = MixMode(mix_value) if mix_value in set(MixMode) else settings.mix_mode
@@ -610,16 +633,43 @@ def build_recovery_session(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        diarizer_factory=build_diarizer_factory(settings),
+        diarizer_factory=build_diarizer_factory(settings) if StepKind.DIARIZE in wanted else None,
         search_index=build_search_index(settings) if in_output_dir else None,
         minutes_template=template,
         vocabulary=tuple(stored_vocabulary(meta)),
         action_items=build_action_item_extractor(settings, localizer)
-        if minutes is not None and settings.extract_action_items
+        if extract and StepKind.ACTION_ITEMS in wanted
         else None,
     )
-    return RecordingSession(
-        settings, store, audio, components, observer, settings.transcription_language
+    return components, meta
+
+
+def build_finisher(
+    settings: Settings,
+    store: SessionRepository,
+    audio: SessionAudio,
+    observer: SessionObserver,
+    session_id: str,
+    models: Collection[StepKind] | None = None,
+) -> SessionFinisher:
+    """The stop steps of a stored session (phase 40), with the components of its metadata.
+
+    The title is read from `session.json` each time the minutes are written, so a rename made
+    while the session waits for its turn is used. `models` limits the models built to those of
+    the named steps (None: all; empty: none, so only `mix`, `index` and `ended` do anything);
+    `SessionFinisher.close()` closes the language model clients built.
+    """
+    components, meta = _stored_components(settings, store, session_id, models)
+    language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
+    return SessionFinisher(
+        settings,
+        store,
+        audio,
+        components,
+        observer,
+        session_id,
+        LanguageLock(language, lambda detected: None),
+        lambda: stored_title(store.read_meta(session_id)),
     )
 
 
@@ -630,25 +680,14 @@ def build_recovery(
     store: SessionRepository | None = None,
     audio: SessionAudio | None = None,
     stale_after: float = 0.0,
-    current: Callable[[], Settings] | None = None,
-    before_finish: Callable[[], None] = lambda: None,
 ) -> SessionRecovery:
-    """Crash recovery over `store` / `audio` (default: those of `output_dir`, else `OUTPUT_DIR`).
-
-    `current` gives the settings each recovery uses (`serve`: the ones saved through
-    `PUT /settings`); `before_finish` runs before the stop steps (`serve`: unload a kept Whisper,
-    VRAM rule). `stale_after` > 0 leaves alone sessions with a recent heartbeat (CLI).
-    """
+    """Crash recovery over `store` / `audio` (default: those of `output_dir`, else `OUTPUT_DIR`):
+    finds `interrupted` sessions and repairs their files; their processing job finishes them.
+    `stale_after` > 0 leaves alone sessions with a recent heartbeat (CLI)."""
     store = store or build_store(settings, output_dir)
     audio = audio or build_audio_store(settings, output_dir)
-    settings_now = current or (lambda: settings)
-
-    def session(session_id: str, observer: SessionObserver) -> RecordingSession:
-        before_finish()
-        return build_recovery_session(settings_now(), store, audio, observer, session_id)
-
     repairs = [part for part in (audio, store) if isinstance(part, RecoverableStore)]
-    return SessionRecovery(store, repairs, session, stale_after)
+    return SessionRecovery(store, repairs, stale_after)
 
 
 def cli_stale_after(settings: Settings) -> float:
@@ -711,10 +750,40 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     if settings.whisper_keep_loaded:
         transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
         shared = SharedTranscriber(lambda: transcriber(settings))
+    gpu_info = functools.cache(query_gpu)  # the GPU does not change while running
+    gate = GpuGate()  # phase 40: live recordings pre-empt the queue's GPU steps
+    live_models = LiveModelTurn()  # a new recording loads its models once the last one closed
+
+    def usage(current: Settings) -> GpuUsage:
+        return gpu_usage(current, gpu_info().available)
+
+    def publish_processing(state: ProcessingState) -> None:
+        broadcaster.publish("processing", state.session_id, state.to_payload())
+
+    queue = ProcessingQueue(gate, publish_processing)
+    queue.start()
+
+    def job_factory(session_id: str, repair: bool, closed: threading.Event | None) -> ProcessingJob:
+        current = settings_file.current
+        from vozata.bootstrap_processing import build_processing_job  # imports this module
+
+        observer = session_observer(broadcaster, labeler, session_id)
+        return build_processing_job(
+            current,
+            store,
+            audio,
+            observer,
+            session_id,
+            repair=repair,
+            closed=closed,
+            gate_usage=usage(current),
+            shared=shared,
+        )
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
+        current = settings_file.current
         return build_session(
-            settings_file.current,
+            current,
             observer,
             language=options.language,
             mic_device=options.mic_device,
@@ -725,12 +794,10 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared=shared,
             translate_to=options.translate_to,
             title=options.title,
+            gate=gate,
+            gpu_usage=usage(current),
+            live_models=live_models,
         )
-
-    def minutes_generator(template: str | None = None) -> MinutesGenerator:
-        if shared is not None:
-            shared.release()  # VRAM rule: never Whisper and the LLM together
-        return build_minutes_generator(settings_file.current, None, template)  # current language
 
     def llm_reachable() -> bool:
         current = settings_file.current
@@ -744,32 +811,47 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
 
     _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)  # fail fast on a bad key
     search_index = build_search_index(settings)
-    recovery = build_recovery(  # phase 17: only sessions not live in this process
-        settings,
-        store=store,
-        audio=audio,
-        current=lambda: settings_file.current,
-        before_finish=shared.release if shared is not None else lambda: None,
-    )
+    recovery = build_recovery(settings, store=store, audio=audio)  # 17: sessions not live here
     manager = SessionManager(
-        session_factory, store, broadcaster, labeler, recovery=recovery, localizer=localizer
+        session_factory,
+        store,
+        broadcaster,
+        labeler,
+        recovery=recovery,
+        queue=queue,
+        job_factory=job_factory,
     )
 
-    def answerer() -> MeetingAnswerer:
+    def free_whisper() -> None:
+        """VRAM rule: unload the kept Whisper before the language model loads, unless a recording
+        is using it right now (asked under its lease, the unload would still happen when the
+        recording ends, dropping a model it keeps loaded)."""
         current = manager.current
         recording = current is not None and current.status in _ACTIVE
         if shared is not None and not recording:
-            shared.release()  # VRAM rule, unless a recording is using the model right now
+            shared.release()
+
+    def minutes_generator(template: str | None = None) -> MinutesGenerator:
+        free_whisper()
+        return build_minutes_generator(settings_file.current, None, template)  # current language
+
+    def answerer() -> MeetingAnswerer:
+        free_whisper()
         return build_answerer(settings_file.current, store, search_index)  # current language
 
     def action_item_extractor() -> ActionItemExtractor:
-        current = manager.current
-        recording = current is not None and current.status in _ACTIVE
-        if shared is not None and not recording:
-            shared.release()  # VRAM rule, as for answers
+        free_whisper()
         return build_action_item_extractor(settings_file.current)  # current language
 
-    gpu_info = functools.cache(query_gpu)  # the GPU does not change while running
+    def llm_on_gpu() -> bool:
+        return usage(settings_file.current).llm
+
+    def check_priority(current: Settings) -> AbstractContextManager[None]:
+        return gate.priority(GpuUser.CHECK) if usage(current).llm else contextlib.nullcontext()
+
+    def index(session_id: str) -> None:
+        search_index.index_session(session_id, store.load_transcript(session_id))
+
     options = build_setting_options(lambda: settings_file.current, lambda: gpu_info().available)
     threading.Thread(
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
@@ -786,14 +868,31 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         devices=WasapiCatalog(),
         gpu_info=gpu_info,
         llm_reachable=llm_reachable,
-        regenerate_minutes=MinutesJob(store, minutes_generator, labeler, broadcaster, localizer),
+        regenerate_minutes=MinutesJob(
+            store,
+            minutes_generator,
+            labeler,
+            broadcaster,
+            localizer,
+            queue=queue,
+            uses_gpu=llm_on_gpu,
+            index=index,
+        ),
         release_models=shared.release if shared is not None else lambda: None,
+        stop_processing=queue.stop,
         exporters={name: build() for name, build in EXPORTERS.items()},
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
-        ask=AskJob(answerer, broadcaster, localizer),
+        ask=AskJob(answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu),
         extract_action_items=ActionItemsJob(
-            store, action_item_extractor, labeler, broadcaster, localizer
+            store,
+            action_item_extractor,
+            labeler,
+            broadcaster,
+            localizer,
+            queue=queue,
+            uses_gpu=llm_on_gpu,
+            index=index,
         ),
         task_targets=lambda: task_targets(settings_file.current),
         task_exporter=lambda target: build_task_exporter(settings_file.current, target),
@@ -803,5 +902,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         migration=migration,
         bundle_importer=build_bundle_importer(settings),
         setting_options=options.collect,
-        connection_check=ConnectionChecks((DIARIZATION_MODEL, EMBEDDING_MODEL)).run,
+        connection_check=ConnectionChecks(
+            (DIARIZATION_MODEL, EMBEDDING_MODEL), priority=check_priority
+        ).run,
     )

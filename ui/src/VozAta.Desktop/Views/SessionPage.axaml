@@ -59,6 +59,13 @@
           <TextBlock Text="{Binding Date}" Classes="secondary" />
           <TextBlock Text="·" Classes="secondary" />
           <TextBlock Text="{Binding Duration}" Classes="secondary tabular" />
+          <Border Classes="tag" Classes.running="{Binding IsRunning}" VerticalAlignment="Center"
+                  IsVisible="{Binding IsProcessing}">
+            <TextBlock Text="{Binding ProcessingText}" />
+          </Border>
+          <PathIcon Data="{StaticResource Icon.Check}" Width="14" Height="14" VerticalAlignment="Center"
+                    Foreground="{DynamicResource Brush.SuccessText}" IsVisible="{Binding ShowsDoneCheck}"
+                    ToolTip.Tip="{Binding DoneText}" AutomationProperties.Name="{Binding DoneText}" />
         </StackPanel>
 
         <!-- Actions: regenerate (template), external player, export -->
@@ -103,7 +110,9 @@
           <Panel>
             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoMinutes]}"
                        Classes="secondary" Margin="8" TextWrapping="Wrap"
-                       IsVisible="{Binding !HasMinutes}" />
+                       IsVisible="{Binding ShowsNoMinutes}" />
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Processing_TabPending]}"
+                       Classes="secondary" Margin="8" TextWrapping="Wrap" IsVisible="{Binding MinutesPending}" />
             <ScrollViewer>
               <ItemsControl ItemsSource="{Binding Blocks}" Margin="8">
                 <ItemsControl.ItemTemplate>
@@ -203,7 +212,13 @@
         <!-- Speaker rename (phase 16) -->
         <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabSpeakers]}"
                  IsVisible="{Binding !IsLive}">
-          <views:SpeakersPanel DataContext="{Binding Speakers}" />
+          <Panel>
+            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Processing_TabPending]}"
+                       Classes="secondary" Margin="8" TextWrapping="Wrap" IsVisible="{Binding SpeakersPending}" />
+            <Panel IsVisible="{Binding !SpeakersPending}">
+              <views:SpeakersPanel DataContext="{Binding Speakers}" />
+            </Panel>
+          </Panel>
         </TabItem>
         <!-- Action items export (phase 23) -->
         <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabActionItems]}"

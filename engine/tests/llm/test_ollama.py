@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Callable
 
 import httpx
 import pytest
 
 from vozata.llm.ollama import OllamaLanguageModel
-from vozata.ports import LanguageModel, LanguageModelError
+from vozata.ports import Cancellable, LanguageModel, LanguageModelError
 
 URL = "http://ollama.test:11434"
 
@@ -218,3 +219,72 @@ def test_is_available_uses_a_short_timeout() -> None:
     model_with(handler).is_available()
 
     assert seen[0]["read"] == 3.0
+
+
+def test_cancel_during_generate_raises_language_model_error() -> None:
+    started, finish = threading.Event(), threading.Event()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        started.set()
+        finish.wait(5)
+        return chat_reply("late")
+
+    model = model_with(handler)
+    assert isinstance(model, Cancellable)
+    errors: list[Exception] = []
+
+    def work() -> None:
+        try:
+            model.generate("s", "p")
+        except Exception as error:  # noqa: BLE001
+            errors.append(error)
+
+    thread = threading.Thread(target=work)
+    thread.start()
+    assert started.wait(5)
+
+    model.cancel()
+    finish.set()
+    thread.join(5)
+
+    assert len(errors) == 1 and isinstance(errors[0], LanguageModelError)
+    with pytest.raises(LanguageModelError):
+        model.generate("s", "p")
+
+
+def test_cancel_during_stream_raises_language_model_error() -> None:
+    model = model_with(lambda request: chat_reply("x"))
+    model.cancel()
+
+    with pytest.raises(LanguageModelError):
+        list(model.stream("s", "p"))
+
+
+@pytest.mark.parametrize("configured", ["0", "300", "5m", "-1"])
+def test_release_after_cancel_unloads_through_a_fresh_client_whatever_keep_alive(
+    configured: str,
+) -> None:
+    bodies: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return chat_reply("")
+
+    model = model_with(handler, keep_alive=configured)
+    model.cancel()
+
+    model.release()
+
+    assert bodies == [{"model": "qwen2.5:7b", "messages": [], "keep_alive": 0}]
+
+
+def test_cancel_after_the_first_streamed_line_stops_the_stream() -> None:
+    lines = '{"message":{"content":"a"}}\n{"message":{"content":"b"}}\n{"done":true}\n'
+    model = model_with(lambda request: httpx.Response(200, text=lines))
+    stream = model.stream("s", "p")
+
+    assert next(stream) == "a"
+    model.cancel()
+
+    with pytest.raises(LanguageModelError):
+        next(stream)

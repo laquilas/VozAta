@@ -33,6 +33,9 @@ public sealed record PartialEvent(string? SessionId, string Channel, string Spea
 /// <summary>The speech model started (true) or finished (false) loading while the session already records.</summary>
 public sealed record ModelLoadingEvent(string? SessionId, bool Loading) : EngineEvent(SessionId);
 
+/// <summary>Background processing of a stopped meeting changed (phase 40); the envelope session id is the meeting.</summary>
+public sealed record ProcessingEvent(string? SessionId, ProcessingInfo Info) : EngineEvent(SessionId);
+
 /// <summary>Sessions a crash cut short (phase 17), sent on connect; recover them with <c>POST /sessions/{id}/recover</c>.</summary>
 public sealed record RecoveryAvailableEvent(string? SessionId, IReadOnlyList<string> SessionIds) : EngineEvent(SessionId);
 
@@ -108,6 +111,8 @@ public static class EngineEventParser
                     data.GetProperty("imported").GetInt32(),
                     data.GetProperty("skipped").GetInt32(),
                     data.GetProperty("errors").GetInt32()),
+                "processing" => new ProcessingEvent(
+                    sessionId, data.Deserialize<ProcessingInfo>(EngineJson.Options) ?? throw new JsonException()),
                 "error" => new ErrorEvent(
                     sessionId, data.GetProperty("code").GetString() ?? "", data.GetProperty("message").GetString() ?? ""),
                 _ => new UnknownEvent(sessionId, type),

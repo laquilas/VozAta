@@ -207,3 +207,32 @@ def test_without_vocabulary_there_is_no_glossary() -> None:
     generator(llm).generate([seg(0, "hi")], LABELER, ConversationLanguage.EN)
 
     assert "Glossary" not in llm.prompts[0][1]
+
+
+def test_generator_cancel_forwards_to_cancellable_model() -> None:
+    llm = FakeLanguageModel()
+
+    generator(llm).cancel()
+
+    assert llm.cancels == 1
+
+
+def test_generator_cancel_without_cancellable_model_is_noop() -> None:
+    class Plain:
+        def release(self) -> None:
+            pass
+
+    MinutesGenerator(Plain(), EN, 100, minutes_template()).cancel()  # type: ignore[arg-type]
+
+
+def test_cancelled_generate_still_ends_with_a_release() -> None:
+    class Cancelled(FakeLanguageModel):
+        def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+            raise LanguageModelError("cancelled")
+
+    llm = Cancelled()
+
+    with pytest.raises(LanguageModelError):
+        generator(llm).generate([seg(1, "Hi")], LABELER, ConversationLanguage.EN)
+
+    assert llm.releases == 1

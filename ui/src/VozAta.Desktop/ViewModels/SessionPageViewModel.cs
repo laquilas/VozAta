@@ -24,7 +24,8 @@ public sealed partial class SessionPageViewModel(
     SessionSummary summary,
     MinutesTemplatesViewModel? templates = null,
     IDialogService? dialogs = null,
-    string? audioFolder = null) : ObservableObject, IDisposable
+    string? audioFolder = null,
+    IProcessingMarkers? markers = null) : ObservableObject, IDisposable
 {
     /// <summary>Export formats and the file-type name shown in the save dialog.</summary>
     private static readonly Dictionary<string, string> ExportTypes = new()
@@ -109,7 +110,7 @@ public sealed partial class SessionPageViewModel(
     };
 
     /// <summary>Recording, paused or finalizing: no regeneration yet.</summary>
-    public bool IsLive => summary.Status is "recording" or "paused" or "finalizing";
+    public bool IsLive => summary.Status is "recording" or "paused";
 
     public ObservableCollection<TranscriptLine> Lines { get; } = [];
 
@@ -146,6 +147,7 @@ public sealed partial class SessionPageViewModel(
     public partial bool IsLoading { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNoMinutes), nameof(MinutesPending))]
     public partial bool HasMinutes { get; private set; }
 
     [ObservableProperty]
@@ -205,11 +207,14 @@ public sealed partial class SessionPageViewModel(
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
+        markers?.Clear(Id); // opened: the "done" check on the list has done its job
         IsLoading = true;
         Error = null;
         try
         {
+            var version = _processingVersion;
             var detail = await client.GetSessionAsync(Id, cancellationToken);
+            ApplyDetailProcessing(detail.Processing, version);
             SetAudio(detail.Audio ?? new Dictionary<string, double>());
             CreatePlayer();
             Folder = detail.Folder;
@@ -480,6 +485,7 @@ public sealed partial class SessionPageViewModel(
             await Speakers.LoadAsync(transcript.Segments, cancellationToken);
         }
 
+        RefreshPending();
         RegenerateMinutesCommand.NotifyCanExecuteChanged();
     }
 

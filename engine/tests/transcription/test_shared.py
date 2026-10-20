@@ -50,9 +50,66 @@ def test_release_unloads_once_and_is_safe_when_nothing_is_loaded() -> None:
     shared = SharedTranscriber(loader)
     shared.release()
 
-    shared.lease(keep=True)
+    shared.lease(keep=True).close()
     shared.release()
     shared.release()
 
     assert [model.closed for model in loader.models] == [True]
     assert not shared.loaded
+
+
+def test_a_lease_closing_while_another_is_open_does_not_close_the_model() -> None:
+    loader = Loader()
+    shared = SharedTranscriber(loader)
+    queue_step = shared.lease(keep=False)  # minutes follow: it asks for the unload
+    live = shared.lease(keep=True)  # a live session that timed out the gate
+
+    queue_step.close()
+    live.transcribe(np.ones(4, np.float32), "pt")
+
+    assert len(loader.models) == 1 and not loader.models[0].closed
+    live.close()  # the last open lease: the asked-for unload happens now
+    assert loader.models[0].closed
+    assert not shared.loaded
+
+
+def test_a_direct_release_waits_for_the_open_lease() -> None:
+    loader = Loader()
+    shared = SharedTranscriber(loader)
+    live = shared.lease(keep=True)
+
+    shared.release()  # e.g. "Regenerate minutes" while a recording uses Whisper
+    live.transcribe(np.ones(4, np.float32), "pt")
+
+    assert not loader.models[0].closed
+    live.close()
+    assert loader.models[0].closed and not shared.loaded
+
+
+def test_closing_a_lease_twice_counts_once() -> None:
+    loader = Loader()
+    shared = SharedTranscriber(loader)
+    first = shared.lease(keep=False)
+    second = shared.lease(keep=True)
+
+    first.close()
+    first.close()
+
+    assert not loader.models[0].closed  # `second` is still open
+    second.close()
+    assert loader.models[0].closed
+
+
+def test_keep_when_is_read_at_close_and_keeps_the_model_when_true() -> None:
+    loader = Loader()
+    shared = SharedTranscriber(loader)
+    cancelled = [False]
+    lease = shared.lease(keep=False, keep_when=lambda: cancelled[0])
+
+    cancelled[0] = True  # e.g. the step was cancelled by a live start meanwhile
+    lease.close()
+
+    assert shared.loaded
+    assert not loader.models[0].closed
+    shared.lease(keep=False, keep_when=lambda: False).close()
+    assert loader.models[0].closed  # not cancelled: the VRAM rule unloads it

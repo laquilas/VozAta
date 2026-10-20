@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,13 +12,11 @@ from typing import Protocol
 
 from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
 from vozata.config import ConfigError, Settings
-from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.heartbeat import Heartbeat
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
-from vozata.minutes.session_action_items import Extractor, write_session_action_items
-from vozata.minutes.session_minutes import EmptyTranscriptError
+from vozata.minutes.session_action_items import Extractor
 from vozata.minutes.template_repository import DEFAULT_TEMPLATE
 from vozata.ports import (
     AudioMixer,
@@ -31,9 +31,16 @@ from vozata.ports import (
     TranscriptSearch,
     Translator,
 )
+from vozata.processing.cancel import CancelToken
+from vozata.processing.gpu_gate import GpuGate, GpuUsage
+from vozata.processing.job import ProcessingJob, run_job_inline
+from vozata.processing.live_lease import LiveGpuLease, LiveModelTurn, ModelLoadSkipped
+from vozata.processing.session_job import JobParts, session_job, transcribe_weight
+from vozata.session_finisher import SessionFinisher
 from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.transcription.language_lock import LanguageLock
+from vozata.transcription.offline import OfflineTranscription
 from vozata.translation.live import live_translation
 from vozata.translation.worker import TranslationWorker
 from vozata.vocabulary import build_hints
@@ -72,6 +79,9 @@ class SessionComponents:
     translate_to: str | None = None  # live translation language (phase 29); None = off
     translator_factory: Callable[[], Translator] | None = None  # built on the translation thread
     title: str | None = None  # meeting title at start (phase 35), normalized; None = untitled
+    gate: GpuGate | None = None  # shared with the processing queue (phase 40); None = no gate
+    gpu_usage: GpuUsage | None = None  # which models use the local GPU (phase 40)
+    live_models: LiveModelTurn | None = None  # shared by `serve` sessions (phase 40); None = own
 
 
 class SessionStartError(RuntimeError):
@@ -83,7 +93,11 @@ class SessionStartError(RuntimeError):
 
 
 class RecordingSession:
-    """Start, pause, resume and stop one recording; `stop()` follows architecture §6 exactly."""
+    """Start, pause, resume and stop one recording (architecture §6).
+
+    `stop_capture()` ends the recording at once and hands the meeting to a processing job
+    (phase 40); `stop()` (CLI `record`) runs that same job inline.
+    """
 
     def __init__(
         self,
@@ -106,7 +120,9 @@ class RecordingSession:
         self._id: str | None = None
         self._captured: float | None = None  # recorded length, fixed once capture stops
         self._heartbeat: Heartbeat | None = None  # `session.json` autosave (phase 17)
-        self._pipeline: CapturePipeline | None = None  # None until `start()`, and on `recover()`
+        self._pipeline: CapturePipeline | None = None  # None until `start()`
+        self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
+        self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
 
     @property
     def id(self) -> str:
@@ -146,7 +162,7 @@ class RecordingSession:
             lambda channel: self._audio.open_writer(self.id, channel),
             self._store.open_transcript(self.id, self._c.labeler),
             self._settings,
-            self._c.transcriber_factory,
+            self._live_transcriber,
             self._lock,
             self._observer,
             self._c.chunker_factory,
@@ -183,45 +199,134 @@ class RecordingSession:
         self._meta.set_title(title)
 
     def stop(self) -> None:
+        """Stop capture, then run the meeting's processing job on this thread (CLI)."""
         if self.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
             return
-        if self.status is SessionStatus.PAUSED:
-            self._meta.pause_ended(self._c.clock.now())
-        self._stop_capture()  # 1
-        self._drain()  # 2
-        self._pipeline.finalize_wavs()  # 3
-        self._finish()
+        run_job_inline(self.processing_job(self.stop_capture()))
 
-    def recover(self, session_id: str, duration_seconds: float) -> None:
-        """Finish an interrupted session whose audio and transcript were repaired (phase 17).
+    def stop_capture(self) -> threading.Event:
+        """End the recording now (architecture §6, step 1); the live transcription is abandoned.
 
-        Runs the same `_finish()` sequence as `stop()` (mix onwards), so every stop step also
-        runs on recovery. `duration_seconds` is the recorded length found in the repaired audio.
+        Sources stop, `capture_ended_at` and the length are written, PortAudio is released and the
+        status becomes `finalizing`. The returned event is set once the abandoned pipeline closed
+        its transcript files and WAVs (and the GPU lease is given back); it is already set when
+        nothing was recording. A failing part (e.g. `session.json` locked by OneDrive) is logged
+        and the rest still runs: the pipeline is always abandoned, so the live model and the GPU
+        lease are always released and `closed` is always set.
         """
-        if self._id is not None:
-            raise RuntimeError("A session can only be started or recovered once")
-        meta = self._store.read_meta(session_id)
-        self._id = session_id
-        self._meta = SessionMeta.restore(self._store, session_id, meta)
-        language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
-        self._lock = LanguageLock(language, self._on_language_detected)
-        self._captured = duration_seconds
-        self._meta.captured(duration_seconds)
-        self._set_status(SessionStatus.FINALIZING)
-        self._start_heartbeat()
-        self._finish()
+        closed = threading.Event()
+        if self.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+            closed.set()
+            return closed
+        paused = self.status is SessionStatus.PAUSED
+        captured = self._captured = self._c.clock.now()
+        self.status = SessionStatus.FINALIZING  # no second stop, whatever fails below
+        parts: list[tuple[str, Callable[[], None]]] = []
+        if paused:
+            parts.append(("Closing the open pause", lambda: self._meta.pause_ended(captured)))
+        parts += [("Stopping a source", source.stop) for source in self._c.sources.values()]
+        parts += [
+            ("Flushing the chunkers", self._pipeline.stop_capture),
+            (
+                "Saving the capture end",
+                lambda: self._meta.capture_ended(self._store.now(), captured),
+            ),
+            ("Releasing the audio backend", self._release_audio),
+            ("Saving the status", lambda: self._meta.set_status(SessionStatus.FINALIZING)),
+            ("Reporting the status", lambda: self._observer.on_status(self.status, captured)),
+            ("Stopping the autosave", self._stop_heartbeat),  # the job owns `session.json` now
+        ]
+        try:
+            for what, part in parts:
+                try:
+                    part()
+                except Exception:
+                    _log.exception("%s at stop failed", what)
+        finally:
+            self._abandoned.set()
+            if self._c.live_models is not None:
+                self._c.live_models.stopping(closed)
+            self._pipeline.abandon(lambda: self._pipeline_closed(closed))
+        return closed
 
-    def _finish(self) -> None:
-        """Stop steps 3 (mix) to 7, shared by `stop()` and `recover()` (phase 17)."""
-        self._mix()  # 3
-        self._release_transcriber()  # 4
-        self._identify_speakers()  # 5
-        self._write_minutes()  # 6
-        self._extract_action_items()  # 6: action items (phase 23)
-        self._index_transcript()  # 6: search (phase 22)
-        self._meta.ended(self._store.now())  # 7
-        self._set_status(SessionStatus.DONE)
-        self._stop_heartbeat()
+    def processing_job(self, closed: threading.Event | None) -> ProcessingJob:
+        """The rest of this meeting (transcribe the rest, mix, speakers, minutes, index, done) with
+        this session's own components; never cancelled, so they are reused across steps (and not
+        closed after each one)."""
+        parts = JobParts(
+            finisher=lambda kind: contextlib.nullcontext(self._finisher()),
+            transcription=self._offline,
+            diarize=self._c.diarizer_factory is not None,
+            minutes=self._c.minutes is not None,
+            action_items=self._c.action_items is not None,
+        )
+        usage = self._c.gpu_usage or GpuUsage(speech=False, speakers=False, llm=False)
+        weight = transcribe_weight(self._store, self.id, self.duration_seconds)
+        return session_job(
+            self.id, parts, usage, weight=weight, closed=closed, on_finished=self._done
+        )
+
+    def _pipeline_closed(self, closed: threading.Event) -> None:
+        """On the abandoned worker's thread, once its files are closed."""
+        try:
+            dropped = self._pipeline.echo_dropped
+            if dropped is not None:
+                self._meta.echo_dropped(dropped)
+        except Exception:
+            _log.exception("Saving the echo count failed")
+        finally:
+            self._gpu.release()
+            closed.set()
+
+    def _offline(self, token: CancelToken) -> OfflineTranscription:
+        """The rest of the meeting (CLI: never cancelled, so `token` is not needed)."""
+        return OfflineTranscription(
+            self._settings,
+            self._store,
+            self._audio,
+            self._c.transcriber_factory,
+            self._c.labeler,
+            self._lock,
+            build_hints(self._c.vocabulary),
+            self._c.chunker_factory,
+            on_segment=self._observer.on_segment,  # CLI: the lines after Stop are printed too
+        )
+
+    def _done(self) -> None:
+        self._finisher().ended(self._store.now())
+        self.status = SessionStatus.DONE
+        self._observer.on_status(SessionStatus.DONE, self.duration_seconds)
+
+    def _live_transcriber(self) -> Transcriber:
+        """The live model, loaded on the worker thread once it may (see `_before_model`)."""
+        self._before_model(self._gpu.hold_speech)
+        return self._c.transcriber_factory()
+
+    def _before_model(self, hold: Callable[[], None]) -> None:
+        """Before a live model loads: the previous session's live models are closed, then `hold`
+        takes the GPU gate when that model runs on the local GPU (pre-empting the queue's GPU
+        step). Raises `ModelLoadSkipped` once this session stopped: an abandoned session never
+        takes the gate nor loads a model only to close it."""
+        if self._abandoned.is_set():
+            raise ModelLoadSkipped
+        if self._c.live_models is not None:
+            self._c.live_models.wait()
+        if self._abandoned.is_set():  # stopped while the previous session's models closed
+            raise ModelLoadSkipped
+        hold()
+
+    def _finisher(self) -> SessionFinisher:
+        return SessionFinisher(
+            self._settings,
+            self._store,
+            self._audio,
+            self._c,
+            self._observer,
+            self.id,
+            self._lock,
+            lambda: self._meta.title,
+            self._meta,
+        )
 
     def _start_heartbeat(self) -> None:
         """Save `last_heartbeat_at` and the length so far every `AUTOSAVE_SECONDS` until done, so
@@ -272,47 +377,17 @@ class RecordingSession:
 
     def _abort(self, opened: list[AudioSource]) -> None:
         self._pipeline.abort()
+        self._gpu.release()
         for source in opened:
             source.stop()
         self._release_audio()
         self._store.discard(self.id)
-
-    def _stop_capture(self) -> None:
-        for source in self._c.sources.values():
-            source.stop()
-        self._pipeline.stop_capture()
-        self._captured = self._c.clock.now()
-        self._meta.captured(self._captured)
-        self._release_audio()
-        self._set_status(SessionStatus.FINALIZING)
-
-    def _drain(self) -> None:
-        self._pipeline.drain()
-        dropped = self._pipeline.echo_dropped
-        if dropped is not None:
-            self._meta.echo_dropped(dropped)
 
     def _release_audio(self) -> None:
         try:
             self._c.release()
         except Exception:
             _log.exception("Releasing the audio backend failed")
-
-    def _mix(self) -> None:
-        try:
-            self._audio.write_mix(self.id, self._c.mixer)
-        except Exception as error:
-            _log.exception("Mixing %s failed", self.id)
-            self._error("mix_failed", reason=str(error))
-
-    def _release_transcriber(self) -> None:
-        transcriber = self._pipeline.transcriber if self._pipeline is not None else None
-        if transcriber is None:
-            return
-        try:
-            transcriber.close()
-        except Exception:
-            _log.exception("Releasing the transcriber failed")
 
     def _live_embedder(self) -> Callable[[], SpeakerEmbedder] | None:
         """The embedder for live speaker labels (phase 15); a failed load reports an error."""
@@ -321,6 +396,7 @@ class RecordingSession:
             return None
 
         def build() -> SpeakerEmbedder:
+            self._before_model(self._gpu.hold_speakers)
             try:
                 return factory()
             except Exception as error:
@@ -328,84 +404,6 @@ class RecordingSession:
                 raise
 
         return build
-
-    def _identify_speakers(self) -> None:
-        """Diarize the system track (Whisper is already released); a failure keeps `system`
-        labels.
-
-        Once speakers are written, `speakers_relabeled` tells clients to reload the transcript:
-        the post-session speakers replace the live ones (phase 15).
-        """
-        if self._c.diarizer_factory is None:
-            return
-        try:
-            found = diarize_session(
-                self._store,
-                self._audio,
-                self.id,
-                self._c.diarizer_factory,
-                self._settings.min_speakers,
-                self._settings.max_speakers,
-            )
-        except Exception as error:
-            _log.warning("Speaker identification for %s failed: %s", self.id, error)
-            reason = self._reason(error)
-            command = f'python -m vozata diarize "{self._command_target()}"'
-            self._error("diarization_failed", reason=reason, command=command)
-            return
-        if found is not None:
-            self._observer.on_speakers_relabeled(self.id)
-
-    def _write_minutes(self) -> None:
-        if self._c.minutes is None:
-            return
-        segments = self._store.load_transcript(self.id)
-        if not segments:
-            _log.info("No speech in %s; minutes skipped", self.id)
-            return
-        try:
-            labeler = self._c.labeler.with_names(self._store.speaker_names(self.id))
-            minutes = self._c.minutes.generate(
-                segments, labeler, self._lock.language, self._c.vocabulary, title=self._meta.title
-            )
-        except Exception as error:
-            _log.exception("Generating minutes for %s failed", self.id)
-            command = f'python -m vozata minutes "{self._command_target()}"'
-            self._error("minutes_failed", reason=str(error), command=command)
-            return
-        self._store.write_minutes(self.id, minutes + "\n")
-        self._observer.on_minutes_ready(self.id)
-
-    def _extract_action_items(self) -> None:
-        """After the minutes, with the same model (phase 23); a failure keeps everything else."""
-        if self._c.action_items is None:
-            return
-        try:
-            items = write_session_action_items(
-                self._store, self.id, self._c.action_items, self._c.labeler
-            )
-        except EmptyTranscriptError:
-            return
-        except Exception as error:
-            _log.exception("Extracting action items for %s failed", self.id)
-            self._error("action_items_failed", reason=str(error))
-            return
-        self._observer.on_action_items_ready(self.id, len(items))
-
-    def _index_transcript(self) -> None:
-        if self._c.search_index is None:
-            return
-        try:
-            self._c.search_index.index_session(self.id, self._store.load_transcript(self.id))
-        except Exception as error:
-            _log.exception("Indexing %s for search failed", self.id)
-            self._error("index_failed", reason=str(error))
-
-    def _command_target(self) -> str:
-        """What the CLI commands in error messages take: the session folder, or for a backend
-        without folders `OUTPUT_DIR/<id>` (the commands open the storage of its parent)."""
-        folder = self.folder
-        return str(folder if folder is not None else self._settings.output_dir / self.id)
 
     def _reason(self, error: Exception) -> str:
         return error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)

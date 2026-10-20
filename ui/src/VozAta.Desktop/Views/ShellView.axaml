@@ -79,6 +79,20 @@
                          IsVisible="{Binding Shell.IsExpanded}" />
             </StackPanel>
           </Button>
+          <!-- Background processing queue (phase 40): running meeting with its percent, then the queued count -->
+          <StackPanel Margin="0,12,0,0" Spacing="2" Classes="processing-indicator" IsVisible="{Binding Processing.IsVisible}"
+                      ToolTip.Tip="{Binding Processing.ToolTipText}">
+            <!-- A Grid, not a horizontal StackPanel: the text column gets the sidebar's width and wraps -->
+            <Grid ColumnDefinitions="Auto,*" Margin="12,0">
+              <PathIcon Data="{StaticResource Icon.Refresh}" VerticalAlignment="Top" />
+              <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="2" IsVisible="{Binding Shell.IsExpanded}">
+                <TextBlock Text="{Binding Processing.Text}" Classes="muted tabular" TextWrapping="Wrap"
+                           IsVisible="{Binding Processing.HasRunning}" />
+                <TextBlock Text="{Binding Processing.QueuedText}" Classes="muted tabular" TextWrapping="Wrap"
+                           IsVisible="{Binding Processing.HasQueued}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
         </StackPanel>
       </DockPanel>
     </Border>

@@ -18,8 +18,8 @@ namespace VozAta.Desktop;
 [ExcludeFromCodeCoverage(Justification = "Composition root; covered by the manual check.")]
 public partial class App : Application
 {
-    /// <summary>Longest wait for a finalizing session when the window closes.</summary>
-    private static readonly TimeSpan FinalizeWait = TimeSpan.FromMinutes(10);
+    /// <summary>Longest wait for the recorder to stop when the window closes; background processing is not waited for (phase 40).</summary>
+    private static readonly TimeSpan StopWait = TimeSpan.FromSeconds(15);
 
     public override void Initialize()
     {
@@ -86,6 +86,7 @@ public partial class App : Application
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
         services.AddSingleton<Func<IAudioPlayer>>(_ => () => new LibVlcAudioPlayer()); // one per meeting page (37)
         services.AddSingleton(baseUri); // the player streams GET /sessions/{id}/audio/{track} from here
+        services.AddSingleton<IProcessingMarkers, ProcessingMarkers>(); // done checks on the meetings list (phase 40)
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }
@@ -140,10 +141,11 @@ public partial class App : Application
         TrayIcon.SetIcons(this, [icon]);
     }
 
-    /// <summary>Closing asks while recording, then waits for finalization before the engine stops.</summary>
+    /// <summary>Closing asks while recording and warns about pending processing, then stops the engine.</summary>
     private static void GuardClosing(Window window, MainViewModel viewModel)
     {
         var closing = false;
+        var confirming = false;
         window.Closing += async (_, args) =>
         {
             if (closing)
@@ -152,14 +154,30 @@ public partial class App : Application
             }
 
             args.Cancel = true;
-            if (!await viewModel.ConfirmCloseAsync())
+            if (confirming)
+            {
+                return; // a second close request while a dialog is open must not stack another
+            }
+
+            confirming = true;
+            bool confirmed;
+            try
+            {
+                confirmed = await viewModel.ConfirmCloseAsync();
+            }
+            finally
+            {
+                confirming = false;
+            }
+
+            if (!confirmed)
             {
                 return;
             }
 
             closing = true;
             window.IsEnabled = false;
-            await viewModel.ShutdownAsync(FinalizeWait);
+            await viewModel.ShutdownAsync(StopWait);
             window.Close();
         };
     }

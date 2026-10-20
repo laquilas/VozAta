@@ -11,7 +11,6 @@ from starlette.exceptions import HTTPException
 
 from vozata.api.session_manager import (
     NoActiveSessionError,
-    SessionBeingRecoveredError,
     SessionConflictError,
     SessionNotInterruptedError,
     SessionStillActiveError,
@@ -53,10 +52,6 @@ def install_error_handlers(app: FastAPI, localizer: Localizer) -> None:
     @app.exception_handler(NoActiveSessionError)
     async def no_session(request: Request, error: NoActiveSessionError) -> JSONResponse:
         return respond(409, "no_active_session")
-
-    @app.exception_handler(SessionBeingRecoveredError)
-    async def recovering(request: Request, error: SessionBeingRecoveredError) -> JSONResponse:
-        return respond(409, "session_being_recovered", id=str(error))
 
     @app.exception_handler(SessionNotInterruptedError)
     async def not_interrupted(request: Request, error: SessionNotInterruptedError) -> JSONResponse:

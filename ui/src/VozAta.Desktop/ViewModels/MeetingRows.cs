@@ -63,10 +63,44 @@ public sealed partial class MeetingRow : ObservableObject
 
     public IReadOnlyList<MeetingExport> Exports { get; }
 
-    /// <summary>Recording, paused or finalizing: pinned on top with a pulsing dot; not deletable.</summary>
-    public bool IsLive => Summary.Status is "recording" or "paused" or "finalizing";
+    /// <summary>Recording or paused: pinned on top with a pulsing dot. A finalizing meeting is in the queue instead.</summary>
+    public bool IsLive => Summary.Status is "recording" or "paused";
 
-    public bool CanDelete => !IsLive;
+    /// <summary>Not while recording or while the engine still finishes the meeting.</summary>
+    public bool CanDelete => !IsLive && Summary.Status != "finalizing";
+
+    /// <summary>"Ready": the tooltip of the done check.</summary>
+    public string DoneText { get; init; } = "";
+
+    /// <summary>The queue's view of the meeting (null: not in the queue).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProcessing), nameof(ShowsDoneCheck), nameof(IsRunning))]
+    public partial ProcessingInfo? Processing { get; private set; }
+
+    /// <summary>"Queued (2)", "Processing 42 %" or "Paused".</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccessibleName))]
+    public partial string ProcessingText { get; private set; } = "";
+
+    /// <summary>Finished while nobody looked: a green check until the meeting is opened.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsDoneCheck), nameof(AccessibleName))]
+    public partial bool UnseenDone { get; set; }
+
+    /// <summary>Queued, running or paused.</summary>
+    public bool IsProcessing => ProcessingStates.IsActive(Processing);
+
+    /// <summary>Running (the badge is accent coloured).</summary>
+    public bool IsRunning => Processing is { State: "running" };
+
+    public bool ShowsDoneCheck => UnseenDone && !IsProcessing;
+
+    /// <summary>Show the queue's state with its already localized text.</summary>
+    public void ApplyProcessing(ProcessingInfo? info, string text)
+    {
+        Processing = info;
+        ProcessingText = ProcessingStates.IsActive(info) ? text : "";
+    }
 
     /// <summary>Opened in the detail on the right.</summary>
     [ObservableProperty]
@@ -87,7 +121,8 @@ public sealed partial class MeetingRow : ObservableObject
     public string AccessibleName => ToString();
 
     /// <summary>What screen readers announce for the row.</summary>
-    public override string ToString() => string.Join(", ", new[] { DisplayTitle, TimeRange, Duration }.Where(text => text.Length > 0));
+    public override string ToString() => string.Join(
+        ", ", new[] { DisplayTitle, TimeRange, Duration, ProcessingText, ShowsDoneCheck ? DoneText : "" }.Where(text => text.Length > 0));
 }
 
 /// <summary>A day of meetings: "Wed, 14 Oct" (or Today / Yesterday) and its total on the right.</summary>

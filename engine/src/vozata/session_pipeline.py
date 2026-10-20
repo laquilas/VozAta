@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 
-from vozata.audio.chunker import FixedWindowChunker
+from vozata.audio.chunker import ChunkerFactory, fixed_windows
 from vozata.audio.levels import rms_db
 from vozata.config import Settings
 from vozata.diarization.live import LiveSpeakerTagger
@@ -24,22 +24,14 @@ from vozata.ports import (
     Transcriber,
     TranscriptSink,
 )
+from vozata.processing.live_lease import ModelLoadSkipped
 from vozata.transcription.context import RollingContext
 from vozata.transcription.echo import EchoFilter
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 from vozata.transcription.worker import PartialOptions, TranscriptionWorker
 
-ChunkerFactory = Callable[[Channel, Callable[[AudioChunk], None]], Chunker]
-
 _log = logging.getLogger(__name__)
-
-
-def _fixed_windows(settings: Settings) -> ChunkerFactory:
-    def build(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> Chunker:
-        return FixedWindowChunker(channel, settings.chunk_seconds, settings.sample_rate, on_chunk)
-
-    return build
 
 
 class _DeferredTranscriber:
@@ -60,6 +52,8 @@ class _DeferredTranscriber:
         self._observer.on_model_loading(True)
         try:
             self.loaded = self._factory()
+        except ModelLoadSkipped:
+            return False  # the session stopped before its model loaded: nothing to report
         except Exception as error:
             _log.exception("Loading the speech model failed")
             self._on_failed(error)
@@ -93,12 +87,7 @@ def _echo_filter(
         if settings.live_partials:
             observer.on_partial(segment.channel, segment.channel.value, segment.start, "")
 
-    return EchoFilter(
-        sinks,
-        settings.echo_similarity,
-        settings.effective_echo_hold_seconds,
-        on_dropped=clear_partial,
-    )
+    return EchoFilter.from_settings(settings, sinks, on_dropped=clear_partial)
 
 
 def _live_speakers(
@@ -169,7 +158,7 @@ class CapturePipeline:
         extra_sinks: Sequence[TranscriptSink] = (),
     ) -> None:
         self._rate = settings.sample_rate
-        new_chunker = chunker_factory or _fixed_windows(settings)
+        new_chunker = chunker_factory or fixed_windows(settings)
         self._observer = observer
         self._accepting = False
         chunks: queue.Queue[AudioChunk] = queue.Queue()
@@ -303,6 +292,35 @@ class CapturePipeline:
         """
         self._worker.stop()
         self._sink.close()
+
+    def abandon(self, on_closed: Callable[[], None]) -> None:
+        """Stop without draining (phase 40); returns at once.
+
+        The worker finishes the chunk (or model load) in hand and skips its backlog; then, on its
+        thread, the sinks are closed (the echo filter releases the mic segments it holds), the
+        loaded transcriber is closed, the WAVs are finalized and `on_closed()` runs. A failing
+        part is logged and the next one still runs.
+        """
+        self._accepting = False
+
+        def close() -> None:
+            for part, what in (
+                (self._sink.close, "Closing the transcript"),
+                (self._close_transcriber, "Releasing the transcriber"),
+                (self.finalize_wavs, "Finalizing the WAVs"),
+            ):
+                try:
+                    part()
+                except Exception:
+                    _log.exception("%s failed", what)
+            on_closed()
+
+        self._worker.abandon(close)
+
+    def _close_transcriber(self) -> None:
+        loaded = self._transcriber.loaded
+        if loaded is not None:
+            loaded.close()
 
     def finalize_wavs(self) -> None:
         """Pad every WAV to the longest one and close them."""

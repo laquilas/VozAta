@@ -6,7 +6,21 @@ from collections.abc import Callable
 
 import numpy as np
 
+from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel
+from vozata.ports import Chunker
+
+ChunkerFactory = Callable[[Channel, Callable[[AudioChunk], None]], Chunker]
+"""Build a channel's chunker that calls `on_chunk` with every cut chunk (`CHUNKERS`)."""
+
+
+def fixed_windows(settings: Settings) -> ChunkerFactory:
+    """Fixed `CHUNK_SECONDS` windows (the chunker when no `CHUNK_MODE` factory is given)."""
+
+    def build(channel: Channel, on_chunk: Callable[[AudioChunk], None]) -> Chunker:
+        return FixedWindowChunker(channel, settings.chunk_seconds, settings.sample_rate, on_chunk)
+
+    return build
 
 
 class FixedWindowChunker:
