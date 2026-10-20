@@ -738,6 +738,68 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Close_with_pending_processing_warns_once_and_closes()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        await SendAsync(viewModel, new ProcessingEvent("b", new ProcessingInfo("queued", 0, null, 1)));
+
+        Assert.Equal(2, viewModel.PendingProcessing);
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal([_localization["AppTitle"]], _dialogs.Asked);
+        Assert.Equal([_localization.Format("Close_PendingProcessing", 2)], _dialogs.Messages);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_pending_processing_warning_keeps_the_app_open()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        _dialogs.Answer = false;
+
+        Assert.False(await viewModel.ConfirmCloseAsync());
+    }
+
+    [Fact]
+    public async Task Finished_processing_does_not_warn_on_close()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("done", 100, null)));
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal(0, viewModel.PendingProcessing);
+        Assert.Empty(_dialogs.Asked);
+    }
+
+    [Fact]
+    public async Task Recording_and_pending_processing_ask_both_questions()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("queued", 0, null, 1)));
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal([_localization["ConfirmCloseTitle"], _localization["AppTitle"]], _dialogs.Asked);
+    }
+
+    [Fact]
+    public async Task Losing_the_engine_connection_clears_the_processing_indicator()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new ProcessingEvent("a", new ProcessingInfo("running", 40, "transcribe")));
+        Assert.True(viewModel.Processing.IsVisible);
+
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+
+        Assert.False(viewModel.Processing.IsVisible);
+        Assert.Equal(0, viewModel.PendingProcessing);
+    }
+
+    [Fact]
     public async Task Closing_with_unsaved_transcript_edits_asks_first()
     {
         _client.Sessions.Add(new SessionSummary("20261015_202358", "done", null, null, 5, "en", false));

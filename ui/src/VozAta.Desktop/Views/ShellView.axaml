@@ -79,6 +79,17 @@
                          IsVisible="{Binding Shell.IsExpanded}" />
             </StackPanel>
           </Button>
+          <!-- Background processing queue (phase 40): running meeting with its percent, then the queued count -->
+          <StackPanel Margin="0,12,0,0" Spacing="2" Classes="processing-indicator" IsVisible="{Binding Processing.IsVisible}"
+                      ToolTip.Tip="{Binding Processing.Text}">
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="12,0">
+              <PathIcon Data="{StaticResource Icon.Refresh}" IsVisible="{Binding Shell.IsCollapsed}" />
+              <TextBlock Text="{Binding Processing.Text}" Classes="muted tabular" TextWrapping="Wrap"
+                         IsVisible="{Binding Shell.IsExpanded}" />
+            </StackPanel>
+            <TextBlock Text="{Binding Processing.QueuedText}" Classes="muted tabular" Margin="12,0"
+                       IsVisible="{Binding Processing.HasQueued}" />
+          </StackPanel>
         </StackPanel>
       </DockPanel>
     </Border>

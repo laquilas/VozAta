@@ -1281,4 +1281,13 @@
   <data name="Processing_TabPending" xml:space="preserve">
     <value>Esta parte todavía se está procesando.</value>
   </data>
+  <data name="ProcessingIndicator_Text" xml:space="preserve">
+    <value>Procesando {0} reunión(es) · {1} %</value>
+  </data>
+  <data name="ProcessingIndicator_Queued" xml:space="preserve">
+    <value>+{0} en cola</value>
+  </data>
+  <data name="Close_PendingProcessing" xml:space="preserve">
+    <value>{0} reunión(es) todavía se está(n) procesando. El procesamiento continúa la próxima vez que se abra VozAta.</value>
+  </data>
 </root>

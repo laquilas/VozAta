@@ -62,6 +62,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token);
         History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs, markers: markers);
         Health = new HealthViewModel(client, localization);
+        Processing = new ProcessingIndicatorViewModel(localization);
         Settings = new SettingsViewModel(client, process, localization, paths);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(Recorder, localization, preferences);
@@ -113,6 +114,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ShellViewModel Shell { get; }
 
     public HistoryViewModel History { get; }
+
+    /// <summary>The sidebar indicator of the background processing queue (phase 40).</summary>
+    public ProcessingIndicatorViewModel Processing { get; }
+
+    /// <summary>Meetings still queued, running or paused; closing the app interrupts them until the next start.</summary>
+    public int PendingProcessing => Processing.PendingCount;
 
     /// <summary>The Meetings page (phase 36): meetings by day, with the history detail on the right.</summary>
     public MeetingsPageViewModel Meetings { get; }
@@ -229,7 +236,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         EventLoop = FollowEventsAsync();
     }
 
-    /// <summary>Whether the window may close: asks about unsaved transcript edits, and while recording asks and stops the session first.</summary>
+    /// <summary>Whether the window may close: asks about unsaved transcript edits, while recording asks and stops the session first, and warns once when meetings are still being processed.</summary>
     public async Task<bool> ConfirmCloseAsync()
     {
         if (!await History.ConfirmLeaveAsync())
@@ -237,22 +244,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return false; // unsaved transcript edits (phase 21)
         }
 
-        if (!Session.IsRecording)
+        if (Session.IsRecording)
         {
-            return true;
-        }
+            var confirmed = await _dialogs.ConfirmAsync(
+                _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]);
+            if (!confirmed)
+            {
+                return false;
+            }
 
-        var confirmed = await _dialogs.ConfirmAsync(
-            _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]);
-        if (confirmed)
-        {
             await Recorder.StopCommand.ExecuteAsync(null);
         }
 
-        return confirmed;
+        // Pending background processing resumes on the next start (the engine re-queues it): tell the user once.
+        return PendingProcessing == 0 || await _dialogs.ConfirmAsync(
+            _localization["AppTitle"], _localization.Format("Close_PendingProcessing", PendingProcessing), _localization["TrayQuit"], _localization["ConfirmRevertNo"]);
     }
 
-    /// <summary>Wait (at most <paramref name="maxWait"/>) for finalization, then release the engine.</summary>
+    /// <summary>Save the window size, commit a pending delete, wait (at most <paramref name="maxWait"/>) for the recorder to stop, then release the engine. Background processing is not waited for.</summary>
     public async Task ShutdownAsync(TimeSpan maxWait)
     {
         _preferences.Save(_preferences.Load() with { WindowWidth = WindowWidth, WindowHeight = WindowHeight });
@@ -394,6 +403,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 EngineStatus = connection.Connected ? EngineStatus.Connected : EngineStatus.Disconnected;
                 if (!connection.Connected)
                 {
+                    Processing.Clear(); // the snapshot on reconnect rebuilds it
                     History.Ask.OnConnectionLost();
                     Recovery.OnConnectionLost();
                     Migration.OnConnectionLost();
@@ -425,6 +435,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
                 break;
             case ProcessingEvent processing:
+                Processing.OnProcessing(processing);
                 HistoryRefresh = processing.Info.State is "done" or "failed"
                     ? Task.WhenAll(History.LoadAsync(), Meetings.OnProcessingAsync(processing))
                     : Meetings.OnProcessingAsync(processing);
@@ -489,6 +500,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Config.RefreshTexts();
         Tray.RefreshTexts();
         Shell.RefreshTexts();
+        Processing.RefreshTexts();
         Migration.RefreshTexts();
         History.Detail?.Player?.RefreshTexts();
     }

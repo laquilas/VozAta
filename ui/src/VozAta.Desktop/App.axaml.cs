@@ -18,8 +18,7 @@ namespace VozAta.Desktop;
 [ExcludeFromCodeCoverage(Justification = "Composition root; covered by the manual check.")]
 public partial class App : Application
 {
-    /// <summary>Longest wait for a finalizing session when the window closes.</summary>
-    /// <summary>Stop is accepted at once now; background processing is not waited for (phase 40).</summary>
+    /// <summary>Longest wait for the recorder to stop when the window closes; background processing is not waited for (phase 40).</summary>
     private static readonly TimeSpan StopWait = TimeSpan.FromSeconds(15);
 
     public override void Initialize()
@@ -142,7 +141,7 @@ public partial class App : Application
         TrayIcon.SetIcons(this, [icon]);
     }
 
-    /// <summary>Closing asks while recording, then waits for finalization before the engine stops.</summary>
+    /// <summary>Closing asks while recording and warns about pending processing, then stops the engine.</summary>
     private static void GuardClosing(Window window, MainViewModel viewModel)
     {
         var closing = false;
