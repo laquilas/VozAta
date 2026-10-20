@@ -17,7 +17,8 @@ public sealed record UiPreferencesData(
     double? WindowHeight = null,
     bool MinimizeToTray = false,
     string Theme = "system",
-    bool SidebarCollapsed = false);
+    bool SidebarCollapsed = false,
+    bool? LiveTranscription = null);
 
 public interface IUiPreferences
 {

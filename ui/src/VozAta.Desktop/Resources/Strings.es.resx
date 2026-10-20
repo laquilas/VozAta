@@ -72,6 +72,12 @@
   <data name="TranscriptEmpty" xml:space="preserve">
     <value>Pulsa Iniciar: la transcripción aparece aquí mientras la gente habla.</value>
   </data>
+  <data name="LiveTranscription" xml:space="preserve">
+    <value>Transcripción simultánea</value>
+  </data>
+  <data name="TranscriptAudioOnly" xml:space="preserve">
+    <value>Grabando solo el audio. La transcripción se crea cuando detengas la grabación.</value>
+  </data>
   <data name="EngineStarting" xml:space="preserve">
     <value>Iniciando el motor (la primera vez carga los modelos)…</value>
   </data>

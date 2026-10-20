@@ -46,6 +46,18 @@
 
     <!-- Options of the recording: chips that open small flyouts; locked while recording -->
     <WrapPanel DockPanel.Dock="Top" Margin="0,10,0,0" ItemSpacing="8" LineSpacing="8">
+      <!-- Live transcription (phase 41): a toggle; unchecked, the meeting only records audio -->
+      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+              Command="{Binding ToggleLiveTranscriptionCommand}"
+              ToolTip.Tip="{Binding L[LiveTranscription]}"
+              AutomationProperties.Name="{Binding L[LiveTranscription]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Classes="inline" Data="{StaticResource Icon.Check}"
+                    IsVisible="{Binding LiveTranscription}" />
+          <TextBlock Text="{Binding L[LiveTranscription]}" />
+        </StackPanel>
+      </Button>
+
       <!-- Microphone, with its level meter inside the chip -->
       <Panel>
         <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
@@ -130,7 +142,7 @@
       </Button>
 
       <!-- Live translation (phase 29) -->
-      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+      <Button Classes="chip" IsEnabled="{Binding CanChooseTranslation}"
               ToolTip.Tip="{Binding L[TranslateTo]}"
               AutomationProperties.Name="{Binding L[TranslateTo]}">
         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -200,7 +212,9 @@
     <Border Margin="0,10,0,0" Classes="outline">
       <Panel>
         <TextBlock Text="{Binding L[TranscriptEmpty]}" Classes="secondary"
-                   Margin="16" TextWrapping="Wrap" IsVisible="{Binding IsTranscriptEmpty}" />
+                   Margin="16" TextWrapping="Wrap" IsVisible="{Binding IsStartPromptVisible}" />
+        <TextBlock Text="{Binding L[TranscriptAudioOnly]}" Classes="secondary"
+                   Margin="16" TextWrapping="Wrap" IsVisible="{Binding IsAudioOnlyNotice}" />
         <ScrollViewer views:AutoScroll.IsEnabled="True">
           <StackPanel Margin="12">
             <ItemsControl ItemsSource="{Binding Segments}">

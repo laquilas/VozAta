@@ -24,6 +24,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     public const int MaxTitleLength = 200;
 
     private readonly IEngineClient _client;
+    private readonly IUiPreferences _preferences;
+    private bool _liveTranscription = true;
     private readonly ILocalizationService _localization;
     private readonly IUiTimer _timer;
     private readonly Action<string> _notify;
@@ -57,6 +59,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     {
         _titleDelay = titleDelay ?? Task.Delay;
         _client = client;
+        _preferences = preferences;
+        _liveTranscription = preferences.Load().LiveTranscription ?? true;
         _localization = localization;
         _timer = timer;
         _notify = notify;
@@ -76,8 +80,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         ];
         SelectedLanguage = ConversationLanguages[0];
         SelectedTranslation = TranslationLanguages[0];
-        Segments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsTranscriptEmpty));
-        Partials.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsTranscriptEmpty));
+        Segments.CollectionChanged += (_, _) => NotifyTranscriptEmpty();
+        Partials.CollectionChanged += (_, _) => NotifyTranscriptEmpty();
         session.PropertyChanged += OnSessionChanged;
         RefreshTexts();
     }
@@ -148,6 +152,35 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
     public bool IsTranscriptEmpty => Segments.Count == 0 && Partials.Count == 0;
 
+    /// <summary>
+    /// Transcribe while recording (phase 41); unchecked, only the audio is recorded and the transcript
+    /// is created after Stop. Editable with the other options only; the choice is remembered.
+    /// </summary>
+    public bool LiveTranscription
+    {
+        get => _liveTranscription;
+        set
+        {
+            if (CanEditOptions && SetLiveTranscription(value))
+            {
+                _preferences.Save(_preferences.Load() with { LiveTranscription = value });
+            }
+        }
+    }
+
+    /// <summary>The chip: flips the option (ignored while recording).</summary>
+    [RelayCommand]
+    private void ToggleLiveTranscription() => LiveTranscription = !LiveTranscription;
+
+    /// <summary>Translation needs live transcription.</summary>
+    public bool CanChooseTranslation => CanEditOptions && LiveTranscription;
+
+    /// <summary>The transcript placeholder says the transcript comes after Stop (live transcription off).</summary>
+    public bool IsAudioOnlyNotice => !LiveTranscription && IsTranscriptEmpty;
+
+    /// <summary>The transcript placeholder for the usual case (live transcription on).</summary>
+    public bool IsStartPromptVisible => LiveTranscription && IsTranscriptEmpty;
+
     /// <summary>The engine is still loading the speech model; audio is already being recorded.</summary>
     [ObservableProperty]
     public partial bool IsModelLoading { get; private set; }
@@ -186,6 +219,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         _systemLabel = NonEmpty(settings.GetString("SYSTEM_LABEL"));
         _defaultTemplate = NonEmpty(settings.GetString("MINUTES_TEMPLATE"));
         ApplyDefaultTranslation(settings.GetString("TRANSLATE_TO"));
+        // The remembered choice wins over LIVE_TRANSCRIPTION until the setting is saved again
+        SetLiveTranscription(_preferences.Load().LiveTranscription ?? ParseBool(settings.GetString("LIVE_TRANSCRIPTION")) ?? true);
     }
 
     /// <summary>Saved settings: languages, labels and template apply when not recording.</summary>
@@ -200,6 +235,12 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         if (values.TryGetValue("TRANSLATE_TO", out var translation) && !IsRecording)
         {
             ApplyDefaultTranslation(translation);
+        }
+
+        if (values.TryGetValue("LIVE_TRANSCRIPTION", out var live) && !IsRecording)
+        {
+            SetLiveTranscription(ParseBool(live) ?? true);
+            _preferences.Save(_preferences.Load() with { LiveTranscription = null }); // the setting is the default again
         }
 
         if (values.TryGetValue("MIC_LABEL", out var mic))
@@ -390,8 +431,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             var request = new StartSessionRequest(
                 Devices.MicDeviceId, Devices.SystemDeviceId, SelectedLanguage.Value, SelectedTemplate?.Id,
                 terms.Count > 0 ? terms : null,
-                SelectedTranslation.Value == _defaultTranslation ? null : SelectedTranslation.Value,
-                title);
+                LiveTranscription && SelectedTranslation.Value != _defaultTranslation ? SelectedTranslation.Value : null,
+                title,
+                LiveTranscription);
             var started = await _client.StartSessionAsync(request, _cancellation);
             _sentTitle = started.Title;
             Session.SessionId = started.Id;
@@ -514,6 +556,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             case nameof(RecordingSessionService.State):
                 OnPropertyChanged(nameof(CanEditTitle));
                 OnPropertyChanged(nameof(CanEditOptions));
+                OnPropertyChanged(nameof(CanChooseTranslation));
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(IsRecording));
                 OnPropertyChanged(nameof(IsPaused));
@@ -549,6 +592,28 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             Segments[index] = Segments[index] with { Translation = translation.Text };
         }
     }
+
+    /// <summary>Change the option without remembering it; false when it did not change.</summary>
+    private bool SetLiveTranscription(bool value)
+    {
+        if (!SetProperty(ref _liveTranscription, value, nameof(LiveTranscription)))
+        {
+            return false;
+        }
+
+        OnPropertyChanged(nameof(CanChooseTranslation));
+        NotifyTranscriptEmpty();
+        return true;
+    }
+
+    private void NotifyTranscriptEmpty()
+    {
+        OnPropertyChanged(nameof(IsTranscriptEmpty));
+        OnPropertyChanged(nameof(IsAudioOnlyNotice));
+        OnPropertyChanged(nameof(IsStartPromptVisible));
+    }
+
+    private static bool? ParseBool(string? text) => bool.TryParse(text, out var value) ? value : null;
 
     /// <summary><c>TRANSLATE_TO</c> becomes the picker's default (empty or unknown = off).</summary>
     private void ApplyDefaultTranslation(string? value)

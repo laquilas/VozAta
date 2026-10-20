@@ -72,6 +72,12 @@
   <data name="TranscriptEmpty" xml:space="preserve">
     <value>Press Start: the transcript appears here as people speak.</value>
   </data>
+  <data name="LiveTranscription" xml:space="preserve">
+    <value>Live transcription</value>
+  </data>
+  <data name="TranscriptAudioOnly" xml:space="preserve">
+    <value>Recording audio only. The transcript is created after you stop.</value>
+  </data>
   <data name="EngineStarting" xml:space="preserve">
     <value>Starting the engine (the first start loads the models)…</value>
   </data>
