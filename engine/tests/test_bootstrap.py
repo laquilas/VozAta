@@ -393,11 +393,11 @@ def test_the_api_container_shares_the_transcriber_when_keep_loaded(
     container.manager._factory(FakeSessionObserver(), StartOptions())
     [shared] = shared_seen
     assert isinstance(shared, SharedTranscriber)
-    shared.lease(keep=True)
+    shared.lease(keep=True).close()  # an idle, kept Whisper
 
     container.regenerate_minutes._build_generator()  # POST /minutes frees Whisper first
     assert not shared.loaded and fakes[0].closed
-    shared.lease(keep=True)
+    shared.lease(keep=True).close()
     container.release_models()  # API shutdown
     assert not shared.loaded and fakes[1].closed
 

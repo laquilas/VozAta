@@ -67,7 +67,7 @@ def test_the_api_container_answers_questions_and_frees_an_idle_whisper(
     assert isinstance(container.ask, AskJob)
     container.manager._factory(FakeSessionObserver(), StartOptions())
     [shared] = shared_seen
-    shared.lease(keep=True)
+    shared.lease(keep=True).close()  # an idle, kept Whisper
 
     answerer = container.ask._build()  # idle: Whisper is freed before the LLM loads
     assert isinstance(answerer, MeetingAnswerer)

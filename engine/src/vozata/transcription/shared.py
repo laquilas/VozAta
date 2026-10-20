@@ -16,12 +16,17 @@ class SharedTranscriber:
 
     The VRAM rule still holds: a lease that ends without `keep` (minutes follow) and `release()`
     (before `POST /sessions/{id}/minutes`, at shutdown) unload it; the next lease loads it again.
+    Leases are counted (phase 40: a queued transcription and a live session may overlap for a
+    moment): an unload asked for while a lease is open happens when the last open lease closes,
+    never under a lease that is still transcribing.
     """
 
     def __init__(self, factory: Callable[[], Transcriber]) -> None:
         self._factory = factory
         self._lock = threading.Lock()
         self._model: Transcriber | None = None
+        self._open = 0
+        self._unload = False  # an unload was asked for while leases were open
 
     @property
     def loaded(self) -> bool:
@@ -32,12 +37,26 @@ class SharedTranscriber:
         with self._lock:
             if self._model is None:
                 self._model = self._factory()
+            self._open += 1
             return _Lease(self, self._model, keep)
 
     def release(self) -> None:
-        """Unload the transcriber now (no-op when it is not loaded)."""
+        """Unload the transcriber now, or when the last open lease closes (no-op when nothing
+        is loaded)."""
+        self._unload_when_free(True)
+
+    def _closed(self, keep: bool) -> None:
         with self._lock:
+            self._open -= 1
+        self._unload_when_free(not keep)
+
+    def _unload_when_free(self, unload: bool) -> None:
+        with self._lock:
+            self._unload = self._unload or unload
+            if self._open > 0 or not self._unload:
+                return
             model, self._model = self._model, None
+            self._unload = False
         if model is not None:
             model.close()
 
@@ -47,6 +66,7 @@ class _Lease:
         self._owner = owner
         self._model = model
         self._keep = keep
+        self._closed = False
 
     def transcribe(
         self,
@@ -58,5 +78,7 @@ class _Lease:
         return self._model.transcribe(samples, language, hints, prompt)
 
     def close(self) -> None:
-        if not self._keep:
-            self._owner.release()
+        if self._closed:
+            return
+        self._closed = True
+        self._owner._closed(self._keep)

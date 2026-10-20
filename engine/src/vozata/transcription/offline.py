@@ -10,6 +10,7 @@ translation and observer events are not part of it.
 
 from __future__ import annotations
 
+import logging
 from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 
@@ -17,7 +18,6 @@ from vozata.audio.chunker import ChunkerFactory, fixed_windows
 from vozata.config import Settings
 from vozata.domain import AudioChunk, Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
-from vozata.output.sinks import CompositeSink
 from vozata.ports import AudioReader, SessionRepository, Transcriber, TranscriptSink
 from vozata.processing.cancel import CancelToken
 from vozata.transcription.context import RollingContext
@@ -32,6 +32,8 @@ from vozata.transcription.offline_feed import (
 )
 from vozata.transcription.resume import ResumePoint, resume_points
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
+
+_log = logging.getLogger(__name__)
 
 
 class _Output:
@@ -67,12 +69,25 @@ class _Output:
             self._echo.tick()
 
 
-class _Notify:
-    def __init__(self, on_segment: Callable[[TranscriptSegment], None]) -> None:
-        self.emit = on_segment
+class _Notifying:
+    """The transcript sink, then `on_segment`: a failing write raises (a lost segment must not
+    pass silently); a failing `on_segment` (e.g. the CLI console) is logged and ignored."""
+
+    def __init__(
+        self, sink: TranscriptSink, on_segment: Callable[[TranscriptSegment], None]
+    ) -> None:
+        self._sink = sink
+        self._on_segment = on_segment
+
+    def emit(self, segment: TranscriptSegment) -> None:
+        self._sink.emit(segment)
+        try:
+            self._on_segment(segment)
+        except Exception:
+            _log.exception("Reporting segment %s failed", segment.segment_id)
 
     def close(self) -> None:
-        pass
+        self._sink.close()
 
 
 class OfflineTranscription:
@@ -132,7 +147,7 @@ class OfflineTranscription:
         try:
             sink: TranscriptSink = self._store.open_transcript(session_id, self._labeler)
             if self._on_segment is not None:
-                sink = CompositeSink([sink, _Notify(self._on_segment)])
+                sink = _Notifying(sink, self._on_segment)
             output = _Output(self._settings, sink, existing)
             try:
                 stitchers = self._stitchers(transcriber, existing, points)

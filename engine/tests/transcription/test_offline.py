@@ -377,3 +377,57 @@ def test_offline_resume_skips_a_voiced_tail_that_reaches_the_end_of_the_track(
     )
 
     assert rig.offline.remaining_seconds(rig.session_id) == pytest.approx(10.1)  # system only
+
+
+def _notifying_rig(tmp_path: Path, on_segment: Callable[[TranscriptSegment], None]) -> _Rig:
+    rig = _Rig(
+        tmp_path,
+        {Channel.MIC: _track(10, (1.0, 2.0)), Channel.SYSTEM: _track(10)},
+        [_said("Told.", 1.0, 2.0)],
+    )
+    rig.offline._on_segment = on_segment
+    return rig
+
+
+def test_offline_tells_on_segment_about_every_appended_segment(tmp_path: Path) -> None:
+    told: list[TranscriptSegment] = []
+    rig = _notifying_rig(tmp_path, told.append)
+
+    rig.run()
+
+    assert [s.text for s in told] == [s.text for s in rig.stored()] == ["Told."]
+
+
+def test_a_failing_on_segment_is_logged_and_the_segment_still_stored(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    def broken(segment: TranscriptSegment) -> None:
+        raise RuntimeError("console gone")
+
+    rig = _notifying_rig(tmp_path, broken)
+
+    rig.run()
+
+    assert [s.text for s in rig.stored()] == ["Told."]
+    assert "console gone" in caplog.text
+
+
+def test_a_failing_transcript_write_is_not_swallowed_by_on_segment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig = _notifying_rig(tmp_path, lambda segment: None)
+    real_open = rig.store.open_transcript
+
+    def failing_open(session_id: str, labeler: SpeakerLabeler):  # type: ignore[no-untyped-def]
+        sink = real_open(session_id, labeler)
+
+        def broken(segment: TranscriptSegment) -> None:
+            raise OSError("disk full")
+
+        sink.emit = broken  # type: ignore[method-assign]
+        return sink
+
+    monkeypatch.setattr(rig.store, "open_transcript", failing_open)
+
+    with pytest.raises(OSError, match="disk full"):
+        rig.run()

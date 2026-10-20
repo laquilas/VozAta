@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import threading
 
 from vozata.processing.gpu_gate import GpuGate, GpuUsage, GpuUser
+
+log = logging.getLogger(__name__)
+
+TURN_WARNING_SECONDS = 300.0  # the previous model load may be a cold download (20+ min)
 
 
 class LiveGpuLease:
@@ -41,9 +46,11 @@ class LiveGpuLease:
 class LiveModelTurn:
     """One live session's models at a time (phase 40): a new session's model load waits until the
     previous session's abandoned pipeline closed (its model load may still run after Stop), so
-    two live Whisper models never coexist. Capture never waits."""
+    two live Whisper models never coexist. Capture never waits. `wait()` has no timeout but
+    logs a warning every `warn_every` seconds."""
 
-    def __init__(self) -> None:
+    def __init__(self, warn_every: float = TURN_WARNING_SECONDS) -> None:
+        self._warn_every = warn_every
         self._lock = threading.Lock()
         self._closing: threading.Event | None = None
 
@@ -51,8 +58,14 @@ class LiveModelTurn:
         """Block until the last stopped session's live models are closed."""
         with self._lock:
             closing = self._closing
-        if closing is not None:
-            closing.wait()
+        if closing is None:
+            return
+        waited = 0.0
+        while not closing.wait(self._warn_every):
+            waited += self._warn_every
+            log.warning(
+                "still waiting for the previous recording's live models to close (%.0f s)", waited
+            )
 
     def stopping(self, closed: threading.Event) -> None:
         """A session stopped; `closed` is set once its live models are closed."""

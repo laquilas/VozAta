@@ -428,7 +428,9 @@ time; the job's step order (each step closes its model) and the GPU gate enforce
 child's CUDA context) is the one exception next to Whisper while recording; it ends at step 1. With `WHISPER_KEEP_LOADED` (`serve`, phase 26) a
 `SharedTranscriber` keeps Whisper between sessions only when neither minutes nor speaker
 identification follow; it is unloaded
-before session minutes, before `POST /sessions/{id}/minutes` and when the API stops.
+before session minutes, before `POST /sessions/{id}/minutes` and when the API stops. Leases are
+counted: an unload asked for (a lease without keep, or `release()`) while another lease is open
+happens when the last open lease closes, never under a model that is transcribing.
 
 **Pause/resume**: while paused, sources keep running (keeps the clock aligned) but chunkers drop
 audio and WAV writers write silence; a `paused` marker is recorded in `session.json`.
