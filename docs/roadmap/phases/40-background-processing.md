@@ -204,7 +204,7 @@ close-with-pending message; locale parity.
 - [x] Cancel token and GPU gate
 - [x] Cancellable LLM and diarizer (fix round 1: release after cancel, cancel before spawn)
 - [x] Session finisher steps (0f2a1ad)
-- [x] Offline transcription of the rest of a meeting (17ceaad; fix round 1: this commit)
+- [x] Offline transcription of the rest of a meeting (17ceaad, 09a2b95; fix round 2: this commit)
 - [ ] Processing job and queue
 - [ ] Stop frees the recorder
 - [ ] Restart and recovery through the queue
@@ -225,3 +225,6 @@ close-with-pending message; locale parity.
   channel resumes after the voiced tail (≤ 0.3 s) the live stitcher cut away after its last
   segment, the stored system segments reach the echo filter as the timeline advances (its 30 s
   memory follows the audio fed), and the lockstep feed lives in `transcription/offline_feed.py`.
+  Fix round 2: the tail is skipped only when it ends in silence within 0.3 s; still voiced at the
+  cap (likely the next word) it is kept, since a repeated fragment is better than a lost word
+  start.

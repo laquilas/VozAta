@@ -4,7 +4,8 @@
 its last word's end, but the stitcher cuts up to `MAX_WORD_TAIL_SECONDS` later (through the
 word's still-voiced tail, `voiced_end`) or halfway to the next word. `ResumePoint.start` is the
 segment `end`, the lower bound from the transcript alone; `offline_feed.track_spans` moves it
-past the voiced tail in the stored audio, as the live cut did, so no fragment is re-transcribed.
+past a voiced tail in the stored audio only when that tail ends in silence within the cap (a
+word tail the live cut dropped); audio still voiced at the cap is kept (likely the next word).
 """
 
 from __future__ import annotations
@@ -18,8 +19,8 @@ from vozata.domain import Channel, TranscriptSegment
 
 @dataclass(frozen=True)
 class ResumePoint:
-    """`start`: the channel's last written `end` (session seconds; the voiced tail after it is
-    skipped from the audio); `next_index`: the channel's next id number."""
+    """`start`: the channel's last written `end` (session seconds; a word tail after it may be
+    skipped from the audio, see `offline_feed`); `next_index`: the channel's next id number."""
 
     start: float
     next_index: int

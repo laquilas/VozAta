@@ -16,7 +16,7 @@ from vozata.domain import AudioChunk, Channel
 from vozata.ports import AudioReader
 from vozata.processing.cancel import CancelToken
 from vozata.transcription.resume import ResumePoint
-from vozata.transcription.stitcher import MAX_WORD_TAIL_SECONDS, voiced_end
+from vozata.transcription.stitcher import FRAME_SECONDS, MAX_WORD_TAIL_SECONDS, voiced_end
 
 CHANNELS = (Channel.MIC, Channel.SYSTEM)
 _INT16_SCALE = 32768.0
@@ -38,25 +38,35 @@ def track_spans(
     written: Collection[Channel],
     silence_threshold: float,
 ) -> dict[Channel, Span]:
-    """Each channel's frames still to transcribe.
-
-    A channel with written segments starts after the voiced tail (at most
-    `MAX_WORD_TAIL_SECONDS`) of its last segment's `end`, where the live stitcher cut and dropped
-    the audio, so no word fragment is transcribed twice.
-    """
+    """Each channel's frames still to transcribe, from its resume point (see `_word_tail`)."""
     spans: dict[Channel, Span] = {}
     for channel in CHANNELS:
         rate = audio.sample_rate(session_id, channel)
         end = audio.length(session_id, channel)
         start = min(round(points[channel].start * rate), end)
         if channel in written and start < end:
-            probe = audio.frames(
-                session_id, channel, start, round(MAX_WORD_TAIL_SECONDS * rate) + 1
-            )
-            tail = voiced_end(probe.astype(np.float32) / _INT16_SCALE, 0.0, rate, silence_threshold)
-            start = min(start + round(tail * rate), end)
+            count = round((MAX_WORD_TAIL_SECONDS + FRAME_SECONDS) * rate)
+            probe = audio.frames(session_id, channel, start, count)
+            start = min(start + _word_tail(probe, rate, silence_threshold), end)
         spans[channel] = Span(start, end, rate)
     return spans
+
+
+def _word_tail(probe: np.ndarray, rate: int, threshold: float) -> int:
+    """Frames to skip after a channel's last written segment `end` (`probe` starts there).
+
+    The live stitcher cut a window's last word through its still-voiced tail (`voiced_end`, at
+    most `MAX_WORD_TAIL_SECONDS`) and dropped that audio, so it is skipped when the voiced run ends
+    in silence within the cap: a word tail before a pause. Still voiced at the cap, it is most
+    likely the next word (the live cut was halfway to it), so nothing is skipped: repeating a
+    fragment is better than losing a word's start.
+    """
+    samples = probe.astype(np.float32) / _INT16_SCALE
+    tail = voiced_end(samples, 0.0, rate, threshold)
+    first = round(tail * rate)
+    after = samples[first : first + round(FRAME_SECONDS * rate)].astype(np.float64)
+    voiced_after = len(after) > 0 and float(np.sqrt(np.mean(np.square(after)))) >= threshold
+    return 0 if voiced_after else first
 
 
 class ShiftedChunker:

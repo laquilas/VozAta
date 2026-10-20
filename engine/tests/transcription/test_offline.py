@@ -134,7 +134,7 @@ def test_offline_feeds_channels_in_lockstep(tmp_path: Path) -> None:
     rig.run()
 
     probes, feeds = rig.audio.reads[:2], rig.audio.reads[2:]
-    assert probes == [(Channel.MIC, 12000, 301), (Channel.SYSTEM, 3000, 301)]  # silent tails
+    assert probes == [(Channel.MIC, 12000, 310), (Channel.SYSTEM, 3000, 310)]  # silent tails
     assert feeds == [
         (Channel.MIC, 12000, 1000),  # mic waits until the shared timeline reaches 12 s
         (Channel.SYSTEM, 3000, 10000),
@@ -320,9 +320,14 @@ def test_offline_flushes_the_carried_tail_at_the_end(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("voiced_until", "resume"),
-    [(None, 10.0), (10.2, 10.2), (12.0, 10.3)],  # silent, a voiced tail, capped at 0.3 s
+    [
+        (None, 10.0),  # silence right after the end: nothing to skip
+        (10.2, 10.2),  # a word tail, then silence within 0.3 s: skipped as the live cut did
+        (10.3, 10.3),  # the tail reaches the cap, then silence: still a word tail
+        (12.0, 10.0),  # still voiced at the cap: likely the next word, resume at the end
+    ],
 )
-def test_offline_resumes_after_the_voiced_tail_the_live_stitcher_dropped(
+def test_offline_resume_skips_a_voiced_tail_only_when_it_ends_in_silence(
     tmp_path: Path, voiced_until: float | None, resume: float
 ) -> None:
     speech = [(9.0, voiced_until)] if voiced_until else [(9.0, 10.0)]
@@ -334,7 +339,7 @@ def test_offline_resumes_after_the_voiced_tail_the_live_stitcher_dropped(
     assert rig.offline.remaining_seconds(rig.session_id) == pytest.approx(30 - resume + 30)
     rig.run()
 
-    mic_feeds = [r for r in rig.audio.reads if r[0] is Channel.MIC and r[2] != 301]  # no probes
+    mic_feeds = [r for r in rig.audio.reads if r[0] is Channel.MIC and r[2] != 310]  # no probes
     first_mic_feed = mic_feeds[0]
     assert first_mic_feed[1] == round(resume * RATE)
 
@@ -359,3 +364,16 @@ def test_offline_echo_memory_follows_the_timeline_when_the_mic_resumes_far_behin
     rig.run()
 
     assert rig.stored() == old
+
+
+def test_offline_resume_skips_a_voiced_tail_that_reaches_the_end_of_the_track(
+    tmp_path: Path,
+) -> None:
+    old = [_row("mic-000001", 9.0, 10.0)]
+    rig = _Rig(
+        tmp_path,
+        {Channel.MIC: _track(10.1, (9.0, 10.1)), Channel.SYSTEM: _track(10.1)},
+        existing=old,
+    )
+
+    assert rig.offline.remaining_seconds(rig.session_id) == pytest.approx(10.1)  # system only
