@@ -23,9 +23,12 @@ public sealed partial class ProcessingIndicatorViewModel(ILocalizationService lo
     public bool HasQueued => QueuedCount > 0;
 
     /// <summary>"Processing 1 meeting · 42 %", empty when nothing is running.</summary>
-    public string Text => Running is { Count: > 0 } running
-        ? localization.Format("ProcessingIndicator_Text", running.Count, running.Max(info => info.Percent))
-        : "";
+    public string Text => Running switch
+    {
+        { Count: 0 } => "",
+        [var single] => localization.Format("ProcessingIndicator_TextOne", single.Percent),
+        var running => localization.Format("ProcessingIndicator_Text", running.Count, running.Max(info => info.Percent)),
+    };
 
     /// <summary>"+2 queued", empty when no meeting waits.</summary>
     public string QueuedText => HasQueued ? localization.Format("ProcessingIndicator_Queued", QueuedCount) : "";

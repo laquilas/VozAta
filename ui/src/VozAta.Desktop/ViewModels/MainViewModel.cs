@@ -260,7 +260,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The meeting being recorded joins the queue at Stop, so it counts too.
         var pending = PendingProcessing + (recording ? 1 : 0);
         if (pending > 0 && !await _dialogs.ConfirmAsync(
-            _localization["AppTitle"], _localization.Format("Close_PendingProcessing", pending), _localization["TrayQuit"], _localization["Close_Cancel"]))
+            _localization["AppTitle"],
+            pending == 1 ? _localization["Close_PendingProcessingOne"] : _localization.Format("Close_PendingProcessing", pending),
+            _localization["TrayQuit"], _localization["Close_Cancel"]))
         {
             return false;
         }

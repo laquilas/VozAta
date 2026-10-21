@@ -1294,13 +1294,19 @@
     <value>Esta parte todavía se está procesando.</value>
   </data>
   <data name="ProcessingIndicator_Text" xml:space="preserve">
-    <value>Procesando {0} reunión(es) · {1} %</value>
+    <value>Procesando {0} reuniones · {1} %</value>
+  </data>
+  <data name="ProcessingIndicator_TextOne" xml:space="preserve">
+    <value>Procesando 1 reunión · {0} %</value>
   </data>
   <data name="ProcessingIndicator_Queued" xml:space="preserve">
     <value>+{0} en cola</value>
   </data>
   <data name="Close_PendingProcessing" xml:space="preserve">
-    <value>{0} reunión(es) todavía se está(n) procesando. El procesamiento continúa la próxima vez que se abra VozAta.</value>
+    <value>{0} reuniones todavía se están procesando. El procesamiento continúa la próxima vez que se abra VozAta.</value>
+  </data>
+  <data name="Close_PendingProcessingOne" xml:space="preserve">
+    <value>1 reunión todavía se está procesando. El procesamiento continúa la próxima vez que se abra VozAta.</value>
   </data>
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancelar</value>

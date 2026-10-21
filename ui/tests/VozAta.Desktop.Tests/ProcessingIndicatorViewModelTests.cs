@@ -35,7 +35,7 @@ public sealed class ProcessingIndicatorViewModelTests
 
         Assert.True(indicator.IsVisible);
         Assert.Equal(3, indicator.PendingCount);
-        Assert.Equal("Processing 1 meeting(s) · 42 %", indicator.Text);
+        Assert.Equal("Processing 1 meeting · 42 %", indicator.Text);
         Assert.Equal("+2 queued", indicator.QueuedText);
         Assert.True(indicator.HasRunning);
         Assert.True(indicator.HasQueued);
@@ -48,7 +48,7 @@ public sealed class ProcessingIndicatorViewModelTests
 
         indicator.OnProcessing(Event("a", "paused", 30));
 
-        Assert.Equal("Processing 1 meeting(s) · 30 %", indicator.Text);
+        Assert.Equal("Processing 1 meeting · 30 %", indicator.Text);
         Assert.False(indicator.HasQueued);
         Assert.Equal("", indicator.QueuedText);
     }
@@ -88,7 +88,7 @@ public sealed class ProcessingIndicatorViewModelTests
         Assert.Equal("+1 queued", indicator.ToolTipText);
 
         indicator.OnProcessing(Event("a", "running", 5));
-        Assert.Equal("Processing 1 meeting(s) · 5 %\n+1 queued", indicator.ToolTipText);
+        Assert.Equal("Processing 1 meeting · 5 %\n+1 queued", indicator.ToolTipText);
     }
 
     [Fact]
@@ -116,6 +116,20 @@ public sealed class ProcessingIndicatorViewModelTests
     }
 
     [Fact]
+    public void Two_active_meetings_use_the_plural()
+    {
+        var indicator = Create();
+        indicator.OnProcessing(Event("a", "running", 40));
+        indicator.OnProcessing(Event("b", "paused", 10));
+
+        Assert.Equal("Processing 2 meetings · 40 %", indicator.Text);
+
+        _localization.SetLanguage("pt-BR");
+        indicator.RefreshTexts();
+        Assert.Equal("Processando 2 reuniões · 40 %", indicator.Text);
+    }
+
+    [Fact]
     public void Texts_follow_the_language()
     {
         var indicator = Create();
@@ -125,7 +139,7 @@ public sealed class ProcessingIndicatorViewModelTests
         _localization.SetLanguage("pt-BR");
         indicator.RefreshTexts();
 
-        Assert.Equal("Processando 1 reunião(ões) · 5 %", indicator.Text);
+        Assert.Equal("Processando 1 reunião · 5 %", indicator.Text);
         Assert.Equal("+1 na fila", indicator.QueuedText);
     }
 }
