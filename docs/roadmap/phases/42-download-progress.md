@@ -105,8 +105,7 @@ indeterminate state, two downloads, failure toast, locale parity.
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
 - **Updated:** 2026-10-20 23:30
-- **Next step:** final review fix (short `failed` reason), then Task 4 of
-  `plans/42-download-progress.md` (full suites, manual check).
+- **Next step:** Task 4 of `plans/42-download-progress.md` (full suites, manual check).
 
 ### Steps
 
@@ -142,3 +141,5 @@ indeterminate state, two downloads, failure toast, locale parity.
   `HF_HUB_OFFLINE` is unset or empty, as huggingface_hub does.
 - Final review fix: concurrent `ensure()` calls for the same repo and `allow_patterns` share one
   download (one tracker handle); the byte counter moved to `models/byte_counter.py`.
+- Final review fix: a `failed` event's `reason` is the error's first line (hub messages are
+  multi-line), at most 200 characters.

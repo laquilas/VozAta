@@ -11,7 +11,12 @@ from huggingface_hub.errors import LocalEntryNotFoundError
 
 from vozata.domain import ModelKind
 from vozata.models import download as download_module
-from vozata.models.download import HubDownloader, HubFunctions
+from vozata.models.download import (
+    REASON_CHARS,
+    HubDownloader,
+    HubFunctions,
+    failure_reason,
+)
 from vozata.models.tracker import DownloadState, DownloadTracker
 from vozata.ports import ModelDownloader
 
@@ -253,6 +258,29 @@ def test_failure_without_a_message_reports_the_error_type() -> None:
         downloader.ensure(ModelKind.SPEECH, "org/repo")
 
     assert events[-1].reason == "TimeoutError"
+
+
+def test_failure_reason_is_the_first_line_of_a_multi_line_message() -> None:
+    error = OSError("Cannot reach the hub.\n\nCheck your connection or set HF_HUB_OFFLINE=1.")
+    fake = FakeHub({"model.bin": [10]}, error=error)
+    downloader, events = _downloader(fake)
+
+    with pytest.raises(OSError):
+        downloader.ensure(ModelKind.SPEECH, "org/repo")
+
+    assert events[-1].reason == "Cannot reach the hub."
+
+
+def test_failure_reason_is_trimmed_to_its_limit() -> None:
+    reason = failure_reason(RuntimeError("x" * 500 + "\nmore"))
+
+    assert len(reason) == REASON_CHARS
+    assert reason == "x" * (REASON_CHARS - 1) + "…"
+    assert failure_reason(RuntimeError("y" * REASON_CHARS)) == "y" * REASON_CHARS
+
+
+def test_failure_reason_falls_back_to_the_type_on_a_blank_message() -> None:
+    assert failure_reason(ValueError("  \n  ")) == "ValueError"
 
 
 def test_byte_counter_handles_initial_bytes_and_empty_updates() -> None:

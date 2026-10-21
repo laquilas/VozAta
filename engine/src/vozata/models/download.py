@@ -18,6 +18,8 @@ from vozata.domain import ModelKind
 from vozata.models.byte_counter import byte_counter
 from vozata.models.tracker import DownloadTracker
 
+REASON_CHARS = 200  # a `failed` reason is the error's first line, at most this long
+
 _log = logging.getLogger(__name__)
 
 
@@ -133,10 +135,20 @@ class HubDownloader:
                 tqdm_class=byte_counter(handle),
             )
         except BaseException as error:
-            handle.failed(str(error) or type(error).__name__)
+            handle.failed(failure_reason(error))
             raise
         handle.done()
         return Path(folder)
+
+
+def failure_reason(error: BaseException) -> str:
+    """The `failed` event's reason: the error's first line (hub messages are multi-line), at most
+    `REASON_CHARS` long; the error type when the message is blank."""
+    lines = str(error).strip().splitlines()
+    first = lines[0].strip() if lines else ""
+    if not first:
+        return type(error).__name__
+    return first if len(first) <= REASON_CHARS else first[: REASON_CHARS - 1] + "…"
 
 
 def _total_bytes(
