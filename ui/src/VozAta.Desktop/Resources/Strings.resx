@@ -1236,6 +1236,9 @@
   <data name="MeetingDeleteAudio" xml:space="preserve">
     <value>Delete audio</value>
   </data>
+  <data name="MeetingMoreActions" xml:space="preserve">
+    <value>More actions</value>
+  </data>
   <data name="MeetingDeleteAudioTitle" xml:space="preserve">
     <value>Delete the audio?</value>
   </data>
