@@ -27,7 +27,10 @@ Launcher = Callable[..., subprocess.Popen[str]]
 
 
 class SubprocessDiarizer:
-    """Sends one request per `diarize()` to a fresh child process; `close()` has nothing to free."""
+    """Sends one request per `diarize()` to a fresh child process; `close()` has nothing to free.
+
+    A cancel is final: once cancelled (even before `diarize()` starts) no child is ever spawned.
+    """
 
     def __init__(
         self,
@@ -49,7 +52,9 @@ class SubprocessDiarizer:
         self, wav: Path, min_speakers: int | None, max_speakers: int | None
     ) -> list[SpeakerTurn]:
         with self._lock:
-            self._active, self._cancelled = True, False
+            if self._cancelled:  # cancelled before it started (e.g. during the model download)
+                raise DiarizationError("cancelled")
+            self._active = True
         try:
             return self._diarize(wav, min_speakers, max_speakers)
         finally:
@@ -83,8 +88,7 @@ class SubprocessDiarizer:
     def cancel(self) -> None:
         """Stop `diarize` from another thread: it raises, and never spawns if not yet started."""
         with self._lock:
-            if self._active:
-                self._cancelled = True
+            self._cancelled = True
             if self._process is not None:
                 self._process.terminate()
 

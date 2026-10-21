@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -700,21 +699,38 @@ class _Published:
         self.events.append((kind, session_id, data))
 
 
-def test_cli_downloads_log_their_progress(caplog: pytest.LogCaptureFixture) -> None:
+def test_the_api_container_passes_its_downloader_to_jobs_and_the_kept_whisper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata import bootstrap_processing
+    from vozata.api.system_info import GpuInfo
     from vozata.models.download import HubDownloader
 
-    downloader = bootstrap.cli_downloader(Settings(hf_hub_offline=True))
-    assert isinstance(downloader, HubDownloader) and downloader._offline
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    loaded: list[object] = []
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS,
+        "fake",
+        lambda settings, downloader: loaded.append(downloader) or FakeTranscriber(),
+    )
+    jobs: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        bootstrap_processing,
+        "build_processing_job",
+        lambda *args, **kwargs: jobs.append(kwargs) or object(),
+    )
+    container = bootstrap.build_api_container(
+        _settings(tmp_path, llm_provider="fake", stt_provider="fake", whisper_keep_loaded=True)
+    )
 
-    with caplog.at_level(logging.INFO, logger="vozata.bootstrap"):
-        handle = downloader._tracker.start(ModelKind.SPEECH, "small", 2_000_000)
-        handle.advance(1_000_000)
-        handle.done()
-        downloader._tracker.start(ModelKind.SPEAKERS, "x", None).failed("offline")
+    container.manager._job_factory("20261015_202358", False, None)
+    shared = jobs[0]["shared"]
+    shared.lease(keep=False).close()
 
-    assert "Downloading speech model small: 0.0 of 2.0 MB" in caplog.text
-    assert "speech model small: done (1.0 MB)" in caplog.text
-    assert "speakers model x: failed (offline)" in caplog.text
+    downloader = jobs[0]["downloader"]
+    assert isinstance(downloader, HubDownloader) and downloader._tracker is container.downloads
+    assert loaded == [downloader]  # the kept Whisper downloads through the same tracker
 
 
 def test_the_api_container_tracks_downloads(

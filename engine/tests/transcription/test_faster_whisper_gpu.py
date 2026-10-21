@@ -14,9 +14,9 @@ import numpy as np
 import pytest
 
 from tests.transcription.contract import check_transcriber_contract
-from vozata.bootstrap import cli_downloader
 from vozata.config import Settings, load_settings
 from vozata.domain import AudioChunk, Channel, WhisperDevice
+from vozata.models.cli_progress import cli_downloader
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 

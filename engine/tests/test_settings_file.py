@@ -129,6 +129,16 @@ def test_process_environment_values_keep_winning(tmp_path: Path) -> None:
     assert "CHUNK_SECONDS=8\n" in (tmp_path / ".env").read_text(encoding="utf-8")
 
 
+def test_hf_hub_offline_survives_an_update(tmp_path: Path) -> None:
+    file = settings_file(tmp_path, environ={"HF_HUB_OFFLINE": "1"})
+    assert file.current.hf_hub_offline is True
+
+    file.update({"CHUNK_SECONDS": 8})
+
+    assert file.current.hf_hub_offline is True  # a process value, never on the saved-settings path
+    assert "HF_HUB_OFFLINE" not in (tmp_path / ".env").read_text(encoding="utf-8")
+
+
 def test_a_briefly_locked_env_file_is_retried(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

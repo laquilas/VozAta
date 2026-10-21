@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import threading
 import time
@@ -69,6 +70,8 @@ class SettingsFile:
             ]
             overrides = {key: self._environ[key] for key in KEYS if self._environ.get(key)}
             current = load_settings(env={**stored, **requested, **overrides})
+            # not a saved setting: the process value read at start-up stays (phase 42)
+            current = dataclasses.replace(current, hf_hub_offline=self._current.hf_hub_offline)
             self._write({key: requested[key] for key in changed})
             self._current = current
             return [key for key in changed if FIELD_BY_KEY[key].applies == "restart"]

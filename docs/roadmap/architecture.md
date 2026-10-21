@@ -55,7 +55,7 @@ engine/
     llm/                    ollama.py
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py, models.py (repo ids, 42)
-    models/                 download.py (HubDownloader), tracker.py (DownloadTracker) (42)
+    models/                 download.py (HubDownloader), tracker.py (DownloadTracker), cli_progress.py (42)
     storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py,
                             audio_cache.py (32), files/{repository,audio,layout,repair,translations,folder}.py
                             (file backend, 30), sqlite/{db,repository,search,audio,audio_writer,...}.py (31, 32)
@@ -1048,13 +1048,21 @@ graph LR
   arrive, and once on `done` / `failed`; `running()` is the snapshot a newly connected WebSocket
   client receives. `serve` builds one tracker publishing `download_progress` (envelope
   `session_id` null) and one `HubDownloader` in `build_api_container` (`ApiContainer.downloads`);
-  the CLI commands (`record`, `transcribe`, `recover`, `diarize`) use `cli_downloader`, whose
-  tracker logs the progress every 5 s.
+  the CLI commands (`record`, `transcribe`, `recover`, `diarize`) use `cli_downloader`
+  (`models/cli_progress.py`), whose tracker logs the progress every 5 s. `HF_HUB_OFFLINE` is a
+  process value: `PUT /settings` keeps the one read at start-up.
+- A processing-queue `diarize` step downloads the pyannote model inside the diarizer factory,
+  before a `Cancellable` diarizer exists. When a live recording cancels the step meanwhile, the
+  finisher closes the new diarizer and ends the step `StepCancelled` instead of spawning the child
+  next to the live Whisper; `SubprocessDiarizer.cancel()` is final, so a cancel that lands before
+  `diarize()` also prevents the spawn.
 - The registries' providers that load a local model take `(settings, downloader)`:
   - Whisper: the `WHISPER_MODEL` / `WHISPER_CPU_MODEL` value is resolved as faster-whisper 1.2.1
     does (`faster_whisper.utils._MODELS`; a name with `/` is a repo id; an existing folder is
     used as is, without the downloader), downloaded with faster-whisper's own file patterns, then
-    `WhisperModel(<snapshot folder>)`. The CPU fallback model goes through the same path.
+    `WhisperModel(<snapshot folder>)`. The CPU fallback model goes through the same path. With
+    `WHISPER_DEVICE=auto` a failed GPU-model download counts as a GPU failure: its `failed` event
+    is sent, then the CPU model loads (downloading it too when it is not cached).
   - pyannote: the diarizer and live embedder providers pre-download
     `pyannote/speaker-diarization-community-1` (which bundles its segmentation, embedding and
     PLDA models) / `pyannote/wespeaker-voxceleb-resnet34-LM` with `HF_TOKEN` **before** spawning

@@ -16,6 +16,7 @@ from tests.fakes import (
     FakeDiarizer,
     FakeLanguageModel,
     FakeLocalizer,
+    FakeModelDownloader,
     FakeSessionObserver,
     minutes_template,
 )
@@ -183,6 +184,51 @@ def test_identify_speakers_cancelled_raises_and_writes_nothing(tmp_path: Path) -
     assert not paths.diarized_jsonl.exists() and not paths.speakers_json.exists()
     assert rig.observer.of("error") == []
     assert rig.observer.of("speakers_relabeled") == []
+
+
+def test_a_cancel_during_the_model_download_never_runs_the_diarizer(tmp_path: Path) -> None:
+    """Phase 42: the diarizer factory downloads its model first; a live recording that
+    pre-empts the step meanwhile must not get a diarizer spawned next to its Whisper."""
+    token = CancelToken()
+    diarizer = FakeDiarizer([SpeakerTurn(0.0, 9.0, 1)])
+    downloader = FakeModelDownloader()
+
+    def factory() -> FakeDiarizer:
+        downloader.ensure("speakers", "pyannote/speaker-diarization-community-1")
+        token.cancel()  # the gate cancels the step while the download runs
+        return diarizer
+
+    rig = _Rig(tmp_path, diarizer_factory=factory)
+
+    with pytest.raises(StepCancelled):
+        rig.finisher.identify_speakers(token)
+
+    assert diarizer.calls == [] and diarizer.closed
+    assert diarizer.cancels == 1  # registered after the cancel: runs at once
+    assert not rig.store.paths(rig.session_id).diarized_jsonl.exists()
+    assert rig.observer.of("error") == []
+
+
+def test_a_cancelled_plain_diarizer_is_closed_even_when_closing_fails(tmp_path: Path) -> None:
+    token = CancelToken()
+
+    class _Plain:  # not Cancellable
+        def diarize(self, wav: Path, min_speakers: int | None, max_speakers: int | None):
+            raise AssertionError("never runs")
+
+        def close(self) -> None:
+            raise OSError("already gone")
+
+    def factory() -> _Plain:
+        token.cancel()
+        return _Plain()
+
+    rig = _Rig(tmp_path, diarizer_factory=factory)
+
+    with pytest.raises(StepCancelled):
+        rig.finisher.identify_speakers(token)
+
+    assert rig.observer.of("error") == []
 
 
 def test_write_minutes_cancelled_sends_no_minutes_ready(tmp_path: Path) -> None:

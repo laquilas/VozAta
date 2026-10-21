@@ -91,9 +91,12 @@ class SessionFinisher:
         unregister: list[Callable[[], None]] = []
 
         def cancellable() -> Diarizer:
-            diarizer = factory()
+            diarizer = factory()  # may download its model first (phase 42): a cancel can land
             if isinstance(diarizer, Cancellable):
-                unregister.append(token.on_cancel(diarizer.cancel))
+                unregister.append(token.on_cancel(diarizer.cancel))  # runs now if cancelled
+            if token.cancelled:  # never spawn next to the live recording that pre-empted us
+                _close_quietly(diarizer)
+                raise StepCancelled
             return diarizer
 
         try:
@@ -199,3 +202,10 @@ class SessionFinisher:
 
     def _error(self, code: str, **params: object) -> None:
         self._observer.on_error(code, self._c.localizer.t(f"errors.session.{code}", **params))
+
+
+def _close_quietly(diarizer: Diarizer) -> None:
+    try:
+        diarizer.close()
+    except Exception:
+        _log.exception("Closing a cancelled diarizer failed")

@@ -160,14 +160,23 @@ def test_cancel_terminates_child_and_diarize_raises(tmp_path: Path) -> None:
     assert isinstance(errors[0], DiarizationError)
 
 
-def test_cancel_with_no_child_running_is_a_noop(tmp_path: Path) -> None:
+def test_cancel_after_the_child_exited_is_harmless(tmp_path: Path) -> None:
     fake = _Child(FakeDiarizer([SpeakerTurn(0.0, 1.0, 0)]))
     diarizer = SubprocessDiarizer("hf", WhisperDevice.CPU, popen=fake)
 
-    diarizer.cancel()
-
     assert diarizer.diarize(tmp_path / "a.wav", None, None) == [SpeakerTurn(0.0, 1.0, 0)]
-    diarizer.cancel()  # after the child has exited
+    diarizer.cancel()  # after the child has exited: nothing to terminate
+
+
+def test_a_cancel_before_diarize_is_final_and_never_spawns(tmp_path: Path) -> None:
+    fake = _Child(FakeDiarizer([SpeakerTurn(0.0, 1.0, 0)]))
+    diarizer = SubprocessDiarizer("hf", WhisperDevice.CPU, popen=fake)
+
+    diarizer.cancel()  # e.g. a live recording pre-empted the step during the model download
+
+    with pytest.raises(DiarizationError, match="cancelled"):
+        diarizer.diarize(tmp_path / "a.wav", None, None)
+    assert fake.calls == []
 
 
 def test_a_bad_request_makes_the_child_fail() -> None:

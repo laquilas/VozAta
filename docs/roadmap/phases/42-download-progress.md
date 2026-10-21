@@ -104,7 +104,7 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
-- **Updated:** 2026-10-20 21:16
+- **Updated:** 2026-10-20 21:26
 - **Next step:** Task 3 of `plans/42-download-progress.md` (UI bottom bar).
 
 ### Steps
@@ -127,4 +127,8 @@ indeterminate state, two downloads, failure toast, locale parity.
   The event's `model` is the name the user knows (`large-v3-turbo`, `ROMANCE-en`,
   `speaker-diarization-community-1`), and `total_bytes` leaves out files already cached.
 - `HF_HUB_OFFLINE` is read by `config.py` from the process environment only (huggingface_hub
-  ignores `.env`), as `Settings.hf_hub_offline`.
+  ignores `.env`), as `Settings.hf_hub_offline`; `PUT /settings` keeps the start-up value.
+- Review fix: the queue's `diarize` step downloads pyannote inside the diarizer factory, before a
+  cancellable diarizer exists; the finisher now checks the token right after the factory (closes
+  it, `StepCancelled`) and `SubprocessDiarizer.cancel()` is final, so a live recording that
+  pre-empts the step during the download never gets the child spawned next to its Whisper.

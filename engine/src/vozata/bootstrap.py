@@ -62,8 +62,9 @@ from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
 from vozata.minutes.template_repository import bundled_templates
+from vozata.models.cli_progress import cli_downloader
 from vozata.models.download import HubDownloader
-from vozata.models.tracker import DownloadState, DownloadTracker
+from vozata.models.tracker import DownloadTracker
 from vozata.ports import (
     AudioMixer,
     BundleImporter,
@@ -123,8 +124,6 @@ AUDIO_CACHE_DIR = "cache"  # in `OUTPUT_DIR` (phase 32)
 
 _log = logging.getLogger(__name__)
 
-CLI_DOWNLOAD_LOG_SECONDS = 5.0  # how often the CLI logs a running download (phase 42)
-
 # Providers that load a local model get it through the `ModelDownloader` (phase 42).
 TRANSCRIBERS: dict[str, Callable[[Settings, ModelDownloader], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
@@ -156,25 +155,8 @@ def build_downloads(broadcaster: EventBroadcaster) -> DownloadTracker:
     )
 
 
-def cli_downloader(settings: Settings) -> ModelDownloader:
-    """The downloader of the CLI commands: progress goes to the log."""
-    tracker = DownloadTracker(_log_download, interval=CLI_DOWNLOAD_LOG_SECONDS)
-    return HubDownloader(tracker, settings.hf_hub_offline)
-
-
-def _log_download(state: DownloadState) -> None:
-    what = f"{state.kind.value} model {state.model}"
-    megabytes = state.downloaded_bytes / 1e6
-    if state.state == "running":
-        total = "?" if state.total_bytes is None else f"{state.total_bytes / 1e6:.1f}"
-        _log.info("Downloading %s: %.1f of %s MB", what, megabytes, total)
-    elif state.state == "done":
-        _log.info("Downloaded %s: done (%.1f MB)", what, megabytes)
-    else:
-        _log.warning("Download of %s: failed (%s)", what, state.reason)
-
-
 def _downloader(settings: Settings, downloader: ModelDownloader | None) -> ModelDownloader:
+    """`downloader`, else the CLI's (progress logged, phase 42)."""
     return downloader if downloader is not None else cli_downloader(settings)
 
 
