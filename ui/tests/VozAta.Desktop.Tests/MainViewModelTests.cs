@@ -748,7 +748,7 @@ public sealed class MainViewModelTests
         Assert.True(await viewModel.ConfirmCloseAsync());
 
         Assert.Equal([_localization["AppTitle"]], _dialogs.Asked);
-        Assert.Equal([_localization.Format("Close_PendingProcessing", 2)], _dialogs.Messages);
+        Assert.Equal(["2 meetings are still being processed. Processing resumes the next time VozAta opens."], _dialogs.Messages);
         Assert.Equal([(_localization["TrayQuit"], _localization["Close_Cancel"])], _dialogs.Buttons);
     }
 
@@ -795,7 +795,7 @@ public sealed class MainViewModelTests
 
         Assert.True(await viewModel.ConfirmCloseAsync());
 
-        Assert.Equal(_localization.Format("Close_PendingProcessing", 1), _dialogs.Messages[^1]);
+        Assert.Equal("1 meeting is still being processed. Processing resumes the next time VozAta opens.", _dialogs.Messages[^1]);
         Assert.Contains("stop", _client.Calls);
     }
 

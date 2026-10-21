@@ -68,32 +68,61 @@
                     ToolTip.Tip="{Binding DoneText}" AutomationProperties.Name="{Binding DoneText}" />
         </StackPanel>
 
-        <!-- Actions: regenerate (template), external player, export -->
-        <WrapPanel>
-          <ComboBox Margin="0,0,4,4" MinWidth="170"
+        <!-- Actions as chips: template + regenerate, then the export menu and the rarer actions -->
+        <WrapPanel Classes="meeting-actions">
+          <ComboBox Classes="chip" Margin="0,0,6,6" MinWidth="150"
                     ItemsSource="{Binding Templates}" SelectedItem="{Binding RegenerateTemplate}"
                     IsVisible="{Binding !IsLive}"
                     PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
+                    ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
                     AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MinutesTemplate]}"
                     DisplayMemberBinding="{Binding Name, x:DataType=vm:TemplateOption}" />
-          <Button Margin="0,0,8,4" Command="{Binding RegenerateMinutesCommand}"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}"
-                  IsVisible="{Binding !IsLive}" />
-          <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="md"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportMarkdown]}" />
-          <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="docx"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportWord]}" />
-          <Button Margin="0,0,8,4" Command="{Binding ExportCommand}" CommandParameter="pdf"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportPdf]}" />
-          <Button Margin="0,0,8,4" Command="{Binding OpenAudioCommand}" CommandParameter="mixed"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerExternal]}" />
-          <Button Margin="0,0,8,4" Command="{Binding ExportBundleCommand}" IsVisible="{Binding !IsLive}"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportBundle]}" />
-          <Button Margin="0,0,8,4" Command="{Binding DeleteAudioCommand}" IsVisible="{Binding HasAudio}"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDeleteAudio]}" />
-          <Button Margin="0,0,8,4" Command="{Binding OpenFolderCommand}"
-                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}"
-                  IsVisible="{Binding Folder, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <Button Classes="chip" Margin="0,0,16,6" Command="{Binding RegenerateMinutesCommand}" IsVisible="{Binding !IsLive}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource Icon.Refresh}" />
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RegenerateMinutes]}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="chip menu" Margin="0,0,6,6"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingExport]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingExport]}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource Icon.Export}" />
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingExport]}" />
+              <PathIcon Classes="caret" Data="{StaticResource Icon.ChevronDown}" />
+            </StackPanel>
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportMarkdown]}"
+                          Command="{Binding ExportCommand}" CommandParameter="md" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportWord]}"
+                          Command="{Binding ExportCommand}" CommandParameter="docx" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportPdf]}"
+                          Command="{Binding ExportCommand}" CommandParameter="pdf" />
+                <Separator IsVisible="{Binding !IsLive}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[ExportBundle]}"
+                          Command="{Binding ExportBundleCommand}" IsVisible="{Binding !IsLive}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <Button Classes="chip icon-chip" Margin="0,0,6,6"
+                  ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingMoreActions]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingMoreActions]}">
+            <PathIcon Data="{StaticResource Icon.More}" />
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayerExternal]}"
+                          Command="{Binding OpenAudioCommand}" CommandParameter="mixed" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[OpenFolder]}"
+                          Command="{Binding OpenFolderCommand}"
+                          IsVisible="{Binding Folder, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Separator IsVisible="{Binding HasAudio}" />
+                <MenuItem Classes="danger" Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingDeleteAudio]}"
+                          Command="{Binding DeleteAudioCommand}" IsVisible="{Binding HasAudio}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
         </WrapPanel>
         <TextBlock Text="{Binding Message}" Classes="success" TextWrapping="Wrap"
                    IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />

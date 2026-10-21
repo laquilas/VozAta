@@ -416,6 +416,33 @@
   <Style Selector="Button.chip :is(TextBlock).caption">
     <Setter Property="FontSize" Value="{StaticResource FontSize.Tiny}" />
   </Style>
+  <!-- The caret of a chip that opens a menu, and an icon-only chip (more actions) -->
+  <Style Selector="Button.chip PathIcon.caret">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.chip.icon-chip">
+    <Setter Property="Padding" Value="10,5" />
+  </Style>
+  <!-- A combo box drawn as a chip (the meeting page's minutes template) -->
+  <Style Selector="ComboBox.chip">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Pill}" />
+    <Setter Property="Padding" Value="12,6,0,6" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Small}" />
+  </Style>
+  <Style Selector="ComboBox.chip:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+  </Style>
+  <!-- A destructive menu entry (delete audio) -->
+  <Style Selector="MenuItem.danger">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.DangerText}" />
+  </Style>
 
   <!-- Notifications float over the page, bottom right -->
   <Style Selector="Border.toast">

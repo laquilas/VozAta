@@ -31,12 +31,13 @@
         <!-- Bottom: engine status and theme -->
         <StackPanel DockPanel.Dock="Bottom" Spacing="4">
           <Border Padding="12,6" ToolTip.Tip="{Binding Health.SpeechText}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <Ellipse Classes="state-dot small engine"
+            <!-- A Grid, not a horizontal StackPanel: the text gets the sidebar's width and wraps -->
+            <Grid ColumnDefinitions="Auto,*">
+              <Ellipse Classes="state-dot small engine" VerticalAlignment="Top" Margin="0,5,0,0"
                        Classes.connected="{Binding IsEngineConnected}" Classes.down="{Binding IsEngineDown}" />
-              <TextBlock Text="{Binding EngineText}" Classes="muted" TextTrimming="CharacterEllipsis"
-                         IsVisible="{Binding Shell.IsExpanded}" />
-            </StackPanel>
+              <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{Binding EngineText}" Classes="muted"
+                         TextWrapping="Wrap" IsVisible="{Binding Shell.IsExpanded}" />
+            </Grid>
           </Border>
           <Button Classes="nav" Command="{Binding Appearance.ToggleCommand}"
                   ToolTip.Tip="{Binding L[ThemeToggle]}" AutomationProperties.Name="{Binding L[ThemeToggle]}">

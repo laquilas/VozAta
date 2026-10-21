@@ -1236,6 +1236,9 @@
   <data name="MeetingDeleteAudio" xml:space="preserve">
     <value>Delete audio</value>
   </data>
+  <data name="MeetingMoreActions" xml:space="preserve">
+    <value>More actions</value>
+  </data>
   <data name="MeetingDeleteAudioTitle" xml:space="preserve">
     <value>Delete the audio?</value>
   </data>
@@ -1294,13 +1297,19 @@
     <value>This part is still being processed.</value>
   </data>
   <data name="ProcessingIndicator_Text" xml:space="preserve">
-    <value>Processing {0} meeting(s) · {1} %</value>
+    <value>Processing {0} meetings · {1} %</value>
+  </data>
+  <data name="ProcessingIndicator_TextOne" xml:space="preserve">
+    <value>Processing 1 meeting · {0} %</value>
   </data>
   <data name="ProcessingIndicator_Queued" xml:space="preserve">
     <value>+{0} queued</value>
   </data>
   <data name="Close_PendingProcessing" xml:space="preserve">
-    <value>{0} meeting(s) are still being processed. Processing resumes the next time VozAta opens.</value>
+    <value>{0} meetings are still being processed. Processing resumes the next time VozAta opens.</value>
+  </data>
+  <data name="Close_PendingProcessingOne" xml:space="preserve">
+    <value>1 meeting is still being processed. Processing resumes the next time VozAta opens.</value>
   </data>
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancel</value>

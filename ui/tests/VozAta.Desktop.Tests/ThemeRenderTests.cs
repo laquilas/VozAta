@@ -162,7 +162,7 @@ public sealed class ThemeRenderTests
 
     /// <summary>A main window with a bit of everything: transcript, notification, history detail, settings.</summary>
     internal static async Task<(MainViewModel ViewModel, FakeEngineClient Client)> SeededAsync(
-        string theme, Action<FakeEngineClient>? seed = null)
+        string theme, Action<FakeEngineClient>? seed = null, FakeEngineEvents? events = null)
     {
         var client = new FakeEngineClient
         {
@@ -190,7 +190,7 @@ public sealed class ThemeRenderTests
         ]);
 
         seed?.Invoke(client); // more data for a page's own renders (phase 38: Config)
-        var events = new FakeEngineEvents();
+        events ??= new FakeEngineEvents();
         var preferences = new FakePreferences { Data = new UiPreferencesData(Theme: theme) };
         var viewModel = new MainViewModel(
             client, events, new FakeEngineProcess(), new ImmediateDispatcher(), new LocalizationService(),

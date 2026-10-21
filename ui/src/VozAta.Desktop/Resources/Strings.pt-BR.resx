@@ -1236,6 +1236,9 @@
   <data name="MeetingDeleteAudio" xml:space="preserve">
     <value>Excluir áudio</value>
   </data>
+  <data name="MeetingMoreActions" xml:space="preserve">
+    <value>Mais ações</value>
+  </data>
   <data name="MeetingDeleteAudioTitle" xml:space="preserve">
     <value>Excluir o áudio?</value>
   </data>
@@ -1294,13 +1297,19 @@
     <value>Esta parte ainda está sendo processada.</value>
   </data>
   <data name="ProcessingIndicator_Text" xml:space="preserve">
-    <value>Processando {0} reunião(ões) · {1} %</value>
+    <value>Processando {0} reuniões · {1} %</value>
+  </data>
+  <data name="ProcessingIndicator_TextOne" xml:space="preserve">
+    <value>Processando 1 reunião · {0} %</value>
   </data>
   <data name="ProcessingIndicator_Queued" xml:space="preserve">
     <value>+{0} na fila</value>
   </data>
   <data name="Close_PendingProcessing" xml:space="preserve">
-    <value>{0} reunião(ões) ainda está(ão) sendo processada(s). O processamento continua na próxima vez que o VozAta abrir.</value>
+    <value>{0} reuniões ainda estão sendo processadas. O processamento continua na próxima vez que o VozAta abrir.</value>
+  </data>
+  <data name="Close_PendingProcessingOne" xml:space="preserve">
+    <value>1 reunião ainda está sendo processada. O processamento continua na próxima vez que o VozAta abrir.</value>
   </data>
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancelar</value>
