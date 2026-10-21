@@ -55,7 +55,7 @@ engine/
     llm/                    ollama.py
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
     diarization/            pyannote.py, assign.py, embedder.py, live.py, models.py (repo ids, 42)
-    models/                 download.py (HubDownloader), tracker.py (DownloadTracker), cli_progress.py (42)
+    models/                 download.py (HubDownloader), byte_counter.py, tracker.py (DownloadTracker), cli_progress.py (42)
     storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py,
                             audio_cache.py (32), files/{repository,audio,layout,repair,translations,folder}.py
                             (file backend, 30), sqlite/{db,repository,search,audio,audio_writer,...}.py (31, 32)
@@ -1043,7 +1043,9 @@ graph LR
   already in the cache left out with `try_to_load_from_cache`, so a partly cached repo still
   reaches 100 %) and downloads with a `tqdm_class` that forwards the bytes to a `DownloadTracker`
   (`models/tracker.py`). `HF_HUB_OFFLINE=1` (read by `config.py` from the process environment)
-  never downloads: the cache error propagates.
+  never downloads: the cache error propagates. Concurrent `ensure()` calls for the same repo and
+  `allow_patterns` share one download (one tracker handle, so no duplicate bar and no bar falling
+  back to 0 %): the later callers wait for the first and get its folder or its error.
 - `DownloadTracker` publishes a state on start, at most every 0.5 s per download while bytes
   arrive, and once on `done` / `failed`; `running()` is the snapshot a newly connected WebSocket
   client receives. `serve` builds one tracker publishing `download_progress` (envelope

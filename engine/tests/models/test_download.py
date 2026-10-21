@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,7 @@ import pytest
 from huggingface_hub.errors import LocalEntryNotFoundError
 
 from vozata.domain import ModelKind
+from vozata.models import download as download_module
 from vozata.models.download import HubDownloader, HubFunctions
 from vozata.models.tracker import DownloadState, DownloadTracker
 from vozata.ports import ModelDownloader
@@ -280,3 +282,91 @@ def test_byte_counter_handles_initial_bytes_and_empty_updates() -> None:
 
     assert [e.downloaded_bytes for e in events] == [0, 4, 6, 6]
     assert seen["rate"] is None
+
+
+class GatedHub(FakeHub):
+    """A FakeHub whose real download waits for `release` (to overlap two `ensure()` calls)."""
+
+    def __init__(self, files: Mapping[str, Sequence[int]], **kwargs: Any) -> None:
+        super().__init__(files, **kwargs)
+        self.downloading = threading.Event()
+        self.release = threading.Event()
+
+    def snapshot_download(self, repo_id: str, **kwargs: Any) -> str:
+        if not kwargs.get("local_files_only") and kwargs["allow_patterns"] == ["*.bin"]:
+            self.downloading.set()
+            assert self.release.wait(5)
+        return super().snapshot_download(repo_id, **kwargs)
+
+
+def _overlap(
+    fake: GatedHub, monkeypatch: pytest.MonkeyPatch, second_patterns: list[str]
+) -> tuple[list[DownloadState], list[object]]:
+    """Runs two `ensure()` calls, the second starting while the first downloads."""
+    downloader, events = _downloader(fake)
+    joined = threading.Event()
+    outcome = download_module._Flight.outcome
+
+    def joining(flight: Any) -> Path:
+        joined.set()
+        return outcome(flight)
+
+    monkeypatch.setattr(download_module._Flight, "outcome", joining)
+    results: list[object] = [None, None]
+
+    def call(index: int, patterns: list[str]) -> None:
+        try:
+            results[index] = downloader.ensure(
+                ModelKind.SPEECH, "org/repo", allow_patterns=patterns
+            )
+        except Exception as error:
+            results[index] = error
+
+    first = threading.Thread(target=call, args=(0, ["*.bin"]), daemon=True)
+    first.start()
+    assert fake.downloading.wait(5)
+    second = threading.Thread(target=call, args=(1, second_patterns), daemon=True)
+    second.start()
+    if second_patterns == ["*.bin"]:
+        assert joined.wait(5)
+    else:  # a different download runs on its own while the first one still waits
+        second.join(5)
+        assert not second.is_alive() and not fake.release.is_set()
+    fake.release.set()
+    first.join(5)
+    second.join(5)
+    assert not first.is_alive() and not second.is_alive()
+    assert downloader._flights == {}
+    return events, results
+
+
+def test_concurrent_ensures_of_the_same_repo_share_one_download(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = GatedHub({"model.bin": [10]})
+
+    events, results = _overlap(fake, monkeypatch, ["*.bin"])
+
+    assert results == [Path(SNAPSHOT), Path(SNAPSHOT)]
+    assert len([call for call in fake.calls if not call["local_files_only"]]) == 1
+    assert [e.state for e in events if e.state != "running"] == ["done"]
+    assert len([e for e in events if e.downloaded_bytes == 0]) == 1  # one bar, never back to 0
+
+
+def test_a_joined_ensure_gets_the_first_ones_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = GatedHub({"model.bin": [10]}, error=ConnectionError("network down"))
+
+    events, results = _overlap(fake, monkeypatch, ["*.bin"])
+
+    assert [type(result) for result in results] == [ConnectionError, ConnectionError]
+    assert results[0] is results[1]
+    assert [e.state for e in events].count("failed") == 1
+
+
+def test_other_file_patterns_download_on_their_own(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = GatedHub({"model.bin": [10]})
+
+    events, results = _overlap(fake, monkeypatch, ["*.json"])
+
+    assert results == [Path(SNAPSHOT), Path(SNAPSHOT)]
+    assert [e.state for e in events].count("done") == 2

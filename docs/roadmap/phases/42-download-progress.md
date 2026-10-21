@@ -105,7 +105,8 @@ indeterminate state, two downloads, failure toast, locale parity.
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
 - **Updated:** 2026-10-20 23:30
-- **Next step:** final review fixes (coalesced `ensure()`, short `failed` reason), then Task 4 of `plans/42-download-progress.md` (full suites, manual check).
+- **Next step:** final review fix (short `failed` reason), then Task 4 of
+  `plans/42-download-progress.md` (full suites, manual check).
 
 ### Steps
 
@@ -139,3 +140,5 @@ indeterminate state, two downloads, failure toast, locale parity.
   2.x `snapshot_download`: two byte bars through `tqdm_class`, `IncompleteSnapshotError`).
 - Final review fix: `Settings.hf_hub_offline` also reads `TRANSFORMERS_OFFLINE` when
   `HF_HUB_OFFLINE` is unset or empty, as huggingface_hub does.
+- Final review fix: concurrent `ensure()` calls for the same repo and `allow_patterns` share one
+  download (one tracker handle); the byte counter moved to `models/byte_counter.py`.
