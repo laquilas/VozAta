@@ -1049,7 +1049,8 @@ graph LR
   client receives. `serve` builds one tracker publishing `download_progress` (envelope
   `session_id` null) and one `HubDownloader` in `build_api_container` (`ApiContainer.downloads`);
   the CLI commands (`record`, `transcribe`, `recover`, `diarize`) use `cli_downloader`
-  (`models/cli_progress.py`), whose tracker logs the progress every 5 s. `HF_HUB_OFFLINE` is a
+  (`models/cli_progress.py`), whose tracker prints localized lines (`cli.download_*`) to stderr,
+  whatever the log level, every 5 s and once when the download ends. `HF_HUB_OFFLINE` is a
   process value: `PUT /settings` keeps the one read at start-up.
 - A processing-queue `diarize` step downloads the pyannote model inside the diarizer factory,
   before a `Cancellable` diarizer exists. When a live recording cancels the step meanwhile, the

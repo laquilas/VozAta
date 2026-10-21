@@ -174,6 +174,12 @@ transcribe_progress = "Transcribiendo: {percent} %"
 transcribe_done = "Transcripción terminada: {count} segmento(s) nuevo(s) escrito(s)."
 transcribe_busy = "Esta reunión todavía se está grabando o procesando; para terminar una reunión interrumpida, usa `python -m vozata recover <carpeta>`."
 transcribe_failed = "No se pudo transcribir el audio ({reason})."
+download_running = "Descargando el modelo de {kind} {model}: {done} de {total} MB"
+download_done = "Modelo de {kind} {model} descargado ({done} MB)."
+download_failed = "No se pudo descargar el modelo de {kind} {model} ({reason})."
+download_kind_speech = "reconocimiento de voz"
+download_kind_speakers = "identificación de hablantes"
+download_kind_translation = "traducción"
 
 [cli.devices]
 microphones = "Micrófonos:"

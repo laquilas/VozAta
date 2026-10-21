@@ -156,8 +156,10 @@ def build_downloads(broadcaster: EventBroadcaster) -> DownloadTracker:
 
 
 def _downloader(settings: Settings, downloader: ModelDownloader | None) -> ModelDownloader:
-    """`downloader`, else the CLI's (progress logged, phase 42)."""
-    return downloader if downloader is not None else cli_downloader(settings)
+    """`downloader`, else the CLI's (progress printed to stderr, phase 42)."""
+    if downloader is not None:
+        return downloader
+    return cli_downloader(settings, build_localizer(settings))
 
 
 def _vad_chunker(

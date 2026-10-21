@@ -104,8 +104,9 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
-- **Updated:** 2026-10-20 22:10
-- **Next step:** Task 4 of `plans/42-download-progress.md` (full suites, manual check).
+- **Updated:** 2026-10-20 23:30
+- **Next step:** final review fixes (hub pin, `TRANSFORMERS_OFFLINE`, coalesced `ensure()`, short
+  `failed` reason), then Task 4 of `plans/42-download-progress.md` (full suites, manual check).
 
 ### Steps
 
@@ -123,7 +124,7 @@ indeterminate state, two downloads, failure toast, locale parity.
 - huggingface_hub 2.2.0 feeds every HTTP chunk to two byte bars (transfer and reconstruct): the
   byte counter reports the furthest byte bar, not their sum, so bytes are not counted twice.
 - The registries' model providers take `(settings, downloader)`; `serve` shares one
-  `HubDownloader` over one `DownloadTracker` (`download_progress`), the CLI logs progress instead.
+  `HubDownloader` over one `DownloadTracker` (`download_progress`), the CLI prints progress to stderr instead.
   The event's `model` is the name the user knows (`large-v3-turbo`, `ROMANCE-en`,
   `speaker-diarization-community-1`), and `total_bytes` leaves out files already cached.
 - `HF_HUB_OFFLINE` is read by `config.py` from the process environment only (huggingface_hub
@@ -132,3 +133,6 @@ indeterminate state, two downloads, failure toast, locale parity.
   cancellable diarizer exists; the finisher now checks the token right after the factory (closes
   it, `StepCancelled`) and `SubprocessDiarizer.cancel()` is final, so a live recording that
   pre-empts the step during the download never gets the child spawned next to its Whisper.
+- Final review fix: the CLI download progress was logged at INFO under a WARNING-level logging
+  setup, so it never showed; `cli_progress.DownloadReporter` now prints localized lines
+  (`cli.download_*`) to stderr every 5 s and when the download ends.
