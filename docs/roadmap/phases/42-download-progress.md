@@ -104,8 +104,8 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
-- **Updated:** 2026-10-20 23:30
-- **Next step:** Task 4 of `plans/42-download-progress.md` (full suites, manual check).
+- **Updated:** 2026-10-21 09:00
+- **Next step:** tick the acceptance criteria, set the phase `done`, open the PR.
 
 ### Steps
 
@@ -143,3 +143,7 @@ indeterminate state, two downloads, failure toast, locale parity.
   download (one tracker handle); the byte counter moved to `models/byte_counter.py`.
 - Final review fix: a `failed` event's `reason` is the error's first line (hub messages are
   multi-line), at most 200 characters.
+- Manual check fix: in the dark theme the light label over the accent fill was 2.2:1. The bar now
+  uses its own tokens, `Brush.DownloadFill` (dark `#A12597`) and `Brush.DownloadTrack`, and
+  `ThemeContrastTests` checks `TextPrimary` over both (≥ 4.5:1); `ThemeRenderTests` renders the
+  half-filled bar in both themes.

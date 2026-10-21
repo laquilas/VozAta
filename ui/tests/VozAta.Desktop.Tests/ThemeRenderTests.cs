@@ -76,6 +76,12 @@ public sealed class ThemeRenderTests
                 viewModel.Recorder.Handle(new StatusEvent("20261016_090000", "recording", 754));
                 AddTranscript(viewModel);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-{theme}.png");
+                // Half downloaded: the label sits over the filled and the unfilled part (phase 42)
+                const long mb = 1024 * 1024;
+                viewModel.Downloads.OnProgress(new DownloadProgressEvent(null, "speech", "large-v3-turbo", 720 * mb, 1440 * mb, "running", null));
+                Assert.True(viewModel.Downloads.IsVisible);
+                Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-downloading-{theme}.png");
+                viewModel.Downloads.OnProgress(new DownloadProgressEvent(null, "speech", "large-v3-turbo", 1440 * mb, 1440 * mb, "done", null));
                 await viewModel.HistoryRefresh;
                 var live = new DateTimeOffset(new DateTime(2026, 10, 16, 14, 0, 0, DateTimeKind.Local));
                 client.Sessions.Add(new SessionSummary("20261016_140000", "recording", live, null, 754, "en", false, "Weekly design review"));
@@ -85,11 +91,11 @@ public sealed class ThemeRenderTests
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-collapsed-{theme}.png");
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
-                return 14;
+                return 15;
             },
             CancellationToken.None);
 
-        Assert.Equal(14, rendered);
+        Assert.Equal(15, rendered);
     }
 
 #if DEBUG

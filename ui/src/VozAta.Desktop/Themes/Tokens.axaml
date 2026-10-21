@@ -50,6 +50,9 @@
       <SolidColorBrush x:Key="Brush.MeterMicPeak" Color="#A5D6A7" />
       <SolidColorBrush x:Key="Brush.MeterSystem" Color="#1565C0" />
       <SolidColorBrush x:Key="Brush.MeterSystemPeak" Color="#90CAF9" />
+      <!-- Model download bar (phase 42): its label is TextPrimary over both parts -->
+      <SolidColorBrush x:Key="Brush.DownloadFill" Color="#E57CD8" />
+      <SolidColorBrush x:Key="Brush.DownloadTrack" Color="#DDD3E2" />
       <!-- The transcript line a search result opened -->
       <SolidColorBrush x:Key="Brush.Highlight" Color="#33FFD54F" />
     </ResourceDictionary>
@@ -90,6 +93,8 @@
       <SolidColorBrush x:Key="Brush.MeterMicPeak" Color="#2E5E31" />
       <SolidColorBrush x:Key="Brush.MeterSystem" Color="#64B5F6" />
       <SolidColorBrush x:Key="Brush.MeterSystemPeak" Color="#244A6E" />
+      <SolidColorBrush x:Key="Brush.DownloadFill" Color="#A12597" />
+      <SolidColorBrush x:Key="Brush.DownloadTrack" Color="#3E3546" />
       <SolidColorBrush x:Key="Brush.Highlight" Color="#55B08A00" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>

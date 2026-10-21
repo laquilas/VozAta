@@ -101,7 +101,7 @@
     <DockPanel Grid.Column="1">
       <!-- Model downloads (phase 42): progress across the bottom, the label centered over it -->
       <Panel DockPanel.Dock="Bottom" IsVisible="{Binding Downloads.IsVisible}">
-        <ProgressBar Minimum="0" Maximum="100" Height="24" Value="{Binding Downloads.Percent}"
+        <ProgressBar Classes="download" Minimum="0" Maximum="100" Height="24" Value="{Binding Downloads.Percent}"
                      IsIndeterminate="{Binding Downloads.IsIndeterminate}" />
         <TextBlock Text="{Binding Downloads.Text}" Classes="tabular" TextTrimming="CharacterEllipsis"
                    HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,0" />
