@@ -43,6 +43,15 @@ public sealed record RecoveryAvailableEvent(string? SessionId, IReadOnlyList<str
 public sealed record TranslationEvent(string? SessionId, string SegmentId, string Language, string Text)
     : EngineEvent(SessionId);
 
+/// <summary>
+/// A model download moved on (phase 42). <see cref="Kind"/>: <c>speech</c> | <c>speakers</c> |
+/// <c>translation</c>; <see cref="State"/>: <c>running</c> | <c>done</c> | <c>failed</c>;
+/// <see cref="TotalBytes"/> is null while the size is unknown; <see cref="Reason"/> explains <c>failed</c>.
+/// </summary>
+public sealed record DownloadProgressEvent(
+    string? SessionId, string Kind, string Model, long DownloadedBytes, long? TotalBytes, string State, string? Reason)
+    : EngineEvent(SessionId);
+
 /// <summary>An event type this client does not know yet (added by a later phase).</summary>
 public sealed record UnknownEvent(string? SessionId, string Type) : EngineEvent(SessionId);
 
@@ -111,6 +120,16 @@ public static class EngineEventParser
                     data.GetProperty("imported").GetInt32(),
                     data.GetProperty("skipped").GetInt32(),
                     data.GetProperty("errors").GetInt32()),
+                "download_progress" => new DownloadProgressEvent(
+                    sessionId,
+                    data.GetProperty("kind").GetString() ?? "",
+                    data.GetProperty("model").GetString() ?? "",
+                    data.GetProperty("downloaded_bytes").GetInt64(),
+                    data.TryGetProperty("total_bytes", out var total) && total.ValueKind == JsonValueKind.Number
+                        ? total.GetInt64()
+                        : null,
+                    data.GetProperty("state").GetString() ?? "",
+                    data.TryGetProperty("reason", out var reason) ? reason.GetString() : null),
                 "processing" => new ProcessingEvent(
                     sessionId, data.Deserialize<ProcessingInfo>(EngineJson.Options) ?? throw new JsonException()),
                 "error" => new ErrorEvent(

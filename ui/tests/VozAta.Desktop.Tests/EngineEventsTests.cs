@@ -57,6 +57,23 @@ public sealed class EngineEventsTests
     }
 
     [Fact]
+    public void Parses_download_progress_with_and_without_total()
+    {
+        Assert.Equal(
+            new DownloadProgressEvent(null, "speech", "large-v3-turbo", 1024, 4096, "running", null),
+            EngineEventParser.Parse(
+                """{"type":"download_progress","session_id":null,"data":{"kind":"speech","model":"large-v3-turbo","downloaded_bytes":1024,"total_bytes":4096,"state":"running"}}"""));
+        Assert.Equal(
+            new DownloadProgressEvent(null, "translation", "ROMANCE-en", 10, null, "failed", "no network"),
+            EngineEventParser.Parse(
+                """{"type":"download_progress","session_id":null,"data":{"kind":"translation","model":"ROMANCE-en","downloaded_bytes":10,"total_bytes":null,"state":"failed","reason":"no network"}}"""));
+        Assert.Equal(
+            new DownloadProgressEvent(null, "speakers", "community-1", 5, null, "running", null),
+            EngineEventParser.Parse(
+                """{"type":"download_progress","session_id":null,"data":{"kind":"speakers","model":"community-1","downloaded_bytes":5,"state":"running"}}"""));
+    }
+
+    [Fact]
     public void Parser_reads_the_recovery_offer()
     {
         var parsed = EngineEventParser.Parse(

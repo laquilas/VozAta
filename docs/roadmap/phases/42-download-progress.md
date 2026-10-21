@@ -104,15 +104,15 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
-- **Updated:** 2026-10-20 21:26
-- **Next step:** Task 3 of `plans/42-download-progress.md` (UI bottom bar).
+- **Updated:** 2026-10-20 22:10
+- **Next step:** Task 4 of `plans/42-download-progress.md` (full suites, manual check).
 
 ### Steps
 
 - [x] Implementation plan (`plans/42-download-progress.md`) and spec amendments
 - [x] Downloader and tracker
 - [x] Wire the downloads and the event
-- [ ] UI bottom bar
+- [x] UI bottom bar
 - [ ] Full suites, manual check
 
 ### Decisions and notes
