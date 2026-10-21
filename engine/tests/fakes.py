@@ -353,3 +353,46 @@ class FakeRecycler:
 def minutes_template(language: str = "en", template_id: str = "general") -> LocalizedTemplate:
     """A bundled minutes template in one language (phase 20)."""
     return TemplateRepository().get(template_id).localized(language)
+
+
+class FakeModelDownloader:
+    """`ModelDownloader` that records each `ensure` and returns `<root>/<repo id>` (no network).
+
+    `log` (optional) receives `("ensure", repo_id)` so a test can check what ran before what;
+    `error` makes every `ensure` raise it.
+    """
+
+    def __init__(
+        self,
+        root: Path = Path("hub"),
+        log: list[tuple[str, str]] | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self.root = root
+        self.log = log
+        self.error = error
+        self.calls: list[dict[str, object]] = []
+
+    def ensure(
+        self,
+        kind: object,
+        repo_id: str,
+        *,
+        allow_patterns: object = None,
+        token: str | None = None,
+        name: str | None = None,
+    ) -> Path:
+        self.calls.append(
+            {
+                "kind": kind,
+                "repo_id": repo_id,
+                "allow_patterns": allow_patterns,
+                "token": token,
+                "name": name,
+            }
+        )
+        if self.log is not None:
+            self.log.append(("ensure", repo_id))
+        if self.error is not None:
+            raise self.error
+        return self.root / repo_id

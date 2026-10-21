@@ -20,7 +20,7 @@ numpy · FastAPI + uvicorn · httpx · python-dotenv · pytest · ruff.
 - `config.py` is the only module that reads environment variables; other modules receive
   `Settings` or plain values through their constructor.
 - `bootstrap.py` is the only module that imports concrete providers; it exposes registries such as
-  `TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]]`.
+  `TRANSCRIBERS: dict[str, Callable[[Settings, ModelDownloader], Transcriber]]`.
 - One responsibility per module; keep files under ~200 lines.
 - User-facing strings via `Localizer.t("key", **params)`; locale files
   `src/vozata/locales/{en,pt-BR,es}.toml`.

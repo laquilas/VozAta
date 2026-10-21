@@ -36,8 +36,7 @@ from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
 from vozata.config import ConfigError, Settings
 from vozata.connection_checks import ConnectionChecks
-from vozata.diarization.embedder import MODEL as EMBEDDING_MODEL
-from vozata.diarization.pyannote import MODEL as DIARIZATION_MODEL
+from vozata.diarization.models import DIARIZATION_MODEL, EMBEDDING_MODEL
 from vozata.diarization.subprocess_diarizer import pyannote_from_settings
 from vozata.diarization.subprocess_embedder import pyannote_embedder_from_settings
 from vozata.domain import (
@@ -63,6 +62,8 @@ from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
 from vozata.minutes.template_repository import bundled_templates
+from vozata.models.download import HubDownloader
+from vozata.models.tracker import DownloadState, DownloadTracker
 from vozata.ports import (
     AudioMixer,
     BundleImporter,
@@ -71,6 +72,7 @@ from vozata.ports import (
     DocumentExporter,
     LanguageModel,
     Localizer,
+    ModelDownloader,
     RecoverableStore,
     SessionAudio,
     SessionObserver,
@@ -121,14 +123,17 @@ AUDIO_CACHE_DIR = "cache"  # in `OUTPUT_DIR` (phase 32)
 
 _log = logging.getLogger(__name__)
 
-TRANSCRIBERS: dict[str, Callable[[Settings], Transcriber]] = {
+CLI_DOWNLOAD_LOG_SECONDS = 5.0  # how often the CLI logs a running download (phase 42)
+
+# Providers that load a local model get it through the `ModelDownloader` (phase 42).
+TRANSCRIBERS: dict[str, Callable[[Settings, ModelDownloader], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
     "openai_compatible": openai_compatible.from_settings,
 }
-DIARIZERS: dict[str, Callable[[Settings], Diarizer]] = {
+DIARIZERS: dict[str, Callable[[Settings, ModelDownloader], Diarizer]] = {
     "pyannote": pyannote_from_settings,  # child process: keeps torch away from ctranslate2
 }
-EMBEDDERS: dict[str, Callable[[Settings], SpeakerEmbedder]] = {
+EMBEDDERS: dict[str, Callable[[Settings, ModelDownloader], SpeakerEmbedder]] = {
     "pyannote": pyannote_embedder_from_settings,  # long-lived child process (phase 15)
 }
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
@@ -137,9 +142,40 @@ LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     ),
 }
 
-TRANSLATORS: dict[str, Callable[[Settings], Translator]] = {
-    "opus_mt": lambda settings: opus_mt.from_settings(settings.translation_model_dir),
+TRANSLATORS: dict[str, Callable[[Settings, ModelDownloader], Translator]] = {
+    "opus_mt": lambda settings, downloader: opus_mt.from_settings(
+        settings.translation_model_dir, downloader
+    ),
 }
+
+
+def build_downloads(broadcaster: EventBroadcaster) -> DownloadTracker:
+    """The engine's model downloads, published as `download_progress` events (phase 42)."""
+    return DownloadTracker(
+        lambda state: broadcaster.publish("download_progress", None, state.to_payload())
+    )
+
+
+def cli_downloader(settings: Settings) -> ModelDownloader:
+    """The downloader of the CLI commands: progress goes to the log."""
+    tracker = DownloadTracker(_log_download, interval=CLI_DOWNLOAD_LOG_SECONDS)
+    return HubDownloader(tracker, settings.hf_hub_offline)
+
+
+def _log_download(state: DownloadState) -> None:
+    what = f"{state.kind.value} model {state.model}"
+    megabytes = state.downloaded_bytes / 1e6
+    if state.state == "running":
+        total = "?" if state.total_bytes is None else f"{state.total_bytes / 1e6:.1f}"
+        _log.info("Downloading %s: %.1f of %s MB", what, megabytes, total)
+    elif state.state == "done":
+        _log.info("Downloaded %s: done (%.1f MB)", what, megabytes)
+    else:
+        _log.warning("Download of %s: failed (%s)", what, state.reason)
+
+
+def _downloader(settings: Settings, downloader: ModelDownloader | None) -> ModelDownloader:
+    return downloader if downloader is not None else cli_downloader(settings)
 
 
 def _vad_chunker(
@@ -445,30 +481,39 @@ def build_task_exporter(settings: Settings, target: str) -> TaskExporter | None:
     return entry.build(settings)
 
 
-def build_diarizer_factory(settings: Settings) -> Callable[[], Diarizer] | None:
-    """The configured diarizer, built only when a session needs it; None when disabled."""
+def build_diarizer_factory(
+    settings: Settings, downloader: ModelDownloader | None = None
+) -> Callable[[], Diarizer] | None:
+    """The configured diarizer, built only when a session needs it; None when disabled.
+    `downloader` (default: the CLI's) fetches its model; the same holds for the factories
+    below."""
     if not settings.diarization_enabled:
         return None
     _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)  # fail fast
-    return functools.partial(build_diarizer, settings)
+    return functools.partial(build_diarizer, settings, downloader)
 
 
-def build_diarizer(settings: Settings) -> Diarizer:
+def build_diarizer(settings: Settings, downloader: ModelDownloader | None = None) -> Diarizer:
     """The `DIARIZATION_PROVIDER` diarizer, whether or not `DIARIZATION_ENABLED` is set."""
-    return _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)(settings)
+    factory = _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)
+    return factory(settings, _downloader(settings, downloader))
 
 
-def build_embedder_factory(settings: Settings) -> Callable[[], SpeakerEmbedder] | None:
+def build_embedder_factory(
+    settings: Settings, downloader: ModelDownloader | None = None
+) -> Callable[[], SpeakerEmbedder] | None:
     """The live speaker embedder (`DIARIZATION_PROVIDER`), built on the live worker's thread;
     None unless `LIVE_DIARIZATION_ENABLED`."""
     if not settings.live_diarization_enabled:
         return None
     factory = _provider(EMBEDDERS, "DIARIZATION_PROVIDER", settings.diarization_provider)
-    return functools.partial(factory, settings)
+    return functools.partial(factory, settings, _downloader(settings, downloader))
 
 
 def build_translator_factory(
-    settings: Settings, translate_to: TranslationTarget | None = None
+    settings: Settings,
+    translate_to: TranslationTarget | None = None,
+    downloader: ModelDownloader | None = None,
 ) -> tuple[str | None, Callable[[], Translator] | None]:
     """The live translation target and translator factory (phase 29); `(None, None)` when off.
 
@@ -479,7 +524,7 @@ def build_translator_factory(
     if target is TranslationTarget.OFF:
         return None, None
     factory = _provider(TRANSLATORS, "TRANSLATION_PROVIDER", settings.translation_provider)
-    return target.value, functools.partial(factory, settings)
+    return target.value, functools.partial(factory, settings, _downloader(settings, downloader))
 
 
 def build_session(
@@ -499,6 +544,7 @@ def build_session(
     gpu_usage: GpuUsage | None = None,
     live_models: LiveModelTurn | None = None,
     live_transcription: bool | None = None,
+    downloader: ModelDownloader | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -513,9 +559,11 @@ def build_session(
     its live GPU priority while recording when `gpu_usage` says its speech or speaker model runs on
     the local GPU (phase 40); with `live_models` its models load only once the previous
     session's abandoned pipeline closed. `live_transcription` (default `LIVE_TRANSCRIPTION`,
-    phase 41) is the per-recording option; it is stored in `session.json`.
+    phase 41) is the per-recording option; it is stored in `session.json`. `downloader` (default:
+    the CLI's) fetches the models that are not cached yet (phase 42).
     """
     transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
+    downloader = _downloader(settings, downloader)
     localizer = build_localizer(settings)
     template = template or settings.minutes_template
     MINUTES_TEMPLATES.get(template)  # an unknown template fails before any device is opened
@@ -524,8 +572,10 @@ def build_session(
         if settings.generate_minutes
         else None
     )
-    diarizer_factory = build_diarizer_factory(settings)
-    translation_target, translator_factory = build_translator_factory(settings, translate_to)
+    diarizer_factory = build_diarizer_factory(settings, downloader)
+    translation_target, translator_factory = build_translator_factory(
+        settings, translate_to, downloader
+    )
     try:
         audio = PortAudioThread()
     except TimeoutError:
@@ -547,7 +597,7 @@ def build_session(
         device_names={channel: device.name for channel, device in devices.items()},
         clock=clock,
         transcriber_factory=(
-            (lambda: transcriber(settings))
+            (lambda: transcriber(settings, downloader))
             if shared is None
             else functools.partial(shared.lease, keep=minutes is None and diarizer_factory is None)
         ),
@@ -564,7 +614,7 @@ def build_session(
         action_items=build_action_item_extractor(settings, localizer)
         if minutes is not None and settings.extract_action_items
         else None,
-        embedder_factory=build_embedder_factory(settings),
+        embedder_factory=build_embedder_factory(settings, downloader),
         translate_to=translation_target,
         translator_factory=translator_factory,
         title=title,
@@ -604,6 +654,7 @@ def _stored_components(
     store: SessionRepository,
     session_id: str,
     models: Collection[StepKind] | None = None,
+    downloader: ModelDownloader | None = None,
 ) -> tuple[SessionComponents, dict[str, Any]]:
     """The stop-step components of a stored session, and its metadata.
 
@@ -638,7 +689,9 @@ def _stored_components(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        diarizer_factory=build_diarizer_factory(settings) if StepKind.DIARIZE in wanted else None,
+        diarizer_factory=build_diarizer_factory(settings, downloader)
+        if StepKind.DIARIZE in wanted
+        else None,
         search_index=build_search_index(settings) if in_output_dir else None,
         minutes_template=template,
         vocabulary=tuple(stored_vocabulary(meta)),
@@ -656,15 +709,17 @@ def build_finisher(
     observer: SessionObserver,
     session_id: str,
     models: Collection[StepKind] | None = None,
+    downloader: ModelDownloader | None = None,
 ) -> SessionFinisher:
     """The stop steps of a stored session (phase 40), with the components of its metadata.
 
     The title is read from `session.json` each time the minutes are written, so a rename made
     while the session waits for its turn is used. `models` limits the models built to those of
     the named steps (None: all; empty: none, so only `mix`, `index` and `ended` do anything);
-    `SessionFinisher.close()` closes the language model clients built.
+    `SessionFinisher.close()` closes the language model clients built; the diarizer gets its model
+    through `downloader` (default: the CLI's).
     """
-    components, meta = _stored_components(settings, store, session_id, models)
+    components, meta = _stored_components(settings, store, session_id, models, downloader)
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
     return SessionFinisher(
         settings,
@@ -749,12 +804,14 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     audio = build_audio_store(settings)
     clean_audio_cache(settings)
     broadcaster = EventBroadcaster()
+    downloads = build_downloads(broadcaster)  # phase 42: one bar for every model download
+    downloader = HubDownloader(downloads, settings.hf_hub_offline)
     env_file = env_file or Path(".env")
     settings_file = SettingsFile(env_file, settings)
     shared = None
     if settings.whisper_keep_loaded:
         transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
-        shared = SharedTranscriber(lambda: transcriber(settings))
+        shared = SharedTranscriber(lambda: transcriber(settings, downloader))
     gpu_info = functools.cache(query_gpu)  # the GPU does not change while running
     gate = GpuGate()  # phase 40: live recordings pre-empt the queue's GPU steps
     live_models = LiveModelTurn()  # a new recording loads its models once the last one closed
@@ -783,6 +840,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             closed=closed,
             gate_usage=usage(current),
             shared=shared,
+            downloader=downloader,
         )
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
@@ -803,6 +861,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             gpu_usage=usage(current),
             live_models=live_models,
             live_transcription=options.live_transcription,
+            downloader=downloader,
         )
 
     def llm_reachable() -> bool:
@@ -911,4 +970,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         connection_check=ConnectionChecks(
             (DIARIZATION_MODEL, EMBEDDING_MODEL), priority=check_priority
         ).run,
+        downloads=downloads,
     )

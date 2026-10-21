@@ -25,6 +25,7 @@ class Sibling:
 @dataclass
 class Info:
     siblings: list[Sibling]
+    sha: str = "abc"
 
 
 class FakeHub:
@@ -39,8 +40,11 @@ class FakeHub:
         cached: bool = False,
         sizes: Mapping[str, int | None] | None = None,
         error: Exception | None = None,
+        in_cache: Sequence[str] = (),
     ) -> None:
         self.files = files
+        self.in_cache = set(in_cache)  # files of a partly cached snapshot
+        self.cache_calls: list[tuple[str, str, str | None]] = []
         self.cached = cached
         self.sizes = sizes
         self.error = error
@@ -48,7 +52,15 @@ class FakeHub:
         self.info_calls: list[dict[str, Any]] = []
 
     def hub(self) -> HubFunctions:
-        return HubFunctions(snapshot_download=self.snapshot_download, model_info=self.model_info)
+        return HubFunctions(
+            snapshot_download=self.snapshot_download,
+            model_info=self.model_info,
+            cached_file=self.cached_file,
+        )
+
+    def cached_file(self, repo_id: str, filename: str, revision: str | None = None) -> Any:
+        self.cache_calls.append((repo_id, filename, revision))
+        return f"{SNAPSHOT}/{filename}" if filename in self.in_cache else None
 
     def model_info(self, repo_id: str, **kwargs: Any) -> Info:
         self.info_calls.append({"repo_id": repo_id, **kwargs})
@@ -166,6 +178,30 @@ def test_total_counts_only_files_matching_allow_patterns() -> None:
     assert fake.calls[1]["allow_patterns"] == ["*.bin", "*.json"]
 
 
+def test_total_excludes_files_already_in_the_cache() -> None:
+    fake = FakeHub(
+        {"model.bin": [500]},
+        sizes={"config.json": 20, "model.bin": 500, "vocabulary.json": 30},
+        in_cache=("config.json", "vocabulary.json"),
+    )
+    downloader, events = _downloader(fake)
+
+    downloader.ensure(ModelKind.SPEECH, "org/repo")
+
+    assert {e.total_bytes for e in events} == {500}
+    assert (events[-1].state, events[-1].downloaded_bytes) == ("done", 500)  # reaches 100 %
+    assert ("org/repo", "model.bin", "abc") in fake.cache_calls  # the snapshot's revision
+
+
+def test_name_is_the_model_shown_in_the_events() -> None:
+    fake = FakeHub({"model.bin": [10]})
+    downloader, events = _downloader(fake)
+
+    downloader.ensure(ModelKind.SPEECH, "org/faster-whisper-small", name="small")
+
+    assert {e.model for e in events} == {"small"}
+
+
 def test_unknown_total_is_reported_as_none() -> None:
     fake = FakeHub({"a.bin": [5], "b.bin": [5]}, sizes={"a.bin": 5, "b.bin": None})
     downloader, events = _downloader(fake)
@@ -184,7 +220,11 @@ def test_model_info_failure_leaves_the_total_unknown() -> None:
 
     events: list[DownloadState] = []
     tracker = DownloadTracker(events.append, clock=lambda: 0.0, interval=0.0)
-    hub = HubFunctions(snapshot_download=fake.snapshot_download, model_info=broken_info)
+    hub = HubFunctions(
+        snapshot_download=fake.snapshot_download,
+        model_info=broken_info,
+        cached_file=fake.cached_file,
+    )
 
     HubDownloader(tracker, False, hub=hub).ensure(ModelKind.SPEECH, "org/repo")
 
@@ -230,7 +270,12 @@ def test_byte_counter_handles_initial_bytes_and_empty_updates() -> None:
         bar.close()
         return SNAPSHOT
 
-    hub = HubFunctions(snapshot_download=snapshot_download, model_info=FakeHub({}).model_info)
+    empty = FakeHub({})
+    hub = HubFunctions(
+        snapshot_download=snapshot_download,
+        model_info=empty.model_info,
+        cached_file=empty.cached_file,
+    )
     HubDownloader(tracker, False, hub=hub).ensure(ModelKind.SPEECH, "org/repo")
 
     assert [e.downloaded_bytes for e in events] == [0, 4, 6, 6]

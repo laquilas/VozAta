@@ -27,7 +27,9 @@ def _repository(root: Path) -> FileSessionRepository:
 
 @pytest.fixture(autouse=True)
 def _fake_speech(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: FakeTranscriber()
+    )
 
 
 def _settings(output_dir: Path) -> Settings:
@@ -86,7 +88,7 @@ def test_an_interrupted_meeting_gets_the_rest_transcribed_from_its_audio(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     transcriber = FakeTranscriber()
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: transcriber)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: transcriber)
     store = _repository(tmp_path / "recordings")
     session_id = make_session_folder(
         store, status="interrupted", segments=[], mic_seconds=3.0, system_seconds=3.0

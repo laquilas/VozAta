@@ -616,7 +616,7 @@ def test_resumed_audio_only_meeting_is_transcribed_whole(
     fake = FakeTranscriber(
         [TranscriptionResult(words=(Word("Hello.", 0.1, 0.5, 0.9),), language="pt")] * 8
     )
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: fake)
     settings = Settings(
         output_dir=tmp_path / "recordings",
         storage_backend=StorageBackend.FILES,

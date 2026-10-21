@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -57,8 +58,17 @@ class Factory:
         return model
 
 
+class ByName:
+    """A downloader whose folders are the model names (these tests check the loading only)."""
+
+    def ensure(self, kind: object, repo_id: str, **options: Any) -> Path:
+        return Path(options["name"])
+
+
 def make(device: WhisperDevice, factory: Factory) -> FasterWhisperTranscriber:
-    return FasterWhisperTranscriber(Settings(whisper_device=device), model_factory=factory)
+    return FasterWhisperTranscriber(
+        Settings(whisper_device=device), ByName(), model_factory=factory
+    )
 
 
 def test_auto_uses_cuda_after_a_warm_up_probe() -> None:

@@ -11,10 +11,9 @@ from typing import Any
 
 import numpy as np
 
+from vozata.diarization.models import EMBEDDING_MODEL as MODEL
 from vozata.domain import WhisperDevice
 from vozata.ports import DiarizationError
-
-MODEL = "pyannote/wespeaker-voxceleb-resnet34-LM"
 
 
 class PyannoteEmbedder:

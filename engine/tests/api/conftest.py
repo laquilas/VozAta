@@ -14,6 +14,7 @@ from vozata.api.session_manager import SessionManager, StartOptions
 from vozata.api.ws import EventBroadcaster
 from vozata.domain import ConversationLanguage, SessionStatus
 from vozata.labels import SpeakerLabeler
+from vozata.models.tracker import DownloadTracker
 from vozata.ports import SessionObserver
 from vozata.processing.gpu_gate import GpuGate
 from vozata.processing.job import ProcessingJob, Step, StepKind
@@ -313,6 +314,7 @@ class Api:
         self.gpu = GpuInfo(True, "RTX 3050", 6144)
         self.reachable = True
         self.regenerated: list[tuple[str, str | None]] = []
+        self.downloads = DownloadTracker(lambda state: None)  # phase 42: the connect snapshot
         from vozata.bootstrap import EXPORTERS
         from vozata.i18n import TomlLocalizer
         from vozata.settings_file import SettingsFile
@@ -338,6 +340,7 @@ class Api:
             ),
             vocabulary_file=lambda: self.vocabulary_file,
             migration=migration(self) if migration is not None else None,  # phase 33
+            downloads=self.downloads,
         )
         self.app = create_app(container)
         self.client = TestClient(self.app, raise_server_exceptions=False)

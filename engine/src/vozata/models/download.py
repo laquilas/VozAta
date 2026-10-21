@@ -27,12 +27,17 @@ class HubFunctions:
 
     snapshot_download: Callable[..., str]
     model_info: Callable[..., Any]
+    cached_file: Callable[..., Any]  # `try_to_load_from_cache`: a path when cached (no network)
 
 
 def _default_hub() -> HubFunctions:  # pragma: no cover - the real hub
-    from huggingface_hub import model_info, snapshot_download
+    from huggingface_hub import model_info, snapshot_download, try_to_load_from_cache
 
-    return HubFunctions(snapshot_download=snapshot_download, model_info=model_info)
+    return HubFunctions(
+        snapshot_download=snapshot_download,
+        model_info=model_info,
+        cached_file=try_to_load_from_cache,
+    )
 
 
 class HubDownloader:
@@ -55,6 +60,7 @@ class HubDownloader:
         *,
         allow_patterns: Sequence[str] | None = None,
         token: str | None = None,
+        name: str | None = None,
     ) -> Path:
         from huggingface_hub.errors import LocalEntryNotFoundError
 
@@ -69,7 +75,8 @@ class HubDownloader:
         except LocalEntryNotFoundError:  # includes IncompleteSnapshotError
             if self._offline:
                 raise
-        handle = self._tracker.start(kind, repo_id, _total_bytes(hub, repo_id, patterns, token))
+        total = _total_bytes(hub, repo_id, patterns, token)
+        handle = self._tracker.start(kind, name or repo_id, total)
         try:
             folder = hub.snapshot_download(
                 repo_id,
@@ -88,16 +95,24 @@ class HubDownloader:
 def _total_bytes(
     hub: HubFunctions, repo_id: str, patterns: list[str] | None, token: str | None
 ) -> int | None:
-    """The size of the files to download, or None when any of them is unknown."""
+    """The size of the files still to download, or None when any of them is unknown.
+
+    Files of a partly cached snapshot are left out, so the bar reaches 100 %.
+    """
     from huggingface_hub.utils import filter_repo_objects
 
     try:
-        siblings = hub.model_info(repo_id, files_metadata=True, token=token).siblings or []
+        info = hub.model_info(repo_id, files_metadata=True, token=token)
     except Exception as error:  # the download itself reports a real failure
         _log.info("Size of %s unknown: %s", repo_id, error)
         return None
+    siblings = info.siblings or []
     wanted = filter_repo_objects(siblings, allow_patterns=patterns, key=lambda s: s.rfilename)
-    sizes = [sibling.size for sibling in wanted]
+    sizes = [
+        sibling.size
+        for sibling in wanted
+        if not isinstance(hub.cached_file(repo_id, sibling.rfilename, revision=info.sha), str)
+    ]
     return None if any(size is None for size in sizes) else sum(sizes)
 
 

@@ -286,9 +286,11 @@ class ModelDownloader(Protocol):
         *,
         allow_patterns: Sequence[str] | None = None,
         token: str | None = None,
+        name: str | None = None,
     ) -> Path:
         """The local snapshot folder of `repo_id` (only the files matching `allow_patterns`),
-        downloading what is missing; raises the hub's exception when it cannot."""
+        downloading what is missing; raises the hub's exception when it cannot. `name` is the
+        model as the user knows it (the progress events' `model`; default: `repo_id`)."""
         ...
 
 

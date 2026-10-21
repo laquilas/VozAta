@@ -45,7 +45,7 @@ def transcriber(monkeypatch: pytest.MonkeyPatch) -> FakeTranscriber:
     fake = FakeTranscriber(
         [TranscriptionResult(words=(Word("Rest", 0.1, 0.4, 0.9),), language="pt")] * 4
     )
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: fake)
     return fake
 
 
@@ -200,7 +200,7 @@ def test_auto_language_detected_while_transcribing_the_rest_is_stored(
 ) -> None:
     said = TranscriptionResult(words=(Word("Resto", 0.0, 0.95, 0.9),), language="pt")
     transcriber = FakeTranscriber([said] * 4)
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: transcriber)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: transcriber)
     settings = _settings(tmp_path, generate_minutes=False)
     store = bootstrap.build_store(settings)
     session_id = make_session_folder(store, mic_seconds=4.0, segments=[], duration_seconds=4.0)
@@ -222,7 +222,7 @@ def test_the_transcribe_command_transcribes_with_the_stored_language_and_reports
 ) -> None:
     said = TranscriptionResult(words=(Word("Resto", 0.0, 0.95, 0.9),), language="pt")
     transcriber = FakeTranscriber([said] * 4)
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: transcriber)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: transcriber)
     settings = _settings(tmp_path)
     store = bootstrap.build_store(settings)
     session_id = make_session_folder(store, mic_seconds=4.0, segments=[], duration_seconds=4.0)
@@ -276,7 +276,9 @@ def test_the_transcribe_step_uses_the_kept_whisper_on_the_gpu(
 
     shared = SharedTranscriber(load)
     shared.lease(keep=True).close()  # the live session kept Whisper loaded
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: FakeTranscriber()
+    )
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
     settings = _settings(tmp_path, generate_minutes=minutes)
     store = bootstrap.build_store(settings)

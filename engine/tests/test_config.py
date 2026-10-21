@@ -417,6 +417,13 @@ def test_whisper_keep_loaded_defaults_to_false_and_accepts_booleans() -> None:
     assert caught.value.key == "WHISPER_KEEP_LOADED"
 
 
+def test_hf_hub_offline_defaults_to_false_and_reads_the_hub_variable() -> None:
+    assert load_settings(env={}).hf_hub_offline is False
+    assert load_settings(env={"HF_HUB_OFFLINE": "1"}).hf_hub_offline is True
+    assert load_settings(env={"HF_HUB_OFFLINE": "true"}).hf_hub_offline is True
+    assert load_settings(env={"HF_HUB_OFFLINE": "0"}).hf_hub_offline is False
+
+
 def test_live_transcription_defaults_to_true_and_reads_the_key() -> None:
     assert load_settings(env={}).live_transcription is True
     assert load_settings(env={"LIVE_TRANSCRIPTION": "false"}).live_transcription is False

@@ -14,10 +14,9 @@ from typing import Any
 
 import numpy as np
 
+from vozata.diarization.models import DIARIZATION_MODEL as MODEL
 from vozata.domain import SpeakerTurn, WhisperDevice
 from vozata.ports import DiarizationError
-
-MODEL = "pyannote/speaker-diarization-community-1"
 
 
 def turns_from_tracks(tracks: Iterable[tuple[float, float, str]]) -> list[SpeakerTurn]:

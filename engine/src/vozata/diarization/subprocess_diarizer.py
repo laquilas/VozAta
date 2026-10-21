@@ -16,8 +16,9 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from vozata.config import ConfigError, Settings
-from vozata.domain import SpeakerTurn, WhisperDevice
-from vozata.ports import DiarizationError
+from vozata.diarization.models import DIARIZATION_MODEL, short_name
+from vozata.domain import ModelKind, SpeakerTurn, WhisperDevice
+from vozata.ports import DiarizationError, ModelDownloader
 
 CHILD_MODULE = "vozata.diarization.child"
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no console flash under the UI
@@ -118,8 +119,18 @@ def _last_line(text: str) -> str:
     return lines[-1] if lines else ""
 
 
-def pyannote_from_settings(settings: Settings) -> SubprocessDiarizer:
-    """The `pyannote` provider; a missing `HF_TOKEN` is a configuration error."""
+def pyannote_from_settings(settings: Settings, downloader: ModelDownloader) -> SubprocessDiarizer:
+    """The `pyannote` provider; a missing `HF_TOKEN` is a configuration error.
+
+    The pipeline is downloaded here, with progress events (phase 42): the child then loads it
+    from the Hugging Face cache.
+    """
     if not settings.hf_token:
         raise ConfigError("HF_TOKEN", "", "missing_hf_token")
+    downloader.ensure(
+        ModelKind.SPEAKERS,
+        DIARIZATION_MODEL,
+        token=settings.hf_token,
+        name=short_name(DIARIZATION_MODEL),
+    )
     return SubprocessDiarizer(settings.hf_token, settings.diarization_device)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -10,6 +11,7 @@ from tests.fakes import (
     FakeDiarizer,
     FakeEmbedder,
     FakeLanguageModel,
+    FakeModelDownloader,
     FakeSessionObserver,
     FakeTranscriber,
 )
@@ -26,6 +28,7 @@ from vozata.domain import (
     ChunkMode,
     ConversationLanguage,
     MixMode,
+    ModelKind,
     SessionStatus,
     StorageInfo,
 )
@@ -192,7 +195,7 @@ def test_transcriber_factory_builds_the_registered_provider_lazily(
     built: list[Settings] = []
     fake = FakeTranscriber()
 
-    def factory(settings: Settings) -> FakeTranscriber:
+    def factory(settings: Settings, downloader: object) -> FakeTranscriber:
         built.append(settings)
         return fake
 
@@ -302,6 +305,7 @@ def test_build_api_container_wires_real_providers(
     )
     settings = _settings(tmp_path, llm_provider="fake")
     from vozata.api.system_info import GpuInfo
+    from vozata.models.download import HubDownloader
     from vozata.processing.gpu_gate import GpuGate, GpuUsage
     from vozata.processing.live_lease import LiveModelTurn
     from vozata.processing.queue import ProcessingQueue
@@ -330,6 +334,9 @@ def test_build_api_container_wires_real_providers(
     gate = built[0].pop("gate")
     assert isinstance(gate, GpuGate) and gate is queue._gate
     assert isinstance(built[0].pop("live_models"), LiveModelTurn)  # shared by every session
+    downloader = built[0].pop("downloader")  # phase 42: publishes through the container's tracker
+    assert isinstance(downloader, HubDownloader) and downloader._tracker is container.downloads
+    assert downloader._offline is False
     assert built == [
         {
             "language": None,
@@ -376,7 +383,7 @@ def test_a_shared_transcriber_is_leased_and_kept_only_without_minutes(
     kept: bool,
 ) -> None:
     fake = FakeTranscriber()
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: fake)
     settings = _settings(tmp_path, stt_provider="fake", generate_minutes=generate_minutes)
     shared = SharedTranscriber(lambda: fake)
 
@@ -397,7 +404,7 @@ def test_the_api_container_shares_the_transcriber_when_keep_loaded(
     monkeypatch.setitem(
         bootstrap.TRANSCRIBERS,
         "fake",
-        lambda settings: fakes.append(FakeTranscriber()) or fakes[-1],
+        lambda settings, downloader: fakes.append(FakeTranscriber()) or fakes[-1],
     )
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
     shared_seen: list[object] = []
@@ -493,7 +500,9 @@ def test_saved_settings_reach_the_next_session_and_the_llm_check(
 def test_the_diarizer_registry_holds_pyannote_behind_a_child_process() -> None:
     from vozata.diarization.subprocess_diarizer import SubprocessDiarizer
 
-    diarizer = bootstrap.DIARIZERS["pyannote"](Settings(hf_token="hf"))
+    downloader = FakeModelDownloader()
+
+    diarizer = bootstrap.DIARIZERS["pyannote"](Settings(hf_token="hf"), downloader)
 
     assert isinstance(diarizer, SubprocessDiarizer)
 
@@ -501,16 +510,17 @@ def test_the_diarizer_registry_holds_pyannote_behind_a_child_process() -> None:
 def test_an_enabled_diarizer_is_built_lazily_from_its_registry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    built: list[Settings] = []
+    built: list[tuple[Settings, object]] = []
     fake = FakeDiarizer()
-    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda s: built.append(s) or fake)
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda s, d: built.append((s, d)) or fake)
     settings = Settings(diarization_enabled=True, diarization_provider="fake")
+    downloader = FakeModelDownloader()
 
-    factory = bootstrap.build_diarizer_factory(settings)
+    factory = bootstrap.build_diarizer_factory(settings, downloader)
 
     assert factory is not None and built == []
     assert factory() is fake
-    assert built == [settings]
+    assert built == [(settings, downloader)]
     with pytest.raises(ConfigError) as caught:
         bootstrap.build_diarizer_factory(
             Settings(diarization_enabled=True, diarization_provider="nope")
@@ -522,7 +532,7 @@ def test_a_shared_transcriber_is_not_kept_when_speakers_are_identified(
     tmp_path: Path, devices: list[int], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = FakeTranscriber()
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: fake)
     settings = _settings(
         tmp_path,
         stt_provider="fake",
@@ -543,16 +553,17 @@ def test_a_shared_transcriber_is_not_kept_when_speakers_are_identified(
 def test_the_live_embedder_is_built_lazily_from_its_registry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    built: list[Settings] = []
+    built: list[tuple[Settings, object]] = []
     fake = FakeEmbedder()
-    monkeypatch.setitem(bootstrap.EMBEDDERS, "fake", lambda s: built.append(s) or fake)
+    monkeypatch.setitem(bootstrap.EMBEDDERS, "fake", lambda s, d: built.append((s, d)) or fake)
     settings = Settings(live_diarization_enabled=True, diarization_provider="fake")
+    downloader = FakeModelDownloader()
 
-    factory = bootstrap.build_embedder_factory(settings)
+    factory = bootstrap.build_embedder_factory(settings, downloader)
 
     assert factory is not None and built == []
     assert factory() is fake
-    assert built == [settings]
+    assert built == [(settings, downloader)]
     assert bootstrap.build_embedder_factory(Settings(diarization_provider="fake")) is None
     with pytest.raises(ConfigError) as caught:
         bootstrap.build_embedder_factory(
@@ -563,7 +574,7 @@ def test_the_live_embedder_is_built_lazily_from_its_registry(
 
 def test_the_embedder_registry_holds_pyannote_and_needs_a_token() -> None:
     with pytest.raises(ConfigError) as caught:
-        bootstrap.EMBEDDERS["pyannote"](Settings())
+        bootstrap.EMBEDDERS["pyannote"](Settings(), FakeModelDownloader())
 
     assert caught.value.key == "HF_TOKEN"
 
@@ -582,7 +593,7 @@ def test_build_diarizer_ignores_the_enabled_flag_for_explicit_runs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake = FakeDiarizer()
-    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.DIARIZERS, "fake", lambda settings, downloader: fake)
 
     assert bootstrap.build_diarizer(Settings(diarization_provider="fake")) is fake
 
@@ -643,7 +654,90 @@ def test_the_translator_registry_holds_opus_mt(monkeypatch: pytest.MonkeyPatch) 
 
     monkeypatch.setattr(opus_mt, "require_extra", lambda: None)
 
-    assert isinstance(bootstrap.TRANSLATORS["opus_mt"](Settings()), opus_mt.OpusMtTranslator)
+    translator = bootstrap.TRANSLATORS["opus_mt"](Settings(), FakeModelDownloader())
+
+    assert isinstance(translator, opus_mt.OpusMtTranslator)
+
+
+def test_download_events_are_published_with_null_session() -> None:
+    broadcaster = _Published()
+    tracker = bootstrap.build_downloads(broadcaster)
+
+    tracker.start(ModelKind.SPEECH, "large-v3-turbo", 1600).failed("network down")
+
+    assert broadcaster.events == [
+        (
+            "download_progress",
+            None,
+            {
+                "kind": "speech",
+                "model": "large-v3-turbo",
+                "downloaded_bytes": 0,
+                "total_bytes": 1600,
+                "state": "running",
+            },
+        ),
+        (
+            "download_progress",
+            None,
+            {
+                "kind": "speech",
+                "model": "large-v3-turbo",
+                "downloaded_bytes": 0,
+                "total_bytes": 1600,
+                "state": "failed",
+                "reason": "network down",
+            },
+        ),
+    ]
+
+
+class _Published:
+    def __init__(self) -> None:
+        self.events: list[tuple[str, str | None, dict[str, object]]] = []
+
+    def publish(self, kind: str, session_id: str | None, data: dict[str, object]) -> None:
+        self.events.append((kind, session_id, data))
+
+
+def test_cli_downloads_log_their_progress(caplog: pytest.LogCaptureFixture) -> None:
+    from vozata.models.download import HubDownloader
+
+    downloader = bootstrap.cli_downloader(Settings(hf_hub_offline=True))
+    assert isinstance(downloader, HubDownloader) and downloader._offline
+
+    with caplog.at_level(logging.INFO, logger="vozata.bootstrap"):
+        handle = downloader._tracker.start(ModelKind.SPEECH, "small", 2_000_000)
+        handle.advance(1_000_000)
+        handle.done()
+        downloader._tracker.start(ModelKind.SPEAKERS, "x", None).failed("offline")
+
+    assert "Downloading speech model small: 0.0 of 2.0 MB" in caplog.text
+    assert "speech model small: done (1.0 MB)" in caplog.text
+    assert "speakers model x: failed (offline)" in caplog.text
+
+
+def test_the_api_container_tracks_downloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vozata.api.system_info import GpuInfo
+
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    container = bootstrap.build_api_container(_settings(tmp_path, llm_provider="fake"))
+    published: list[tuple[str, str | None, dict[str, Any]]] = []
+    monkeypatch.setattr(
+        container.broadcaster,
+        "publish",
+        lambda kind, sid, data: published.append((kind, sid, data)),
+    )
+
+    container.downloads.start(ModelKind.TRANSLATION, "ROMANCE-en", None).done()
+
+    assert [(kind, session) for kind, session, _ in published] == [
+        ("download_progress", None),
+        ("download_progress", None),
+    ]
 
 
 def test_translation_is_off_by_default_and_the_start_choice_overrides_the_setting(
@@ -653,7 +747,7 @@ def test_translation_is_off_by_default_and_the_start_choice_overrides_the_settin
     from vozata.domain import TranslationTarget
 
     fake = FakeTranslator()
-    monkeypatch.setitem(bootstrap.TRANSLATORS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.TRANSLATORS, "fake", lambda settings, downloader: fake)
     settings = Settings(translate_to=TranslationTarget.ES, translation_provider="fake")
 
     assert bootstrap.build_translator_factory(Settings()) == (None, None)
@@ -674,7 +768,9 @@ def test_build_session_passes_the_translation_to_the_session(
     from tests.fakes import FakeTranslator
     from vozata.domain import TranslationTarget
 
-    monkeypatch.setitem(bootstrap.TRANSLATORS, "fake", lambda settings: FakeTranslator())
+    monkeypatch.setitem(
+        bootstrap.TRANSLATORS, "fake", lambda settings, downloader: FakeTranslator()
+    )
     settings = _settings(tmp_path, translation_provider="fake")
 
     session = bootstrap.build_session(

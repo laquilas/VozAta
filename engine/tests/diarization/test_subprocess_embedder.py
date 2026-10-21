@@ -7,13 +7,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.fakes import FakeModelDownloader
 from vozata.config import ConfigError, Settings
+from vozata.diarization.models import EMBEDDING_MODEL
 from vozata.diarization.subprocess_embedder import (
     CHILD_MODULE,
     SubprocessEmbedder,
     pyannote_embedder_from_settings,
 )
-from vozata.domain import WhisperDevice
+from vozata.domain import ModelKind, WhisperDevice
 from vozata.ports import DiarizationError, SpeakerEmbedder
 
 CHILD = Path(__file__).with_name("fake_embed_child.py")
@@ -140,7 +142,7 @@ def test_close_kills_a_child_that_does_not_exit() -> None:
 
 def test_from_settings_needs_a_token() -> None:
     with pytest.raises(ConfigError) as caught:
-        pyannote_embedder_from_settings(Settings())
+        pyannote_embedder_from_settings(Settings(), FakeModelDownloader())
 
     assert (caught.value.key, caught.value.message_key) == ("HF_TOKEN", "missing_hf_token")
 
@@ -154,6 +156,33 @@ def test_from_settings_passes_the_token_device_and_rate(monkeypatch: pytest.Monk
 
     monkeypatch.setattr("vozata.diarization.subprocess_embedder.SubprocessEmbedder", _Recorder)
 
-    pyannote_embedder_from_settings(Settings(hf_token="hf_x", diarization_device=WhisperDevice.CPU))
+    settings = Settings(hf_token="hf_x", diarization_device=WhisperDevice.CPU)
+    pyannote_embedder_from_settings(settings, FakeModelDownloader())
 
     assert built == [("hf_x", WhisperDevice.CPU, 16000)]
+
+
+def test_embedder_predownloads_its_pyannote_repo_with_the_token_before_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    log: list[tuple[str, str]] = []
+    downloader = FakeModelDownloader(log=log)
+
+    class _Recorder:
+        def __init__(self, token: str, *args: object) -> None:
+            log.append(("spawn", token))
+
+    monkeypatch.setattr("vozata.diarization.subprocess_embedder.SubprocessEmbedder", _Recorder)
+
+    pyannote_embedder_from_settings(Settings(hf_token="hf_x"), downloader)
+
+    assert log == [("ensure", EMBEDDING_MODEL), ("spawn", "hf_x")]
+    assert downloader.calls == [
+        {
+            "kind": ModelKind.SPEAKERS,
+            "repo_id": "pyannote/wespeaker-voxceleb-resnet34-LM",
+            "allow_patterns": None,
+            "token": "hf_x",
+            "name": "wespeaker-voxceleb-resnet34-LM",
+        }
+    ]

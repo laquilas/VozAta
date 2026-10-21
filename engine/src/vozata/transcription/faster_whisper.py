@@ -4,45 +4,85 @@ from __future__ import annotations
 
 import gc
 import logging
+import os
 from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 
 from vozata.config import Settings
-from vozata.domain import TranscriptionResult, WhisperDevice, Word
+from vozata.domain import ModelKind, TranscriptionResult, WhisperDevice, Word
+from vozata.ports import ModelDownloader
 from vozata.transcription.cuda import register_cuda_dlls
 
 _log = logging.getLogger(__name__)
 
 ModelFactory = Callable[..., Any]
 HALLUCINATION_SILENCE_SECONDS = 2.0  # skip silent stretches where Whisper tends to invent text
+# The files faster-whisper 1.2.1 downloads (`faster_whisper.utils.download_model`)
+WHISPER_FILES = (
+    "config.json",
+    "preprocessor_config.json",
+    "model.bin",
+    "tokenizer.json",
+    "vocabulary.*",
+)
 
 
-def _whisper_model(size: str, device: str, compute_type: str) -> Any:  # pragma: no cover - GPU
+def whisper_repo(name: str) -> str:
+    """The Hugging Face repo of a `WHISPER_MODEL` value, resolved as faster-whisper 1.2.1 does:
+    a name with `/` is a repo id, otherwise a size of `faster_whisper.utils._MODELS`."""
+    if "/" in name:
+        return name
+    from faster_whisper.utils import _MODELS
+
+    repo = _MODELS.get(name)
+    if repo is None:
+        raise ValueError(f"Invalid model size '{name}', expected one of: {', '.join(_MODELS)}")
+    return repo
+
+
+def model_folder(name: str, downloader: ModelDownloader) -> str:
+    """An existing folder as is; otherwise the model's cached snapshot, downloaded with progress
+    events when missing (phase 42)."""
+    if os.path.isdir(name):
+        return name
+    repo = whisper_repo(name)
+    return str(downloader.ensure(ModelKind.SPEECH, repo, allow_patterns=WHISPER_FILES, name=name))
+
+
+def _whisper_model(path: str, device: str, compute_type: str) -> Any:  # pragma: no cover - GPU
     from faster_whisper import WhisperModel
 
-    return WhisperModel(size, device=device, compute_type=compute_type)
+    return WhisperModel(path, device=device, compute_type=compute_type)
 
 
 class FasterWhisperTranscriber:
     """Whisper on CUDA (`WHISPER_MODEL`, `WHISPER_COMPUTE_TYPE`) or CPU (`WHISPER_CPU_MODEL`).
 
     `WHISPER_DEVICE=auto` loads the GPU model and runs a 1 s warm-up probe, because missing CUDA
-    DLLs only fail at the first transcription; any failure falls back to the CPU model.
+    DLLs only fail at the first transcription; any failure falls back to the CPU model. Each
+    model is first made local through `downloader` (phase 42), then loaded from its folder.
     """
 
-    def __init__(self, settings: Settings, model_factory: ModelFactory | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        downloader: ModelDownloader,
+        model_factory: ModelFactory | None = None,
+    ) -> None:
         register_cuda_dlls()
         factory = model_factory or _whisper_model
-        self.device, self._model = self._load(settings, factory)
+        self.device, self._model = self._load(settings, downloader, factory)
 
     @staticmethod
-    def _load(settings: Settings, factory: ModelFactory) -> tuple[str, Any]:
+    def _load(
+        settings: Settings, downloader: ModelDownloader, factory: ModelFactory
+    ) -> tuple[str, Any]:
         if settings.whisper_device is not WhisperDevice.CPU:
             try:
                 model = factory(
-                    settings.whisper_model,
+                    model_folder(settings.whisper_model, downloader),
                     device="cuda",
                     compute_type=settings.whisper_compute_type,
                 )
@@ -55,7 +95,8 @@ class FasterWhisperTranscriber:
                 _log.warning(
                     "GPU unavailable (%s); using CPU model %s", error, settings.whisper_cpu_model
                 )
-        return "cpu", factory(settings.whisper_cpu_model, device="cpu", compute_type="int8")
+        cpu_model = model_folder(settings.whisper_cpu_model, downloader)
+        return "cpu", factory(cpu_model, device="cpu", compute_type="int8")
 
     def transcribe(
         self,

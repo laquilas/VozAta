@@ -104,14 +104,14 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
-- **Updated:** 2026-10-20 20:57
-- **Next step:** Task 2 of `plans/42-download-progress.md` (wire the downloads and the event).
+- **Updated:** 2026-10-20 21:16
+- **Next step:** Task 3 of `plans/42-download-progress.md` (UI bottom bar).
 
 ### Steps
 
 - [x] Implementation plan (`plans/42-download-progress.md`) and spec amendments
 - [x] Downloader and tracker
-- [ ] Wire the downloads and the event
+- [x] Wire the downloads and the event
 - [ ] UI bottom bar
 - [ ] Full suites, manual check
 
@@ -122,3 +122,9 @@ indeterminate state, two downloads, failure toast, locale parity.
   huggingface_hub 2.2.0, pyannote pre-downloaded in the engine, XET switched off at engine start.
 - huggingface_hub 2.2.0 feeds every HTTP chunk to two byte bars (transfer and reconstruct): the
   byte counter reports the furthest byte bar, not their sum, so bytes are not counted twice.
+- The registries' model providers take `(settings, downloader)`; `serve` shares one
+  `HubDownloader` over one `DownloadTracker` (`download_progress`), the CLI logs progress instead.
+  The event's `model` is the name the user knows (`large-v3-turbo`, `ROMANCE-en`,
+  `speaker-diarization-community-1`), and `total_bytes` leaves out files already cached.
+- `HF_HUB_OFFLINE` is read by `config.py` from the process environment only (huggingface_hub
+  ignores `.env`), as `Settings.hf_hub_offline`.

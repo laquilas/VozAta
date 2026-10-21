@@ -85,6 +85,11 @@ def create_app(container: ApiContainer) -> FastAPI:
                 await websocket.send_json(message)
             if container.migration is not None and container.migration.is_running():
                 await websocket.send_json(container.migration.progress_message())  # phase 33
+            for download in container.downloads.running():  # phase 42
+                data = download.to_payload()
+                await websocket.send_json(
+                    {"type": "download_progress", "session_id": None, "data": data}
+                )
             interrupted = await asyncio.to_thread(container.manager.interrupted_sessions)
             if interrupted:  # phase 17: offer to recover sessions a crash cut short
                 data = {"session_ids": interrupted}

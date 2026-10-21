@@ -17,6 +17,7 @@ from vozata.connection_checks import CheckResult, CheckTarget
 from vozata.domain import StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.template_repository import TemplateRepository, bundled_templates
+from vozata.models.tracker import DownloadTracker
 from vozata.ports import (
     AudioCache,
     BundleImporter,
@@ -92,3 +93,5 @@ class ApiContainer:
     connection_check: Callable[[CheckTarget, Settings], CheckResult] = lambda target, settings: (
         CheckResult(False, "unavailable")
     )
+    # Model downloads (42): the running ones are sent to a newly connected WebSocket client.
+    downloads: DownloadTracker = field(default_factory=lambda: DownloadTracker(lambda state: None))

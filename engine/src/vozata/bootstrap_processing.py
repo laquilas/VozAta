@@ -17,6 +17,7 @@ from vozata.config import Settings
 from vozata.domain import ConversationLanguage, SessionStatus, TranscriptSegment
 from vozata.minutes.session_minutes import stored_vocabulary
 from vozata.ports import (
+    ModelDownloader,
     RecoverableStore,
     SessionAudio,
     SessionObserver,
@@ -48,6 +49,7 @@ def build_processing_job(
     closed: threading.Event | None,
     gate_usage: GpuUsage,
     shared: SharedTranscriber | None = None,
+    downloader: ModelDownloader | None = None,
 ) -> ProcessingJob:
     """The processing job of a stopped (or crashed, `repair`) meeting (phase 40).
 
@@ -57,7 +59,9 @@ def build_processing_job(
     language stored in the metadata (selected, or detected live), so it is not detected again.
     With a `shared` Whisper (`WHISPER_KEEP_LOADED`) and speech on the GPU, the transcribe step
     leases it instead of loading a second model (the gate keeps live sessions off it meanwhile).
+    Models not cached yet are fetched through `downloader` (default: the CLI's, phase 42).
     """
+    downloader = root._downloader(settings, downloader)
     meta = store.read_meta(session_id)
     duration = float(meta.get("duration_seconds") or 0.0)
     after = settings.generate_minutes or settings.diarization_enabled  # VRAM rule
@@ -65,7 +69,9 @@ def build_processing_job(
     @contextlib.contextmanager
     def finisher(kind: StepKind) -> Iterator[SessionFinisher]:
         """One step attempt's finisher: only that step's model is built, closed at the end."""
-        built = root.build_finisher(settings, store, audio, observer, session_id, (kind,))
+        built = root.build_finisher(
+            settings, store, audio, observer, session_id, (kind,), downloader
+        )
         try:
             yield built
         finally:
@@ -75,7 +81,8 @@ def build_processing_job(
         if shared is not None and gate_usage.speech:
             # cancelled by a live start: keep the model, the live session leases it next
             return shared.lease(keep=not after, keep_when=lambda: token.cancelled)
-        return root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)(settings)
+        provider = root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
+        return provider(settings, downloader)
 
     def transcription(token: CancelToken) -> OfflineTranscription:
         return build_offline_transcription(
@@ -111,16 +118,20 @@ def build_offline_transcription(
     session_id: str,
     transcriber: Callable[[], Transcriber] | None = None,
     on_segment: Callable[[TranscriptSegment], None] | None = None,
+    downloader: ModelDownloader | None = None,
 ) -> OfflineTranscription:
     """The transcription of what a meeting's raw transcript does not cover, built from its
     stored metadata: the conversation language (selected, or detected live; a language detected
     now is stored back), the session vocabulary and the configured chunker. The speech provider
-    is `STT_PROVIDER` unless `transcriber` is given."""
+    is `STT_PROVIDER` (its model fetched through `downloader`, default: the CLI's) unless
+    `transcriber` is given."""
     stored = store.read_meta(session_id)
     language = ConversationLanguage(stored.get("language", ConversationLanguage.AUTO.value))
     if transcriber is None:
         transcriber = functools.partial(
-            root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider), settings
+            root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider),
+            settings,
+            root._downloader(settings, downloader),
         )
     return OfflineTranscription(
         settings,
