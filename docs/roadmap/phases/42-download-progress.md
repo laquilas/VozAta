@@ -105,8 +105,7 @@ indeterminate state, two downloads, failure toast, locale parity.
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
 - **Updated:** 2026-10-20 23:30
-- **Next step:** final review fixes (`TRANSFORMERS_OFFLINE`, coalesced `ensure()`, short
-  `failed` reason), then Task 4 of `plans/42-download-progress.md` (full suites, manual check).
+- **Next step:** final review fixes (coalesced `ensure()`, short `failed` reason), then Task 4 of `plans/42-download-progress.md` (full suites, manual check).
 
 ### Steps
 
@@ -138,3 +137,5 @@ indeterminate state, two downloads, failure toast, locale parity.
   (`cli.download_*`) to stderr every 5 s and when the download ends.
 - Final review fix: `huggingface_hub>=2.2,<3` is a main dependency (the downloader relies on its
   2.x `snapshot_download`: two byte bars through `tqdm_class`, `IncompleteSnapshotError`).
+- Final review fix: `Settings.hf_hub_offline` also reads `TRANSFORMERS_OFFLINE` when
+  `HF_HUB_OFFLINE` is unset or empty, as huggingface_hub does.

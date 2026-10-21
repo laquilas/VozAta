@@ -424,6 +424,16 @@ def test_hf_hub_offline_defaults_to_false_and_reads_the_hub_variable() -> None:
     assert load_settings(env={"HF_HUB_OFFLINE": "0"}).hf_hub_offline is False
 
 
+def test_hf_hub_offline_also_reads_transformers_offline_like_the_hub() -> None:
+    assert load_settings(env={"TRANSFORMERS_OFFLINE": "1"}).hf_hub_offline is True
+    assert load_settings(env={"TRANSFORMERS_OFFLINE": "0"}).hf_hub_offline is False
+    # huggingface_hub: `HF_HUB_OFFLINE or TRANSFORMERS_OFFLINE`, so a set HF_HUB_OFFLINE wins
+    both = {"HF_HUB_OFFLINE": "0", "TRANSFORMERS_OFFLINE": "1"}
+    assert load_settings(env=both).hf_hub_offline is False
+    both = {"HF_HUB_OFFLINE": "", "TRANSFORMERS_OFFLINE": "1"}
+    assert load_settings(env=both).hf_hub_offline is True
+
+
 def test_live_transcription_defaults_to_true_and_reads_the_key() -> None:
     assert load_settings(env={}).live_transcription is True
     assert load_settings(env={"LIVE_TRANSCRIPTION": "false"}).live_transcription is False

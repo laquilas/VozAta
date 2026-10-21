@@ -323,9 +323,11 @@ def _read(env: Mapping[str, str] | None, env_file: Path | None) -> dict[str, str
 
 
 def _hub_offline(env: Mapping[str, str]) -> bool:
-    """`HF_HUB_OFFLINE` as huggingface_hub reads it: from the process environment only (not
-    `.env`), any other value meaning off (never a configuration error)."""
-    return env.get("HF_HUB_OFFLINE", "").strip().lower() in _TRUE
+    """Offline as huggingface_hub reads it: `HF_HUB_OFFLINE`, else `TRANSFORMERS_OFFLINE` (a
+    non-empty `HF_HUB_OFFLINE` wins), from the process environment only (not `.env`), any other
+    value meaning off (never a configuration error)."""
+    value = env.get("HF_HUB_OFFLINE") or env.get("TRANSFORMERS_OFFLINE") or ""
+    return value.strip().lower() in _TRUE
 
 
 def _choice[E: StrEnum](raw: Mapping[str, str], key: str, enum: type[E], default: E) -> E:

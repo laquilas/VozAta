@@ -784,7 +784,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `DIARIZATION_PROVIDER` | `pyannote` | 14 | |
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
 | `HF_TOKEN` | *(empty)* | 14 | Hugging Face token for pyannote models |
-| `HF_HUB_OFFLINE` | *(empty)* | 42 | Hugging Face's own variable, read from the process environment only (not `.env`, not on the Config page): `1` never downloads a model |
+| `HF_HUB_OFFLINE` | *(empty)* | 42 | Hugging Face's own variable, read from the process environment only (not `.env`, not on the Config page): `1` never downloads a model; unset or empty, `TRANSFORMERS_OFFLINE` is read instead, as huggingface_hub does |
 | `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
 | `LIVE_DIARIZATION_ENABLED` | `false` | 15 | live `User N` labels while recording (needs the `diarization` extra and `HF_TOKEN`; uses `DIARIZATION_PROVIDER` / `DIARIZATION_DEVICE`) |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
