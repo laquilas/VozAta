@@ -105,7 +105,7 @@ indeterminate state, two downloads, failure toast, locale parity.
 - **Branch:** `feature/42-download-progress`
 - **Status:** in progress
 - **Updated:** 2026-10-20 23:30
-- **Next step:** final review fixes (hub pin, `TRANSFORMERS_OFFLINE`, coalesced `ensure()`, short
+- **Next step:** final review fixes (`TRANSFORMERS_OFFLINE`, coalesced `ensure()`, short
   `failed` reason), then Task 4 of `plans/42-download-progress.md` (full suites, manual check).
 
 ### Steps
@@ -136,3 +136,5 @@ indeterminate state, two downloads, failure toast, locale parity.
 - Final review fix: the CLI download progress was logged at INFO under a WARNING-level logging
   setup, so it never showed; `cli_progress.DownloadReporter` now prints localized lines
   (`cli.download_*`) to stderr every 5 s and when the download ends.
+- Final review fix: `huggingface_hub>=2.2,<3` is a main dependency (the downloader relies on its
+  2.x `snapshot_download`: two byte bars through `tqdm_class`, `IncompleteSnapshotError`).
