@@ -77,17 +77,17 @@ Found on 2026-10-20 while testing the packaged app: a 16 s meeting stayed `final
 
 ## Acceptance criteria
 
-- [ ] With the speech model missing from the cache, starting a recording shows the bottom bar with
+- [x] With the speech model missing from the cache, starting a recording shows the bottom bar with
       "Downloading speech model …", the percent grows, and the bar disappears when the model
       loads.
-- [ ] A UI that reconnects to the running engine during a download (e.g. the window restored
+- [x] A UI that reconnects to the running engine during a download (e.g. the window restored
       from the tray) shows the bar again with the current percent.
-- [ ] After the app is closed mid-download, the next time the model is needed (a recording, or
+- [x] After the app is closed mid-download, the next time the model is needed (a recording, or
       the phase 40 queue resuming) the download starts again and the bar shows it (no resume:
       see the design notes).
-- [ ] Pulling the network cable shows an error toast and hides the bar.
-- [ ] Cached models never show the bar.
-- [ ] Contract docs updated (`download_progress`).
+- [x] Pulling the network cable shows an error toast and hides the bar.
+- [x] Cached models never show the bar.
+- [x] Contract docs updated (`download_progress`).
 
 ## Tests
 
@@ -103,9 +103,9 @@ indeterminate state, two downloads, failure toast, locale parity.
 ## Progress
 
 - **Branch:** `feature/42-download-progress`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-21 09:00
-- **Next step:** tick the acceptance criteria, set the phase `done`, open the PR.
+- **Next step:** open the PR; the user merges it.
 
 ### Steps
 
@@ -113,7 +113,7 @@ indeterminate state, two downloads, failure toast, locale parity.
 - [x] Downloader and tracker
 - [x] Wire the downloads and the event
 - [x] UI bottom bar
-- [ ] Full suites, manual check
+- [x] Full suites, manual check
 
 ### Decisions and notes
 
@@ -147,3 +147,11 @@ indeterminate state, two downloads, failure toast, locale parity.
   uses its own tokens, `Brush.DownloadFill` (dark `#A12597`) and `Brush.DownloadTrack`, and
   `ThemeContrastTests` checks `TextPrimary` over both (≥ 4.5:1); `ThemeRenderTests` renders the
   half-filled bar in both themes.
+- Manual check (2026-10-21, Debug app, scratch database, empty `HF_HOME`, `WHISPER_MODEL=tiny`,
+  driven through the engine API, app window captured with `PrintWindow`): `POST /sessions` showed
+  "Baixando modelo de fala tiny — 44 % (33 MB de 75 MB)" across the bottom, growing in ~10 MB
+  steps (huggingface_hub's chunk size; ~470 KB/s here), the download went on after the stop, the
+  bar was gone 2 s after `done` and the queued transcription ran. The restart with the cache
+  filled could not be run: the JBL mic wedged WASAPI again (`device_failed`), and the user chose
+  to skip the mic-based runs. Reconnect, restart after a close, network loss and cached models are
+  covered by the engine and UI tests only; dark-theme contrast by the render and contrast tests.

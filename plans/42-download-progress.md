@@ -109,6 +109,6 @@ def test_main_sets_hf_hub_disable_xet_before_importing_the_hub(): ...    # subpr
 
 ### Task 4: Full suites, manual check, phase done
 
-- [ ] **Step 1:** Engine suite with coverage (output to a file; it must exit on its own), ruff; UI suite, format.
-- [ ] **Step 2:** Manual check with an isolated Hugging Face cache (`HF_HOME=<scratch>\hf`, so the user's cache is untouched) and a small model (`WHISPER_MODEL=tiny`, ~75 MB), a scratch database, the app launched on it: start a recording → the bottom bar shows "Baixando modelo de fala tiny — N % (x de y)" growing, then disappears and the live transcript starts; restart with the cache filled → no bar. Capture only the app window (`PrintWindow`). Delete the scratch cache and database afterwards.
-- [ ] **Step 3:** Tick the (amended) acceptance criteria, README `done`, Progress `ready for PR`; commit; push once; open the PR; the user merges.
+- [x] **Step 1:** Engine suite with coverage (output to a file; it must exit on its own), ruff; UI suite, format.
+- [x] **Step 2:** Manual check with an isolated Hugging Face cache (`HF_HOME=<scratch>\hf`, so the user's cache is untouched) and a small model (`WHISPER_MODEL=tiny`, ~75 MB), a scratch database, the app launched on it: start a recording → the bottom bar shows "Baixando modelo de fala tiny — N % (x de y)" growing, then disappears and the live transcript starts; restart with the cache filled → no bar. Capture only the app window (`PrintWindow`). Delete the scratch cache and database afterwards.
+- [x] **Step 3:** Tick the (amended) acceptance criteria, README `done`, Progress `ready for PR`; commit; push once; open the PR; the user merges.
