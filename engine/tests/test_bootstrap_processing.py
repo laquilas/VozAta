@@ -9,7 +9,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.fakes import FakeLanguageModel, FakeSessionObserver, FakeTranscriber
+from tests.fakes import (
+    FakeDiarizer,
+    FakeLanguageModel,
+    FakeModelDownloader,
+    FakeSessionObserver,
+    FakeTranscriber,
+)
 from tests.session_folders import make_session_folder, segment, write_wav
 from vozata import bootstrap, bootstrap_processing
 from vozata.config import Settings
@@ -45,7 +51,7 @@ def transcriber(monkeypatch: pytest.MonkeyPatch) -> FakeTranscriber:
     fake = FakeTranscriber(
         [TranscriptionResult(words=(Word("Rest", 0.1, 0.4, 0.9),), language="pt")] * 4
     )
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: fake)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: fake)
     return fake
 
 
@@ -71,6 +77,7 @@ def _job(
     closed: threading.Event | None = None,
     usage: GpuUsage = USAGE,
     shared: SharedTranscriber | None = None,
+    downloader: FakeModelDownloader | None = None,
 ):  # type: ignore[no-untyped-def]
     audio = bootstrap.build_audio_store(settings)
     return bootstrap_processing.build_processing_job(
@@ -83,6 +90,7 @@ def _job(
         closed=closed,
         gate_usage=usage,
         shared=shared,
+        downloader=downloader,
     )
 
 
@@ -200,7 +208,7 @@ def test_auto_language_detected_while_transcribing_the_rest_is_stored(
 ) -> None:
     said = TranscriptionResult(words=(Word("Resto", 0.0, 0.95, 0.9),), language="pt")
     transcriber = FakeTranscriber([said] * 4)
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: transcriber)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: transcriber)
     settings = _settings(tmp_path, generate_minutes=False)
     store = bootstrap.build_store(settings)
     session_id = make_session_folder(store, mic_seconds=4.0, segments=[], duration_seconds=4.0)
@@ -222,7 +230,7 @@ def test_the_transcribe_command_transcribes_with_the_stored_language_and_reports
 ) -> None:
     said = TranscriptionResult(words=(Word("Resto", 0.0, 0.95, 0.9),), language="pt")
     transcriber = FakeTranscriber([said] * 4)
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: transcriber)
+    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: transcriber)
     settings = _settings(tmp_path)
     store = bootstrap.build_store(settings)
     session_id = make_session_folder(store, mic_seconds=4.0, segments=[], duration_seconds=4.0)
@@ -276,7 +284,9 @@ def test_the_transcribe_step_uses_the_kept_whisper_on_the_gpu(
 
     shared = SharedTranscriber(load)
     shared.lease(keep=True).close()  # the live session kept Whisper loaded
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: FakeTranscriber()
+    )
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
     settings = _settings(tmp_path, generate_minutes=minutes)
     store = bootstrap.build_store(settings)
@@ -409,6 +419,36 @@ def test_each_step_attempt_builds_only_its_model_and_closes_it(
 
     assert len(models) == built  # one language model client at most, never two
     assert all(model.closes == 1 for model in models)
+
+
+def test_the_job_steps_get_their_models_through_the_given_downloader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[tuple[str, object]] = []
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS,
+        "fake",
+        lambda settings, downloader: seen.append(("speech", downloader)) or FakeTranscriber(),
+    )
+    monkeypatch.setitem(
+        bootstrap.DIARIZERS,
+        "fake",
+        lambda settings, downloader: seen.append(("speakers", downloader)) or FakeDiarizer(),
+    )
+    settings = _settings(
+        tmp_path, diarization_enabled=True, diarization_provider="fake", generate_minutes=False
+    )
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store)
+    downloader = FakeModelDownloader()
+    cpu = GpuUsage(speech=False, speakers=False, llm=False)
+    job = _job(settings, store, session_id, usage=cpu, downloader=downloader)
+
+    for step in job.steps:
+        if step.kind in (StepKind.TRANSCRIBE, StepKind.DIARIZE):
+            step.run(CancelToken(), lambda fraction: None)
+
+    assert seen == [("speech", downloader), ("speakers", downloader)]
 
 
 def test_the_finished_hook_builds_no_model(tmp_path: Path, models: list) -> None:

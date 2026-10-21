@@ -31,6 +31,7 @@ public sealed class ThemeContrastTests
             ("TextPrimary", "InfoSurface"), ("TextPrimary", "WarningSurface"), ("TextPrimary", "DangerSurface"),
             ("TextPrimary", "AccentSubtle"),
             ("ChannelMic", "Surface"), ("ChannelSystem", "Surface"), ("ChannelOther", "Surface"),
+            ("TextPrimary", "DownloadFill"), ("TextPrimary", "DownloadTrack"), // the label over the download bar (42)
         ];
         var data = new TheoryData<string, string, string>();
         foreach (var theme in new[] { "Light", "Dark" })

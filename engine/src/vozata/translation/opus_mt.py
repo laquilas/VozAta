@@ -17,7 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from vozata.ports import TranslationError
+from vozata.domain import ModelKind
+from vozata.ports import ModelDownloader, TranslationError
 
 MODELS = {
     "ROMANCE-en": "michaelfeil/ct2fast-opus-mt-ROMANCE-en",
@@ -107,23 +108,23 @@ def folder_locator(root: Path) -> ModelLocator:
     return locate
 
 
-def hub_locator(download: Callable[[str], str] | None = None) -> ModelLocator:
+def hub_locator(download: Callable[[str], Path | str]) -> ModelLocator:
     """Models from Hugging Face, downloaded once into its cache (`TRANSLATION_MODEL_DIR` empty)."""
 
     def locate(name: str) -> Path:
-        fetch = download or _snapshot_download
         try:
-            return Path(fetch(MODELS[name]))
+            return Path(download(MODELS[name]))
         except Exception as error:
             raise TranslationError(f"downloading {MODELS[name]} failed: {error}") from error
 
     return locate
 
 
-def _snapshot_download(repo: str) -> str:  # pragma: no cover - network
-    from huggingface_hub import snapshot_download
-
-    return snapshot_download(repo)
+def downloader_fetch(downloader: ModelDownloader) -> Callable[[str], Path]:
+    """`hub_locator`'s download through the `ModelDownloader` (progress events, phase 42); the
+    model is shown by its direction (e.g. `ROMANCE-en`)."""
+    names = {repo: name for name, repo in MODELS.items()}
+    return lambda repo: downloader.ensure(ModelKind.TRANSLATION, repo, name=names.get(repo))
 
 
 class CTranslate2Marian:
@@ -167,8 +168,12 @@ def load_ctranslate2(folder: Path) -> MarianModel:  # pragma: no cover - needs t
     return CTranslate2Marian(translator, source, target)
 
 
-def from_settings(model_dir: Path | None) -> OpusMtTranslator:
-    """The configured provider: `TRANSLATION_MODEL_DIR` folders, else the Hugging Face cache."""
+def from_settings(model_dir: Path | None, downloader: ModelDownloader) -> OpusMtTranslator:
+    """The configured provider: `TRANSLATION_MODEL_DIR` folders, else the Hugging Face cache
+    (filled through `downloader`)."""
     require_extra()
-    locate = folder_locator(model_dir) if model_dir is not None else hub_locator()
+    if model_dir is not None:
+        locate = folder_locator(model_dir)
+    else:
+        locate = hub_locator(downloader_fetch(downloader))
     return OpusMtTranslator(locate, load_ctranslate2)

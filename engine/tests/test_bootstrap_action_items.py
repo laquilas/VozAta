@@ -24,7 +24,9 @@ def test_the_api_container_extracts_and_exports_with_current_settings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     llm = FakeLanguageModel()
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: FakeTranscriber()
+    )
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: llm)
     shared_seen: list = []
     monkeypatch.setattr(

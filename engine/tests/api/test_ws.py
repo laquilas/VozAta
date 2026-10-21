@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from tests.api.conftest import Api, hold_in_queue
 from vozata.api.app import create_app
-from vozata.domain import Channel, TranscriptSegment
+from vozata.domain import Channel, ModelKind, TranscriptSegment
 from vozata.processing.job import ProcessingJob, Step, StepKind
 
 SESSION = "20261015_202358"
@@ -163,6 +163,37 @@ def test_ws_connect_sends_processing_snapshot_after_status(api: Api) -> None:
         },
     ]
     assert after["type"] == "minutes_ready"
+
+
+def test_ws_connect_sends_running_downloads(api: Api) -> None:
+    running = hold_in_queue(api.manager, SESSION)
+    assert _wait_for(lambda: api.manager._queue.state(SESSION).state == "running")
+    speech = api.downloads.start(ModelKind.SPEECH, "large-v3-turbo", 1600)
+    speech.advance(720)
+    api.downloads.start(ModelKind.SPEAKERS, "speaker-diarization-community-1", None).done()
+
+    with api.client.websocket_connect("/ws") as ws:
+        first = ws.receive_json()
+        processing = ws.receive_json()
+        download = ws.receive_json()
+        api.broadcaster.publish("minutes_ready", SESSION, {"session_id": SESSION})
+        after = ws.receive_json()
+
+    running.set()
+    assert api.manager._queue.wait_idle(5)
+    assert (first["type"], processing["type"]) == ("status", "processing")
+    assert download == {
+        "type": "download_progress",
+        "session_id": None,
+        "data": {
+            "kind": "speech",
+            "model": "large-v3-turbo",
+            "downloaded_bytes": 720,
+            "total_bytes": 1600,
+            "state": "running",
+        },
+    }
+    assert after["type"] == "minutes_ready"  # the finished download is not in the snapshot
 
 
 def test_ws_connect_snapshot_skips_a_meeting_that_is_already_done(api: Api) -> None:

@@ -16,6 +16,7 @@ import pytest
 from tests.transcription.contract import check_transcriber_contract
 from vozata.config import Settings, load_settings
 from vozata.domain import AudioChunk, Channel, WhisperDevice
+from vozata.models.cli_progress import cli_downloader
 from vozata.transcription.faster_whisper import FasterWhisperTranscriber
 from vozata.transcription.stitcher import CarryOverStitcher, SegmentIds
 
@@ -43,12 +44,16 @@ def _settings(**overrides: object) -> Settings:
     return replace(load_settings(), **overrides)
 
 
+def _transcriber(settings: Settings) -> FasterWhisperTranscriber:
+    return FasterWhisperTranscriber(settings, cli_downloader(settings))
+
+
 def _words(text: str) -> list[str]:
     return [word.strip(".,").lower() for word in text.split()]
 
 
 def test_gpu_transcriber_honours_the_contract(speech: np.ndarray) -> None:
-    transcriber = FasterWhisperTranscriber(_settings(whisper_device=WhisperDevice.CUDA))
+    transcriber = _transcriber(_settings(whisper_device=WhisperDevice.CUDA))
     try:
         assert transcriber.device == "cuda"
         check_transcriber_contract(transcriber, speech.astype(np.float32), "en")
@@ -61,7 +66,7 @@ def test_gpu_transcriber_honours_the_contract(speech: np.ndarray) -> None:
 
 
 def test_cpu_fallback_model_honours_the_contract(speech: np.ndarray) -> None:
-    transcriber = FasterWhisperTranscriber(_settings(whisper_device=WhisperDevice.CPU))
+    transcriber = _transcriber(_settings(whisper_device=WhisperDevice.CPU))
     try:
         assert transcriber.device == "cpu"
         check_transcriber_contract(transcriber, speech.astype(np.float32), "en")
@@ -71,7 +76,7 @@ def test_cpu_fallback_model_honours_the_contract(speech: np.ndarray) -> None:
 
 def test_stitched_windows_reproduce_the_speech_without_duplicates(speech: np.ndarray) -> None:
     settings = _settings(whisper_device=WhisperDevice.CUDA, chunk_seconds=2)
-    transcriber = FasterWhisperTranscriber(settings)
+    transcriber = _transcriber(settings)
     stitcher = CarryOverStitcher(
         Channel.MIC, transcriber, settings, FixedLanguage(), SegmentIds().next
     )

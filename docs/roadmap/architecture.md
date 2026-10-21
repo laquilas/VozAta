@@ -54,7 +54,8 @@ engine/
     output/                 sinks.py
     llm/                    ollama.py
     minutes/                generator.py, prompts.py, template_repository.py, templates/, action_items.py, session_action_items.py
-    diarization/            pyannote.py, assign.py, embedder.py, live.py
+    diarization/            pyannote.py, assign.py, embedder.py, live.py, models.py (repo ids, 42)
+    models/                 download.py (HubDownloader), byte_counter.py, tracker.py (DownloadTracker), cli_progress.py (42)
     storage/                session_store.py, recovery.py, wav_repair.py, search_index.py, action_items.py,
                             audio_cache.py (32), files/{repository,audio,layout,repair,translations,folder}.py
                             (file backend, 30), sqlite/{db,repository,search,audio,audio_writer,...}.py (31, 32)
@@ -175,6 +176,9 @@ class SessionObserver(Protocol):     # console (05), WebSocket broadcaster (06);
 class Translator(Protocol):           # OpusMtTranslator (29), CPU; built on the translation thread
     def translate(self, text: str, source: str, target: str) -> str: ...  # raises TranslationError
     def close(self) -> None: ...
+class ModelDownloader(Protocol):      # HubDownloader (42): every local model (Whisper, pyannote, Opus-MT)
+    def ensure(self, kind: ModelKind, repo_id: str, *, allow_patterns: Sequence[str] | None = None,
+               token: str | None = None, name: str | None = None) -> Path: ...  # cached snapshot folder
 class TranscriptSearch(Protocol):     # SearchIndex (22, files) / SqliteSearch (31, sqlite); reused by 21 and 24
     def index_session(self, session_id: str, segments: Sequence[TranscriptSegment]) -> None: ...  # replace (SqliteSearch: no-op, triggers)
     def search(self, query: str, limit: int = 50) -> list[SearchHit]: ...  # free text, best first
@@ -780,6 +784,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `DIARIZATION_PROVIDER` | `pyannote` | 14 | |
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
 | `HF_TOKEN` | *(empty)* | 14 | Hugging Face token for pyannote models |
+| `HF_HUB_OFFLINE` | *(empty)* | 42 | Hugging Face's own variable, read from the process environment only (not `.env`, not on the Config page): `1` never downloads a model; unset or empty, `TRANSFORMERS_OFFLINE` is read instead, as huggingface_hub does |
 | `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
 | `LIVE_DIARIZATION_ENABLED` | `false` | 15 | live `User N` labels while recording (needs the `diarization` extra and `HF_TOKEN`; uses `DIARIZATION_PROVIDER` / `DIARIZATION_DEVICE`) |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
@@ -953,7 +958,8 @@ Decision: **Opus-MT (MarianMT) models converted to CTranslate2**, registered as 
   `require_extra()` fails fast, so the engine works without the extra and the session reports
   `translation_failed` instead.
 - Models come from `TRANSLATION_MODEL_DIR` (`<dir>/opus-mt-<name>/` with `model.bin`,
-  `source.spm`, `target.spm`) or are downloaded once with `huggingface_hub.snapshot_download`.
+  `source.spm`, `target.spm`) or are downloaded once into the Hugging Face cache through the
+  `ModelDownloader` (§17), shown as the direction (`ROMANCE-en`).
 
 ## 15. Desktop design system (phase 34)
 
@@ -1027,3 +1033,70 @@ graph LR
   audio stream needs ship (≈ 11 MB, `libvlc/win-x64/` next to the single-file executable).
   `PlayerBarViewModel`: play/pause, −10 s / +10 s, position slider, speed, channel (switching
   keeps the position) and volume.
+
+## 17. Model downloads (phase 42)
+
+- Every local model is made local through one `ModelDownloader` port before it loads:
+  `HubDownloader` (`models/download.py`) first asks `snapshot_download(local_files_only=True)`;
+  a cached snapshot is returned untouched (no network, no event). Otherwise it sums the size of the
+  files still missing (`model_info(files_metadata=True)`, filtered by `allow_patterns`, files
+  already in the cache left out with `try_to_load_from_cache`, so a partly cached repo still
+  reaches 100 %) and downloads with a `tqdm_class` that forwards the bytes to a `DownloadTracker`
+  (`models/tracker.py`). `HF_HUB_OFFLINE=1` (read by `config.py` from the process environment)
+  never downloads: the cache error propagates. Concurrent `ensure()` calls for the same repo and
+  `allow_patterns` share one download (one tracker handle, so no duplicate bar and no bar falling
+  back to 0 %): the later callers wait for the first and get its folder or its error.
+- `DownloadTracker` publishes a state on start, at most every 0.5 s per download while bytes
+  arrive, and once on `done` / `failed`; `running()` is the snapshot a newly connected WebSocket
+  client receives. `serve` builds one tracker publishing `download_progress` (envelope
+  `session_id` null) and one `HubDownloader` in `build_api_container` (`ApiContainer.downloads`);
+  the CLI commands (`record`, `transcribe`, `recover`, `diarize`) use `cli_downloader`
+  (`models/cli_progress.py`), whose tracker prints localized lines (`cli.download_*`) to stderr,
+  whatever the log level, every 5 s and once when the download ends. `HF_HUB_OFFLINE` is a
+  process value: `PUT /settings` keeps the one read at start-up.
+- A processing-queue `diarize` step downloads the pyannote model inside the diarizer factory,
+  before a `Cancellable` diarizer exists. When a live recording cancels the step meanwhile, the
+  finisher closes the new diarizer and ends the step `StepCancelled` instead of spawning the child
+  next to the live Whisper; `SubprocessDiarizer.cancel()` is final, so a cancel that lands before
+  `diarize()` also prevents the spawn.
+- The registries' providers that load a local model take `(settings, downloader)`:
+  - Whisper: the `WHISPER_MODEL` / `WHISPER_CPU_MODEL` value is resolved as faster-whisper 1.2.1
+    does (`faster_whisper.utils._MODELS`; a name with `/` is a repo id; an existing folder is
+    used as is, without the downloader), downloaded with faster-whisper's own file patterns, then
+    `WhisperModel(<snapshot folder>)`. The CPU fallback model goes through the same path. With
+    `WHISPER_DEVICE=auto` a failed GPU-model download counts as a GPU failure: its `failed` event
+    is sent, then the CPU model loads (downloading it too when it is not cached).
+  - pyannote: the diarizer and live embedder providers pre-download
+    `pyannote/speaker-diarization-community-1` (which bundles its segmentation, embedding and
+    PLDA models) / `pyannote/wespeaker-voxceleb-resnet34-LM` with `HF_TOKEN` **before** spawning
+    their child, which then loads from the cache (the child has no progress channel). The repo
+    ids live in `diarization/models.py`, which imports no torch.
+  - Opus-MT: `hub_locator` downloads through the same downloader.
+- huggingface_hub reads `HF_HUB_DISABLE_XET` once, on import: `vozata.__main__` sets it before
+  anything imports the hub (the XET protocol hangs on this machine).
+- No resume: huggingface_hub 2.2.0 writes each file to a unique `.incomplete` file and deletes it on
+  failure, so an interrupted download starts again from 0.
+
+```mermaid
+sequenceDiagram
+    participant F as Provider factory
+    participant D as HubDownloader
+    participant H as huggingface_hub
+    participant T as DownloadTracker
+    participant W as WebSocket clients
+    F->>D: ensure(kind, repo, name)
+    D->>H: snapshot_download(local_files_only)
+    alt cached
+        H-->>D: folder
+    else missing
+        D->>H: model_info + try_to_load_from_cache (size still to download)
+        D->>T: start(kind, name, total)
+        T-->>W: download_progress running
+        D->>H: snapshot_download(tqdm_class=byte counter)
+        H-->>T: bytes (throttled to 2/s)
+        T-->>W: download_progress running
+        D->>T: done / failed
+        T-->>W: download_progress done / failed
+    end
+    D-->>F: snapshot folder
+```

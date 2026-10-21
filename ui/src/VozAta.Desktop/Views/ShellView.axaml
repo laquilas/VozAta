@@ -98,126 +98,136 @@
     </Border>
 
     <!-- Page area: banners on top, the page, notifications as toasts over it -->
-    <Panel Grid.Column="1">
-      <DockPanel>
-        <!-- A recording runs while another page is shown -->
-        <Border DockPanel.Dock="Top" Margin="16,12,16,0" Classes="banner error"
-                IsVisible="{Binding Shell.IsRecordingElsewhere}">
-          <DockPanel>
-            <Button DockPanel.Dock="Right" Classes="link" Padding="4,0"
-                    Command="{Binding Shell.NavigateCommand}" CommandParameter="recorder"
-                    Content="{Binding L[NavRecorder]}" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Ellipse Classes="state-dot small recording" IsVisible="{Binding Session.IsActivelyRecording}" />
-              <Ellipse Classes="state-dot small paused" IsVisible="{Binding Session.IsPaused}" />
-              <TextBlock Text="{Binding Shell.RecordingBannerText}" VerticalAlignment="Center" Classes="tabular" />
-            </StackPanel>
-          </DockPanel>
-        </Border>
+    <DockPanel Grid.Column="1">
+      <!-- Model downloads (phase 42): progress across the bottom, the label centered over it -->
+      <Panel DockPanel.Dock="Bottom" IsVisible="{Binding Downloads.IsVisible}">
+        <ProgressBar Classes="download" Minimum="0" Maximum="100" Height="24" Value="{Binding Downloads.Percent}"
+                     IsIndeterminate="{Binding Downloads.IsIndeterminate}" />
+        <TextBlock Text="{Binding Downloads.Text}" Classes="tabular" TextTrimming="CharacterEllipsis"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,0" />
+      </Panel>
 
-        <!-- Crash recovery (phase 17): interrupted sessions with Recover / Later -->
-        <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
-                IsVisible="{Binding Recovery.IsOpen}">
-          <StackPanel Spacing="8">
-            <TextBlock Text="{Binding L[RecoveryTitle]}" Classes="subtitle" />
-            <TextBlock Text="{Binding L[RecoveryMessage]}" TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding Recovery.Sessions}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:RecoverySession">
-                  <Grid ColumnDefinitions="Auto,Auto" Margin="0,2">
-                    <TextBlock Text="{Binding Started}" FontWeight="SemiBold" Margin="0,0,16,0" />
-                    <TextBlock Grid.Column="1" Text="{Binding Duration}" Classes="secondary tabular" />
-                  </Grid>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-              <Button Content="{Binding L[RecoveryLater]}" Command="{Binding Recovery.LaterCommand}" />
-              <Button Classes="primary" Content="{Binding L[RecoveryRecover]}"
-                      Command="{Binding Recovery.RecoverCommand}" />
-            </StackPanel>
-          </StackPanel>
-        </Border>
-
-        <!-- Import of the old meeting folders (phase 33): progress, then the counts and errors -->
-        <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
-                IsVisible="{Binding Migration.IsVisible}">
-          <StackPanel Spacing="8">
+      <Panel>
+        <DockPanel>
+          <!-- A recording runs while another page is shown -->
+          <Border DockPanel.Dock="Top" Margin="16,12,16,0" Classes="banner error"
+                  IsVisible="{Binding Shell.IsRecordingElsewhere}">
             <DockPanel>
-              <Button DockPanel.Dock="Right" Classes="icon" VerticalAlignment="Top"
-                      IsVisible="{Binding Migration.IsFinished}"
-                      ToolTip.Tip="{Binding L[Dismiss]}" AutomationProperties.Name="{Binding L[Dismiss]}"
-                      Command="{Binding Migration.DismissCommand}">
-                <PathIcon Data="{StaticResource Icon.Dismiss}" />
-              </Button>
-              <Button DockPanel.Dock="Right" Classes="link" Padding="4,0" Margin="8,0"
-                      IsVisible="{Binding Migration.HasErrors}"
-                      Content="{Binding L[MigrationShowErrors]}" Command="{Binding Migration.ShowErrorsCommand}" />
-              <TextBlock Text="{Binding Migration.Text}" TextWrapping="Wrap" VerticalAlignment="Center" Classes="tabular" />
+              <Button DockPanel.Dock="Right" Classes="link" Padding="4,0"
+                      Command="{Binding Shell.NavigateCommand}" CommandParameter="recorder"
+                      Content="{Binding L[NavRecorder]}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Classes="state-dot small recording" IsVisible="{Binding Session.IsActivelyRecording}" />
+                <Ellipse Classes="state-dot small paused" IsVisible="{Binding Session.IsPaused}" />
+                <TextBlock Text="{Binding Shell.RecordingBannerText}" VerticalAlignment="Center" Classes="tabular" />
+              </StackPanel>
             </DockPanel>
-            <ProgressBar Minimum="0" Maximum="100" Value="{Binding Migration.Progress}"
-                         IsVisible="{Binding Migration.IsRunning}" />
-            <TextBlock Text="{Binding L[MigrationKeepFolders]}" Classes="secondary" TextWrapping="Wrap"
-                       IsVisible="{Binding Migration.IsFinished}" />
-            <StackPanel Spacing="4" IsVisible="{Binding Migration.ErrorsOpen}">
-              <TextBlock Text="{Binding L[MigrationErrorsTitle]}" Classes="subtitle" />
-              <ItemsControl ItemsSource="{Binding Migration.Errors}">
+          </Border>
+
+          <!-- Crash recovery (phase 17): interrupted sessions with Recover / Later -->
+          <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
+                  IsVisible="{Binding Recovery.IsOpen}">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{Binding L[RecoveryTitle]}" Classes="subtitle" />
+              <TextBlock Text="{Binding L[RecoveryMessage]}" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding Recovery.Sessions}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="client:MigrationFolderError">
-                    <StackPanel Margin="0,2">
-                      <SelectableTextBlock Text="{Binding Folder}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Message}" Classes="secondary" TextWrapping="Wrap" />
-                    </StackPanel>
+                  <DataTemplate x:DataType="vm:RecoverySession">
+                    <Grid ColumnDefinitions="Auto,Auto" Margin="0,2">
+                      <TextBlock Text="{Binding Started}" FontWeight="SemiBold" Margin="0,0,16,0" />
+                      <TextBlock Grid.Column="1" Text="{Binding Duration}" Classes="secondary tabular" />
+                    </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <Button HorizontalAlignment="Right" Content="{Binding L[Dismiss]}"
-                      Command="{Binding Migration.CloseErrorsCommand}" />
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{Binding L[RecoveryLater]}" Command="{Binding Recovery.LaterCommand}" />
+                <Button Classes="primary" Content="{Binding L[RecoveryRecover]}"
+                        Command="{Binding Recovery.RecoverCommand}" />
+              </StackPanel>
             </StackPanel>
-          </StackPanel>
-        </Border>
+          </Border>
 
-        <ContentControl Content="{Binding Shell.CurrentPage}">
-          <ContentControl.DataTemplates>
-            <DataTemplate DataType="vm:RecorderPageViewModel">
-              <views:RecorderPage />
-            </DataTemplate>
-            <DataTemplate DataType="vm:MeetingsPageViewModel">
-              <views:MeetingsPage />
-            </DataTemplate>
-            <DataTemplate DataType="vm:AskPageViewModel">
-              <views:AskView DataContext="{Binding Ask}" Margin="{StaticResource Inset.Page}" />
-            </DataTemplate>
-            <DataTemplate DataType="vm:ConfigPageViewModel">
-              <views:ConfigPage />
-            </DataTemplate>
-            <DataTemplate DataType="vm:SessionPageViewModel">
-              <views:SessionPage />
-            </DataTemplate>
-          </ContentControl.DataTemplates>
-        </ContentControl>
-      </DockPanel>
-
-      <!-- Notifications (engine errors, minutes ready): dismissable toasts -->
-      <ItemsControl ItemsSource="{Binding Notifications}" MaxWidth="440" Margin="16"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="x:String">
-            <Border Classes="toast" Margin="0,6,0,0">
+          <!-- Import of the old meeting folders (phase 33): progress, then the counts and errors -->
+          <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
+                  IsVisible="{Binding Migration.IsVisible}">
+            <StackPanel Spacing="8">
               <DockPanel>
-                <Button DockPanel.Dock="Right" Classes="icon" Margin="8,0,0,0" VerticalAlignment="Top"
-                        ToolTip.Tip="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).L[Dismiss]}"
-                        AutomationProperties.Name="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).L[Dismiss]}"
-                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DismissNotificationCommand}"
-                        CommandParameter="{Binding}">
+                <Button DockPanel.Dock="Right" Classes="icon" VerticalAlignment="Top"
+                        IsVisible="{Binding Migration.IsFinished}"
+                        ToolTip.Tip="{Binding L[Dismiss]}" AutomationProperties.Name="{Binding L[Dismiss]}"
+                        Command="{Binding Migration.DismissCommand}">
                   <PathIcon Data="{StaticResource Icon.Dismiss}" />
                 </Button>
-                <TextBlock Text="{Binding}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button DockPanel.Dock="Right" Classes="link" Padding="4,0" Margin="8,0"
+                        IsVisible="{Binding Migration.HasErrors}"
+                        Content="{Binding L[MigrationShowErrors]}" Command="{Binding Migration.ShowErrorsCommand}" />
+                <TextBlock Text="{Binding Migration.Text}" TextWrapping="Wrap" VerticalAlignment="Center" Classes="tabular" />
               </DockPanel>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </Panel>
+              <ProgressBar Minimum="0" Maximum="100" Value="{Binding Migration.Progress}"
+                           IsVisible="{Binding Migration.IsRunning}" />
+              <TextBlock Text="{Binding L[MigrationKeepFolders]}" Classes="secondary" TextWrapping="Wrap"
+                         IsVisible="{Binding Migration.IsFinished}" />
+              <StackPanel Spacing="4" IsVisible="{Binding Migration.ErrorsOpen}">
+                <TextBlock Text="{Binding L[MigrationErrorsTitle]}" Classes="subtitle" />
+                <ItemsControl ItemsSource="{Binding Migration.Errors}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="client:MigrationFolderError">
+                      <StackPanel Margin="0,2">
+                        <SelectableTextBlock Text="{Binding Folder}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Message}" Classes="secondary" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button HorizontalAlignment="Right" Content="{Binding L[Dismiss]}"
+                        Command="{Binding Migration.CloseErrorsCommand}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <ContentControl Content="{Binding Shell.CurrentPage}">
+            <ContentControl.DataTemplates>
+              <DataTemplate DataType="vm:RecorderPageViewModel">
+                <views:RecorderPage />
+              </DataTemplate>
+              <DataTemplate DataType="vm:MeetingsPageViewModel">
+                <views:MeetingsPage />
+              </DataTemplate>
+              <DataTemplate DataType="vm:AskPageViewModel">
+                <views:AskView DataContext="{Binding Ask}" Margin="{StaticResource Inset.Page}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:ConfigPageViewModel">
+                <views:ConfigPage />
+              </DataTemplate>
+              <DataTemplate DataType="vm:SessionPageViewModel">
+                <views:SessionPage />
+              </DataTemplate>
+            </ContentControl.DataTemplates>
+          </ContentControl>
+        </DockPanel>
+
+        <!-- Notifications (engine errors, minutes ready): dismissable toasts -->
+        <ItemsControl ItemsSource="{Binding Notifications}" MaxWidth="440" Margin="16"
+                      HorizontalAlignment="Right" VerticalAlignment="Bottom">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <Border Classes="toast" Margin="0,6,0,0">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Classes="icon" Margin="8,0,0,0" VerticalAlignment="Top"
+                          ToolTip.Tip="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).L[Dismiss]}"
+                          AutomationProperties.Name="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).L[Dismiss]}"
+                          Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DismissNotificationCommand}"
+                          CommandParameter="{Binding}">
+                    <PathIcon Data="{StaticResource Icon.Dismiss}" />
+                  </Button>
+                  <TextBlock Text="{Binding}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Panel>
+    </DockPanel>
   </Grid>
 </UserControl>

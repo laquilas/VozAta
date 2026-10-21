@@ -149,7 +149,9 @@ def test_the_api_container_recovers_through_its_session_manager(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keep_loaded: bool
 ) -> None:
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: FakeTranscriber()
+    )
     settings = _settings(
         tmp_path,
         llm_provider="fake",

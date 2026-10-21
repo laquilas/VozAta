@@ -16,8 +16,9 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from vozata.config import ConfigError, Settings
-from vozata.domain import SpeakerTurn, WhisperDevice
-from vozata.ports import DiarizationError
+from vozata.diarization.models import DIARIZATION_MODEL, short_name
+from vozata.domain import ModelKind, SpeakerTurn, WhisperDevice
+from vozata.ports import DiarizationError, ModelDownloader
 
 CHILD_MODULE = "vozata.diarization.child"
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no console flash under the UI
@@ -26,7 +27,10 @@ Launcher = Callable[..., subprocess.Popen[str]]
 
 
 class SubprocessDiarizer:
-    """Sends one request per `diarize()` to a fresh child process; `close()` has nothing to free."""
+    """Sends one request per `diarize()` to a fresh child process; `close()` has nothing to free.
+
+    A cancel is final: once cancelled (even before `diarize()` starts) no child is ever spawned.
+    """
 
     def __init__(
         self,
@@ -48,7 +52,9 @@ class SubprocessDiarizer:
         self, wav: Path, min_speakers: int | None, max_speakers: int | None
     ) -> list[SpeakerTurn]:
         with self._lock:
-            self._active, self._cancelled = True, False
+            if self._cancelled:  # cancelled before it started (e.g. during the model download)
+                raise DiarizationError("cancelled")
+            self._active = True
         try:
             return self._diarize(wav, min_speakers, max_speakers)
         finally:
@@ -82,8 +88,7 @@ class SubprocessDiarizer:
     def cancel(self) -> None:
         """Stop `diarize` from another thread: it raises, and never spawns if not yet started."""
         with self._lock:
-            if self._active:
-                self._cancelled = True
+            self._cancelled = True
             if self._process is not None:
                 self._process.terminate()
 
@@ -118,8 +123,18 @@ def _last_line(text: str) -> str:
     return lines[-1] if lines else ""
 
 
-def pyannote_from_settings(settings: Settings) -> SubprocessDiarizer:
-    """The `pyannote` provider; a missing `HF_TOKEN` is a configuration error."""
+def pyannote_from_settings(settings: Settings, downloader: ModelDownloader) -> SubprocessDiarizer:
+    """The `pyannote` provider; a missing `HF_TOKEN` is a configuration error.
+
+    The pipeline is downloaded here, with progress events (phase 42): the child then loads it
+    from the Hugging Face cache.
+    """
     if not settings.hf_token:
         raise ConfigError("HF_TOKEN", "", "missing_hf_token")
+    downloader.ensure(
+        ModelKind.SPEAKERS,
+        DIARIZATION_MODEL,
+        token=settings.hf_token,
+        name=short_name(DIARIZATION_MODEL),
+    )
     return SubprocessDiarizer(settings.hf_token, settings.diarization_device)

@@ -5,6 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.fakes import FakeModelDownloader
+from vozata.domain import ModelKind
 from vozata.ports import TranslationError, Translator
 from vozata.translation import opus_mt
 from vozata.translation.opus_mt import (
@@ -168,11 +170,42 @@ def test_from_settings_fails_fast_without_the_extra(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(opus_mt.importlib.util, "find_spec", lambda name: None)
 
     with pytest.raises(TranslationError, match="translation"):
-        opus_mt.from_settings(None)
+        opus_mt.from_settings(None, FakeModelDownloader())
 
 
 def test_from_settings_picks_the_locator(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(opus_mt.importlib.util, "find_spec", lambda name: object())
 
-    assert isinstance(opus_mt.from_settings(tmp_path), OpusMtTranslator)
-    assert isinstance(opus_mt.from_settings(None), OpusMtTranslator)
+    downloader = FakeModelDownloader()
+
+    assert isinstance(opus_mt.from_settings(tmp_path, downloader), OpusMtTranslator)
+    assert isinstance(opus_mt.from_settings(None, downloader), OpusMtTranslator)
+    assert downloader.calls == []  # nothing loads before the first translation
+
+
+def test_opus_mt_downloads_through_the_downloader(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(opus_mt.importlib.util, "find_spec", lambda name: object())
+    downloader = FakeModelDownloader(tmp_path)
+    loaded: list[Path] = []
+
+    def load(folder: Path) -> FakeModel:
+        loaded.append(folder)
+        return FakeModel("en")
+
+    translator = opus_mt.from_settings(None, downloader)
+    translator._load = load
+
+    translator.translate("Bom dia.", "pt", "en")
+
+    assert downloader.calls == [
+        {
+            "kind": ModelKind.TRANSLATION,
+            "repo_id": "michaelfeil/ct2fast-opus-mt-ROMANCE-en",
+            "allow_patterns": None,
+            "token": None,
+            "name": "ROMANCE-en",
+        }
+    ]
+    assert loaded == [tmp_path / "michaelfeil/ct2fast-opus-mt-ROMANCE-en"]

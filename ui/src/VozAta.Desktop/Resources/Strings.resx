@@ -1305,4 +1305,28 @@
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="DownloadKindSpeech" xml:space="preserve">
+    <value>speech</value>
+  </data>
+  <data name="DownloadKindSpeakers" xml:space="preserve">
+    <value>speakers</value>
+  </data>
+  <data name="DownloadKindTranslation" xml:space="preserve">
+    <value>translation</value>
+  </data>
+  <data name="DownloadOne" xml:space="preserve">
+    <value>Downloading {0} model {1} — {2} % ({3} of {4})</value>
+  </data>
+  <data name="DownloadUnknown" xml:space="preserve">
+    <value>Downloading {0} model {1} — {2}</value>
+  </data>
+  <data name="DownloadMany" xml:space="preserve">
+    <value>Downloading {0} models — {1} % ({2} of {3})</value>
+  </data>
+  <data name="DownloadManyUnknown" xml:space="preserve">
+    <value>Downloading {0} models — {1}</value>
+  </data>
+  <data name="DownloadFailed" xml:space="preserve">
+    <value>Downloading the {0} model {1} failed: {2}</value>
+  </data>
 </root>

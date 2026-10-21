@@ -23,8 +23,9 @@ import numpy as np
 
 from vozata.config import ConfigError, Settings
 from vozata.diarization.embed_child import PREFIX
-from vozata.domain import WhisperDevice
-from vozata.ports import DiarizationError
+from vozata.diarization.models import EMBEDDING_MODEL, short_name
+from vozata.domain import ModelKind, WhisperDevice
+from vozata.ports import DiarizationError, ModelDownloader
 
 CHILD_MODULE = "vozata.diarization.embed_child"
 LOAD_TIMEOUT = 600.0  # the first run downloads the model
@@ -147,8 +148,17 @@ def _close(stream: Any) -> None:
         close()
 
 
-def pyannote_embedder_from_settings(settings: Settings) -> SubprocessEmbedder:
-    """The `pyannote` live embedder; a missing `HF_TOKEN` is a configuration error."""
+def pyannote_embedder_from_settings(
+    settings: Settings, downloader: ModelDownloader
+) -> SubprocessEmbedder:
+    """The `pyannote` live embedder; a missing `HF_TOKEN` is a configuration error. The model
+    is downloaded (with progress events, phase 42) before the child starts."""
     if not settings.hf_token:
         raise ConfigError("HF_TOKEN", "", "missing_hf_token")
+    downloader.ensure(
+        ModelKind.SPEAKERS,
+        EMBEDDING_MODEL,
+        token=settings.hf_token,
+        name=short_name(EMBEDDING_MODEL),
+    )
     return SubprocessEmbedder(settings.hf_token, settings.diarization_device, settings.sample_rate)

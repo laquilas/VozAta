@@ -1029,6 +1029,27 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Download_progress_drives_the_bar_toasts_a_failure_and_clears_when_the_connection_drops()
+    {
+        var viewModel = await ReadyAsync();
+
+        await SendAsync(viewModel, new DownloadProgressEvent(null, "speech", "large-v3", 100, 200, "running", null));
+        Assert.True(viewModel.Downloads.IsVisible);
+        Assert.Equal(50, viewModel.Downloads.Percent);
+
+        _localization.SetLanguage("es");
+        Assert.StartsWith("Descargando modelo de voz large-v3", viewModel.Downloads.Text);
+
+        await SendAsync(viewModel, new ConnectionChangedEvent(false));
+        Assert.False(viewModel.Downloads.IsVisible);
+
+        await SendAsync(viewModel, new DownloadProgressEvent(null, "speech", "large-v3", 100, 200, "running", null));
+        await SendAsync(viewModel, new DownloadProgressEvent(null, "speech", "large-v3", 100, 200, "failed", "no network"));
+        Assert.False(viewModel.Downloads.IsVisible);
+        Assert.Contains("No se pudo descargar el modelo de voz large-v3: no network", viewModel.Notifications);
+    }
+
+    [Fact]
     public async Task Processing_events_update_the_meetings_row_and_a_background_done_refreshes_the_list()
     {
         var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9));

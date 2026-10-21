@@ -478,4 +478,11 @@
   <Style Selector="ProgressBar.meter-mic, ProgressBar.meter-system">
     <Setter Property="Background" Value="Transparent" />
   </Style>
+
+  <!-- Model download bar (phase 42): the label over it stays readable on both parts -->
+  <Style Selector="ProgressBar.download">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.DownloadFill}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.DownloadTrack}" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
 </Styles>

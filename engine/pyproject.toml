@@ -20,6 +20,9 @@ dependencies = [
     "python-docx",
     "fpdf2",
     "Send2Trash",  # deleted file-backend sessions go to the Recycle Bin (phase 36)
+    # Model downloads with progress (phase 42): relies on 2.x snapshot_download (two byte bars
+    # fed through tqdm_class, IncompleteSnapshotError in the cache check).
+    "huggingface_hub>=2.2,<3",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +51,10 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# `HF_HUB_DISABLE_XET` is set before the imports: huggingface_hub reads it once (phase 42).
+"src/vozata/__main__.py" = ["E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

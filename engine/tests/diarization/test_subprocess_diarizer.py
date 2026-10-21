@@ -14,12 +14,13 @@ from typing import Any
 import numpy as np
 import pytest
 
-from tests.fakes import FakeDiarizer
+from tests.fakes import FakeDiarizer, FakeModelDownloader
 from vozata.config import ConfigError, Settings
 from vozata.diarization import child
+from vozata.diarization.models import DIARIZATION_MODEL
 from vozata.diarization.pyannote import PyannoteDiarizer, read_wav, turns_from_tracks
 from vozata.diarization.subprocess_diarizer import SubprocessDiarizer, pyannote_from_settings
-from vozata.domain import SpeakerTurn, WhisperDevice
+from vozata.domain import ModelKind, SpeakerTurn, WhisperDevice
 from vozata.ports import Cancellable, DiarizationError, Diarizer
 
 
@@ -159,14 +160,23 @@ def test_cancel_terminates_child_and_diarize_raises(tmp_path: Path) -> None:
     assert isinstance(errors[0], DiarizationError)
 
 
-def test_cancel_with_no_child_running_is_a_noop(tmp_path: Path) -> None:
+def test_cancel_after_the_child_exited_is_harmless(tmp_path: Path) -> None:
     fake = _Child(FakeDiarizer([SpeakerTurn(0.0, 1.0, 0)]))
     diarizer = SubprocessDiarizer("hf", WhisperDevice.CPU, popen=fake)
 
-    diarizer.cancel()
-
     assert diarizer.diarize(tmp_path / "a.wav", None, None) == [SpeakerTurn(0.0, 1.0, 0)]
-    diarizer.cancel()  # after the child has exited
+    diarizer.cancel()  # after the child has exited: nothing to terminate
+
+
+def test_a_cancel_before_diarize_is_final_and_never_spawns(tmp_path: Path) -> None:
+    fake = _Child(FakeDiarizer([SpeakerTurn(0.0, 1.0, 0)]))
+    diarizer = SubprocessDiarizer("hf", WhisperDevice.CPU, popen=fake)
+
+    diarizer.cancel()  # e.g. a live recording pre-empted the step during the model download
+
+    with pytest.raises(DiarizationError, match="cancelled"):
+        diarizer.diarize(tmp_path / "a.wav", None, None)
+    assert fake.calls == []
 
 
 def test_a_bad_request_makes_the_child_fail() -> None:
@@ -186,11 +196,53 @@ def test_the_real_child_process_runs_without_the_extra(tmp_path: Path) -> None:
 
 def test_the_pyannote_provider_needs_a_token() -> None:
     with pytest.raises(ConfigError) as caught:
-        pyannote_from_settings(Settings())
+        pyannote_from_settings(Settings(), FakeModelDownloader())
 
     assert (caught.value.key, caught.value.message_key) == ("HF_TOKEN", "missing_hf_token")
-    diarizer = pyannote_from_settings(Settings(hf_token="hf", diarization_device=WhisperDevice.CPU))
+    settings = Settings(hf_token="hf", diarization_device=WhisperDevice.CPU)
+    diarizer = pyannote_from_settings(settings, FakeModelDownloader())
     assert isinstance(diarizer, Diarizer)
+
+
+def test_diarizer_predownloads_its_pyannote_repo_with_the_token_before_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    log: list[tuple[str, str]] = []
+    downloader = FakeModelDownloader(log=log)
+
+    class _Recorder:
+        def __init__(self, token: str, device: WhisperDevice) -> None:
+            log.append(("build", token))
+
+    monkeypatch.setattr("vozata.diarization.subprocess_diarizer.SubprocessDiarizer", _Recorder)
+
+    pyannote_from_settings(Settings(hf_token="hf_x"), downloader)
+
+    assert log == [("ensure", DIARIZATION_MODEL), ("build", "hf_x")]
+    assert downloader.calls == [
+        {
+            "kind": ModelKind.SPEAKERS,
+            "repo_id": "pyannote/speaker-diarization-community-1",
+            "allow_patterns": None,
+            "token": "hf_x",
+            "name": "speaker-diarization-community-1",
+        }
+    ]
+
+
+def test_a_failed_predownload_spawns_no_diarizer(monkeypatch: pytest.MonkeyPatch) -> None:
+    built: list[object] = []
+    monkeypatch.setattr(
+        "vozata.diarization.subprocess_diarizer.SubprocessDiarizer",
+        lambda *args: built.append(args),
+    )
+
+    with pytest.raises(OSError, match="network down"):
+        pyannote_from_settings(
+            Settings(hf_token="hf"), FakeModelDownloader(error=OSError("network down"))
+        )
+
+    assert built == []
 
 
 def test_tracks_become_turns_in_time_order_numbered_by_first_turn() -> None:

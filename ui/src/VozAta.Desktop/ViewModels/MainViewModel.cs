@@ -74,6 +74,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         History.Renamed = Meetings.OnRenamedAsync;
         History.DeleteMeeting = Meetings.DeleteMeetingAsync;
         History.PropertyChanged += OnHistoryChanged;
+        Downloads = new DownloadBarViewModel(localization, Notify);
         Migration = new MigrationViewModel(client, localization, () => Task.WhenAll(History.LoadAsync(), Meetings.LoadAsync()));
         Shell = new ShellViewModel(
             Recorder,
@@ -132,6 +133,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>The import of the old meeting folders (phase 33): banner, counts and errors.</summary>
     public MigrationViewModel Migration { get; }
+
+    /// <summary>The bar at the bottom of the page area while models download (phase 42).</summary>
+    public DownloadBarViewModel Downloads { get; }
 
     /// <summary>The last migration refresh started by an event (tests await it).</summary>
     public Task MigrationRefresh { get; private set; } = Task.CompletedTask;
@@ -416,6 +420,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     History.Ask.OnConnectionLost();
                     Recovery.OnConnectionLost();
                     Migration.OnConnectionLost();
+                    Downloads.OnConnectionLost(); // the engine reports its running downloads on reconnect
                 }
                 else
                 {
@@ -448,6 +453,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 HistoryRefresh = processing.Info.State is "done" or "failed"
                     ? Task.WhenAll(History.LoadAsync(), Meetings.OnProcessingAsync(processing))
                     : Meetings.OnProcessingAsync(processing);
+                break;
+            case DownloadProgressEvent download:
+                Downloads.OnProgress(download);
                 break;
             case MigrationProgressEvent progress:
                 Migration.OnProgress(progress);
@@ -511,6 +519,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Shell.RefreshTexts();
         Processing.RefreshTexts();
         Migration.RefreshTexts();
+        Downloads.RefreshTexts();
         History.Detail?.Player?.RefreshTexts();
     }
 

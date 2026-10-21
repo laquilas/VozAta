@@ -48,7 +48,7 @@ def test_the_api_container_answers_questions_and_frees_an_idle_whisper(
     monkeypatch.setitem(
         bootstrap.TRANSCRIBERS,
         "fake",
-        lambda settings: fakes.append(FakeTranscriber()) or fakes[-1],
+        lambda settings, downloader: fakes.append(FakeTranscriber()) or fakes[-1],
     )
     monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: FakeLanguageModel())
     shared_seen: list[SharedTranscriber] = []

@@ -18,6 +18,7 @@ import numpy as np
 
 from vozata.config import ConfigError, Settings
 from vozata.domain import TranscriptionResult, Word
+from vozata.ports import ModelDownloader
 from vozata.transcription.retry import TranscriptionRequestError, send_with_retry
 
 PROBE_SECONDS = 0.5
@@ -116,8 +117,10 @@ def remote_host(settings: Settings) -> str | None:
     return urlparse(settings.openai_stt_url).hostname or settings.openai_stt_url
 
 
-def from_settings(settings: Settings) -> OpenAICompatibleTranscriber:
-    """`TRANSCRIBERS["openai_compatible"]`."""
+def from_settings(
+    settings: Settings, downloader: ModelDownloader | None = None
+) -> OpenAICompatibleTranscriber:
+    """`TRANSCRIBERS["openai_compatible"]`; a remote model has nothing to download."""
     return OpenAICompatibleTranscriber(
         settings.openai_stt_url,
         settings.openai_stt_key,

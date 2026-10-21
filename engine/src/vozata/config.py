@@ -93,6 +93,8 @@ class Settings:
     diarization_provider: str = "pyannote"
     diarization_device: WhisperDevice = WhisperDevice.AUTO
     hf_token: str | None = None
+    # `HF_HUB_OFFLINE` (Hugging Face's own variable): models are never downloaded (phase 42)
+    hf_hub_offline: bool = False
     min_speakers: int | None = None
     max_speakers: int | None = None
     # Live speaker identification (phase 15)
@@ -206,6 +208,7 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         diarization_provider=raw.get("DIARIZATION_PROVIDER", "pyannote"),
         diarization_device=_choice(raw, "DIARIZATION_DEVICE", WhisperDevice, WhisperDevice.AUTO),
         hf_token=raw.get("HF_TOKEN"),
+        hf_hub_offline=_hub_offline(os.environ if env is None else env),
         min_speakers=min_speakers,
         max_speakers=max_speakers,
         live_diarization_enabled=_flag(raw, "LIVE_DIARIZATION_ENABLED", False),
@@ -317,6 +320,14 @@ def _read(env: Mapping[str, str] | None, env_file: Path | None) -> dict[str, str
     merged.update({key: env[key] for key in KEYS if key in env})
     cleaned = {key: (merged.get(key) or "").strip() for key in KEYS}
     return {key: value for key, value in cleaned.items() if value}
+
+
+def _hub_offline(env: Mapping[str, str]) -> bool:
+    """Offline as huggingface_hub reads it: `HF_HUB_OFFLINE`, else `TRANSFORMERS_OFFLINE` (a
+    non-empty `HF_HUB_OFFLINE` wins), from the process environment only (not `.env`), any other
+    value meaning off (never a configuration error)."""
+    value = env.get("HF_HUB_OFFLINE") or env.get("TRANSFORMERS_OFFLINE") or ""
+    return value.strip().lower() in _TRUE
 
 
 def _choice[E: StrEnum](raw: Mapping[str, str], key: str, enum: type[E], default: E) -> E:

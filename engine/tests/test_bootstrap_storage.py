@@ -166,7 +166,9 @@ def test_sqlite_recovery_pads_the_audio_and_finishes_the_session(
     """A crash with the SQLite backend: the row says `recording`; the committed chunks are the
     audio (phase 32) and the committed segments the transcript (phase 31). The processing job
     (repair, transcribe the rest, stop steps) finishes it (phase 40)."""
-    monkeypatch.setitem(bootstrap.TRANSCRIBERS, "fake", lambda settings: FakeTranscriber())
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS, "fake", lambda settings, downloader: FakeTranscriber()
+    )
     settings = _settings(tmp_path, generate_minutes=False, stt_provider="fake")
     recovery = bootstrap.build_recovery(settings)
     store = recovery.store

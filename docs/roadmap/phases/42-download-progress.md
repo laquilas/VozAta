@@ -67,21 +67,27 @@ Found on 2026-10-20 while testing the packaged app: a 16 s meeting stayed `final
   tests.
 - Closing the app kills the engine and its download; there is no download outside the engine.
 - Offline mode (`HF_HUB_OFFLINE=1`) never downloads: no bar, the existing error applies.
-- The resumable `.incomplete` files Hugging Face leaves are counted as already downloaded bytes.
+- No resume: huggingface_hub 2.2.0 writes each file to a unique `.{uuid}.incomplete` and deletes it
+  on failure, so an interrupted download starts again from 0 (amended 2026-10-20).
+- pyannote loads its models in a child process with no progress channel: the engine pre-downloads
+  both pyannote repos (with `HF_TOKEN`) through the downloader before spawning the child, which then
+  loads from the cache (amended 2026-10-20).
+- `HF_HUB_DISABLE_XET` is read once when huggingface_hub is first imported: it is set at the start
+  of `vozata.__main__` (the late `setdefault` in the transcriber had no effect under `serve`).
 
 ## Acceptance criteria
 
-- [ ] With the speech model missing from the cache, starting a recording shows the bottom bar with
+- [x] With the speech model missing from the cache, starting a recording shows the bottom bar with
       "Downloading speech model …", the percent grows, and the bar disappears when the model
       loads.
-- [ ] A UI that reconnects to the running engine during a download (e.g. the window restored
+- [x] A UI that reconnects to the running engine during a download (e.g. the window restored
       from the tray) shows the bar again with the current percent.
-- [ ] After the app is closed mid-download, the next time the model is needed (a recording, or
-      the phase 40 queue resuming) the download resumes from the partial files and the bar
-      starts at the percent already downloaded.
-- [ ] Pulling the network cable shows an error toast and hides the bar.
-- [ ] Cached models never show the bar.
-- [ ] Contract docs updated (`download_progress`).
+- [x] After the app is closed mid-download, the next time the model is needed (a recording, or
+      the phase 40 queue resuming) the download starts again and the bar shows it (no resume:
+      see the design notes).
+- [x] Pulling the network cable shows an error toast and hides the bar.
+- [x] Cached models never show the bar.
+- [x] Contract docs updated (`download_progress`).
 
 ## Tests
 
@@ -93,3 +99,59 @@ indeterminate state, two downloads, failure toast, locale parity.
 
 - Pre-downloading models from the Config page (a later "Download now" button can reuse this).
 - Ollama model pulls (Ollama manages them).
+
+## Progress
+
+- **Branch:** `feature/42-download-progress`
+- **Status:** ready for PR
+- **Updated:** 2026-10-21 09:00
+- **Next step:** open the PR; the user merges it.
+
+### Steps
+
+- [x] Implementation plan (`plans/42-download-progress.md`) and spec amendments
+- [x] Downloader and tracker
+- [x] Wire the downloads and the event
+- [x] UI bottom bar
+- [x] Full suites, manual check
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20: save GitHub Actions minutes).
+- The three design notes marked "amended 2026-10-20" come from the code map: no resume in
+  huggingface_hub 2.2.0, pyannote pre-downloaded in the engine, XET switched off at engine start.
+- huggingface_hub 2.2.0 feeds every HTTP chunk to two byte bars (transfer and reconstruct): the
+  byte counter reports the furthest byte bar, not their sum, so bytes are not counted twice.
+- The registries' model providers take `(settings, downloader)`; `serve` shares one
+  `HubDownloader` over one `DownloadTracker` (`download_progress`), the CLI prints progress to stderr instead.
+  The event's `model` is the name the user knows (`large-v3-turbo`, `ROMANCE-en`,
+  `speaker-diarization-community-1`), and `total_bytes` leaves out files already cached.
+- `HF_HUB_OFFLINE` is read by `config.py` from the process environment only (huggingface_hub
+  ignores `.env`), as `Settings.hf_hub_offline`; `PUT /settings` keeps the start-up value.
+- Review fix: the queue's `diarize` step downloads pyannote inside the diarizer factory, before a
+  cancellable diarizer exists; the finisher now checks the token right after the factory (closes
+  it, `StepCancelled`) and `SubprocessDiarizer.cancel()` is final, so a live recording that
+  pre-empts the step during the download never gets the child spawned next to its Whisper.
+- Final review fix: the CLI download progress was logged at INFO under a WARNING-level logging
+  setup, so it never showed; `cli_progress.DownloadReporter` now prints localized lines
+  (`cli.download_*`) to stderr every 5 s and when the download ends.
+- Final review fix: `huggingface_hub>=2.2,<3` is a main dependency (the downloader relies on its
+  2.x `snapshot_download`: two byte bars through `tqdm_class`, `IncompleteSnapshotError`).
+- Final review fix: `Settings.hf_hub_offline` also reads `TRANSFORMERS_OFFLINE` when
+  `HF_HUB_OFFLINE` is unset or empty, as huggingface_hub does.
+- Final review fix: concurrent `ensure()` calls for the same repo and `allow_patterns` share one
+  download (one tracker handle); the byte counter moved to `models/byte_counter.py`.
+- Final review fix: a `failed` event's `reason` is the error's first line (hub messages are
+  multi-line), at most 200 characters.
+- Manual check fix: in the dark theme the light label over the accent fill was 2.2:1. The bar now
+  uses its own tokens, `Brush.DownloadFill` (dark `#A12597`) and `Brush.DownloadTrack`, and
+  `ThemeContrastTests` checks `TextPrimary` over both (≥ 4.5:1); `ThemeRenderTests` renders the
+  half-filled bar in both themes.
+- Manual check (2026-10-21, Debug app, scratch database, empty `HF_HOME`, `WHISPER_MODEL=tiny`,
+  driven through the engine API, app window captured with `PrintWindow`): `POST /sessions` showed
+  "Baixando modelo de fala tiny — 44 % (33 MB de 75 MB)" across the bottom, growing in ~10 MB
+  steps (huggingface_hub's chunk size; ~470 KB/s here), the download went on after the stop, the
+  bar was gone 2 s after `done` and the queued transcription ran. The restart with the cache
+  filled could not be run: the JBL mic wedged WASAPI again (`device_failed`), and the user chose
+  to skip the mic-based runs. Reconnect, restart after a close, network loss and cached models are
+  covered by the engine and UI tests only; dark-theme contrast by the render and contrast tests.
