@@ -480,7 +480,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 break;
             case ErrorEvent error:
                 Notify(error.Message);
-                History.OnError(error.SessionId, error.Message);
+                History.OnError(error.SessionId, error.Code, error.Message);
                 RecoveryRefresh = Recovery.OnErrorAsync(error);
                 break;
             default:

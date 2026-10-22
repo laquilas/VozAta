@@ -1080,6 +1080,9 @@
   <data name="SettingOptionsUnreachable" xml:space="preserve">
     <value>The list could not be read: the service did not answer.</value>
   </data>
+  <data name="RemoteOllamaNote" xml:space="preserve">
+    <value>Transcripts are sent to {0} to write the minutes.</value>
+  </data>
   <data name="SettingInvalidUrl" xml:space="preserve">
     <value>Enter a full address that starts with http:// or https://.</value>
   </data>

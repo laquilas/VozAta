@@ -20,6 +20,48 @@ public sealed class SettingEditorViewModelTests
             _localization,
             paths);
 
+    [Theory]
+    [InlineData("http://192.168.0.20:11434", "Transcripts are sent to 192.168.0.20 to write the minutes.")]
+    [InlineData("gpu-box:11434", "Transcripts are sent to gpu-box to write the minutes.")]
+    [InlineData("http://localhost:11434", null)]
+    [InlineData("", null)]
+    public void The_Ollama_URL_says_where_transcripts_go_while_it_is_typed(string typed, string? note)
+    {
+        var editor = Editor("OLLAMA_URL", "url", "http://localhost:11434");
+        Assert.Null(editor.Note);
+
+        editor.TextValue = typed;
+
+        Assert.Equal(note, editor.Note);
+    }
+
+    [Fact]
+    public void A_saved_remote_Ollama_URL_has_the_note_from_the_start()
+    {
+        var editor = Editor("OLLAMA_URL", "url", "http://192.168.0.20:11434");
+
+        Assert.Equal("Transcripts are sent to 192.168.0.20 to write the minutes.", editor.Note);
+    }
+
+    [Fact]
+    public void Other_keys_never_get_a_note()
+    {
+        var editor = Editor("OPENAI_STT_URL", "url", "http://192.168.0.20:8000");
+
+        Assert.Null(editor.Note);
+    }
+
+    [Fact]
+    public void The_note_follows_the_ui_language()
+    {
+        var editor = Editor("OLLAMA_URL", "url", "http://192.168.0.20:11434");
+
+        _localization.SetLanguage("pt-BR");
+        editor.RefreshTexts(_localization);
+
+        Assert.Equal("As transcrições são enviadas para 192.168.0.20 para escrever a ata.", editor.Note);
+    }
+
     private static SettingOption[] Models() =>
         [new("large-v3-turbo", "large-v3-turbo", true), new("small", "small", false)];
 

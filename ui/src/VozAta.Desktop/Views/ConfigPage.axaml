@@ -393,6 +393,8 @@
                               </DockPanel>
 
                               <TextBlock Text="{Binding Help}" Classes="caption" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Note}" Classes="caption" TextWrapping="Wrap"
+                                         IsVisible="{Binding Note, Converter={x:Static ObjectConverters.IsNotNull}}" />
                               <TextBlock Classes="warning" TextWrapping="Wrap" IsVisible="{Binding OptionsUnreachable}"
                                          Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[SettingOptionsUnreachable]}" />
                               <TextBlock Text="{Binding ValidationError}" Classes="error" TextWrapping="Wrap"
