@@ -148,4 +148,8 @@ parity.
 - Found in the manual check, not changed: `minutes_ready` is published before the `index` step ends,
   so a `POST .../action-items` sent at once can get `409 session_still_active` (phase 40 rule).
 - The Ollama URL help text no longer says "local" (en, pt-BR, es).
+- Added on the user's request while this phase was open: a **Restore section defaults** button on
+  the Config page (UI only, the schema already carries each default). It acts on the open engine
+  section, never during a search, never on secrets, and leaves the values as unsaved changes
+  (Save applies them, Discard undoes them).
 - Related, not in this phase: issue #58 (skip the GPU Whisper download on `auto` without CUDA).

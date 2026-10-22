@@ -236,6 +236,18 @@ public sealed partial class SettingsViewModel(
         }
     }
 
+    /// <summary>Put the defaults of <paramref name="editors"/> back as unsaved changes (secrets are skipped).</summary>
+    public void RestoreDefaults(IEnumerable<SettingEditorViewModel> editors)
+    {
+        foreach (var editor in editors)
+        {
+            editor.ApplyDefault();
+        }
+
+        Message = Error = null;
+        UpdateDirty();
+    }
+
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private void Discard()
     {

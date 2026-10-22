@@ -1068,6 +1068,12 @@
   <data name="ConfigNoResults" xml:space="preserve">
     <value>No setting matches the search.</value>
   </data>
+  <data name="ConfigRestoreDefaults" xml:space="preserve">
+    <value>Restore section defaults</value>
+  </data>
+  <data name="ConfigRestoreDefaultsHelp" xml:space="preserve">
+    <value>Puts this section's settings back to their default values. Nothing is saved until you press Save; Discard undoes it. Tokens and keys are kept.</value>
+  </data>
   <data name="ConfigUnsaved" xml:space="preserve">
     <value>You have unsaved changes.</value>
   </data>

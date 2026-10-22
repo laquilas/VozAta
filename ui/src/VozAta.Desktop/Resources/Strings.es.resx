@@ -1068,6 +1068,12 @@
   <data name="ConfigNoResults" xml:space="preserve">
     <value>Ningún ajuste coincide con la búsqueda.</value>
   </data>
+  <data name="ConfigRestoreDefaults" xml:space="preserve">
+    <value>Restaurar valores de la sección</value>
+  </data>
+  <data name="ConfigRestoreDefaultsHelp" xml:space="preserve">
+    <value>Devuelve los ajustes de esta sección a sus valores predeterminados. No se guarda nada hasta que pulses Guardar; Descartar lo deshace. Los tokens y las claves se conservan.</value>
+  </data>
   <data name="ConfigUnsaved" xml:space="preserve">
     <value>Hay cambios sin guardar.</value>
   </data>

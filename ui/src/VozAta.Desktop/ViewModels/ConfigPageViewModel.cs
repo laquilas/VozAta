@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using VozAta.Desktop.Services;
 
 namespace VozAta.Desktop.ViewModels;
@@ -83,10 +84,12 @@ public sealed partial class ConfigPageViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowDesktop), nameof(ShowVocabulary), nameof(ShowStorage), nameof(ShowAbout))]
+    [NotifyCanExecuteChangedFor(nameof(RestoreDefaultsCommand))]
     public partial ConfigSection? SelectedSection { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSearching), nameof(ShowDesktop), nameof(ShowVocabulary), nameof(ShowStorage), nameof(ShowAbout))]
+    [NotifyCanExecuteChangedFor(nameof(RestoreDefaultsCommand))]
     public partial string SearchText { get; set; } = "";
 
     public bool IsSearching => !string.IsNullOrWhiteSpace(SearchText);
@@ -110,6 +113,16 @@ public sealed partial class ConfigPageViewModel : ObservableObject
         await Settings.LoadOptionsAsync(cancellationToken);
         await Storage.LoadAsync(cancellationToken);
     }
+
+    /// <summary>An engine section is open (not a search, which shows pieces of several).</summary>
+    private bool CanRestoreDefaults() => !IsSearching && SelectedSection?.Group is not null;
+
+    /// <summary>
+    /// The defaults of the open section as unsaved changes: nothing is saved until Save, Discard
+    /// undoes it, and secrets (tokens, keys) are never touched.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRestoreDefaults))]
+    private void RestoreDefaults() => Settings.RestoreDefaults(SelectedSection!.Group!.Editors);
 
     /// <summary>Show a section by id (<c>general</c>, <c>storage</c>…); unknown ids are ignored.</summary>
     public void Select(string id)

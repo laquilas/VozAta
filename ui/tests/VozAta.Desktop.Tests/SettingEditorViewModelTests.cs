@@ -62,6 +62,71 @@ public sealed class SettingEditorViewModelTests
         Assert.Equal("As transcrições são enviadas para 192.168.0.20 para escrever a ata.", editor.Note);
     }
 
+    [Fact]
+    public void Applying_the_default_is_an_unsaved_change_that_Reset_undoes()
+    {
+        var editor = Editor("CHUNK_SECONDS", "number", 8.0, fallback: 5.0);
+
+        editor.ApplyDefault();
+
+        Assert.Equal(5m, editor.NumberValue);
+        Assert.True(editor.IsDirty);
+        editor.Reset();
+        Assert.Equal(8m, editor.NumberValue);
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void Applying_the_default_covers_text_toggles_and_choices()
+    {
+        var text = Editor("OLLAMA_URL", "url", "http://192.168.0.20:11434", fallback: "http://localhost:11434");
+        var toggle = Editor("GENERATE_MINUTES", "bool", false, fallback: true);
+        var choice = Editor("MIX_MODE", "choice", "stereo", choices: ["mono", "stereo"], fallback: "mono");
+
+        text.ApplyDefault();
+        toggle.ApplyDefault();
+        choice.ApplyDefault();
+
+        Assert.Equal("http://localhost:11434", text.TextValue);
+        Assert.True(toggle.BoolValue);
+        Assert.Equal("mono", choice.SelectedChoice!.Value);
+        Assert.All(new[] { text, toggle, choice }, editor => Assert.True(editor.IsDirty));
+    }
+
+    [Fact]
+    public void A_default_of_nothing_clears_the_value()
+    {
+        var editor = Editor("MIC_LABEL", "string", "Host", fallback: null);
+
+        editor.ApplyDefault();
+
+        Assert.Equal("", editor.TextValue);
+        Assert.True(editor.IsDirty); // saved as "not set"
+    }
+
+    [Fact]
+    public void Applying_the_default_to_the_value_already_saved_changes_nothing()
+    {
+        var editor = Editor("CHUNK_SECONDS", "number", 5.0, fallback: 5.0);
+
+        editor.ApplyDefault();
+
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void A_secret_has_no_default_to_apply()
+    {
+        var editor = Editor("HF_TOKEN", "string", "********", secret: true, fallback: "");
+        editor.ReplaceSecretCommand.Execute(null);
+        editor.TextValue = "hf_new";
+
+        editor.ApplyDefault();
+
+        Assert.Equal("hf_new", editor.TextValue);
+        Assert.True(editor.IsReplacingSecret);
+    }
+
     private static SettingOption[] Models() =>
         [new("large-v3-turbo", "large-v3-turbo", true), new("small", "small", false)];
 
