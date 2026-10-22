@@ -110,7 +110,7 @@ parity.
 
 - **Branch:** `feature/43-remote-ollama`
 - **Status:** in progress
-- **Updated:** 2026-10-21 10:00
+- **Updated:** 2026-10-22
 - **Next step:** Task 1 of `plans/43-remote-ollama.md` (`net.py`, GPU gate, Whisper release,
   `/health` `llm.remote`).
 
@@ -120,7 +120,9 @@ parity.
 - [ ] Local or remote: helper, GPU gate, Whisper release, `/health`
 - [ ] Fail fast when the Ollama PC is unreachable (`llm_unreachable`)
 - [ ] UI: remote note on the Config page, unreachable message on the meeting page
-- [ ] Guide, full suites, manual check
+- [x] Guide written (`docs/remote-ollama.md`, linked from `docs/INSTALL.md`)
+- [ ] UI: reload the model list when the Ollama URL is saved or tested
+- [ ] Full suites, manual check on a real second PC
 
 ### Decisions and notes
 
@@ -129,4 +131,9 @@ parity.
   (empty and `0.0.0.0` count as local), one probe per model object, no `release()` after an
   unreachable probe, error code `llm_unreachable`, `/health` `llm.host`, the Config note computed
   in the UI.
+- The guide is written early (`docs/remote-ollama.md`, linked from `docs/INSTALL.md`). It also says
+  why the engine cannot run on another PC (it captures the local audio and has no authentication);
+  the last step still has to check it against the finished phase and a real second PC.
+- Found while testing: the Config page loads the `OLLAMA_MODEL` list once, at startup, so a new
+  `OLLAMA_URL` keeps the old list until the app restarts. To be fixed in this phase (see Steps).
 - Related, not in this phase: issue #58 (skip the GPU Whisper download on `auto` without CUDA).
