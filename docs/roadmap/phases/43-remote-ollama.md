@@ -121,7 +121,7 @@ parity.
 - [ ] Fail fast when the Ollama PC is unreachable (`llm_unreachable`)
 - [ ] UI: remote note on the Config page, unreachable message on the meeting page
 - [x] Guide written (`docs/remote-ollama.md`, linked from `docs/INSTALL.md`)
-- [ ] UI: reload the model list when the Ollama URL is saved or tested
+- [x] UI: reload the model list when the Ollama URL is saved or tested
 - [ ] Full suites, manual check on a real second PC
 
 ### Decisions and notes
@@ -135,5 +135,5 @@ parity.
   why the engine cannot run on another PC (it captures the local audio and has no authentication);
   the last step still has to check it against the finished phase and a real second PC.
 - Found while testing: the Config page loads the `OLLAMA_MODEL` list once, at startup, so a new
-  `OLLAMA_URL` keeps the old list until the app restarts. To be fixed in this phase (see Steps).
+  `OLLAMA_URL` keeps the old list until the app restarts. Fixed in this phase: saving the URL and the Ollama Test button read the list again.
 - Related, not in this phase: issue #58 (skip the GPU Whisper download on `auto` without CUDA).

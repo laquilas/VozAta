@@ -110,7 +110,11 @@ public sealed partial class SettingsViewModel(
                     editor.PropertyChanged += OnEditorChanged;
                     if (TestAnchors.TryGetValue(editor.Key, out var target))
                     {
-                        editor.Test = new ConnectionTestViewModel(target, client, localization);
+                        editor.Test = new ConnectionTestViewModel(target, client, localization)
+                        {
+                            // testing the server is also how a user checks that its models can be listed
+                            Completed = target == ConnectionTargets.Ollama ? () => LoadOptionsAsync() : null,
+                        };
                     }
                 }
 
@@ -207,6 +211,11 @@ public sealed partial class SettingsViewModel(
                 {
                     RestartKeys.Add(label);
                 }
+            }
+
+            if (saved.ContainsKey("OLLAMA_URL"))
+            {
+                await LoadOptionsAsync(); // the model list belongs to the server that was just saved
             }
 
             Message = localization["SettingsSaved"];

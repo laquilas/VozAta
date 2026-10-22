@@ -31,6 +31,9 @@ public sealed partial class ConnectionTestViewModel(string target, IEngineClient
     [ObservableProperty]
     public partial string? Message { get; private set; }
 
+    /// <summary>Runs after every test, once its result is shown (the Ollama test refreshes the model list).</summary>
+    public Func<Task>? Completed { get; init; }
+
     public bool HasResult => Ok is not null && !IsRunning;
 
     public bool IsOk => Ok == true;
@@ -61,6 +64,11 @@ public sealed partial class ConnectionTestViewModel(string target, IEngineClient
         finally
         {
             IsRunning = false;
+        }
+
+        if (Completed is { } completed)
+        {
+            await completed();
         }
     }
 }
