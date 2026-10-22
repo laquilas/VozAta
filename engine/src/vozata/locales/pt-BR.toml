@@ -11,6 +11,7 @@ invalid_url = "Valor inválido \"{value}\" para {key}: era esperada uma URL http
 invalid_duration = "Valor inválido \"{value}\" para {key}: eram esperados segundos (0, -1, 300) ou uma duração como 5m ou 1h30m."
 unknown_key = "Configuração desconhecida: {key}."
 no_word_timestamps = "A API de fala em {host} não retornou marcas de tempo por palavra para o modelo \"{value}\". Escolha um modelo que suporte timestamp_granularities=word."
+worker_unauthorized = "O worker do VozAta em {host} recusou o token. Copie o token mostrado no PC do worker para {key} (Config → Worker)."
 missing_hf_token = "{key} não está definido. A identificação de participantes precisa de um token de acesso do Hugging Face: crie um em huggingface.co, aceite os termos do modelo pyannote e defina {key} nas configurações."
 
 [errors.session]

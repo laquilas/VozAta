@@ -137,6 +137,23 @@ class LlmUnreachableError(LanguageModelError):
         self.host = host
 
 
+class WorkerUnreachableError(RuntimeError):
+    """The VozAta worker did not answer at all: off, wrong address or blocked (phase 44).
+
+    Callers fall back to this PC and tell the user through `FallbackNotices`.
+    """
+
+    def __init__(self, host: str, detail: str) -> None:
+        super().__init__(f"Could not reach the VozAta worker at {host}: {detail}")
+        self.host = host
+
+
+class FallbackNotices(Protocol):
+    def fallback(self, task: str, host: str) -> None:
+        """`task` (`speech`, …) runs on this PC because the worker at `host` did not answer."""
+        ...
+
+
 @runtime_checkable
 class LanguageModel(Protocol):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str: ...

@@ -140,15 +140,15 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - **Branch:** `feature/44-worker-speech`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 3 of `plans/44-worker-speech.md` (engine `worker_client/`: client and
-  `WorkerTranscriber`, contract suite).
+- **Next step:** Task 4 of `plans/44-worker-speech.md` (`build_transcriber` with the fallback and
+  the `worker_fallback` notice at the three call sites; gate rule `speech_remote`).
 
 ### Steps
 
 - [x] Phases 44–46 and the implementation plan (`plans/44-worker-speech.md`)
 - [x] Worker: settings, token auth, `/health`, `vozata worker` command
 - [x] Worker: `/transcribe` with a kept faster-whisper
-- [ ] Engine: worker client and `WorkerTranscriber`
+- [x] Engine: worker client and `WorkerTranscriber`
 - [ ] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
 - [ ] Engine: settings, connection check, `/health.worker`; UI Test anchor
 - [ ] Packaging entry and smoke test; guide and contract docs
@@ -166,5 +166,8 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - `/transcribe` refuses an empty or non-float32 body with 422 `worker_invalid_audio`; `/health`
   lists the model actually loaded (`WHISPER_MODEL` on CUDA, `WHISPER_CPU_MODEL` after a CPU
   fallback); the model is released when the worker stops (FastAPI lifespan).
+- `send_with_retry` chains the last network failure (`__cause__`), so the worker client tells a
+  lost worker (`WorkerUnreachableError`, fallback) from a failing one (`TranscriptionRequestError`,
+  the chunk is skipped as today).
 - Phases 47–50 were planned on this branch (user, 2026-10-22): worker app and discovery, minutes so
   far, minutes of a range, voice commands. Order: finish 44, then 47–50, then 45–46.
