@@ -10,7 +10,7 @@ from contextlib import AbstractContextManager
 from typing import Protocol
 
 from vozata.api.ws import EventBroadcaster
-from vozata.ports import LanguageModelError, Localizer
+from vozata.ports import LanguageModelError, LlmUnreachableError, Localizer
 from vozata.processing.gpu_gate import GpuGate, GpuUser
 from vozata.qa.answerer import Answer
 
@@ -93,6 +93,9 @@ class AskJob:
                     ),
                 )
             citations = [citation.to_dict() for citation in answer.citations]
+        except LlmUnreachableError as failure:
+            _log.warning("Answering %s failed: %s", answer_id, failure)
+            error = self._t("errors.llm_unreachable.answer", host=failure.host)
         except LanguageModelError as failure:
             _log.warning("Answering %s failed: %s", answer_id, failure)
             error = self._t("errors.api.answer_failed", reason=failure)

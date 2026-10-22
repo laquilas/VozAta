@@ -8,7 +8,8 @@ from typing import Any
 
 import httpx
 
-from vozata.ports import LanguageModelError
+from vozata.net import url_host
+from vozata.ports import LanguageModelError, LlmUnreachableError
 
 NUM_CTX = 8192
 AVAILABILITY_TIMEOUT = 3.0  # health checks must answer quickly
@@ -17,10 +18,13 @@ JOB_KEEP_ALIVE = "5m"  # keeps the model loaded between the calls of one job (ma
 
 
 class OllamaLanguageModel:
-    """Chat completions from a local Ollama server (`POST /api/chat`).
+    """Chat completions from an Ollama server on this PC or another one (`POST /api/chat`).
 
     Every failure (unreachable server, HTTP error, timeout, malformed reply) raises
-    `LanguageModelError`; callers decide whether the session continues.
+    `LanguageModelError`; callers decide whether the session continues. A server that does not
+    answer at all raises `LlmUnreachableError`: the first request of a model is a short
+    `GET /api/tags` probe, so an Ollama PC that is off fails in seconds, not after the 300 s
+    chat timeout (phase 43).
 
     Chat requests keep the model loaded for `JOB_KEEP_ALIVE`; `release()` then applies
     `keep_alive` (`OLLAMA_KEEP_ALIVE`, default `0`: unload at once) so the GPU is free for Whisper.
@@ -39,22 +43,31 @@ class OllamaLanguageModel:
         self._client = httpx.Client(base_url=url, timeout=timeout, transport=transport)
         self._cancelled = False
         self._url, self._transport = url, transport
+        self._host = url_host(url)
+        self._probed = False
+        self._unreachable: LlmUnreachableError | None = None
 
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         body = self._body(system, prompt, stream=False)
         if json_schema is not None:
             body["format"] = json_schema
         try:
+            self._probe()
             response = self._client.post("/api/chat", json=body)
             response.raise_for_status()
             if self._cancelled:
                 raise RuntimeError("cancelled")
             return str(response.json()["message"]["content"])
+        except LlmUnreachableError:
+            raise
+        except (httpx.ConnectError, httpx.ConnectTimeout) as error:
+            raise self._lost(error) from error
         except (httpx.HTTPError, RuntimeError, ValueError, KeyError, TypeError) as error:
             raise LanguageModelError(f"Ollama chat request failed: {error}") from error
 
     def stream(self, system: str, prompt: str) -> Iterator[str]:
         try:
+            self._probe()
             with self._client.stream(
                 "POST", "/api/chat", json=self._body(system, prompt, stream=True)
             ) as response:
@@ -72,6 +85,8 @@ class OllamaLanguageModel:
                         yield content
                     if data.get("done"):
                         return
+        except (httpx.ConnectError, httpx.ConnectTimeout) as error:
+            raise self._lost(error) from error
         except (httpx.HTTPError, RuntimeError, ValueError) as error:
             if isinstance(error, LanguageModelError):
                 raise
@@ -92,6 +107,8 @@ class OllamaLanguageModel:
 
         After `cancel()` the model is always unloaded (`keep_alive` 0), whatever
         `OLLAMA_KEEP_ALIVE` says: a cancel means a live recording or Ask needs the GPU now."""
+        if self._unreachable is not None:
+            return  # nothing is loaded there to unload, and waiting would hold the queue
         keep_alive = 0 if self._cancelled else _keep_alive(self.keep_alive)
         body = {"model": self._model, "messages": [], "keep_alive": keep_alive}
         try:
@@ -112,6 +129,27 @@ class OllamaLanguageModel:
 
     def close(self) -> None:
         self._client.close()
+
+    def _probe(self) -> None:
+        """Once per model: a short `GET /api/tags` that tells an off server from a failing one.
+
+        Only a connection failure counts; any HTTP answer, even an error, means the server is
+        there and the chat request reports what is wrong with it."""
+        if self._unreachable is not None:
+            raise self._unreachable
+        if self._probed:
+            return
+        try:
+            self._client.get("/api/tags", timeout=AVAILABILITY_TIMEOUT)
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as error:
+            raise self._lost(error) from error
+        except httpx.HTTPError:
+            pass
+        self._probed = True
+
+    def _lost(self, error: httpx.HTTPError) -> LlmUnreachableError:
+        self._unreachable = LlmUnreachableError(self._host, str(error) or type(error).__name__)
+        return self._unreachable
 
     def _body(self, system: str, prompt: str, *, stream: bool) -> dict[str, Any]:
         return {

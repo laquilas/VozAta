@@ -123,6 +123,11 @@ owner = "Owner: {owner}"
 due = "Due: {due}"
 folder = "Session folder: {folder}"
 
+[errors.llm_unreachable]
+minutes = "Could not reach Ollama at {host}. Regenerate the minutes when it is available."
+action_items = "Could not reach Ollama at {host}. Extract the action items again when it is available."
+answer = "Could not reach Ollama at {host}. Ask again when it is available."
+
 [errors.tasks]
 already_exported = "Already exported: {url}"
 unknown_item = "Action item \"{id}\" is not in this session."

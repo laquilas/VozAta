@@ -15,7 +15,7 @@ from vozata.api.ask_job import AskJob
 from vozata.domain import Channel, Citation, TranscriptSegment
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
-from vozata.ports import LanguageModelError
+from vozata.ports import LanguageModelError, LlmUnreachableError
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.gpu_gate import GpuGate
 from vozata.processing.job import ProcessingJob, Step, StepKind
@@ -108,6 +108,19 @@ def test_a_model_failure_ends_the_answer_with_a_localized_error() -> None:
             },
         )
     ]
+
+
+def test_an_unreachable_ollama_ends_the_answer_naming_the_host() -> None:
+    broadcaster = RecordingBroadcaster()
+    unreachable = LlmUnreachableError("192.168.0.20", "refused")
+    ask = job(StubAnswerer(error=unreachable), broadcaster)
+
+    ask.start("a1", "Who?", None)
+    assert ask.wait(5)
+
+    [(_, done)] = broadcaster.of("answer_done")
+    assert done["error"] == "errors.llm_unreachable.answer(host=192.168.0.20)"
+    assert done["citations"] == []
 
 
 def test_an_unexpected_failure_ends_the_answer_with_the_internal_error() -> None:

@@ -27,6 +27,7 @@ from vozata.domain import (
     TranscriptionResult,
     Word,
 )
+from vozata.ports import LlmUnreachableError
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import StepKind, run_job_inline
@@ -485,3 +486,32 @@ def test_a_cancelled_transcribe_step_keeps_the_shared_whisper_for_the_live_sessi
 
     [model] = loads
     assert shared.loaded and not model.closed  # never unloaded just before the live lease
+
+
+def test_an_unreachable_ollama_does_not_stop_the_queue(
+    tmp_path: Path, transcriber: FakeTranscriber, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Unreachable(FakeLanguageModel):
+        def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+            raise LlmUnreachableError("192.168.0.20", "refused")
+
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "fake", lambda settings: Unreachable())
+    settings = _settings(tmp_path)
+    store = bootstrap.build_store(settings)
+    ids = [make_session_folder(store, mic_seconds=2.0, duration_seconds=2.0) for _ in range(2)]
+    assert len(set(ids)) == 2
+    observers = [FakeSessionObserver() for _ in ids]
+    queue = ProcessingQueue(GpuGate(), lambda state: None)
+    queue.start()
+    try:
+        for session_id, observer in zip(ids, observers, strict=True):
+            assert queue.enqueue(_job(settings, store, session_id, observer))
+        assert queue.wait_idle(10)
+    finally:
+        queue.stop()
+
+    for session_id, observer in zip(ids, observers, strict=True):
+        assert store.read_meta(session_id)["status"] == "done"  # kept, without minutes
+        assert not store.paths(session_id).minutes_md.exists()
+        errors = observer.of("error")
+        assert errors and {code for code, _ in errors} == {"llm_unreachable"}

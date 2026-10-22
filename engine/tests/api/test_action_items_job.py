@@ -10,7 +10,7 @@ from vozata.api.action_items_job import ActionItemsJob
 from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.action_items import ActionItemExtractor
-from vozata.ports import LanguageModelError
+from vozata.ports import LanguageModelError, LlmUnreachableError
 from vozata.processing.gpu_gate import GpuGate, GpuUser
 from vozata.processing.job import ProcessingJob, Step, StepKind
 from vozata.processing.queue import ProcessingQueue
@@ -83,6 +83,20 @@ def test_a_model_failure_is_reported(tmp_path: Path) -> None:
     [(_, data)] = broadcaster.of("error")
     assert data["code"] == "action_items_failed"
     assert data["message"].startswith("errors.api.action_items_failed(reason=")
+
+
+def test_an_unreachable_ollama_is_reported_with_its_own_code_and_message(tmp_path: Path) -> None:
+    class Unreachable(FakeLanguageModel):
+        def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+            raise LlmUnreachableError("192.168.0.20", "refused")
+
+    _, broadcaster = _run(tmp_path, lambda: _extractor(Unreachable()))
+
+    [(_, data)] = broadcaster.of("error")
+    assert data == {
+        "code": "llm_unreachable",
+        "message": "errors.llm_unreachable.action_items(host=192.168.0.20)",
+    }
 
 
 def test_an_unexpected_failure_is_reported_as_internal(tmp_path: Path) -> None:

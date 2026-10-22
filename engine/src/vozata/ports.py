@@ -126,6 +126,17 @@ class LanguageModelError(RuntimeError):
     """A language model could not produce a reply (unreachable, failed or malformed)."""
 
 
+class LlmUnreachableError(LanguageModelError):
+    """The model's server did not answer at all: off, wrong address or blocked (phase 43).
+
+    Callers report it with the localized `llm_unreachable` message instead of a generic failure.
+    """
+
+    def __init__(self, host: str, detail: str) -> None:
+        super().__init__(f"Could not reach the language model at {host}: {detail}")
+        self.host = host
+
+
 @runtime_checkable
 class LanguageModel(Protocol):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str: ...

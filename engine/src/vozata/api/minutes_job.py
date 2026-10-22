@@ -14,7 +14,7 @@ from vozata.minutes.session_minutes import (
     GeneratorFactory,
     write_session_minutes,
 )
-from vozata.ports import LanguageModelError, Localizer, SessionRepository
+from vozata.ports import LanguageModelError, LlmUnreachableError, Localizer, SessionRepository
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.job import StepKind
 from vozata.processing.queue import ProcessingQueue
@@ -75,13 +75,18 @@ class MinutesJob(QueuedModelJob):
         except Exception as error:
             if token.cancelled:  # pre-empted: the queue redoes the step
                 raise StepCancelled from error
-            if isinstance(error, LanguageModelError):
+            code = "minutes_failed"
+            if isinstance(error, LlmUnreachableError):
+                _log.warning("Regenerating minutes for %s failed: %s", session_id, error)
+                code = "llm_unreachable"
+                message = self._t("errors.llm_unreachable.minutes", host=error.host)
+            elif isinstance(error, LanguageModelError):
                 _log.warning("Regenerating minutes for %s failed: %s", session_id, error)
                 message = self._t("errors.api.minutes_failed", reason=error)
             else:
                 _log.exception("Regenerating minutes for %s failed", session_id)
                 message = self._t("errors.api.internal_error")
-            self._error(session_id, "minutes_failed", message)
+            self._error(session_id, code, message)
             return False
         finally:
             cancels.close()
