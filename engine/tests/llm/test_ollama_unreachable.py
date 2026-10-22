@@ -106,6 +106,13 @@ def test_a_probe_http_error_is_not_unreachable() -> None:
     assert server.model().generate("s", "p") == "ok"
 
 
+def test_a_probe_that_breaks_after_connecting_is_left_to_the_chat_request() -> None:
+    server = Server(tags=httpx.RemoteProtocolError("garbled", request=_request()))
+
+    assert server.model().generate("s", "p") == "ok"
+    assert server.paths == ["/api/tags", "/api/chat"]
+
+
 def test_the_server_going_away_during_the_job_is_unreachable() -> None:
     server = Server(chat=httpx.ConnectError("gone", request=_request()))
 

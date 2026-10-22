@@ -28,6 +28,7 @@ public sealed class ConfigPageThemeRenderTests
                 config.Select("minutes");
                 var model = config.Settings.Editors.Single(editor => editor.Key == "OLLAMA_MODEL");
                 model.TextValue = "mistral:7b"; // changed and not installed
+                config.Settings.Editors.Single(editor => editor.Key == "OLLAMA_URL").TextValue = "http://192.168.0.20:11434"; // the remote note
                 await config.Settings.Editors.Single(editor => editor.Key == "OLLAMA_URL").Test!.RunCommand.ExecuteAsync(null);
                 ThemeRenderTests.Render<ConfigPage>(viewModel, ShellViewModel.Config, $"config-minutes-{theme}.png");
 

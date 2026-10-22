@@ -556,7 +556,7 @@
     <value>Ollama address</value>
   </data>
   <data name="SettingHelp_OLLAMA_URL" xml:space="preserve">
-    <value>Address of the local Ollama server.</value>
+    <value>Address of the Ollama server: this PC or another one on your network.</value>
   </data>
   <data name="Setting_OLLAMA_MODEL" xml:space="preserve">
     <value>Minutes model</value>

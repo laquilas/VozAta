@@ -83,14 +83,14 @@ Requested by the user on 2026-10-20.
 
 ## Acceptance criteria
 
-- [ ] With `OLLAMA_URL` pointing to another PC, minutes, action items and Ask work, and `/health`
+- [x] With `OLLAMA_URL` pointing to another PC, minutes, action items and Ask work, and `/health`
       reports `llm.remote: true`.
-- [ ] While a meeting records live, a queued meeting's minutes step keeps running when Ollama is
+- [x] While a meeting records live, a queued meeting's minutes step keeps running when Ollama is
       remote, and is interrupted when it is local.
-- [ ] With the remote PC off, the minutes step fails in ≤ 5 s with the localized message, the
+- [x] With the remote PC off, the minutes step fails in ≤ 5 s with the localized message, the
       meeting ends `done` without minutes, and the next queued meeting is processed.
-- [ ] The Config page shows the remote note; the guide is linked from `docs/INSTALL.md`.
-- [ ] Contract docs updated (`llm.remote`, `llm_unreachable`).
+- [x] The Config page shows the remote note; the guide is linked from `docs/INSTALL.md`.
+- [x] Contract docs updated (`llm.remote`, `llm_unreachable`).
 
 ## Tests
 
@@ -109,10 +109,9 @@ parity.
 ## Progress
 
 - **Branch:** `feature/43-remote-ollama`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-22
-- **Next step:** Task 4 of `plans/43-remote-ollama.md` (full suites, manual check with a TCP forwarder,
-  acceptance criteria, `done`).
+- **Next step:** push the branch once and open the PR to `main`; the user merges it.
 
 ### Steps
 
@@ -122,7 +121,7 @@ parity.
 - [x] UI: remote note on the Config page, unreachable message on the meeting page
 - [x] Guide written (`docs/remote-ollama.md`, linked from `docs/INSTALL.md`)
 - [x] UI: reload the model list when the Ollama URL is saved or tested
-- [ ] Full suites, manual check on a real second PC
+- [x] Full suites, manual check (this PC's LAN address as the remote PC)
 
 ### Decisions and notes
 
@@ -136,4 +135,17 @@ parity.
   the last step still has to check it against the finished phase and a real second PC.
 - Found while testing: the Config page loads the `OLLAMA_MODEL` list once, at startup, so a new
   `OLLAMA_URL` keeps the old list until the app restarts. Fixed in this phase: saving the URL and the Ollama Test button read the list again.
+- Manual check (2026-10-22, scratch engine on port 8799 with its own data folder; there is no
+  second PC, so this PC's LAN address played the remote one): with nothing listening there,
+  `/health` reported `llm.remote: true` and the host, and the minutes, the action items and Ask
+  each failed with the localized `llm_unreachable` message in 2.3-2.5 s, with no minutes written
+  and the later requests still served. With a TCP forwarder from the LAN address to the local
+  Ollama, the minutes (20 s), the action items (2 items, owners found) and Ask (cited the right
+  line) worked. The Config note was captured from the headless render in both themes.
+- Not checked live: a recording running while a queued meeting's minutes step uses a remote
+  Ollama (it needs the microphone). The gate rule is covered by the `gpu_usage` and queue tests;
+  repeat it by hand on the first real second PC.
+- Found in the manual check, not changed: `minutes_ready` is published before the `index` step ends,
+  so a `POST .../action-items` sent at once can get `409 session_still_active` (phase 40 rule).
+- The Ollama URL help text no longer says "local" (en, pt-BR, es).
 - Related, not in this phase: issue #58 (skip the GPU Whisper download on `auto` without CUDA).

@@ -92,7 +92,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 40 | [Background processing queue](phases/40-background-processing.md) | 17, 26, 37 | done |
 | 41 | [Live transcription toggle](phases/41-record-only.md) | 40 | done |
 | 42 | [Model download progress bar](phases/42-download-progress.md) | 26, 35 | done |
-| 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | in progress (`feature/43-remote-ollama`) |
+| 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | done |
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·

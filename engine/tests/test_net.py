@@ -20,6 +20,7 @@ from vozata.net import is_local_url, remote_llm_host, url_host
         "   ",
         "http://0.0.0.0:11434",
         "http://[::]:11434",
+        "http://[::ffff:127.0.0.1]:11434",
     ],
 )
 def test_loopback_empty_and_unspecified_urls_are_local(url: str) -> None:
@@ -35,6 +36,7 @@ def test_loopback_empty_and_unspecified_urls_are_local(url: str) -> None:
         "http://10.0.0.5",
         "http://[fe80::1]:11434",
         "http://gpu-box:11434",
+        "http://[::ffff:192.168.0.20]:11434",
     ],
 )
 def test_any_other_address_is_remote(url: str) -> None:
