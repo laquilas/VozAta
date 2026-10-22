@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from fastapi import FastAPI
+
 from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
@@ -251,6 +253,13 @@ def _provider[T](registry: Mapping[str, T], key: str, value: str) -> T:
     if value not in registry:
         raise ConfigError(key, value, "invalid_choice", allowed=", ".join(sorted(registry)))
     return registry[value]
+
+
+def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
+    """`vozata worker` (phase 44): the worker's API over this PC's models."""
+    from vozata.worker.app import create_worker_app
+
+    return create_worker_app(token, gpu_info=functools.cache(query_gpu), models=list)
 
 
 def build_localizer(settings: Settings) -> Localizer:

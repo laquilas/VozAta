@@ -331,3 +331,10 @@ def test_main_sets_hf_hub_disable_xet_before_importing_the_hub(
     importlib.reload(cli)
 
     assert __import__("os").environ["HF_HUB_DISABLE_XET"] == "1"
+
+
+def test_worker_check_prints_the_version_and_the_address() -> None:
+    code, out = _main(["worker", "--check"], env={"WORKER_PORT": "9001"})
+
+    assert code == 0
+    assert "VozAta worker" in out and "http://0.0.0.0:9001" in out

@@ -471,6 +471,8 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
     assert restart == {
         "API_HOST",
         "API_PORT",
+        "WORKER_HOST",
+        "WORKER_PORT",
         "STT_PROVIDER",
         "WHISPER_MODEL",
         "WHISPER_DEVICE",
@@ -732,3 +734,27 @@ def test_live_translation_defaults_and_values(tmp_path: Path) -> None:
     with pytest.raises(ConfigError) as caught:
         load_settings(env={"TRANSLATE_TO": "auto"})
     assert caught.value.key == "TRANSLATE_TO"
+
+
+def test_worker_keys_are_read_with_their_defaults() -> None:
+    assert (
+        load_settings({}).worker_url,
+        load_settings({}).worker_token,
+        load_settings({}).worker_host,
+        load_settings({}).worker_port,
+    ) == (None, None, "0.0.0.0", 8766)
+    settings = load_settings(
+        {
+            "WORKER_URL": "http://192.168.68.101:8766",
+            "WORKER_TOKEN": "abc",
+            "WORKER_HOST": "192.168.68.101",
+            "WORKER_PORT": "9000",
+        }
+    )
+    assert (settings.worker_url, settings.worker_token) == ("http://192.168.68.101:8766", "abc")
+    assert (settings.worker_host, settings.worker_port) == ("192.168.68.101", 9000)
+
+
+def test_a_worker_port_outside_the_range_is_refused() -> None:
+    with pytest.raises(ConfigError):
+        load_settings({"WORKER_PORT": "70000"})

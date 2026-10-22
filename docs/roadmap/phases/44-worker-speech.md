@@ -139,12 +139,12 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - **Branch:** `feature/44-worker-speech`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 1 of `plans/44-worker-speech.md` (worker settings, token auth and `/health`).
+- **Next step:** Task 2 of `plans/44-worker-speech.md` (`/transcribe` with a kept faster-whisper).
 
 ### Steps
 
 - [x] Phases 44–46 and the implementation plan (`plans/44-worker-speech.md`)
-- [ ] Worker: settings, token auth, `/health`, `vozata worker` command
+- [x] Worker: settings, token auth, `/health`, `vozata worker` command
 - [ ] Worker: `/transcribe` with a kept faster-whisper
 - [ ] Engine: worker client and `WorkerTranscriber`
 - [ ] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
@@ -158,3 +158,6 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - Fallback to this PC when the worker does not answer, with a notification (user, 2026-10-22).
 - The worker is a subcommand of the engine bundle, not a second program, so it reuses the providers
   and the packaging.
+- The worker keys are `settings_fields` fields (group `worker`) because `config.py` only reads keys
+  listed there; `WORKER_HOST` / `WORKER_PORT` matter on the worker PC only (their help says so,
+  Task 5). A loopback worker host needs no token; `0.0.0.0` does (stricter than `net.is_local_url`).

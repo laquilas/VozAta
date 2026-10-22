@@ -139,6 +139,9 @@ invalid_reply = "{target} retornou uma resposta inesperada."
 
 [cli]
 serving = "API do motor escutando em {url} (Ctrl+C para parar)."
+worker_listening = "Worker do VozAta escutando em {url} (Ctrl+C para parar)."
+worker_token_created = "Novo token do worker, salvo em {file}: {token}. Informe-o no VozAta do outro PC (Config → Worker)."
+worker_check = "Worker do VozAta {version}, escutaria em {url}."
 serve_public_host = "Recusando escutar em {host}: a API do motor não tem autenticação. Use 127.0.0.1 ou localhost em API_HOST."
 loading_model = "Carregando o modelo de reconhecimento de fala — já gravando..."
 model_ready = "Modelo de reconhecimento de fala pronto."
@@ -193,6 +196,8 @@ default = "padrão"
 
 [cli.help]
 serve = "executa a API HTTP + WebSocket local usada pelo aplicativo desktop"
+worker = "fornece reconhecimento de fala ao motor do VozAta de outro PC da rede local"
+worker_check = "mostra a versão e o endereço e sai (verificação da instalação)"
 description = "Transcrição de reuniões quase em tempo real e geração de atas."
 record = "grava o microfone e o áudio do sistema com transcrição ao vivo"
 language = "idioma falado na reunião (padrão: TRANSCRIPTION_LANGUAGE)"

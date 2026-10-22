@@ -76,5 +76,5 @@
 ### Task 7: Full suites, manual check, phase done
 
 - [ ] Engine `pytest --cov` to a file (exits on its own), ruff; UI `dotnet test`, `dotnet format --verify-no-changes`.
-- [ ] Manual (no second PC): scratch `.env` for a worker on this PC's LAN address with a token; scratch engine (port 8799, scratch data) with `STT_PROVIDER=vozata_worker` and `WORKER_URL` → offline transcription of a scratch meeting through the worker (`POST /sessions/{id}/transcribe` or the CLI `transcribe`), `/health.worker.reachable`; stop the worker → the next run falls back with the `worker_fallback` event. Close both processes afterwards.
+- [ ] Manual (no second PC): scratch `.env` for a worker on this PC's LAN address with a token; scratch engine (port 8799, scratch data) with `STT_PROVIDER=vozata_worker` and `WORKER_URL` → transcription of a scratch meeting through the worker (the CLI `vozata transcribe <id>`), `/health.worker.reachable`; stop the worker → the next run falls back with the `worker_fallback` event. Close both processes afterwards.
 - [ ] Tick the acceptance criteria, README `done`, Progress `ready for PR`; commit `docs(roadmap): finish phase 44`; push once, open the PR; the user merges.

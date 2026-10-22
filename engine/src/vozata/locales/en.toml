@@ -139,6 +139,9 @@ invalid_reply = "{target} returned an unexpected reply."
 
 [cli]
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
+worker_listening = "VozAta worker listening on {url} (Ctrl+C to stop)."
+worker_token_created = "New worker token, saved in {file}: {token}. Enter it in VozAta on the other PC (Config → Worker)."
+worker_check = "VozAta worker {version}, would listen on {url}."
 serve_public_host = "Refusing to listen on {host}: the engine API has no authentication. Use 127.0.0.1 or localhost in API_HOST."
 loading_model = "Loading the speech recognition model — already recording..."
 model_ready = "Speech recognition model ready."
@@ -193,6 +196,8 @@ default = "default"
 
 [cli.help]
 serve = "run the local HTTP + WebSocket API used by the desktop app"
+worker = "serve speech recognition to the VozAta engine of another PC of the local network"
+worker_check = "print the version and the address, then exit (installation check)"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"

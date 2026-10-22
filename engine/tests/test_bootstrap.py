@@ -899,3 +899,16 @@ def test_ask_and_the_model_test_take_gpu_priority_only_for_a_local_gpu_llm(
         assert not gate.priority_held
     assert container.regenerate_minutes._uses_gpu() is False
     assert container.extract_action_items._uses_gpu() is False
+
+
+def test_the_worker_app_needs_its_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from vozata.api.system_info import GpuInfo
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    client = TestClient(bootstrap.build_worker_app(Settings(), "t0ken"))
+
+    assert client.get("/health").status_code == 401
+    body = client.get("/health", headers={"Authorization": "Bearer t0ken"}).json()
+    assert (body["gpu"]["available"], body["models"]) == (False, [])
