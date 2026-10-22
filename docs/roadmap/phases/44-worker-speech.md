@@ -140,13 +140,14 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - **Branch:** `feature/44-worker-speech`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 2 of `plans/44-worker-speech.md` (`/transcribe` with a kept faster-whisper).
+- **Next step:** Task 3 of `plans/44-worker-speech.md` (engine `worker_client/`: client and
+  `WorkerTranscriber`, contract suite).
 
 ### Steps
 
 - [x] Phases 44–46 and the implementation plan (`plans/44-worker-speech.md`)
 - [x] Worker: settings, token auth, `/health`, `vozata worker` command
-- [ ] Worker: `/transcribe` with a kept faster-whisper
+- [x] Worker: `/transcribe` with a kept faster-whisper
 - [ ] Engine: worker client and `WorkerTranscriber`
 - [ ] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
 - [ ] Engine: settings, connection check, `/health.worker`; UI Test anchor
@@ -162,5 +163,8 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - The worker keys are `settings_fields` fields (group `worker`) because `config.py` only reads keys
   listed there; `WORKER_HOST` / `WORKER_PORT` matter on the worker PC only (their help says so,
   Task 5). A loopback worker host needs no token; `0.0.0.0` does (stricter than `net.is_local_url`).
+- `/transcribe` refuses an empty or non-float32 body with 422 `worker_invalid_audio`; `/health`
+  lists the model actually loaded (`WHISPER_MODEL` on CUDA, `WHISPER_CPU_MODEL` after a CPU
+  fallback); the model is released when the worker stops (FastAPI lifespan).
 - Phases 47–50 were planned on this branch (user, 2026-10-22): worker app and discovery, minutes so
   far, minutes of a range, voice commands. Order: finish 44, then 47–50, then 45–46.

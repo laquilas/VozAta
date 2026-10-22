@@ -258,8 +258,18 @@ def _provider[T](registry: Mapping[str, T], key: str, value: str) -> T:
 def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
     """`vozata worker` (phase 44): the worker's API over this PC's models."""
     from vozata.worker.app import create_worker_app
+    from vozata.worker.speech import LoadedModel, SpeechService
 
-    return create_worker_app(token, gpu_info=functools.cache(query_gpu), models=list)
+    def whisper() -> LoadedModel:
+        transcriber = FasterWhisperTranscriber(settings, _downloader(settings, None))
+        cuda = transcriber.device == "cuda"
+        return LoadedModel(
+            transcriber, settings.whisper_model if cuda else settings.whisper_cpu_model
+        )
+
+    return create_worker_app(
+        token, gpu_info=functools.cache(query_gpu), speech=SpeechService(whisper)
+    )
 
 
 def build_localizer(settings: Settings) -> Localizer:

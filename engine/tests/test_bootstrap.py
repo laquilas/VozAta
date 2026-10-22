@@ -912,3 +912,32 @@ def test_the_worker_app_needs_its_token(monkeypatch: pytest.MonkeyPatch) -> None
     assert client.get("/health").status_code == 401
     body = client.get("/health", headers={"Authorization": "Bearer t0ken"}).json()
     assert (body["gpu"]["available"], body["models"]) == (False, [])
+
+
+@pytest.mark.parametrize(("device", "listed"), [("cuda", "large-v3"), ("cpu", "small")])
+def test_the_worker_lists_the_whisper_model_it_loaded(
+    monkeypatch: pytest.MonkeyPatch, device: str, listed: str
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from vozata.api.system_info import GpuInfo
+    from vozata.domain import TranscriptionResult
+
+    class _Whisper:
+        def __init__(self, settings: Settings, downloader: object) -> None:
+            self.device = device
+
+        def transcribe(self, *args: object) -> TranscriptionResult:
+            return TranscriptionResult((), None)
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    monkeypatch.setattr(bootstrap, "FasterWhisperTranscriber", _Whisper)
+    settings = Settings(whisper_model="large-v3", whisper_cpu_model="small")
+    client = TestClient(bootstrap.build_worker_app(settings, None))
+
+    client.post("/transcribe", content=b"\x00" * 8)
+
+    assert client.get("/health").json()["models"] == [listed]

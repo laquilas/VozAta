@@ -6,15 +6,27 @@ from fastapi.testclient import TestClient
 from vozata import __version__
 from vozata.api.system_info import GpuInfo
 from vozata.worker.app import create_worker_app
+from vozata.worker.speech import LoadedModel, SpeechService
 
 TOKEN = "s3cret-token"
+
+
+class _LoadedSpeech(SpeechService):
+    """A speech service that reports `models` as loaded."""
+
+    def __init__(self, models: list[str]) -> None:
+        super().__init__(lambda: LoadedModel(None, ""))  # type: ignore[arg-type]
+        self._names = models
+
+    def models(self) -> list[str]:
+        return list(self._names)
 
 
 def _client(token: str | None = TOKEN, models: list[str] | None = None) -> TestClient:
     app = create_worker_app(
         token,
         gpu_info=lambda: GpuInfo(True, "RTX 4070", 12282),
-        models=lambda: list(models or []),
+        speech=_LoadedSpeech(models or []),
     )
     return TestClient(app)
 
