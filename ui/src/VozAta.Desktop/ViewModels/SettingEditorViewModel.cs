@@ -185,6 +185,13 @@ public sealed partial class SettingEditorViewModel : ObservableObject
 
     public bool HasValidationError => ValidationError is not null;
 
+    /// <summary>
+    /// A line under the field: the Ollama URL names the other PC that receives the transcripts
+    /// (phase 43); null for every other field and for a server on this PC.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Note { get; private set; }
+
     /// <summary>The list was read but its service did not answer (Ollama stopped).</summary>
     [ObservableProperty]
     public partial bool OptionsUnreachable { get; private set; }
@@ -288,6 +295,7 @@ public sealed partial class SettingEditorViewModel : ObservableObject
         }
 
         Validate();
+        UpdateNote();
         OnPropertyChanged(nameof(SecretStatus));
         Test?.RefreshTexts();
     }
@@ -345,7 +353,13 @@ public sealed partial class SettingEditorViewModel : ObservableObject
     {
         Error = null;
         Validate();
+        UpdateNote();
     }
+
+    private void UpdateNote() =>
+        Note = Key == "OLLAMA_URL" && !NetworkAddress.IsLocalUrl(TextValue)
+            ? _localization.Format("RemoteOllamaNote", NetworkAddress.Host(TextValue))
+            : null;
 
     partial void OnNumberValueChanged(decimal? value) => Error = null;
 
@@ -367,9 +381,32 @@ public sealed partial class SettingEditorViewModel : ObservableObject
         : Schema.Default.ValueKind == JsonValueKind.String && System.IO.Path.GetFileName(Schema.Default.GetString()) is { Length: > 0 } fallback ? fallback
         : "vozata.db";
 
+    /// <summary>
+    /// Put the schema's default in the editor as an unsaved change (the saved value stays what
+    /// <see cref="Reset"/> goes back to). A secret has no default to apply and is left alone.
+    /// </summary>
+    public void ApplyDefault()
+    {
+        if (Kind == SettingKind.Secret)
+        {
+            return;
+        }
+
+        SetValue(Text(Schema.Default));
+        Error = null;
+        OnPropertyChanged(nameof(IsDirty));
+    }
+
     private void Load(string? text)
     {
         _original = text;
+        SetValue(text);
+        Error = null;
+        OnPropertyChanged(nameof(IsDirty));
+    }
+
+    private void SetValue(string? text)
+    {
         switch (Kind)
         {
             case SettingKind.Number or SettingKind.WholeNumber:
@@ -392,9 +429,6 @@ public sealed partial class SettingEditorViewModel : ObservableObject
                 TextValue = text ?? "";
                 break;
         }
-
-        Error = null;
-        OnPropertyChanged(nameof(IsDirty));
     }
 
     /// <summary>The edited value as canonical text (null = not set), comparable with the loaded one.</summary>

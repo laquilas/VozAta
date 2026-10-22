@@ -10,7 +10,7 @@ from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.session_action_items import Extractor, write_session_action_items
 from vozata.minutes.session_minutes import EmptyTranscriptError
-from vozata.ports import LanguageModelError, Localizer, SessionRepository
+from vozata.ports import LanguageModelError, LlmUnreachableError, Localizer, SessionRepository
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.processing.job import StepKind
 from vozata.processing.queue import ProcessingQueue
@@ -68,13 +68,18 @@ class ActionItemsJob(QueuedModelJob):
         except Exception as error:
             if token.cancelled:  # pre-empted: the queue redoes the step
                 raise StepCancelled from error
-            if isinstance(error, LanguageModelError):
+            code = "action_items_failed"
+            if isinstance(error, LlmUnreachableError):
+                _log.warning("Extracting action items for %s failed: %s", session_id, error)
+                code = "llm_unreachable"
+                message = self._t("errors.llm_unreachable.action_items", host=error.host)
+            elif isinstance(error, LanguageModelError):
                 _log.warning("Extracting action items for %s failed: %s", session_id, error)
                 message = self._t("errors.api.action_items_failed", reason=error)
             else:
                 _log.exception("Extracting action items for %s failed", session_id)
                 message = self._t("errors.api.internal_error")
-            self._error(session_id, "action_items_failed", message)
+            self._error(session_id, code, message)
             return False
         finally:
             cancels.close()

@@ -556,7 +556,7 @@
     <value>Endereço do Ollama</value>
   </data>
   <data name="SettingHelp_OLLAMA_URL" xml:space="preserve">
-    <value>Endereço do servidor Ollama local.</value>
+    <value>Endereço do servidor Ollama: este PC ou outro da sua rede.</value>
   </data>
   <data name="Setting_OLLAMA_MODEL" xml:space="preserve">
     <value>Modelo da ata</value>
@@ -1068,6 +1068,12 @@
   <data name="ConfigNoResults" xml:space="preserve">
     <value>Nenhuma configuração corresponde à busca.</value>
   </data>
+  <data name="ConfigRestoreDefaults" xml:space="preserve">
+    <value>Restaurar padrões da seção</value>
+  </data>
+  <data name="ConfigRestoreDefaultsHelp" xml:space="preserve">
+    <value>Volta as configurações desta seção aos valores padrão. Nada é salvo até você apertar Salvar; Descartar desfaz. Tokens e chaves são mantidos.</value>
+  </data>
   <data name="ConfigUnsaved" xml:space="preserve">
     <value>Há alterações não salvas.</value>
   </data>
@@ -1079,6 +1085,9 @@
   </data>
   <data name="SettingOptionsUnreachable" xml:space="preserve">
     <value>Não foi possível ler a lista: o serviço não respondeu.</value>
+  </data>
+  <data name="RemoteOllamaNote" xml:space="preserve">
+    <value>As transcrições são enviadas para {0} para escrever a ata.</value>
   </data>
   <data name="SettingInvalidUrl" xml:space="preserve">
     <value>Informe um endereço completo que comece com http:// ou https://.</value>

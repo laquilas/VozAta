@@ -220,6 +220,143 @@ public sealed class ConfigPageViewModelTests
     }
 
     [Fact]
+    public async Task Restore_defaults_puts_the_defaults_of_the_open_section_back_as_unsaved_changes()
+    {
+        _client.SettingValues["MIX_MODE"] = "stereo"; // saved differently from its default (mono)
+        var page = await LoadedAsync();
+        page.Select("audio");
+        Assert.Equal("stereo", Editor(page, "MIX_MODE").SelectedChoice!.Value);
+
+        page.RestoreDefaultsCommand.Execute(null);
+
+        var mix = Editor(page, "MIX_MODE");
+        Assert.Equal("mono", mix.SelectedChoice!.Value);
+        Assert.True(mix.IsDirty);
+        Assert.True(page.Settings.IsDirty);
+        Assert.Empty(_client.Updates); // nothing is saved until the user says so
+        await page.Settings.SaveCommand.ExecuteAsync(null);
+        Assert.Equal("mono", (string)_client.Updates.Single()["MIX_MODE"]!);
+    }
+
+    [Fact]
+    public async Task Discard_undoes_the_restored_defaults()
+    {
+        _client.SettingValues["MIX_MODE"] = "stereo";
+        var page = await LoadedAsync();
+        page.Select("audio");
+        page.RestoreDefaultsCommand.Execute(null);
+
+        page.Settings.DiscardCommand.Execute(null);
+
+        Assert.Equal("stereo", Editor(page, "MIX_MODE").SelectedChoice!.Value);
+        Assert.False(page.Settings.IsDirty);
+    }
+
+    [Fact]
+    public async Task Restore_defaults_leaves_the_other_sections_alone()
+    {
+        _client.SettingValues["MIX_MODE"] = "stereo";
+        _client.SettingValues["WHISPER_MODEL"] = "small"; // default: large-v3-turbo
+        var page = await LoadedAsync();
+        page.Select("audio");
+
+        page.RestoreDefaultsCommand.Execute(null);
+
+        Assert.Equal("small", Editor(page, "WHISPER_MODEL").TextValue);
+        Assert.False(Editor(page, "WHISPER_MODEL").IsDirty);
+    }
+
+    [Fact]
+    public async Task Restore_defaults_never_touches_a_secret()
+    {
+        var page = await LoadedAsync();
+        page.Select("speakers");
+        var token = Editor(page, "HF_TOKEN");
+        token.ReplaceSecretCommand.Execute(null);
+        token.TextValue = "hf_new";
+
+        page.RestoreDefaultsCommand.Execute(null);
+
+        Assert.Equal("hf_new", token.TextValue);
+        Assert.True(token.IsReplacingSecret);
+    }
+
+    [Fact]
+    public async Task Restore_defaults_is_only_for_an_open_engine_section()
+    {
+        var page = await LoadedAsync();
+        Assert.True(page.RestoreDefaultsCommand.CanExecute(null)); // "general" is open
+
+        page.Select("storage");
+        Assert.False(page.RestoreDefaultsCommand.CanExecute(null));
+
+        page.Select("audio");
+        page.SearchText = "model";
+        Assert.False(page.RestoreDefaultsCommand.CanExecute(null)); // a search shows pieces of many sections
+    }
+
+    private void OllamaServerNowAnswers() =>
+        _client.Options = new SettingOptions(
+            new Dictionary<string, IReadOnlyList<SettingOption>>
+            {
+                ["whisper_models"] = [new("large-v3-turbo", "large-v3-turbo")],
+                ["ollama_models"] = [new("llama3.2:3b", "llama3.2:3b"), new("qwen2.5:7b", "qwen2.5:7b")],
+            },
+            new Dictionary<string, bool> { ["ollama_models"] = true });
+
+    private int OptionRequests => _client.Calls.Count(call => call == "options");
+
+    [Fact]
+    public async Task Saving_a_new_Ollama_URL_reads_the_models_of_that_server()
+    {
+        var page = await LoadedAsync(); // the server did not answer when the app opened
+        var model = Editor(page, "OLLAMA_MODEL");
+        Assert.True(model.OptionsUnreachable);
+        OllamaServerNowAnswers();
+
+        Editor(page, "OLLAMA_URL").TextValue = "http://192.168.1.50:11434";
+        await page.Settings.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, OptionRequests);
+        Assert.False(model.OptionsUnreachable);
+        Assert.Equal(["llama3.2:3b", "qwen2.5:7b"], model.Options.Select(option => option.Value));
+    }
+
+    [Fact]
+    public async Task Saving_other_settings_does_not_read_the_lists_again()
+    {
+        var page = await LoadedAsync();
+
+        var mix = Editor(page, "MIX_MODE");
+        mix.SelectedChoice = mix.Choices.Single(choice => choice.Value == "stereo");
+        await page.Settings.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, OptionRequests);
+    }
+
+    [Fact]
+    public async Task Testing_the_Ollama_connection_reads_the_models_again()
+    {
+        var page = await LoadedAsync();
+        OllamaServerNowAnswers();
+
+        await Editor(page, "OLLAMA_URL").Test!.RunCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, OptionRequests);
+        Assert.Equal(["llama3.2:3b", "qwen2.5:7b"], Editor(page, "OLLAMA_MODEL").Options.Select(option => option.Value));
+    }
+
+    [Fact]
+    public async Task Testing_another_service_does_not_read_the_lists_again()
+    {
+        var page = await LoadedAsync();
+
+        await Editor(page, "HF_TOKEN").Test!.RunCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, OptionRequests);
+    }
+
+    [Fact]
     public async Task Without_lists_the_editors_stay_free_text()
     {
         _client.OptionsError = new EngineUnavailableException("refused", new HttpRequestException());

@@ -149,7 +149,7 @@ public sealed class HistoryViewModelTests
         Assert.False(history.Detail.IsBusy);
         Assert.True(history.Rows[0].HasMinutes);
         await history.Detail.RegenerateMinutesCommand.ExecuteAsync(null);
-        history.OnError(Session(16).Id, "Ollama is offline.");
+        history.OnError(Session(16).Id, "minutes_failed", "Ollama is offline.");
         Assert.Equal("Ollama is offline.", history.Detail.Error);
     }
 
@@ -161,7 +161,7 @@ public sealed class HistoryViewModelTests
 
         await history.OnMinutesReadyAsync("x");
         await history.OnSpeakersRelabeledAsync("x");
-        history.OnError("x", "message");
+        history.OnError("x", "minutes_failed", "message");
 
         Assert.Null(history.Detail);
     }

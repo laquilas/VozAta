@@ -65,6 +65,7 @@ from vozata.minutes.template_repository import bundled_templates
 from vozata.models.cli_progress import cli_downloader
 from vozata.models.download import HubDownloader
 from vozata.models.tracker import DownloadTracker
+from vozata.net import remote_llm_host
 from vozata.ports import (
     AudioMixer,
     BundleImporter,
@@ -874,7 +875,10 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     def free_whisper() -> None:
         """VRAM rule: unload the kept Whisper before the language model loads, unless a recording
         is using it right now (asked under its lease, the unload would still happen when the
-        recording ends, dropping a model it keeps loaded)."""
+        recording ends, dropping a model it keeps loaded). An Ollama on another PC needs no
+        VRAM here: Whisper stays loaded."""
+        if remote_llm_host(settings_file.current) is not None:
+            return
         current = manager.current
         recording = current is not None and current.status in _ACTIVE
         if shared is not None and not recording:

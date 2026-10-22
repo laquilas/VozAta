@@ -14,9 +14,19 @@ URL = "http://ollama.test:11434"
 
 
 def model_with(
-    handler: Callable[[httpx.Request], httpx.Response], keep_alive: str = "0"
+    handler: Callable[[httpx.Request], httpx.Response],
+    keep_alive: str = "0",
+    raw_tags: bool = False,
 ) -> OllamaLanguageModel:
-    transport = httpx.MockTransport(handler)
+    """A model over `handler`; the reachability probe (`GET /api/tags`) is answered here unless
+    `raw_tags` hands that request to the handler (the `is_available` tests)."""
+
+    def routed(request: httpx.Request) -> httpx.Response:
+        if not raw_tags and request.method == "GET" and request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": []})
+        return handler(request)
+
+    transport = httpx.MockTransport(routed)
     return OllamaLanguageModel(URL, "qwen2.5:7b", keep_alive=keep_alive, transport=transport)
 
 
@@ -174,7 +184,7 @@ def test_is_available_checks_that_the_model_is_pulled(names: list[str], availabl
         assert (request.method, request.url.path) == ("GET", "/api/tags")
         return httpx.Response(200, json={"models": [{"name": name} for name in names]})
 
-    assert model_with(handler).is_available() is available
+    assert model_with(handler, raw_tags=True).is_available() is available
 
 
 def test_untagged_model_name_matches_latest() -> None:
@@ -189,7 +199,7 @@ def test_is_available_is_false_when_the_server_is_down() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("connection refused", request=request)
 
-    assert model_with(handler).is_available() is False
+    assert model_with(handler, raw_tags=True).is_available() is False
 
 
 def test_close_closes_the_http_client() -> None:
@@ -216,7 +226,7 @@ def test_is_available_uses_a_short_timeout() -> None:
         seen.append(request.extensions["timeout"])
         return httpx.Response(200, json={"models": []})
 
-    model_with(handler).is_available()
+    model_with(handler, raw_tags=True).is_available()
 
     assert seen[0]["read"] == 3.0
 

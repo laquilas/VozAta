@@ -123,6 +123,11 @@ owner = "Responsable: {owner}"
 due = "Fecha límite: {due}"
 folder = "Carpeta de la sesión: {folder}"
 
+[errors.llm_unreachable]
+minutes = "No se pudo contactar con Ollama en {host}. Genera el acta de nuevo cuando esté disponible."
+action_items = "No se pudo contactar con Ollama en {host}. Extrae las tareas de nuevo cuando esté disponible."
+answer = "No se pudo contactar con Ollama en {host}. Pregunta de nuevo cuando esté disponible."
+
 [errors.tasks]
 already_exported = "Ya exportada: {url}"
 unknown_item = "La tarea \"{id}\" no está en esta sesión."

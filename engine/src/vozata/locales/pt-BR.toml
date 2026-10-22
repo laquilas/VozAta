@@ -123,6 +123,11 @@ owner = "Responsável: {owner}"
 due = "Prazo: {due}"
 folder = "Pasta da sessão: {folder}"
 
+[errors.llm_unreachable]
+minutes = "Não foi possível falar com o Ollama em {host}. Gere a ata de novo quando ele estiver disponível."
+action_items = "Não foi possível falar com o Ollama em {host}. Extraia os itens de ação de novo quando ele estiver disponível."
+answer = "Não foi possível falar com o Ollama em {host}. Pergunte de novo quando ele estiver disponível."
+
 [errors.tasks]
 already_exported = "Já exportado: {url}"
 unknown_item = "O item de ação \"{id}\" não está nesta sessão."

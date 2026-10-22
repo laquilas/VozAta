@@ -277,13 +277,26 @@ public sealed partial class SessionPageViewModel(
         }
     }
 
-    /// <summary>An <c>error</c> event: ends our regeneration with the engine's message.</summary>
-    public void OnError(string? sessionId, string message)
+    /// <summary>
+    /// An <c>error</c> event: ends our regeneration with the engine's message. An Ollama that does
+    /// not answer (phase 43) is shown next to "Regenerate minutes" even when nothing was running,
+    /// because the meeting's own processing is what failed to reach it.
+    /// </summary>
+    public void OnError(string? sessionId, string code, string message)
     {
         _actionItems?.OnError(sessionId, message);
-        if (sessionId == Id && IsBusy)
+        if (sessionId != Id)
+        {
+            return;
+        }
+
+        if (IsBusy)
         {
             IsBusy = false;
+            Error = message;
+        }
+        else if (code == "llm_unreachable")
+        {
             Error = message;
         }
     }

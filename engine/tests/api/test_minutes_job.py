@@ -14,7 +14,7 @@ from vozata.api.minutes_job import MinutesJob
 from vozata.domain import Channel, TranscriptSegment
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
-from vozata.ports import LanguageModelError
+from vozata.ports import LanguageModelError, LlmUnreachableError
 from vozata.processing.gpu_gate import GpuGate, GpuUser
 from vozata.processing.job import ProcessingJob, Step, StepKind
 from vozata.processing.queue import ProcessingQueue
@@ -25,6 +25,11 @@ from vozata.storage.session_store import SessionStore
 class _Failing(FakeLanguageModel):
     def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
         raise LanguageModelError("connection refused")
+
+
+class _Unreachable(FakeLanguageModel):
+    def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+        raise LlmUnreachableError("192.168.0.20", "refused")
 
 
 class _Blocking(FakeLanguageModel):
@@ -153,6 +158,26 @@ def test_a_language_model_failure_is_published_as_a_localized_error(
         )
     ]
     assert not rig.paths.minutes_md.exists()
+
+
+def test_an_unreachable_ollama_is_published_with_its_own_code_and_message(
+    tmp_path: Path, rigs: list[_Rig]
+) -> None:
+    rig = _rig(rigs, tmp_path, _Unreachable())
+
+    rig.run()
+
+    assert rig.broadcaster.of("error") == [
+        (
+            rig.paths.id,
+            {
+                "code": "llm_unreachable",
+                "message": "errors.llm_unreachable.minutes(host=192.168.0.20)",
+            },
+        )
+    ]
+    assert not rig.paths.minutes_md.exists()
+    assert rig.states[-1].state == "done"  # the meeting is kept, without minutes
 
 
 def test_an_empty_transcript_is_published_as_an_error(tmp_path: Path, rigs: list[_Rig]) -> None:

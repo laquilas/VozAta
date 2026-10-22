@@ -374,6 +374,10 @@ stream opens and `terminate()`; the session releases it once capture has stopped
    - `minutes` (if `GENERATE_MINUTES`; GPU with local Ollama): `MinutesGenerator` → `minutes.md`,
      then `llm.release()` (Ollama unloads per `OLLAMA_KEEP_ALIVE`, also after a failed job;
      after a cancel always at once, `keep_alive` 0, since the GPU is needed by a live user).
+     An Ollama that does not answer (43) fails the step in about 3 s: the first request of a model
+     is a `GET /api/tags` probe, a connection failure raises `LlmUnreachableError`, the step
+     reports `llm_unreachable` (no `release()` is sent to a dead host) and the queue goes on; the
+     meeting ends `done` without minutes and "Regenerate minutes" retries later.
    - `action_items` (if `EXTRACT_ACTION_ITEMS` too): `ActionItemExtractor` → `action_items.json`
      (items already exported are kept), `on_action_items_ready` (23; a failure reports
      `action_items_failed`).
@@ -403,7 +407,7 @@ step or job; the meeting stays `finalizing` and the next start resumes it.
 
 **GPU gate** (phase 40, `processing/gpu_gate.py`, one per engine, built in `bootstrap.py`):
 `gpu_usage(settings, cuda)` says which model families run on the local GPU (speech: faster-whisper
-not on CPU; speakers: pyannote not on CPU; LLM: Ollama); without CUDA nothing is gated. Priority:
+not on CPU; speakers: pyannote not on CPU; LLM: Ollama on this PC; an Ollama on another PC (43, `net.py`: `OLLAMA_URL` is not loopback) is not local GPU work, and Whisper is not unloaded before it); without CUDA nothing is gated. Priority:
 live recording > Ask > Config tests > queue. A live session takes `gate.priority(LIVE)` on the
 model-load thread before a live model that runs on the local GPU loads (`LiveGpuLease`: the speech
 model when `usage.speech`, the live speaker embedder when `usage.live_speakers`, i.e.

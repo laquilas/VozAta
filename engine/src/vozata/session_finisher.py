@@ -18,7 +18,14 @@ from vozata.diarization.session_diarization import diarize_session
 from vozata.domain import SessionStatus
 from vozata.minutes.session_action_items import write_session_action_items
 from vozata.minutes.session_minutes import EmptyTranscriptError
-from vozata.ports import Cancellable, Diarizer, SessionAudio, SessionObserver, SessionRepository
+from vozata.ports import (
+    Cancellable,
+    Diarizer,
+    LlmUnreachableError,
+    SessionAudio,
+    SessionObserver,
+    SessionRepository,
+)
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.session_meta import SessionMeta
 from vozata.transcription.language_lock import LanguageLock
@@ -140,6 +147,9 @@ class SessionFinisher:
         except Exception as error:
             if token.cancelled:
                 raise StepCancelled from error
+            if isinstance(error, LlmUnreachableError):
+                self._unreachable("minutes", error)
+                return
             _log.exception("Generating minutes for %s failed", self._id)
             command = f'python -m vozata minutes "{self._command_target()}"'
             self._error("minutes_failed", reason=str(error), command=command)
@@ -164,6 +174,9 @@ class SessionFinisher:
         except Exception as error:
             if token.cancelled:
                 raise StepCancelled from error
+            if isinstance(error, LlmUnreachableError):
+                self._unreachable("action_items", error)
+                return
             _log.exception("Extracting action items for %s failed", self._id)
             self._error("action_items_failed", reason=str(error))
             return
@@ -199,6 +212,12 @@ class SessionFinisher:
 
     def _reason(self, error: Exception) -> str:
         return error.render(self._c.localizer) if isinstance(error, ConfigError) else str(error)
+
+    def _unreachable(self, step: str, error: LlmUnreachableError) -> None:
+        """The Ollama PC does not answer: no traceback, one localized line naming its host."""
+        _log.warning("The language model is unreachable for %s: %s", self._id, error)
+        message = self._c.localizer.t(f"errors.llm_unreachable.{step}", host=error.host)
+        self._observer.on_error("llm_unreachable", message)
 
     def _error(self, code: str, **params: object) -> None:
         self._observer.on_error(code, self._c.localizer.t(f"errors.session.{code}", **params))

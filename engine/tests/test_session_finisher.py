@@ -27,7 +27,7 @@ from vozata.domain import ConversationLanguage, SearchHit, SpeakerTurn, Transcri
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
-from vozata.ports import DiarizationError, LanguageModelError
+from vozata.ports import DiarizationError, LanguageModelError, LlmUnreachableError
 from vozata.processing.cancel import CancelToken, StepCancelled
 from vozata.session import SessionComponents
 from vozata.session_finisher import SessionFinisher
@@ -324,6 +324,22 @@ def test_a_failing_minutes_call_is_reported_with_a_retry_command(tmp_path: Path)
     assert rig.observer.of("minutes_ready") == []
 
 
+def test_an_unreachable_ollama_reports_llm_unreachable_for_the_minutes(tmp_path: Path) -> None:
+    class Unreachable(FakeLanguageModel):
+        def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+            raise LlmUnreachableError("192.168.0.20", "refused")
+
+    rig = _Rig(tmp_path, llm=Unreachable())
+
+    rig.finisher.write_minutes(CancelToken())
+
+    assert rig.observer.of("error") == [
+        ("llm_unreachable", "errors.llm_unreachable.minutes(host=192.168.0.20)")
+    ]
+    assert rig.observer.of("minutes_ready") == []
+    assert not rig.store.paths(rig.session_id).minutes_md.exists()
+
+
 def test_minutes_are_skipped_when_disabled_or_nothing_was_said(tmp_path: Path) -> None:
     off = _Rig(tmp_path / "off", with_minutes=False)
     silent = _Rig(tmp_path / "silent", segments=[])
@@ -391,6 +407,23 @@ def test_action_items_are_written_and_reported(tmp_path: Path) -> None:
     [item] = read_action_items(rig.store.paths(rig.session_id))
     assert (item.id, item.description) == ("a1", "Send the budget")
     assert rig.observer.of("action_items_ready") == [(rig.session_id, 1)]
+
+
+def test_an_unreachable_ollama_reports_llm_unreachable_for_the_action_items(
+    tmp_path: Path,
+) -> None:
+    class Unreachable(FakeLanguageModel):
+        def generate(self, system: str, prompt: str, json_schema: dict | None = None) -> str:
+            raise LlmUnreachableError("192.168.0.20", "refused")
+
+    rig = _Rig(tmp_path, action_items_llm=Unreachable())
+
+    rig.finisher.extract_action_items(CancelToken())
+
+    assert rig.observer.of("error") == [
+        ("llm_unreachable", "errors.llm_unreachable.action_items(host=192.168.0.20)")
+    ]
+    assert rig.observer.of("action_items_ready") == []
 
 
 def test_a_failed_extraction_is_reported(tmp_path: Path) -> None:

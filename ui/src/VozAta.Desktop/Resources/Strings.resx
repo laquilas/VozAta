@@ -556,7 +556,7 @@
     <value>Ollama address</value>
   </data>
   <data name="SettingHelp_OLLAMA_URL" xml:space="preserve">
-    <value>Address of the local Ollama server.</value>
+    <value>Address of the Ollama server: this PC or another one on your network.</value>
   </data>
   <data name="Setting_OLLAMA_MODEL" xml:space="preserve">
     <value>Minutes model</value>
@@ -1068,6 +1068,12 @@
   <data name="ConfigNoResults" xml:space="preserve">
     <value>No setting matches the search.</value>
   </data>
+  <data name="ConfigRestoreDefaults" xml:space="preserve">
+    <value>Restore section defaults</value>
+  </data>
+  <data name="ConfigRestoreDefaultsHelp" xml:space="preserve">
+    <value>Puts this section's settings back to their default values. Nothing is saved until you press Save; Discard undoes it. Tokens and keys are kept.</value>
+  </data>
   <data name="ConfigUnsaved" xml:space="preserve">
     <value>You have unsaved changes.</value>
   </data>
@@ -1079,6 +1085,9 @@
   </data>
   <data name="SettingOptionsUnreachable" xml:space="preserve">
     <value>The list could not be read: the service did not answer.</value>
+  </data>
+  <data name="RemoteOllamaNote" xml:space="preserve">
+    <value>Transcripts are sent to {0} to write the minutes.</value>
   </data>
   <data name="SettingInvalidUrl" xml:space="preserve">
     <value>Enter a full address that starts with http:// or https://.</value>

@@ -556,7 +556,7 @@
     <value>Dirección de Ollama</value>
   </data>
   <data name="SettingHelp_OLLAMA_URL" xml:space="preserve">
-    <value>Dirección del servidor Ollama local.</value>
+    <value>Dirección del servidor Ollama: este PC u otro de tu red.</value>
   </data>
   <data name="Setting_OLLAMA_MODEL" xml:space="preserve">
     <value>Modelo del acta</value>
@@ -1068,6 +1068,12 @@
   <data name="ConfigNoResults" xml:space="preserve">
     <value>Ningún ajuste coincide con la búsqueda.</value>
   </data>
+  <data name="ConfigRestoreDefaults" xml:space="preserve">
+    <value>Restaurar valores de la sección</value>
+  </data>
+  <data name="ConfigRestoreDefaultsHelp" xml:space="preserve">
+    <value>Devuelve los ajustes de esta sección a sus valores predeterminados. No se guarda nada hasta que pulses Guardar; Descartar lo deshace. Los tokens y las claves se conservan.</value>
+  </data>
   <data name="ConfigUnsaved" xml:space="preserve">
     <value>Hay cambios sin guardar.</value>
   </data>
@@ -1079,6 +1085,9 @@
   </data>
   <data name="SettingOptionsUnreachable" xml:space="preserve">
     <value>No se pudo leer la lista: el servicio no respondió.</value>
+  </data>
+  <data name="RemoteOllamaNote" xml:space="preserve">
+    <value>Las transcripciones se envían a {0} para escribir el acta.</value>
   </data>
   <data name="SettingInvalidUrl" xml:space="preserve">
     <value>Escribe una dirección completa que empiece por http:// o https://.</value>

@@ -151,7 +151,7 @@ public sealed partial class HistoryViewModel(
     public Task OnProcessingAsync(ProcessingEvent processing) =>
         Detail is { } detail && processing.SessionId == detail.Id ? detail.OnProcessingAsync(processing.Info) : Task.CompletedTask;
 
-    public void OnError(string? sessionId, string message) => Detail?.OnError(sessionId, message);
+    public void OnError(string? sessionId, string code, string message) => Detail?.OnError(sessionId, code, message);
 
     /// <summary>An <c>action_items_ready</c> event (phase 23): reload the open detail's action items.</summary>
     public Task OnActionItemsReadyAsync(string? sessionId) =>

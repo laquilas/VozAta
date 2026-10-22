@@ -149,13 +149,48 @@ public sealed class SessionPageViewModelTests : IDisposable
         await detail.LoadAsync();
         await detail.RegenerateMinutesCommand.ExecuteAsync(null);
 
-        detail.OnError("another-session", "ignored");
+        detail.OnError("another-session", "minutes_failed", "ignored");
         Assert.True(detail.IsBusy);
-        detail.OnError(Id, "Ollama is offline.");
+        detail.OnError(Id, "minutes_failed", "Ollama is offline.");
 
         Assert.False(detail.IsBusy);
         Assert.Equal("Ollama is offline.", detail.Error);
         Assert.True(detail.HasMinutes);  // the old minutes stay
+    }
+
+    [Fact]
+    public async Task An_unreachable_Ollama_is_shown_even_when_nothing_is_regenerating()
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+        Assert.False(detail.IsBusy);
+
+        detail.OnError(Id, "llm_unreachable", "Could not reach Ollama at gpu-box.");
+
+        Assert.Equal("Could not reach Ollama at gpu-box.", detail.Error);
+        Assert.False(detail.IsBusy);
+    }
+
+    [Fact]
+    public async Task Other_errors_are_not_shown_when_nothing_is_regenerating()
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+
+        detail.OnError(Id, "minutes_failed", "The minutes failed.");
+
+        Assert.Null(detail.Error);
+    }
+
+    [Fact]
+    public async Task An_unreachable_Ollama_of_another_meeting_is_ignored()
+    {
+        var detail = Create();
+        await detail.LoadAsync();
+
+        detail.OnError("another-session", "llm_unreachable", "Could not reach Ollama at gpu-box.");
+
+        Assert.Null(detail.Error);
     }
 
     [Fact]

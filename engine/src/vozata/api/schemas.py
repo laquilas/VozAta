@@ -23,9 +23,13 @@ class SttStatus(BaseModel):
 
 
 class LlmStatus(BaseModel):
+    """Phase 43: `remote` is true for an Ollama on another PC, `host` names it (null when local)."""
+
     provider: str
     model: str
     reachable: bool
+    remote: bool = False
+    host: str | None = None
 
 
 class StorageStatus(BaseModel):

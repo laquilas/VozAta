@@ -11,6 +11,7 @@ from enum import StrEnum
 
 from vozata.config import Settings
 from vozata.domain import WhisperDevice
+from vozata.net import remote_llm_host
 from vozata.processing.cancel import CancelToken, StepCancelled
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def gpu_usage(settings: Settings, cuda: bool) -> GpuUsage:
     speakers_on_gpu = settings.diarization_device != WhisperDevice.CPU and cuda
     speakers = wants_speakers and speakers_on_gpu
     live_speakers = settings.live_diarization_enabled and speakers_on_gpu
-    llm = settings.llm_provider == "ollama" and cuda
+    llm = settings.llm_provider == "ollama" and cuda and remote_llm_host(settings) is None
     return GpuUsage(speech=speech, speakers=speakers, llm=llm, live_speakers=live_speakers)
 
 

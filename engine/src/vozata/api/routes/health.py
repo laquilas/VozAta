@@ -11,6 +11,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.schemas import GpuStatus, Health, LlmStatus, StorageStatus, SttStatus
 from vozata.config import Settings
+from vozata.net import remote_llm_host
 from vozata.storage.usage import database_size
 from vozata.transcription.openai_compatible import remote_host
 
@@ -22,6 +23,7 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
     settings = c.settings  # speech-to-text keys apply on restart
     current = c.settings_file.current
     gpu = c.gpu_info()
+    llm_host = remote_llm_host(current)
     return Health(
         version=__version__,
         gpu=GpuStatus(available=gpu.available, name=gpu.name, vram_total_mb=gpu.vram_total_mb),
@@ -30,6 +32,8 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
             provider=current.llm_provider,
             model=current.ollama_model,
             reachable=c.llm_reachable(),
+            remote=llm_host is not None,
+            host=llm_host,
         ),
         storage=_storage(c),
     )
