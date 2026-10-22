@@ -126,7 +126,8 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 ## Out of scope
 
 - Speaker identification on the worker (phase 45), translation on the worker (phase 46).
-- TLS, user accounts, discovering workers automatically, several workers.
+- TLS, user accounts, several workers.
+- The worker's own app (`VozAta Worker.exe`), automatic discovery and pairing (phase 47).
 - Running the whole engine on another PC (capture stays local).
 
 ## Kickoff prompt
@@ -161,3 +162,5 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - The worker keys are `settings_fields` fields (group `worker`) because `config.py` only reads keys
   listed there; `WORKER_HOST` / `WORKER_PORT` matter on the worker PC only (their help says so,
   Task 5). A loopback worker host needs no token; `0.0.0.0` does (stricter than `net.is_local_url`).
+- Phases 47–50 were planned on this branch (user, 2026-10-22): worker app and discovery, minutes so
+  far, minutes of a range, voice commands. Order: finish 44, then 47–50, then 45–46.

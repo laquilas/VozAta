@@ -62,5 +62,6 @@ Translation (phase 46); diarizing the microphone channel.
 
 ## Kickoff prompt
 
-> Start phase 45 (`docs/roadmap/phases/45-worker-speakers.md`) once phase 44 is merged: read its
+> Start phase 45 (`docs/roadmap/phases/45-worker-speakers.md`) once phases 44 and 47–50 are merged
+> (order chosen by the user): read its
 > *Read first* files, write `plans/45-worker-speakers.md`, then implement it task by task.
