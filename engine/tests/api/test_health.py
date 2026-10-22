@@ -21,7 +21,13 @@ def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
         "version": "0.1.0",
         "gpu": {"available": True, "name": "RTX 3050", "vram_total_mb": 6144},
         "stt": {"provider": "faster_whisper", "model": "large-v3-turbo", "device": "auto"},
-        "llm": {"provider": "ollama", "model": "qwen2.5:7b", "reachable": True},
+        "llm": {
+            "provider": "ollama",
+            "model": "qwen2.5:7b",
+            "reachable": True,
+            "remote": False,
+            "host": None,
+        },
         "storage": {
             "backend": "files",
             "database": None,
@@ -79,6 +85,47 @@ def test_a_remote_speech_api_is_named_by_its_host(tmp_path: Path) -> None:
         "model": "whisper-large-v3",
         "device": "api.groq.com",
     }
+
+
+def test_an_ollama_on_another_pc_is_reported_remote_with_its_host(tmp_path: Path) -> None:
+    from vozata.config import Settings
+
+    settings = Settings(output_dir=tmp_path / "recordings", ollama_url="http://192.168.0.20:11434")
+    remote = Api(tmp_path, settings)
+    with remote.client:
+        llm = remote.client.get("/health").json()["llm"]
+
+    assert (llm["remote"], llm["host"]) == (True, "192.168.0.20")
+
+
+def test_health_goes_back_to_local_when_the_url_is_saved_as_localhost(tmp_path: Path) -> None:
+    from vozata.config import Settings
+
+    settings = Settings(output_dir=tmp_path / "recordings", ollama_url="http://192.168.0.20:11434")
+    remote = Api(tmp_path, settings)
+    with remote.client:
+        saved = remote.client.put(
+            "/settings", json={"values": {"OLLAMA_URL": "http://localhost:11434"}}
+        )
+        llm = remote.client.get("/health").json()["llm"]
+
+    assert saved.status_code == 200
+    assert (llm["remote"], llm["host"]) == (False, None)
+
+
+def test_a_remote_url_does_not_matter_when_the_provider_is_not_ollama(tmp_path: Path) -> None:
+    from vozata.config import Settings
+
+    settings = Settings(
+        output_dir=tmp_path / "recordings",
+        llm_provider="fake",
+        ollama_url="http://192.168.0.20:11434",
+    )
+    other = Api(tmp_path, settings)
+    with other.client:
+        llm = other.client.get("/health").json()["llm"]
+
+    assert (llm["remote"], llm["host"]) == (False, None)
 
 
 def test_health_without_gpu_or_llm(api: Api) -> None:

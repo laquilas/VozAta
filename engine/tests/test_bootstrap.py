@@ -434,6 +434,48 @@ def test_the_api_container_shares_the_transcriber_when_keep_loaded(
     assert shared.loaded and not shared._unload
 
 
+@pytest.mark.parametrize(
+    ("url", "unloaded"),
+    [("http://localhost:11434", True), ("http://192.168.0.20:11434", False)],
+)
+def test_whisper_is_freed_for_a_local_ollama_but_kept_for_a_remote_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, url: str, unloaded: bool
+) -> None:
+    from vozata.api.session_manager import StartOptions
+
+    fakes: list[FakeTranscriber] = []
+    monkeypatch.setitem(
+        bootstrap.TRANSCRIBERS,
+        "fake",
+        lambda settings, downloader: fakes.append(FakeTranscriber()) or fakes[-1],
+    )
+    monkeypatch.setitem(bootstrap.LANGUAGE_MODELS, "ollama", lambda settings: FakeLanguageModel())
+    shared_seen: list[object] = []
+    monkeypatch.setattr(
+        bootstrap,
+        "build_session",
+        lambda settings, observer, **kwargs: shared_seen.append(kwargs["shared"]),
+    )
+    settings = _settings(
+        tmp_path,
+        stt_provider="fake",
+        llm_provider="ollama",
+        ollama_url=url,
+        whisper_keep_loaded=True,
+    )
+
+    container = bootstrap.build_api_container(settings)
+    container.manager._factory(FakeSessionObserver(), StartOptions())
+    [shared] = shared_seen
+    assert isinstance(shared, SharedTranscriber)
+    shared.lease(keep=True).close()  # an idle, kept Whisper
+
+    container.regenerate_minutes._build_generator()
+
+    assert (not shared.loaded) is unloaded
+    assert fakes[0].closed is unloaded
+
+
 def test_without_keep_loaded_sessions_load_their_own_transcriber(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -111,13 +111,12 @@ parity.
 - **Branch:** `feature/43-remote-ollama`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 1 of `plans/43-remote-ollama.md` (`net.py`, GPU gate, Whisper release,
-  `/health` `llm.remote`).
+- **Next step:** Task 2 of `plans/43-remote-ollama.md` (fail fast with `llm_unreachable`).
 
 ### Steps
 
 - [x] Implementation plan (`plans/43-remote-ollama.md`)
-- [ ] Local or remote: helper, GPU gate, Whisper release, `/health`
+- [x] Local or remote: helper, GPU gate, Whisper release, `/health`
 - [ ] Fail fast when the Ollama PC is unreachable (`llm_unreachable`)
 - [ ] UI: remote note on the Config page, unreachable message on the meeting page
 - [x] Guide written (`docs/remote-ollama.md`, linked from `docs/INSTALL.md`)

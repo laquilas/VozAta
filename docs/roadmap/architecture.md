@@ -403,7 +403,7 @@ step or job; the meeting stays `finalizing` and the next start resumes it.
 
 **GPU gate** (phase 40, `processing/gpu_gate.py`, one per engine, built in `bootstrap.py`):
 `gpu_usage(settings, cuda)` says which model families run on the local GPU (speech: faster-whisper
-not on CPU; speakers: pyannote not on CPU; LLM: Ollama); without CUDA nothing is gated. Priority:
+not on CPU; speakers: pyannote not on CPU; LLM: Ollama on this PC; an Ollama on another PC (43, `net.py`: `OLLAMA_URL` is not loopback) is not local GPU work, and Whisper is not unloaded before it); without CUDA nothing is gated. Priority:
 live recording > Ask > Config tests > queue. A live session takes `gate.priority(LIVE)` on the
 model-load thread before a live model that runs on the local GPU loads (`LiveGpuLease`: the speech
 model when `usage.speech`, the live speaker embedder when `usage.live_speakers`, i.e.

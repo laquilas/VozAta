@@ -200,5 +200,28 @@ def test_gpu_usage_llm(provider, cuda, expected):
     assert gpu_usage(_settings(llm_provider=provider), cuda=cuda).llm is expected
 
 
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("http://localhost:11434", True),
+        ("http://127.0.0.1:11434", True),
+        ("http://192.168.0.20:11434", False),
+        ("gpu-box:11434", False),
+    ],
+)
+def test_gpu_usage_remote_ollama_is_not_local_gpu_work(url, expected):
+    settings = _settings(llm_provider="ollama", ollama_url=url)
+
+    assert gpu_usage(settings, cuda=True).llm is expected
+
+
+def test_gpu_usage_remote_ollama_leaves_the_speech_model_on_the_gpu():
+    settings = _settings(llm_provider="ollama", ollama_url="http://192.168.0.20:11434")
+
+    usage = gpu_usage(settings, cuda=True)
+
+    assert usage.speech is True and usage.llm is False
+
+
 def test_gpu_usage_is_a_frozen_value():
     assert GpuUsage(speech=True, speakers=False, llm=False) == GpuUsage(True, False, False)
