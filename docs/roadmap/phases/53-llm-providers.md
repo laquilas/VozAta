@@ -73,9 +73,9 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - **Branch:** `feature/53-llm-providers`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 6: `docs/language-models.md` (from `remote-ollama.md`), architecture §9 keys,
-  api-contract (`/settings/test` targets, `/health.llm`), `.env.example`, `engine.spec` hidden
-  import `anthropic`.
+- **Next step:** task 7: full suites, then the manual check: a scratch engine with
+  `LLM_PROVIDER=openai_compatible`, `OPENAI_LLM_URL=http://localhost:11434/v1` (Ollama's own OpenAI
+  API, `qwen2.5:7b`), the Config test and minutes of an imported meeting; Anthropic without a key.
 
 ### Steps
 
@@ -85,7 +85,7 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - [x] Anthropic provider (official SDK)
 - [x] Config tests for both providers
 - [x] UI: labels, tests, provider-neutral texts
-- [ ] Docs and packaging
+- [x] Docs and packaging
 - [ ] Full suites, manual check, phase done
 
 ### Decisions and notes
