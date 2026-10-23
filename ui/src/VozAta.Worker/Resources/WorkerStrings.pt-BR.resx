@@ -99,4 +99,28 @@
   <data name="WorkerTag_Failed" xml:space="preserve">
     <value>Erro</value>
   </data>
+  <data name="WorkerTasks" xml:space="preserve">
+    <value>Tarefas para os outros PCs</value>
+  </data>
+  <data name="WorkerTask_speech" xml:space="preserve">
+    <value>Reconhecimento de fala</value>
+  </data>
+  <data name="WorkerTask_speakers" xml:space="preserve">
+    <value>Identificação de locutores</value>
+  </data>
+  <data name="WorkerTask_translation" xml:space="preserve">
+    <value>Tradução</value>
+  </data>
+  <data name="WorkerTaskOffered" xml:space="preserve">
+    <value>Oferecido</value>
+  </data>
+  <data name="WorkerTaskNeedsToken" xml:space="preserve">
+    <value>Precisa de um token do Hugging Face: adicione HF_TOKEN=… em {0} e pare e inicie o worker.</value>
+  </data>
+  <data name="WorkerTaskNotInEdition" xml:space="preserve">
+    <value>Não incluído nesta instalação: instale neste PC a edição do VozAta com locutores.</value>
+  </data>
+  <data name="WorkerTaskNotOffered" xml:space="preserve">
+    <value>Não oferecido</value>
+  </data>
 </root>

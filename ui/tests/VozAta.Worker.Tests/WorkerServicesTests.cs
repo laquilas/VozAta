@@ -71,7 +71,7 @@ public sealed class WorkerServicesTests
                 {"version": "0.9.0", "id": "4f1c", "name": "GPU-PC", "port": 8766,
                  "addresses": ["192.168.0.20"], "token": "t0k", "pairing_code": "123456",
                  "code_expires_in": 300, "gpu": {"available": true, "name": "RTX 4070", "vram_total_mb": 12282},
-                 "models": []}
+                 "models": [], "tasks": [{"name": "speakers", "available": false, "reason": "missing_hf_token"}]}
                 """),
         });
 
@@ -80,6 +80,7 @@ public sealed class WorkerServicesTests
         Assert.Equal("http://127.0.0.1:8766/local/status", handler.Uri?.ToString());
         Assert.Equal(("GPU-PC", "123456", 300, "RTX 4070"), (status!.Name, status.PairingCode, status.CodeExpiresIn, status.Gpu.Name));
         Assert.Equal(["192.168.0.20"], status.Addresses);
+        Assert.Equal([new WorkerTaskStatus("speakers", false, "missing_hf_token")], status.Tasks);
     }
 
     [Fact]

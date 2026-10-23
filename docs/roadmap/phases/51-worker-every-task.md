@@ -118,9 +118,9 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - **Branch:** `feature/51-worker-every-task`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 4 of the plan: `engine.spec` collects sentencepiece always and torch /
-  pyannote with `SPEAKERS=1`; `build.ps1 -Speakers`, smoke test on `worker --check --json`;
-  `installer.iss` edition suffix.
+- **Next step:** finish task 4 (packaging): check the CPU-only build in the scratchpad (`worker
+  --check --json` offers translation, `-m vozata --version` runs), then commit `engine.spec` /
+  `build.ps1` / `installer.iss`.
 
 ### Steps
 
@@ -129,7 +129,7 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - [x] `worker --check` lists the tasks (`--json` for the build)
 - [x] Frozen engine runs `-m <module>` (packaged child processes)
 - [ ] Packaging: translation in every build, `-Speakers` edition
-- [ ] Worker app: Tasks card
+- [x] Worker app: Tasks card
 - [ ] Docs
 - [ ] Full suites, manual check, phase done
 
@@ -142,3 +142,5 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - The packaged engine could never run speakers: the pyannote children start `sys.executable -m ...`
   and `vozata-engine.exe` did not understand `-m`. `engine_main.py` now runs it through
   `vozata.frozen.run_module_args`.
+- The worker app shows the Tasks card only when the worker sends `tasks` (an older worker: no card).
+  The `.env` named in the HF_TOKEN hint is the one next to `worker.log`.

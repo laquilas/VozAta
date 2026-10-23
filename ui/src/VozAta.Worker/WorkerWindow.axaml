@@ -73,6 +73,24 @@
         </Grid>
       </Border>
 
+      <!-- Phase 51: what the other PCs can send here, and why a task is missing -->
+      <Border Classes="card" IsVisible="{Binding HasTasks}">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="caption secondary" Text="{Binding T[WorkerTasks]}" />
+          <ItemsControl ItemsSource="{Binding Tasks}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WorkerTaskRow">
+                <Grid ColumnDefinitions="150,*" Margin="0,4">
+                  <TextBlock Text="{Binding Name}" Classes.secondary="{Binding !Offered}" TextWrapping="Wrap" />
+                  <SelectableTextBlock Grid.Column="1" Text="{Binding Detail}" Classes.secondary="{Binding !Offered}"
+                                       TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
       <!-- Setup on this PC -->
       <Border Classes="card">
         <StackPanel Spacing="12">

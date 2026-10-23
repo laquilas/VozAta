@@ -6,6 +6,12 @@ namespace VozAta.Worker.Services;
 
 public sealed record WorkerGpu(bool Available, string? Name);
 
+/// <summary>
+/// A task of the worker (phase 51): <c>speech</c>, <c>speakers</c> or <c>translation</c>; when it is
+/// not offered, <c>Reason</c> is <c>missing_extra</c>, <c>missing_hf_token</c> or null (unknown).
+/// </summary>
+public sealed record WorkerTaskStatus(string Name, bool Available, string? Reason);
+
 /// <summary>The worker's <c>GET /local/status</c> (phase 47), answered to this PC only.</summary>
 public sealed record LocalStatus(
     string Version,
@@ -17,7 +23,8 @@ public sealed record LocalStatus(
     string? PairingCode,
     int? CodeExpiresIn,
     WorkerGpu Gpu,
-    IReadOnlyList<string> Models);
+    IReadOnlyList<string> Models,
+    IReadOnlyList<WorkerTaskStatus>? Tasks = null);
 
 public interface IWorkerStatusClient
 {
