@@ -55,7 +55,7 @@ def test_version_flag_prints_the_version(capsys) -> None:
         cli.main(["--version"], env={})
 
     assert exit_.value.code == 0
-    assert capsys.readouterr().out.strip() == "0.2.1"
+    assert capsys.readouterr().out.strip() == "0.3.1"
 
 
 def test_record_runs_with_the_parsed_options(monkeypatch: pytest.MonkeyPatch) -> None:
