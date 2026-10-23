@@ -135,6 +135,9 @@ public interface IEngineClient
     /// <summary><c>GET /sessions/{id}/partial-minutes</c> (phase 48).</summary>
     Task<PartialMinutesList> GetPartialMinutesAsync(string sessionId, CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /sessions/{id}/requests</c> (phase 59): the meeting's request history.</summary>
+    Task<RequestList> GetRequestsAsync(string sessionId, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /sessions/{id}/partial-minutes/{pid}</c> (phase 48).</summary>
     Task<PartialMinutesDetail> GetPartialMinutesItemAsync(
         string sessionId, string partialId, CancellationToken cancellationToken = default);
@@ -368,6 +371,9 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<PartialMinutesList> GetPartialMinutesAsync(string sessionId, CancellationToken cancellationToken = default) =>
         SendAsync<PartialMinutesList>(HttpMethod.Get, $"sessions/{Escape(sessionId)}/partial-minutes", null, cancellationToken);
+
+    public Task<RequestList> GetRequestsAsync(string sessionId, CancellationToken cancellationToken = default) =>
+        SendAsync<RequestList>(HttpMethod.Get, $"sessions/{Escape(sessionId)}/requests", null, cancellationToken);
 
     public Task<PartialMinutesDetail> GetPartialMinutesItemAsync(
         string sessionId, string partialId, CancellationToken cancellationToken = default) =>
