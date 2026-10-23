@@ -96,13 +96,13 @@ Free-form questions after the wake word, speech synthesis, commands that control
 - **Branch:** `feature/50-voice-commands`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 1 of `plans/50-voice-commands.md` (matcher, command store, settings,
-  `/voice-commands`).
+- **Next step:** Task 2 of `plans/50-voice-commands.md` (detector, session wiring, dispatch,
+  minutes action, hints, prompt filtering).
 
 ### Steps
 
 - [x] Implementation plan (`plans/50-voice-commands.md`)
-- [ ] Matcher, command list, settings, `/voice-commands`
+- [x] Matcher, command list, settings, `/voice-commands`
 - [ ] Detector, session wiring, dispatch, minutes action, hints, prompt filtering
 - [ ] Voice question over the meeting so far
 - [ ] Desktop: Config block, recorder panels

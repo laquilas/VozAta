@@ -29,6 +29,9 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+voice_command_busy = "Voice commands are being processed already; try again in a moment."
+invalid_voice_commands = "The voice command list cannot be saved: {reason}."
+voice_commands_failed = "The voice command list could not be read or saved ({reason})."
 range_beyond_end = "The meeting lasts {length}: the part must end by then."
 empty_range = "Nothing was said in that part of the meeting, so there is nothing to summarize."
 partial_minutes_failed = "The partial minutes could not be written ({reason}). Check that Ollama is running and the model is pulled."
@@ -278,3 +281,10 @@ fallback = "The VozAta worker at {host} did not answer: {task} runs on this PC."
 speech = "speech recognition"
 speakers = "speaker identification"
 translation = "translation"
+
+[voice_commands]
+minutes_phrase = "make the minutes"
+decided_phrase = "what was decided"
+decided_question = "What was decided so far in this meeting?"
+next_phrase = "what are the next steps"
+next_question = "What are the next steps agreed so far, and who does each?"

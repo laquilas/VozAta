@@ -118,6 +118,10 @@ class Settings:
     echo_hold_seconds: float | None = None  # None: CHUNK_SECONDS + 3
     # Custom vocabulary (phase 19)
     vocabulary_file: Path | None = None  # None: `vocabulary.txt` next to `.env`
+    # phase 50: voice commands while recording
+    voice_commands_enabled: bool = True
+    wake_word: str = "VozAta"
+    voice_commands_file: Path | None = None  # None: `voice_commands.json` next to `.env`
     context_prompt_chars: int = 200  # rolling context prompt length, 0 = off
     # Editable transcript (phase 21)
     low_confidence_threshold: float = 0.5
@@ -240,6 +244,11 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         echo_similarity=_number(raw, "ECHO_SIMILARITY", 0.85, minimum=0.5, maximum=1),
         echo_hold_seconds=_optional_number(raw, "ECHO_HOLD_SECONDS", minimum=1, maximum=60),
         vocabulary_file=Path(raw["VOCABULARY_FILE"]) if "VOCABULARY_FILE" in raw else None,
+        voice_commands_enabled=_flag(raw, "VOICE_COMMANDS_ENABLED", True),
+        wake_word=raw.get("WAKE_WORD", "VozAta").strip() or "VozAta",
+        voice_commands_file=(
+            Path(raw["VOICE_COMMANDS_FILE"]) if "VOICE_COMMANDS_FILE" in raw else None
+        ),
         context_prompt_chars=_integer(raw, "CONTEXT_PROMPT_CHARS", 200, minimum=0, maximum=1000),
         low_confidence_threshold=_number(
             raw, "LOW_CONFIDENCE_THRESHOLD", 0.5, minimum=0, maximum=1

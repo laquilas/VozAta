@@ -237,6 +237,25 @@ class SearchResults(BaseModel):
     hits: list[SearchHitModel]
 
 
+class VoiceCommandOut(BaseModel):
+    """Phase 50: `action` is `minutes` or `ask` (`question` then required)."""
+
+    phrase: str
+    action: str
+    question: str | None = None
+
+
+class VoiceCommandsBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    commands: list[VoiceCommandOut]
+
+
+class VoiceCommandsView(BaseModel):
+    commands: list[VoiceCommandOut]
+    defaults: list[VoiceCommandOut]
+
+
 class PartialMinutesRequest(BaseModel):
     """Phase 48: seconds since the meeting start; `end` None is up to the transcript's end."""
 

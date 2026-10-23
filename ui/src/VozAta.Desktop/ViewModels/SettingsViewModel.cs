@@ -56,7 +56,7 @@ public sealed partial class SettingsViewModel(
     IEngineClient client, IEngineProcess process, ILocalizationService localization, IPathPicker? paths = null)
     : ObservableObject
 {
-    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "api"];
+    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "voice", "api"];
 
     /// <summary>The key each service check sits next to (phase 38).</summary>
     /// <summary>The keys a worker pairing saves (phase 47).</summary>

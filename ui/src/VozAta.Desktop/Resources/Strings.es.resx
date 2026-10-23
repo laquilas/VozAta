@@ -1494,4 +1494,25 @@
   <data name="RangeEndHere" xml:space="preserve">
     <value>Terminar el tramo aquí</value>
   </data>
+  <data name="SettingsGroup_voice" xml:space="preserve">
+    <value>Comandos de voz</value>
+  </data>
+  <data name="Setting_VOICE_COMMANDS_ENABLED" xml:space="preserve">
+    <value>Comandos de voz</value>
+  </data>
+  <data name="SettingHelp_VOICE_COMMANDS_ENABLED" xml:space="preserve">
+    <value>Durante la grabación, decir la palabra de activación y una frase en tu micrófono ejecuta un comando (acta hasta ahora, una pregunta sobre la reunión). El sonido de los altavoces nunca lo hace.</value>
+  </data>
+  <data name="Setting_WAKE_WORD" xml:space="preserve">
+    <value>Palabra de activación</value>
+  </data>
+  <data name="SettingHelp_WAKE_WORD" xml:space="preserve">
+    <value>La palabra que inicia un comando, por ejemplo "VozAta, genera el acta". Funciona mejor una palabra que nadie diga por casualidad.</value>
+  </data>
+  <data name="Setting_VOICE_COMMANDS_FILE" xml:space="preserve">
+    <value>Archivo de comandos de voz</value>
+  </data>
+  <data name="SettingHelp_VOICE_COMMANDS_FILE" xml:space="preserve">
+    <value>Dónde se guardan las frases de abajo. Vacío: voice_commands.json junto a la configuración.</value>
+  </data>
 </root>

@@ -29,6 +29,9 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+voice_command_busy = "Ya se está atendiendo un comando de voz; inténtalo de nuevo en un momento."
+invalid_voice_commands = "La lista de comandos de voz no se puede guardar: {reason}."
+voice_commands_failed = "No se pudo leer ni guardar la lista de comandos de voz ({reason})."
 range_beyond_end = "La reunión dura {length}: el tramo debe terminar antes."
 empty_range = "No se dijo nada en ese tramo de la reunión, así que no hay nada que resumir."
 partial_minutes_failed = "No se pudo escribir el acta parcial ({reason}). Comprueba que Ollama está en marcha y el modelo descargado."
@@ -278,3 +281,10 @@ fallback = "El worker de VozAta en {host} no respondió: {task} se ejecuta en es
 speech = "el reconocimiento de voz"
 speakers = "la identificación de hablantes"
 translation = "la traducción"
+
+[voice_commands]
+minutes_phrase = "genera el acta"
+decided_phrase = "qué se decidió"
+decided_question = "¿Qué se decidió hasta ahora en esta reunión?"
+next_phrase = "cuáles son los próximos pasos"
+next_question = "¿Cuáles son los próximos pasos acordados hasta ahora y quién hace cada uno?"

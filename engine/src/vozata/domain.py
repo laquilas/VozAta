@@ -374,6 +374,27 @@ class PartialMinutes:
 
 
 @dataclass(frozen=True)
+class VoiceCommand:
+    """A phrase said after the wake word while recording (phase 50) and what it does: `minutes`
+    (minutes so far) or `ask` (`question` over the meeting so far)."""
+
+    phrase: str
+    action: str  # "minutes" | "ask"
+    question: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"phrase": self.phrase, "action": self.action, "question": self.question}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> VoiceCommand:
+        return cls(
+            phrase=str(data["phrase"]),
+            action=str(data["action"]),
+            question=optional_text(data.get("question")),
+        )
+
+
+@dataclass(frozen=True)
 class ImportedSession:
     """A meeting ZIP read back (phase 39): a new session, or the audio of a kept one."""
 

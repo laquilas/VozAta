@@ -1494,4 +1494,25 @@
   <data name="RangeEndHere" xml:space="preserve">
     <value>End the part here</value>
   </data>
+  <data name="SettingsGroup_voice" xml:space="preserve">
+    <value>Voice commands</value>
+  </data>
+  <data name="Setting_VOICE_COMMANDS_ENABLED" xml:space="preserve">
+    <value>Voice commands</value>
+  </data>
+  <data name="SettingHelp_VOICE_COMMANDS_ENABLED" xml:space="preserve">
+    <value>While recording, saying the wake word and a phrase into your microphone runs a command (minutes so far, a question about the meeting). Speech from the speakers never does.</value>
+  </data>
+  <data name="Setting_WAKE_WORD" xml:space="preserve">
+    <value>Wake word</value>
+  </data>
+  <data name="SettingHelp_WAKE_WORD" xml:space="preserve">
+    <value>The word that starts a command, e.g. "VozAta, make the minutes". A word nobody says by chance works best.</value>
+  </data>
+  <data name="Setting_VOICE_COMMANDS_FILE" xml:space="preserve">
+    <value>Voice command file</value>
+  </data>
+  <data name="SettingHelp_VOICE_COMMANDS_FILE" xml:space="preserve">
+    <value>Where the phrases below are saved. Empty: voice_commands.json next to the settings.</value>
+  </data>
 </root>

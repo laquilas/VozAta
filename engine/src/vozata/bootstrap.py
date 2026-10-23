@@ -134,6 +134,7 @@ from vozata.worker_client.status import worker_status
 from vozata.worker_client.transcriber import WorkerTranscriber
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
+DEFAULT_VOICE_COMMANDS_FILE = "voice_commands.json"  # phase 50, next to `.env` as well
 AUDIO_CACHE_DIR = "cache"  # in `OUTPUT_DIR` (phase 32)
 
 _log = logging.getLogger(__name__)
@@ -523,6 +524,13 @@ def vocabulary_path(settings: Settings, env_file: Path | None = None) -> Path:
     if settings.vocabulary_file is not None:
         return settings.vocabulary_file
     return (env_file or Path(".env")).parent / DEFAULT_VOCABULARY_FILE
+
+
+def voice_commands_path(settings: Settings, env_file: Path | None = None) -> Path:
+    """`VOICE_COMMANDS_FILE`, else `voice_commands.json` next to the `.env` file (phase 50)."""
+    if settings.voice_commands_file is not None:
+        return settings.voice_commands_file
+    return (env_file or Path(".env")).parent / DEFAULT_VOICE_COMMANDS_FILE
 
 
 def session_vocabulary(
@@ -1078,6 +1086,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         exporters={name: build() for name, build in EXPORTERS.items()},
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
+        voice_commands_file=lambda: voice_commands_path(settings_file.current, env_file),
         ask=AskJob(answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu),
         partial_minutes=PartialMinutesJob(
             minutes_generator,
