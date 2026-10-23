@@ -47,10 +47,10 @@ an **OpenAI-compatible** chat server (LM Studio, vLLM, llama.cpp server, OpenAI 
 
 ## Acceptance criteria
 
-- [ ] With `LLM_PROVIDER=openai_compatible` and LM Studio / llama.cpp serving a model, minutes,
+- [x] With `LLM_PROVIDER=openai_compatible` and LM Studio / llama.cpp serving a model, minutes,
       action items and Ask work; the Config Test says ok.
-- [ ] With `LLM_PROVIDER=anthropic` and a key, the same; without a key the Test says what is missing.
-- [ ] The sidebar / Config show that the transcript leaves the PC for a remote provider.
+- [x] With `LLM_PROVIDER=anthropic` and a key, the same; without a key the Test says what is missing.
+- [x] The sidebar / Config show that the transcript leaves the PC for a remote provider.
 
 ## Tests
 
@@ -71,11 +71,10 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 ## Progress
 
 - **Branch:** `feature/53-llm-providers`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23
-- **Next step:** task 7: full suites, then the manual check: a scratch engine with
-  `LLM_PROVIDER=openai_compatible`, `OPENAI_LLM_URL=http://localhost:11434/v1` (Ollama's own OpenAI
-  API, `qwen2.5:7b`), the Config test and minutes of an imported meeting; Anthropic without a key.
+- **Next step:** open the PR to `main`; then phase 54
+  (`docs/roadmap/phases/54-meeting-detection.md`).
 
 ### Steps
 
@@ -86,7 +85,7 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - [x] Config tests for both providers
 - [x] UI: labels, tests, provider-neutral texts
 - [x] Docs and packaging
-- [ ] Full suites, manual check, phase done
+- [x] Full suites, manual check, phase done
 
 ### Decisions and notes
 
@@ -108,3 +107,13 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - The sidebar keeps "start Ollama" for Ollama and says "check the language model in Config" for the
   other providers. The remote note (phase 43) now also shows for a non-local `OPENAI_LLM_URL` and
   always next to `ANTHROPIC_API_KEY`.
+- Manual check (2026-10-23): with the real engine modules and `LLM_PROVIDER=openai_compatible` on
+  Ollama's own OpenAI API (`http://localhost:11434/v1`, model left empty so the first listed one was
+  used): a stream, pt-BR minutes of a six-line meeting in 18 s (decision, owners and the open
+  question right) and two action items as JSON (Carlos, Ana) in 10 s. A scratch engine (own folder,
+  `.env`, port): `/health.llm` `{openai_compatible, qwen2.5:7b, reachable, remote false}`; Config
+  test ok, a wrong model got the localized "does not serve" message; `anthropic` without a key "Fill
+  in and save ANTHROPIC_API_KEY"; with `LLM_PROVIDER=anthropic` `/health.llm` remote
+  `api.anthropic.com`. Engine 2565 tests (99.4 %), UI 918 + 25, ruff / dotnet format clean. Not
+  checked: a real Claude call (needs the user's API key, billed), LM Studio / vLLM themselves, the
+  Config page in the running app.
