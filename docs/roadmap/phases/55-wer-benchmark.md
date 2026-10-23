@@ -60,13 +60,14 @@ Speaker-attributed WER (cpWER), downloading public corpora, CI runs.
 - **Branch:** `feature/55-wer-benchmark`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** failing tests in `engine/tests/scripts/test_wer_benchmark.py` for `normalize`,
-  `align`, `wer`, `parse_grid` and `render`.
+- **Next step:** task 3: `scripts/wer_runtime.py` (`OfflineTranscription` over an in-memory session:
+  the WAV as mic, silence as system, no echo dedupe) and `scripts/make_tts_reference.ps1`;
+  `benchmarks/results/` git-ignored.
 
 ### Steps
 
 - [x] Implementation plan (`plans/55-wer-benchmark.md`)
-- [ ] Pure parts: normalization, alignment, WER, grid, report
+- [x] Pure parts: normalization, alignment, WER, grid, report
 - [ ] Runtime (offline transcription of a WAV) and the TTS reference
 - [ ] First benchmark run, defaults kept or changed
 - [ ] Docs, full suites, phase done
