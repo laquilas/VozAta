@@ -49,7 +49,8 @@ different port, its own settings, and a token on every request.
 
 ## Speakers (phase 45)
 
-Only on a worker whose `.env` has `HF_TOKEN` (the pyannote models); otherwise these routes answer
+Only on a worker with the `diarization` extra (the speakers edition, phase 51) whose `.env` has
+`HF_TOKEN` (the pyannote models); otherwise these routes answer
 `503 worker_speakers_unavailable` and `/health` lists only `speech`.
 
 | Method | Path | Body | Response |
@@ -82,7 +83,7 @@ These two need no token; `/health` and `/transcribe` still do.
 | Method | Path | Body | Response |
 |--------|------|------|----------|
 | POST | `/pair` | `{code}` | `{token, id, name}` when `code` is the 6-digit code shown in VozAta Worker (valid 5 minutes, replaced once used); wrong code `403 worker_pairing_refused`; after 5 wrong codes `423 worker_pairing_locked` for 60 s (and a new code); a worker without a token (loopback) `409 worker_no_token` |
-| GET | `/local/status` | — | for VozAta Worker on the same PC only (a non-loopback client gets `403 worker_local_only`): `{version, id, name, port, addresses: [ipv4], token, pairing_code, code_expires_in, gpu: {available, name, vram_total_mb}, models}`; `token`, `pairing_code` and `code_expires_in` are null for a loopback worker |
+| GET | `/local/status` | — | for VozAta Worker on the same PC only (a non-loopback client gets `403 worker_local_only`): `{version, id, name, port, addresses: [ipv4], token, pairing_code, code_expires_in, gpu: {available, name, vram_total_mb}, models, tasks: [{name, available, reason}]}`; `token`, `pairing_code` and `code_expires_in` are null for a loopback worker; `tasks` (phase 51) lists `speech`, `speakers`, `translation` with `reason` `missing_extra` (not in this edition / extra not installed), `missing_hf_token` (speakers) or null |
 
 ## Discovery (phase 47, UDP)
 

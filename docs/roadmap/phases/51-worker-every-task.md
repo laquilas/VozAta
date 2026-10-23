@@ -130,7 +130,7 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - [x] Frozen engine runs `-m <module>` (packaged child processes)
 - [ ] Packaging: translation in every build, `-Speakers` edition
 - [x] Worker app: Tasks card
-- [ ] Docs
+- [x] Docs
 - [ ] Full suites, manual check, phase done
 
 ### Decisions and notes

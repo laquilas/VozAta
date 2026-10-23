@@ -18,13 +18,28 @@ stops because of the worker.
 The language model (minutes, action items, Ask) can move to another PC too, with Ollama: see
 [Using Ollama on another PC](remote-ollama.md). The same GPU PC can run both.
 
+## Editions
+
+VozAta comes in two installers; either works on either PC:
+
+| Installer | Speech recognition | Live translation | Speaker identification |
+|-----------|--------------------|------------------|------------------------|
+| `VozAta-Setup-<version>.exe` | yes | yes | no |
+| `VozAta-Setup-<version>-speakers.exe` | yes | yes | yes (about 3 GB larger: pyannote and torch) |
+
+For a worker that should also identify the speakers, install the **speakers edition** on the GPU
+PC. VozAta Worker lists under **Tasks for the other PCs** what it offers and, for a task it does
+not offer, why: not in this edition, or no Hugging Face token (`HF_TOKEN`, see below).
+
 ## On the GPU PC
 
-1. Install VozAta on the GPU PC (the same installer).
+1. Install VozAta on the GPU PC (the speakers edition for speaker identification, see
+   [Editions](#editions)).
 2. Open **VozAta Worker** from the Start menu. It starts the worker and shows:
    - its state (the first start downloads the speech model, `WHISPER_MODEL`, which takes a while);
    - the **pairing code** (6 digits, a new one every 5 minutes);
-   - this PC's addresses, its GPU, the loaded model and the token.
+   - this PC's addresses, its GPU, the loaded model and the token;
+   - the tasks it offers to the other PCs, and why one is missing.
 3. Press **Allow on the network** once. It asks for administrator rights and adds two firewall
    rules for the **Private** network profile only: TCP 8766 (the worker) and UDP 8767 (so other
    PCs can find it).
@@ -68,13 +83,15 @@ a fixed address (a DHCP reservation in your router).
 ### Command line
 
 The worker is `vozata-engine.exe worker` in the `engine` folder of VozAta (`python -m vozata
-worker` from the sources); `vozata-engine.exe worker --check` prints the version and the address
-without starting anything. The first start prints the token once.
+worker` from the sources); `vozata-engine.exe worker --check` prints the version, the address and
+the tasks offered (with the reason for a missing one) without starting anything; add `--json`
+for a script. The first start prints the token once.
 
 ## Speaker identification on the worker
 
 The worker can also identify the speakers (pyannote): after a meeting, and live when live speaker
-labels are on.
+labels are on. It needs the **speakers edition** of VozAta on the GPU PC (or the
+`diarization` extra, `pip install -e ".[diarization]"`, when it runs from the sources).
 
 1. On the GPU PC, put your Hugging Face token in `%APPDATA%\VozAta\worker\.env` as
    `HF_TOKEN=...` (the same token and model terms as on this PC) and restart VozAta Worker.
@@ -87,9 +104,9 @@ When the worker does not answer, a notification says "speaker identification run
 ## Live translation on the worker
 
 Tick **Live translation** under **Use the worker for**. The worker translates each line with
-opus-mt (on its CPU, about 300 MB of memory); it needs the `translation` extra there
-(`pip install -e ".[translation]"` when it runs from the sources). A worker without it does not
-offer translation, and this PC translates instead.
+opus-mt (on its CPU, about 300 MB of memory). Both editions include it; a worker run from the
+sources needs the `translation` extra (`pip install -e ".[translation]"`). A worker without it
+does not offer translation, and this PC translates instead.
 
 ## VRAM on the GPU PC
 
@@ -114,5 +131,6 @@ so Ollama frees its memory after each job.
 | **Pair** says the code was refused | Type the code shown **now** in VozAta Worker (it changes every 5 minutes). After 5 wrong codes, wait a minute. |
 | A notification says the worker did not answer, and transcription runs on this PC | The worker is not running or cannot be reached. Open VozAta Worker on the GPU PC and press **Test** here. |
 | **Test** says the token was refused | Pair again, or copy the token shown in VozAta Worker into **Worker token**. |
+| Speaker identification runs on this PC although the worker is on | Look at **Tasks for the other PCs** in VozAta Worker: "Not included in this installation" needs the speakers edition; "Needs a Hugging Face token" needs `HF_TOKEN` in the worker's `.env` and a restart of the worker. |
 | VozAta Worker says the worker stopped | Open `worker.log` (the path is in the message): a model download failed, or the port is used by another program (`WORKER_PORT`). |
 | Transcription is slow on the worker | The GPU PC has no working CUDA and runs on its CPU (`WHISPER_CPU_MODEL`); VozAta Worker and the **Test** message say so. |
