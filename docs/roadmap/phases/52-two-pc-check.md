@@ -73,3 +73,27 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 
 > Start phase 52 (`docs/roadmap/phases/52-two-pc-check.md`) once phase 51 is merged: read its
 > *Read first* files, write `plans/52-two-pc-check.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/52-two-pc-check`
+- **Status:** in progress
+- **Updated:** 2026-10-23
+- **Next step:** failing tests in `engine/tests/scripts/test_two_pc_check.py` for the scratch
+  `.env`, the synthetic WAV, the table and the discover / pair / health steps.
+
+### Steps
+
+- [x] Implementation plan (`plans/52-two-pc-check.md`)
+- [ ] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
+- [ ] Script: translate, diarize + cancel, pre-emption
+- [ ] Script runtime: scratch engine process, playback, command line
+- [ ] Checklist `docs/two-pc-check.md`
+- [ ] Full suites, one recorded run, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- A diarize step that runs on the worker is pre-empted by a recording only when the client PC has
+  CUDA (`gpu_gate.speakers_fallback`: its fallback would run pyannote on this GPU); the script
+  expects `paused` with CUDA and `running` without it.
