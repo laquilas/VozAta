@@ -51,7 +51,7 @@ public sealed partial class SettingsViewModel(
     IEngineClient client, IEngineProcess process, ILocalizationService localization, IPathPicker? paths = null)
     : ObservableObject
 {
-    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "api"];
+    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "api"];
 
     /// <summary>The key each service check sits next to (phase 38).</summary>
     private static readonly Dictionary<string, string> TestAnchors = new()
@@ -61,6 +61,7 @@ public sealed partial class SettingsViewModel(
         ["HF_TOKEN"] = ConnectionTargets.HfToken,
         ["AZDO_PAT"] = ConnectionTargets.AzureDevOps,
         ["GITHUB_TOKEN"] = ConnectionTargets.GitHub,
+        ["WORKER_URL"] = ConnectionTargets.Worker,
     };
 
     private SettingOptions? _options;

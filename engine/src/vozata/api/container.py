@@ -30,6 +30,7 @@ from vozata.ports import (
 )
 from vozata.settings_file import SettingsFile
 from vozata.settings_options import OptionLists
+from vozata.worker_client.status import WorkerStatus
 
 
 class AskRunner(Protocol):
@@ -95,3 +96,5 @@ class ApiContainer:
     )
     # Model downloads (42): the running ones are sent to a newly connected WebSocket client.
     downloads: DownloadTracker = field(default_factory=lambda: DownloadTracker(lambda state: None))
+    # The VozAta worker (44): `GET /health` asks it with the current `WORKER_URL` / `WORKER_TOKEN`.
+    worker_status: Callable[[Settings], WorkerStatus] = lambda settings: WorkerStatus(False)

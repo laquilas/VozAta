@@ -22,6 +22,7 @@ public static class ConnectionTargets
     public const string HfToken = "hf_token";
     public const string AzureDevOps = "azure_devops";
     public const string GitHub = "github";
+    public const string Worker = "worker";
 }
 
 /// <summary><c>POST /settings/test/{target}</c>: the engine's localized message (never a secret).</summary>

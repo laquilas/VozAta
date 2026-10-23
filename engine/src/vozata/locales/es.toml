@@ -244,6 +244,7 @@ no_space = "No hay suficiente espacio libre en disco para importar {folder}: se 
 ollama_ok = "Ollama respondió y el modelo {model} está instalado."
 ollama_model_missing = "Ollama respondió, pero el modelo {model} no está instalado: ejecuta `ollama pull {model}`."
 stt_api_ok = "La API de voz en {host} aceptó la clave."
+worker_ok = "El worker de VozAta {version} en {host} aceptó el token ({gpu})."
 hf_token_ok = "El token abre {models}."
 azure_devops_ok = "Proyecto {project} de Azure DevOps encontrado; el token funciona."
 github_ok = "Repositorio {repo} de GitHub encontrado; el token funciona."

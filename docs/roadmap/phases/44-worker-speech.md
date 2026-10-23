@@ -140,8 +140,9 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - **Branch:** `feature/44-worker-speech`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 5 of `plans/44-worker-speech.md` (connection check target `worker`,
-  `/health.worker`, UI Test anchor on `WORKER_URL`, group `worker` in the UI, RESX labels).
+- **Next step:** Task 6 of `plans/44-worker-speech.md` (packaging smoke test
+  `vozata-engine.exe worker --check`, `docs/remote-worker.md`, `docs/roadmap/worker-api.md`,
+  architecture / api-contract updates, pointer in `docs/remote-ollama.md`).
 
 ### Steps
 
@@ -150,7 +151,7 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - [x] Worker: `/transcribe` with a kept faster-whisper
 - [x] Engine: worker client and `WorkerTranscriber`
 - [x] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
-- [ ] Engine: settings, connection check, `/health.worker`; UI Test anchor
+- [x] Engine: settings, connection check, `/health.worker`; UI Test anchor
 - [ ] Packaging entry and smoke test; guide and contract docs
 - [ ] Full suites, manual check (this PC's LAN address as the worker), phase done
 
@@ -174,5 +175,8 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
   notice runs before the local model loads); the queue's transcribe step is gated whenever
   `speech_fallback` is set, so a fallback there never races a recording. The kept Whisper
   (`WHISPER_KEEP_LOADED`) is not used with the worker. The CLI `transcribe` logs the fallback.
+- `/health.worker` is `{url, reachable, version}` (null without `WORKER_URL`), read with the
+  current settings; `stt.device` is the worker host and `stt.model` the model it has loaded
+  (empty until it loads one or when it is off). The Config group `worker` sits after `tasks`.
 - Phases 47–50 were planned on this branch (user, 2026-10-22): worker app and discovery, minutes so
   far, minutes of a range, voice commands. Order: finish 44, then 47–50, then 45–46.

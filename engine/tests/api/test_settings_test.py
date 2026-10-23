@@ -17,7 +17,13 @@ from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuGate, GpuUser
 
 HF_MODELS = ("pyannote/speaker-diarization-community-1", "pyannote/wespeaker-voxceleb-resnet34-LM")
-SECRETS = ("sk-stt-secret", "hf_secret_token", "azdo-secret-pat", "ghp_secret_token")
+SECRETS = (
+    "sk-stt-secret",
+    "hf_secret_token",
+    "azdo-secret-pat",
+    "ghp_secret_token",
+    "wk-secret-token",
+)
 
 
 def _settings(**overrides: object) -> Settings:
@@ -32,6 +38,8 @@ def _settings(**overrides: object) -> Settings:
         "azdo_pat": "azdo-secret-pat",
         "github_repo": "contoso/vozata",
         "github_token": "ghp_secret_token",
+        "worker_url": "http://gpu-pc:8766",
+        "worker_token": "wk-secret-token",
     }
     values.update(overrides)
     return Settings(**values)  # type: ignore[arg-type]
@@ -288,6 +296,61 @@ def test_github_not_configured() -> None:
     assert result == CheckResult(False, "not_configured", {"keys": "GITHUB_REPO, GITHUB_TOKEN"})
 
 
+# VozAta worker (phase 44)
+
+WORKER_HEALTH = {
+    "worker": "ok",
+    "version": "0.9.0",
+    "gpu": {"available": True, "name": "RTX 4070", "vram_total_mb": 12282},
+    "capabilities": ["speech"],
+    "models": [],
+}
+
+
+def test_worker_success_names_its_version_and_gpu() -> None:
+    result, seen = _run(CheckTarget.WORKER, _status(200, json=WORKER_HEALTH))
+
+    assert result == CheckResult(
+        True, "worker_ok", {"host": "gpu-pc", "version": "0.9.0", "gpu": "RTX 4070"}
+    )
+    assert str(seen[0].url) == "http://gpu-pc:8766/health"
+    assert seen[0].headers["Authorization"] == "Bearer wk-secret-token"
+
+
+def test_a_worker_without_a_gpu_says_cpu() -> None:
+    body = {**WORKER_HEALTH, "gpu": {"available": False, "name": None, "vram_total_mb": None}}
+
+    result, _ = _run(CheckTarget.WORKER, _status(200, json=body))
+
+    assert result.params["gpu"] == "CPU"
+
+
+def test_worker_without_a_token_sends_no_authorization() -> None:
+    _, seen = _run(
+        CheckTarget.WORKER, _status(200, json=WORKER_HEALTH), _settings(worker_token=None)
+    )
+
+    assert "Authorization" not in seen[0].headers
+
+
+def test_worker_refused_token() -> None:
+    result, _ = _run(CheckTarget.WORKER, _status(401))
+
+    assert result == CheckResult(False, "unauthorized", {"status": 401})
+
+
+def test_worker_unreachable() -> None:
+    result, _ = _run(CheckTarget.WORKER, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "gpu-pc"})
+
+
+def test_worker_not_configured() -> None:
+    result, _ = _run(CheckTarget.WORKER, _status(200), _settings(worker_url=None))
+
+    assert result == CheckResult(False, "not_configured", {"keys": "WORKER_URL"})
+
+
 # Secrets
 
 
@@ -371,6 +434,8 @@ def test_every_result_code_has_a_message_in_every_language(language: str) -> Non
         "keys": "K",
         "status": 401,
         "what": "w",
+        "version": "v",
+        "gpu": "g",
     }
     for code in (
         "ollama_ok",
@@ -379,6 +444,7 @@ def test_every_result_code_has_a_message_in_every_language(language: str) -> Non
         "hf_token_ok",
         "azure_devops_ok",
         "github_ok",
+        "worker_ok",
         "not_configured",
         "unauthorized",
         "terms_not_accepted",

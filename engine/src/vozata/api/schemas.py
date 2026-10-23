@@ -46,6 +46,14 @@ class StorageStatus(BaseModel):
     audio_cache_bytes: int = 0  # `OUTPUT_DIR/cache/` (phase 38)
 
 
+class WorkerHealth(BaseModel):
+    """Phase 44: the VozAta worker of `WORKER_URL` (null in `Health` when it is empty)."""
+
+    url: str
+    reachable: bool
+    version: str | None = None
+
+
 class Health(BaseModel):
     engine: Literal["ok"] = "ok"
     version: str
@@ -53,6 +61,7 @@ class Health(BaseModel):
     stt: SttStatus
     llm: LlmStatus
     storage: StorageStatus
+    worker: WorkerHealth | None = None
 
 
 class Device(BaseModel):

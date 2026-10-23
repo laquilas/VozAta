@@ -25,6 +25,8 @@ public sealed class ConfigPageViewModelTests
         Add("OLLAMA_MODEL", "string", "qwen2.5:7b", "minutes", source: "ollama_models");
         Add("AZDO_PAT", "string", null, "tasks", secret: true);
         Add("GITHUB_TOKEN", "string", null, "tasks", secret: true);
+        Add("WORKER_URL", "url", null, "worker");
+        Add("WORKER_TOKEN", "string", null, "worker", secret: true);
         _client.Health = _client.Health with
         {
             Storage = new StorageStatus("sqlite", @"C:\data\vozata.db", null, 5 * 1024 * 1024, 1536),
@@ -72,10 +74,11 @@ public sealed class ConfigPageViewModelTests
         var page = await LoadedAsync();
 
         Assert.Equal(
-            ["general", "audio", "transcription", "speakers", "minutes", "tasks", "desktop", "vocabulary", "storage", "about"],
+            ["general", "audio", "transcription", "speakers", "minutes", "tasks", "worker", "desktop", "vocabulary", "storage", "about"],
             page.Sections.Select(section => section.Id));
         Assert.Equal(_localization["SettingsGroup_general"], page.Sections[0].Title);
-        Assert.Equal(_localization["ConfigSection_storage"], page.Sections[8].ToString());
+        Assert.Equal(_localization["SettingsGroup_worker"], page.Sections[6].Title);
+        Assert.Equal(_localization["ConfigSection_storage"], page.Sections[9].ToString());
         Assert.Same(page.Sections[0], page.SelectedSection);
         Assert.Equal(["general"], page.VisibleGroups.Select(group => group.Id));
         Assert.False(page.ShowDesktop || page.ShowVocabulary || page.ShowStorage || page.ShowAbout);
@@ -383,6 +386,7 @@ public sealed class ConfigPageViewModelTests
                 ["OLLAMA_URL"] = ConnectionTargets.Ollama,
                 ["AZDO_PAT"] = ConnectionTargets.AzureDevOps,
                 ["GITHUB_TOKEN"] = ConnectionTargets.GitHub,
+                ["WORKER_URL"] = ConnectionTargets.Worker,
             },
             page.Settings.Editors.Where(editor => editor.HasTest).ToDictionary(editor => editor.Key, editor => editor.Test!.Target));
         Assert.Equal(_localization["ConnectionTest"], Editor(page, "HF_TOKEN").Test!.ButtonText);

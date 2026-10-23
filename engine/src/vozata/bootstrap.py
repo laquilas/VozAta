@@ -125,6 +125,7 @@ from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
 from vozata.worker_client.client import WorkerClient
 from vozata.worker_client.notices import LoggedNotices, ObserverNotices
+from vozata.worker_client.status import worker_status
 from vozata.worker_client.transcriber import WorkerTranscriber
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
@@ -1024,4 +1025,5 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             (DIARIZATION_MODEL, EMBEDDING_MODEL), priority=check_priority
         ).run,
         downloads=downloads,
+        worker_status=lambda current: worker_status(current.worker_url or "", current.worker_token),
     )

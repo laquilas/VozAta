@@ -35,6 +35,7 @@ def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
             "size_bytes": None,
             "audio_cache_bytes": 0,
         },
+        "worker": None,
     }
 
 
@@ -126,6 +127,68 @@ def test_a_remote_url_does_not_matter_when_the_provider_is_not_ollama(tmp_path: 
         llm = other.client.get("/health").json()["llm"]
 
     assert (llm["remote"], llm["host"]) == (False, None)
+
+
+def test_without_a_worker_url_there_is_no_worker(api: Api) -> None:
+    assert api.client.get("/health").json()["worker"] is None
+
+
+def _with_worker(tmp_path: Path, status: object, **overrides: object) -> Api:
+    from vozata.config import Settings
+
+    settings = Settings(
+        output_dir=tmp_path / "recordings",
+        worker_url="http://192.168.0.30:8766",
+        worker_token="t0k",
+        **overrides,  # type: ignore[arg-type]
+    )
+    api = Api(tmp_path, settings)
+    asked: list[object] = []
+    api.app.state.container = dataclasses.replace(
+        api.app.state.container,
+        worker_status=lambda current: asked.append(current.worker_token) or status,
+    )
+    api.asked = asked  # type: ignore[attr-defined]
+    return api
+
+
+def test_health_reports_the_worker(tmp_path: Path) -> None:
+    from vozata.worker_client.status import WorkerStatus
+
+    api = _with_worker(tmp_path, WorkerStatus(True, "0.9.0", ["large-v3-turbo"]))
+    with api.client:
+        body = api.client.get("/health").json()
+
+    assert body["worker"] == {
+        "url": "http://192.168.0.30:8766",
+        "reachable": True,
+        "version": "0.9.0",
+    }
+    assert body["stt"]["provider"] == "faster_whisper"  # the worker is set up but not used
+    assert api.asked == ["t0k"]  # type: ignore[attr-defined]
+
+
+def test_speech_on_the_worker_is_named_by_its_host_and_model(tmp_path: Path) -> None:
+    from vozata.worker_client.status import WorkerStatus
+
+    api = _with_worker(
+        tmp_path, WorkerStatus(True, "0.9.0", ["large-v3-turbo"]), stt_provider="vozata_worker"
+    )
+    with api.client:
+        stt = api.client.get("/health").json()["stt"]
+
+    assert stt == {"provider": "vozata_worker", "model": "large-v3-turbo", "device": "192.168.0.30"}
+
+
+def test_a_worker_that_is_off_is_reported_unreachable(tmp_path: Path) -> None:
+    from vozata.worker_client.status import WorkerStatus
+
+    api = _with_worker(tmp_path, WorkerStatus(False), stt_provider="vozata_worker")
+    with api.client:
+        body = api.client.get("/health").json()
+
+    assert body["worker"]["reachable"] is False
+    assert body["stt"]["model"] == ""
 
 
 def test_health_without_gpu_or_llm(api: Api) -> None:

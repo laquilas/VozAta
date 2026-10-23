@@ -1347,4 +1347,31 @@
   <data name="DownloadFailed" xml:space="preserve">
     <value>Downloading the {0} model {1} failed: {2}</value>
   </data>
+  <data name="SettingsGroup_worker" xml:space="preserve">
+    <value>Worker (another PC)</value>
+  </data>
+  <data name="Setting_WORKER_URL" xml:space="preserve">
+    <value>Worker address</value>
+  </data>
+  <data name="SettingHelp_WORKER_URL" xml:space="preserve">
+    <value>Address of the VozAta worker on a PC of your network with a GPU, e.g. http://192.168.0.20:8766. Set the speech provider to vozata_worker to use it; when it does not answer, this PC transcribes and a notification says so.</value>
+  </data>
+  <data name="Setting_WORKER_TOKEN" xml:space="preserve">
+    <value>Worker token</value>
+  </data>
+  <data name="SettingHelp_WORKER_TOKEN" xml:space="preserve">
+    <value>The token the worker printed the first time it started (also in the .env of the worker PC).</value>
+  </data>
+  <data name="Setting_WORKER_HOST" xml:space="preserve">
+    <value>Worker listens on</value>
+  </data>
+  <data name="SettingHelp_WORKER_HOST" xml:space="preserve">
+    <value>On the worker PC only: the interface the worker listens on. 0.0.0.0 is every network of that PC and needs a token.</value>
+  </data>
+  <data name="Setting_WORKER_PORT" xml:space="preserve">
+    <value>Worker port</value>
+  </data>
+  <data name="SettingHelp_WORKER_PORT" xml:space="preserve">
+    <value>On the worker PC only: the port the worker listens on (default 8766).</value>
+  </data>
 </root>

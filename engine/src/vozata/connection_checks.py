@@ -32,6 +32,7 @@ class CheckTarget(StrEnum):
     HF_TOKEN = "hf_token"
     AZURE_DEVOPS = "azure_devops"
     GITHUB = "github"
+    WORKER = "worker"  # phase 44
 
 
 # Checks that load a model on the GPU take the Config-test GPU priority (phase 40). None does
@@ -74,6 +75,7 @@ class ConnectionChecks:
             CheckTarget.HF_TOKEN: self._hf_token,
             CheckTarget.AZURE_DEVOPS: _azure_devops,
             CheckTarget.GITHUB: _github,
+            CheckTarget.WORKER: _worker,
         }
 
     def run(self, target: CheckTarget, settings: Settings) -> CheckResult:
@@ -166,6 +168,23 @@ def _github(client: httpx.Client, settings: Settings) -> CheckResult:
     )
     repo = settings.github_repo
     return _by_status(response.status_code, "github_ok", {"repo": repo}, repo)
+
+
+def _worker(client: httpx.Client, settings: Settings) -> CheckResult:
+    if not settings.worker_url:
+        return CheckResult(False, "not_configured", {"keys": "WORKER_URL"})
+    token = settings.worker_token
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    response = client.get(settings.worker_url.rstrip("/") + "/health", headers=headers)
+    host = urlparse(settings.worker_url).hostname or settings.worker_url
+    result = _by_status(response.status_code, "worker_ok", {"host": host}, host)
+    if result.ok:
+        body = response.json()
+        gpu = body["gpu"]["name"] if body["gpu"]["available"] else None
+        return CheckResult(
+            True, "worker_ok", {"host": host, "version": body["version"], "gpu": gpu or "CPU"}
+        )
+    return result
 
 
 def _by_status(status: int, ok_code: str, params: dict[str, object], what: str) -> CheckResult:
