@@ -71,13 +71,13 @@ Translation (phase 46); diarizing the microphone channel.
 - **Branch:** `feature/45-worker-speakers`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 1 of `plans/45-worker-speakers.md` (tests of the worker speaker services, the
-  engine providers and the gate; commit).
+- **Next step:** Task 2 of `plans/45-worker-speakers.md` (docs, manual check with pyannote on a
+  loopback worker, PR).
 
 ### Steps
 
 - [x] Implementation plan (`plans/45-worker-speakers.md`)
-- [ ] Worker `/diarize` jobs and `/embed`; engine providers with fallback; gate
+- [x] Worker `/diarize` jobs and `/embed`; engine providers with fallback; gate
 - [ ] Docs, full suites, manual check, phase done
 
 ### Decisions and notes
