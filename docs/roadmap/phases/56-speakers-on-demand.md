@@ -83,13 +83,13 @@ it), other runtimes (translation already ships in the standard build).
 - **Branch:** `feature/56-speakers-on-demand`
 - **Status:** in progress
 - **Updated:** 2026-10-23 16:00
-- **Next step:** packaging: `uv` in the `package` extra, `uv.exe` + `vozata.zip` into `dist/vozata-engine/speakers` (build.ps1), drop `-Speakers` / `SPEAKERS` / `Edition`, the installer task.
+- **Next step:** worker app: `ISpeakerInstaller` (runs `engine speakers install`, reports its lines), the Download button on the speakers row (missing_extra), restart the worker after it.
 
 ### Steps
 
 - [x] Phase start (phase file, plan, README)
 - [x] Engine: the speaker runtime (layout, readiness, child command and env) — `992bb80`
 - [x] Engine: the installer (uv steps) and `speakers install | status | remove`
-- [ ] Packaging: `vozata.zip` + `uv.exe`, the edition removed, the installer task
+- [x] Packaging: `vozata.zip` + `uv.exe`, the edition removed, the installer task (`frozen.py` removed: the children no longer run through `vozata-engine.exe -m`)
 - [ ] Worker app: the Download button
 - [ ] Docs; full suites; manual check (packaged build, runtime install, diarization)

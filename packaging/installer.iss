@@ -1,17 +1,14 @@
-; VozAta installer (Inno Setup 6). Built by packaging/build.ps1:
+﻿; VozAta installer (Inno Setup 6 or 7). Built by packaging/build.ps1:
 ;   iscc /DAppVersion=1.0.0 /DBuildDir=<repo>\build packaging\installer.iss
 ; Per-user install (no administrator rights). The uninstaller removes the program files and keeps
-; %APPDATA%\VozAta\.env (settings) and Documents\VozAta (recordings).
+; %APPDATA%\VozAta\.env (settings) and Documents\VozAta (recordings). Speaker identification is
+; downloaded on this PC (phase 56): an optional task runs `vozata-engine speakers install`.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
 #ifndef BuildDir
   #define BuildDir "..\build"
-#endif
-; phase 51: "-speakers" for the edition that bundles speaker identification (pyannote / torch)
-#ifndef Edition
-  #define Edition ""
 #endif
 
 [Setup]
@@ -28,7 +25,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#BuildDir}\installer
-OutputBaseFilename=VozAta-Setup-{#AppVersion}{#Edition}
+OutputBaseFilename=VozAta-Setup-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -42,8 +39,17 @@ Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "ptbr"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 
+[CustomMessages]
+en.SpeakersTask=Download speaker identification now (about 3 GB; also possible later in VozAta Worker)
+ptbr.SpeakersTask=Baixar a identificação de participantes agora (cerca de 3 GB; também dá depois no VozAta Worker)
+es.SpeakersTask=Descargar la identificación de participantes ahora (unos 3 GB; también se puede después en VozAta Worker)
+en.SpeakersStatus=Downloading speaker identification (see the console window)...
+ptbr.SpeakersStatus=Baixando a identificação de participantes (veja a janela do console)...
+es.SpeakersStatus=Descargando la identificación de participantes (mira la ventana de la consola)...
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "speakers"; Description: "{cm:SpeakersTask}"; Flags: unchecked
 
 [Files]
 Source: "{#BuildDir}\ui\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -65,5 +71,11 @@ Name: "{userprograms}\VozAta Worker"; Filename: "{app}\VozAta.Worker.exe"; Worki
 ; "Start with Windows" of VozAta Worker writes this value; uninstalling removes it
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "VozAta Worker"; Flags: uninsdeletevalue
 
+[UninstallDelete]
+; the speaker runtime downloaded by `speakers install` (phase 56)
+Type: filesandordirs; Name: "{localappdata}\VozAta\speakers"
+
 [Run]
+; phase 56: in a console, which stays open on a failure so the reason can be read
+Filename: "{cmd}"; Parameters: "/c """"{app}\engine\vozata-engine.exe"" speakers install || pause"""; WorkingDir: "{userappdata}\VozAta"; StatusMsg: "{cm:SpeakersStatus}"; Tasks: speakers; Flags: waituntilterminated
 Filename: "{app}\VozAta.Desktop.exe"; Description: "{cm:LaunchProgram,VozAta}"; Flags: nowait postinstall skipifsilent
