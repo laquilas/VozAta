@@ -60,18 +60,20 @@ Speaker-attributed WER (cpWER), downloading public corpora, CI runs.
 - **Branch:** `feature/55-wer-benchmark`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 3: `scripts/wer_runtime.py` (`OfflineTranscription` over an in-memory session:
-  the WAV as mic, silence as system, no echo dedupe) and `scripts/make_tts_reference.ps1`;
-  `benchmarks/results/` git-ignored.
+- **Next step:** task 4: run the grid `WHISPER_MODEL=large-v3,large-v3-turbo CHUNK_MODE=vad,fixed
+  CHUNK_SECONDS=4,8` (`HF_HUB_OFFLINE=1`, `TRANSCRIPTION_LANGUAGE=pt`) and record the table here.
 
 ### Steps
 
 - [x] Implementation plan (`plans/55-wer-benchmark.md`)
 - [x] Pure parts: normalization, alignment, WER, grid, report
-- [ ] Runtime (offline transcription of a WAV) and the TTS reference
+- [x] Runtime (offline transcription of a WAV) and the TTS reference
 - [ ] First benchmark run, defaults kept or changed
 - [ ] Docs, full suites, phase done
 
 ### Decisions and notes
 
 - Commits stay local until the PR (user rule, 2026-10-20).
+- The TTS meeting is 62.9 s (9 sentences, Microsoft Maria Desktop, 0.8 s pauses). A first run with
+  the defaults (large-v3, VAD) got WER 0.0 % at RTF 0.44: clean TTS audio, so it mostly measures
+  speed and chunking accidents; real recordings belong in further benchmark folders.
