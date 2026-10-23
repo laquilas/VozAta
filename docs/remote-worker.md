@@ -123,6 +123,11 @@ minutes, both share its GPU:
 An 8 GB GPU fits both; with less, use a smaller Ollama model or `OLLAMA_KEEP_ALIVE=0` (the default)
 so Ollama frees its memory after each job.
 
+## Checking a worker end to end
+
+[Two-PC check](two-pc-check.md) lists what to check across the two PCs, with a script for the
+network parts (discovery, pairing, translation, speakers, cancel).
+
 ## When it does not work
 
 | Symptom | What to do |

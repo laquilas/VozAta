@@ -30,8 +30,8 @@ API parts so the check is repeatable after every worker change.
 | pair | `POST /worker/pair {url, code}` with the code typed from the GPU PC | 200; `WORKER_URL` / `WORKER_TOKEN` saved in the client engine's scratch `.env` |
 | health | `GET /health` on the worker with the token | `capabilities` has speech, translation (and speakers on the speakers edition) |
 | translate | `POST /translate` a known Portuguese sentence → English | non-empty English text, not equal to the input |
-| diarize + cancel | `POST /diarize` a generated two-voice WAV, then `DELETE` after it is `running` | state `cancelled` within 5 s |
-| pre-emption | a client recording session (`POST /sessions`) while the queue's diarize step runs on the worker | the worker job ends `cancelled`, the meeting finishes after Stop |
+| diarize + cancel | `POST /diarize` a generated WAV, then `DELETE` after it is `running` | state `cancelled` within 5 s |
+| pre-emption (`--record`) | a recorded meeting (a speech WAV played on the output); while its queue diarize step runs on the worker, a second recording with live transcription | paused only when that recording uses this PC's GPU (`--local-speech` + CUDA), else kept running; the meeting then finishes with its speakers |
 
 It talks to a **scratch client engine** it starts on a free port with its own `OUTPUT_DIR`,
 `DATABASE_PATH` and `.env` (never the user's), and prints a pass / fail table. The pure parts
@@ -43,22 +43,24 @@ and the UI steps it cannot do: Config → Worker "Find workers" and pairing in t
 "use the worker for …" switches saved and reloaded, the sidebar line "Worker: host" during a
 recording and "This PC (worker off)" after the worker app is closed, the fallback notification.
 
-**Results**: the run of 2026-10-xx is recorded in this file (what passed, what was found and fixed).
+**Results**: each run is recorded in *Decisions and notes* below (what passed, what was found
+and fixed).
 
 ## Design notes
 
 - Only the reference machine is available to the session that builds this phase: it runs the
-  script against a worker on this PC on another port (loopback discovery is skipped by the
-  worker, so the script also accepts `--worker-url` to skip discovery and pairing). The real
-  two-PC run is the user's, following the checklist; its result goes into this file afterwards.
-- The script must not need GPU on the client PC: the client engine uses `STT_PROVIDER=vozata_worker`.
+  script against a worker on this PC on other ports, bound to `0.0.0.0` so it has an id and
+  answers discovery (`--code auto` reads its code from `/local/status`). The real two-PC run is
+  the user's, following the checklist; its result goes into this file afterwards.
+- The script needs no GPU on the client PC: by default the client engine uses
+  `STT_PROVIDER=vozata_worker` (`--local-speech` switches speech to this PC).
 
 ## Acceptance criteria
 
-- [ ] `scripts/two_pc_check.py` runs every API step against a worker and prints a pass / fail
+- [x] `scripts/two_pc_check.py` runs every API step against a worker and prints a pass / fail
       table; its pure parts have unit tests.
-- [ ] `docs/two-pc-check.md` lists the manual UI steps with the expected result of each.
-- [ ] One run recorded here (on one PC at least; two PCs when available).
+- [x] `docs/two-pc-check.md` lists the manual UI steps with the expected result of each.
+- [x] One run recorded here (on one PC at least; two PCs when available).
 
 ## Tests
 
@@ -79,8 +81,7 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - **Branch:** `feature/52-two-pc-check`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** write `docs/two-pc-check.md` (prerequisites, the script, the manual UI steps) and
-  link it from `docs/remote-worker.md`.
+- **Next step:** full suites, then the phase is done.
 
 ### Steps
 
@@ -88,7 +89,7 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - [x] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
 - [x] Script: translate, diarize + cancel, pre-emption
 - [x] Script runtime: scratch engine process, playback, command line
-- [ ] Checklist `docs/two-pc-check.md`
+- [x] Checklist `docs/two-pc-check.md`
 - [ ] Full suites, one recorded run, phase done
 
 ### Decisions and notes
