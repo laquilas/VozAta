@@ -118,9 +118,27 @@
     <value>Needs a Hugging Face token: add HF_TOKEN=… to {0}, then stop and start the worker.</value>
   </data>
   <data name="WorkerTaskNotInEdition" xml:space="preserve">
-    <value>Not included in this installation: install the speakers edition of VozAta on this PC.</value>
+    <value>Not included in this installation of VozAta.</value>
   </data>
   <data name="WorkerTaskNotOffered" xml:space="preserve">
     <value>Not offered</value>
+  </data>
+  <data name="WorkerTaskNotInstalled" xml:space="preserve">
+    <value>Not installed on this PC: download it below.</value>
+  </data>
+  <data name="WorkerSpeakersDownload" xml:space="preserve">
+    <value>Download speaker identification</value>
+  </data>
+  <data name="WorkerSpeakersDownloadHelp" xml:space="preserve">
+    <value>About 3 GB (Python, PyTorch and pyannote), once, into this PC's AppData. The worker restarts when it is done.</value>
+  </data>
+  <data name="WorkerSpeakersStarting" xml:space="preserve">
+    <value>Starting the download...</value>
+  </data>
+  <data name="WorkerSpeakersInstalled" xml:space="preserve">
+    <value>Speaker identification is installed. The worker is restarting to offer it.</value>
+  </data>
+  <data name="WorkerSpeakersFailed" xml:space="preserve">
+    <value>The download stopped. See {0}, then try again.</value>
   </data>
 </root>

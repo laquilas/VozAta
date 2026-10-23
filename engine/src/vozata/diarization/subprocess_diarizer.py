@@ -8,15 +8,17 @@ every byte of VRAM before the minutes run.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 from vozata.config import ConfigError, Settings
 from vozata.diarization.models import DIARIZATION_MODEL, short_name
+from vozata.diarization.runtime import SpeakerRuntime, runtime_for
 from vozata.domain import ModelKind, SpeakerTurn, WhisperDevice
 from vozata.ports import DiarizationError, ModelDownloader
 
@@ -38,8 +40,10 @@ class SubprocessDiarizer:
         device: WhisperDevice,
         command: Sequence[str] = (sys.executable, "-m", CHILD_MODULE),
         popen: Launcher = subprocess.Popen,
+        env: Mapping[str, str] | None = None,
     ) -> None:
         self._token = hf_token
+        self._env = {**os.environ, **env} if env else None  # the speaker runtime (phase 56)
         self._device = device
         self._command = list(command)
         self._popen = popen
@@ -105,6 +109,7 @@ class SubprocessDiarizer:
                 encoding="utf-8",
                 errors="replace",
                 creationflags=_NO_WINDOW,
+                env=self._env,
             )
             process = self._process
         try:
@@ -123,18 +128,24 @@ def _last_line(text: str) -> str:
     return lines[-1] if lines else ""
 
 
-def pyannote_from_settings(settings: Settings, downloader: ModelDownloader) -> SubprocessDiarizer:
-    """The `pyannote` provider; a missing `HF_TOKEN` is a configuration error.
+def pyannote_from_settings(
+    settings: Settings, downloader: ModelDownloader, runtime: SpeakerRuntime | None = None
+) -> SubprocessDiarizer:
+    """The `pyannote` provider; a missing `HF_TOKEN`, or a packaged engine without its speaker
+    runtime (phase 56), is a configuration error.
 
     The pipeline is downloaded here, with progress events (phase 42): the child then loads it
     from the Hugging Face cache.
     """
     if not settings.hf_token:
         raise ConfigError("HF_TOKEN", "", "missing_hf_token")
+    child = (runtime or runtime_for(settings)).child(CHILD_MODULE)
     downloader.ensure(
         ModelKind.SPEAKERS,
         DIARIZATION_MODEL,
         token=settings.hf_token,
         name=short_name(DIARIZATION_MODEL),
     )
-    return SubprocessDiarizer(settings.hf_token, settings.diarization_device)
+    return SubprocessDiarizer(
+        settings.hf_token, settings.diarization_device, child.argv, env=child.env
+    )

@@ -33,6 +33,17 @@ public sealed class WorkerServicesTests
         Assert.DoesNotContain("%APPDATA%", command.WorkingDirectory, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("worker", "speakers install")]
+    [InlineData("-m vozata worker", "-m vozata speakers install")]
+    [InlineData("other", "speakers install")]
+    public void Speakers_install_runs_the_same_engine(string arguments, string expected)
+    {
+        var command = new WorkerCommand("engine.exe", arguments, "w");
+
+        Assert.Equal(new WorkerCommand("engine.exe", expected, "w"), command.SpeakersInstall());
+    }
+
     [Fact]
     public void A_rooted_path_is_used_as_it_is_and_nothing_found_is_null()
     {

@@ -11,12 +11,13 @@ import base64
 import contextlib
 import json
 import logging
+import os
 import queue
 import subprocess
 import sys
 import threading
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 import numpy as np
@@ -24,6 +25,7 @@ import numpy as np
 from vozata.config import ConfigError, Settings
 from vozata.diarization.embed_child import PREFIX
 from vozata.diarization.models import EMBEDDING_MODEL, short_name
+from vozata.diarization.runtime import SpeakerRuntime, runtime_for
 from vozata.domain import ModelKind, WhisperDevice
 from vozata.ports import DiarizationError, ModelDownloader
 
@@ -54,6 +56,7 @@ class SubprocessEmbedder:
         popen: Popen = subprocess.Popen,
         load_timeout: float = LOAD_TIMEOUT,
         embed_timeout: float = EMBED_TIMEOUT,
+        env: Mapping[str, str] | None = None,
     ) -> None:
         self._embed_timeout = embed_timeout
         self._replies: queue.Queue[dict[str, Any] | None] = queue.Queue()
@@ -67,6 +70,7 @@ class SubprocessEmbedder:
             encoding="utf-8",
             errors="replace",
             creationflags=_NO_WINDOW,
+            env={**os.environ, **env} if env else None,  # the speaker runtime (phase 56)
         )
         self._readers = [
             threading.Thread(target=self._read_replies, name="embedder-out", daemon=True),
@@ -149,16 +153,23 @@ def _close(stream: Any) -> None:
 
 
 def pyannote_embedder_from_settings(
-    settings: Settings, downloader: ModelDownloader
+    settings: Settings, downloader: ModelDownloader, runtime: SpeakerRuntime | None = None
 ) -> SubprocessEmbedder:
     """The `pyannote` live embedder; a missing `HF_TOKEN` is a configuration error. The model
     is downloaded (with progress events, phase 42) before the child starts."""
     if not settings.hf_token:
         raise ConfigError("HF_TOKEN", "", "missing_hf_token")
+    child = (runtime or runtime_for(settings)).child(CHILD_MODULE)
     downloader.ensure(
         ModelKind.SPEAKERS,
         EMBEDDING_MODEL,
         token=settings.hf_token,
         name=short_name(EMBEDDING_MODEL),
     )
-    return SubprocessEmbedder(settings.hf_token, settings.diarization_device, settings.sample_rate)
+    return SubprocessEmbedder(
+        settings.hf_token,
+        settings.diarization_device,
+        settings.sample_rate,
+        child.argv,
+        env=child.env,
+    )

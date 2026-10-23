@@ -48,6 +48,7 @@ from vozata.config import ConfigError, Settings
 from vozata.connection_checks import ConnectionChecks
 from vozata.diarization import models as diarization_models
 from vozata.diarization.models import DIARIZATION_MODEL, EMBEDDING_MODEL
+from vozata.diarization.runtime import runtime_for
 from vozata.diarization.subprocess_diarizer import pyannote_from_settings
 from vozata.diarization.subprocess_embedder import pyannote_embedder_from_settings
 from vozata.domain import (
@@ -492,7 +493,7 @@ def build_worker_tasks(settings: Settings) -> list[WorkerTask]:
     return worker_tasks(
         settings.hf_token,
         translation_extra=opus_mt.has_extra(),
-        diarization_extra=diarization_models.has_extra(),
+        diarization_extra=diarization_models.has_extra(runtime_for(settings)),  # phase 56
     )
 
 

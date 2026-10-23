@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,8 @@ from vozata.domain import AppLanguage, ChunkMode, ConversationLanguage, MixMode,
 
 
 def test_defaults_when_nothing_is_set() -> None:
-    assert load_settings(env={}) == Settings(
+    # the speaker runtime folder depends on the home folder (its own tests below)
+    assert replace(load_settings(env={}), speakers_runtime_dir=Path("speakers")) == Settings(
         chunk_seconds=5.0,
         sample_rate=16000,
         app_language=AppLanguage.EN,
@@ -847,3 +849,17 @@ def test_the_voice_command_keys_are_read_with_their_defaults() -> None:
     assert (
         settings.voice_commands_file is not None and settings.voice_commands_file.name == "c.json"
     )
+
+
+def test_the_speaker_runtime_lives_in_local_app_data() -> None:
+    settings = load_settings(env={"LOCALAPPDATA": r"C:\Users\me\AppData\Local"})
+
+    assert (
+        settings.speakers_runtime_dir == Path(r"C:\Users\me\AppData\Local") / "VozAta" / "speakers"
+    )
+
+
+def test_without_local_app_data_the_speaker_runtime_is_under_home() -> None:
+    settings = load_settings(env={})
+
+    assert settings.speakers_runtime_dir == Path.home() / ".local" / "share" / "VozAta" / "speakers"

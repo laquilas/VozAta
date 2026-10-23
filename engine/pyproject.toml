@@ -35,7 +35,7 @@ dev = ["pytest", "pytest-cov", "ruff", "pypdf"]
 diarization = ["pyannote.audio>=4", "torch"]
 # Live translation (phase 29): Opus-MT on CTranslate2 (ctranslate2 comes with faster-whisper).
 translation = ["sentencepiece", "huggingface_hub"]
-package = ["pyinstaller"]  # packaging/engine.spec (phase 13)
+package = ["pyinstaller", "uv"]  # packaging/engine.spec (phase 13); uv.exe for the speaker runtime (56)
 
 [tool.setuptools.dynamic]
 version = { attr = "vozata.__version__" }

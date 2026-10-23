@@ -14,6 +14,7 @@ no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por 
 worker_unauthorized = "El worker de VozAta en {host} rechazó el token. Copia el token que se muestra en el PC del worker en {key} (Config → Worker)."
 worker_url_missing = "{key} está vacío. Indica la dirección del worker de VozAta (Config → Worker), por ejemplo http://192.168.0.20:8766."
 missing_hf_token = "{key} no está definido. La identificación de participantes necesita un token de acceso de Hugging Face: crea uno en huggingface.co, acepta los términos del modelo pyannote y define {key} en la configuración."
+speakers_not_installed = "La identificación de participantes no está instalada en este PC. Descárgala con el instalador (tarea \"Descargar identificación de participantes\"), el botón Descargar de VozAta Worker o con: vozata-engine speakers install"
 
 [errors.session]
 audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."
@@ -213,7 +214,7 @@ download_kind_translation = "traducción"
 
 [cli.worker_task]
 offered = "  {task}: ofrecido."
-missing_extra = "  {task}: no incluido en esta instalación de VozAta (consulta Ediciones en la guía del worker)."
+missing_extra = "  {task}: no instalada en este PC (Descargar en VozAta Worker, o vozata-engine speakers install)."
 missing_hf_token = "  {task}: necesita un token de Hugging Face (HF_TOKEN en el .env de este worker)."
 missing = "  {task}: no ofrecido."
 
@@ -221,6 +222,20 @@ missing = "  {task}: no ofrecido."
 speech = "Reconocimiento de voz"
 speakers = "Identificación de hablantes"
 translation = "Traducción"
+
+[cli.speakers]
+start = "Descargando la identificación de participantes ({variant}, unos 3 GB) en {folder}."
+step_python = "1/4 Python 3.13..."
+step_torch = "2/4 PyTorch, la parte más grande (tarda un poco)..."
+step_pyannote = "3/4 pyannote.audio..."
+step_check = "4/4 Comprobando la instalación..."
+done = "La identificación de participantes está instalada en {folder}. Reinicia VozAta y VozAta Worker para usarla."
+already_ready = "La identificación de participantes ya está instalada en {folder}."
+failed = "La descarga se detuvo (mira los mensajes de arriba). Ejecútala de nuevo para empezar otra vez: vozata-engine speakers install"
+status_ready = "La identificación de participantes está instalada en {folder}."
+status_missing = "La identificación de participantes no está instalada en este PC (vozata-engine speakers install)."
+development = "En desarrollo, la identificación de participantes usa el virtualenv: pip install -e \"engine[diarization]\"."
+removed = "{folder} eliminada."
 
 [cli.devices]
 microphones = "Micrófonos:"
@@ -232,6 +247,9 @@ serve = "ejecuta la API HTTP + WebSocket local que usa la aplicación de escrito
 worker = "ofrece reconocimiento de voz al motor de VozAta de otro PC de la red local"
 worker_check = "muestra la versión, la dirección y las tareas ofrecidas y sale (comprobación de la instalación)"
 worker_json = "con --check: muestra la versión, la dirección y las tareas en JSON"
+speakers = "descargar, comprobar o eliminar la identificación de participantes en este PC (pyannote, unos 3 GB)"
+speakers_action = "install | status | remove"
+speakers_json = "con status: mostrarlo en JSON"
 description = "Transcripción de reuniones casi en tiempo real y generación de actas."
 record = "graba el micrófono y el audio del sistema con transcripción en vivo"
 language = "idioma hablado en la reunión (predeterminado: TRANSCRIPTION_LANGUAGE)"

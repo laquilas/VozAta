@@ -41,6 +41,7 @@ public partial class App : Application
                 new WorkerStatusClient(new HttpClient { Timeout = TimeSpan.FromSeconds(2) }),
                 new RegistryStartup(Environment.ProcessPath ?? "VozAta.Worker.exe"),
                 new NetshFirewall(),
+                new SystemSpeakerInstaller(command),
                 texts,
                 () => WorkerPorts.Read(Path.Combine(folder, ".env")));
 

@@ -10,6 +10,7 @@ import pytest
 from tests.fakes import FakeModelDownloader
 from vozata.config import ConfigError, Settings
 from vozata.diarization.models import EMBEDDING_MODEL
+from vozata.diarization.runtime import SpeakerRuntime
 from vozata.diarization.subprocess_embedder import (
     CHILD_MODULE,
     SubprocessEmbedder,
@@ -140,6 +141,41 @@ def test_close_kills_a_child_that_does_not_exit() -> None:
     assert '"device": "cuda"' in process.stdin.lines[0]
 
 
+def test_the_packaged_embedder_starts_with_the_speaker_runtime(tmp_path: Path) -> None:
+    root = tmp_path / "speakers"
+    (root / "venv" / "Scripts").mkdir(parents=True)
+    (root / "venv" / "Scripts" / "python.exe").write_bytes(b"")
+    (root / "ready.json").write_text("{}", encoding="utf-8")
+    runtime = SpeakerRuntime(root, tmp_path / "bundle")
+    calls: list[tuple] = []
+
+    def popen(*args: object, **kwargs: object) -> _HangingProcess:
+        calls.append((args, kwargs))
+        return _HangingProcess()
+
+    command = runtime.child(CHILD_MODULE)
+    embedder = SubprocessEmbedder(
+        "hf", WhisperDevice.CPU, 16000, command.argv, popen=popen, env=command.env
+    )
+    embedder.close()
+
+    [(args, kwargs)] = calls
+    assert args == ([str(runtime.python), "-m", CHILD_MODULE],)
+    assert kwargs["env"]["PYTHONPATH"] == str(tmp_path / "bundle" / "vozata.zip")
+
+
+def test_from_settings_without_the_runtime_downloads_nothing(tmp_path: Path) -> None:
+    downloader = FakeModelDownloader()
+
+    with pytest.raises(ConfigError) as caught:
+        pyannote_embedder_from_settings(
+            Settings(hf_token="hf"), downloader, SpeakerRuntime(tmp_path, tmp_path / "b")
+        )
+
+    assert caught.value.message_key == "speakers_not_installed"
+    assert downloader.calls == []
+
+
 def test_from_settings_needs_a_token() -> None:
     with pytest.raises(ConfigError) as caught:
         pyannote_embedder_from_settings(Settings(), FakeModelDownloader())
@@ -151,8 +187,8 @@ def test_from_settings_passes_the_token_device_and_rate(monkeypatch: pytest.Monk
     built: list[tuple] = []
 
     class _Recorder:
-        def __init__(self, *args: object) -> None:
-            built.append(args)
+        def __init__(self, *args: object, **kw: object) -> None:
+            built.append(args[:3])
 
     monkeypatch.setattr("vozata.diarization.subprocess_embedder.SubprocessEmbedder", _Recorder)
 
@@ -169,7 +205,7 @@ def test_embedder_predownloads_its_pyannote_repo_with_the_token_before_spawning(
     downloader = FakeModelDownloader(log=log)
 
     class _Recorder:
-        def __init__(self, token: str, *args: object) -> None:
+        def __init__(self, token: str, *args: object, **kw: object) -> None:
             log.append(("spawn", token))
 
     monkeypatch.setattr("vozata.diarization.subprocess_embedder.SubprocessEmbedder", _Recorder)

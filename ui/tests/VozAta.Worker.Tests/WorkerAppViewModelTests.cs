@@ -14,11 +14,12 @@ public sealed class WorkerAppViewModelTests
     private readonly FakeStatus _status = new();
     private readonly FakeStartup _startup = new();
     private readonly FakeFirewall _firewall = new();
+    private readonly FakeSpeakers _speakers = new();
     private readonly WorkerTexts _texts = new(CultureInfo.GetCultureInfo("en"));
     private WorkerPorts _ports = new(8766, 8767);
 
     private WorkerAppViewModel Create() =>
-        new(_process, _status, _startup, _firewall, _texts, () => _ports);
+        new(_process, _status, _startup, _firewall, _speakers, _texts, () => _ports);
 
     [Fact]
     public async Task Starting_waits_for_the_worker_then_shows_how_to_reach_it()
@@ -71,6 +72,72 @@ public sealed class WorkerAppViewModelTests
             ],
             app.Tasks);
         Assert.True(app.HasTasks);
+    }
+
+    [Fact]
+    public async Task Speakers_not_installed_can_be_downloaded_then_the_worker_restarts()
+    {
+        _status.Answer = Status with { Tasks = [new WorkerTaskStatus("speakers", false, "missing_extra")] };
+        var app = Create();
+        app.StartCommand.Execute(null);
+        await app.RefreshAsync();
+        Assert.Equal([new WorkerTaskRow(_texts["WorkerTask_speakers"], false, _texts["WorkerTaskNotInstalled"])], app.Tasks);
+        Assert.True(app.CanDownloadSpeakers);
+        SynchronizationContext.SetSynchronizationContext(null); // xUnit's posts: report at once
+        string? seen = null;
+        _speakers.During = () => seen = app.DownloadProgress;
+
+        await app.DownloadSpeakersCommand.ExecuteAsync(null);
+
+        Assert.Equal("2/4 PyTorch...", seen);
+        Assert.Equal(_texts["WorkerSpeakersInstalled"], app.Message);
+        Assert.Equal((1, WorkerState.Starting), (_process.Stops, app.State));
+        Assert.False(app.CanDownloadSpeakers);
+        Assert.False(app.IsDownloadingSpeakers);
+        Assert.Null(app.DownloadProgress);
+        Assert.Empty(app.Tasks);
+    }
+
+    [Fact]
+    public async Task A_failed_download_names_its_log_and_keeps_the_worker()
+    {
+        _status.Answer = Status with { Tasks = [new WorkerTaskStatus("speakers", false, "missing_extra")] };
+        _speakers.Result = false;
+        var app = Create();
+        app.StartCommand.Execute(null);
+        await app.RefreshAsync();
+
+        await app.DownloadSpeakersCommand.ExecuteAsync(null);
+
+        Assert.Equal(_texts.Format("WorkerSpeakersFailed", _speakers.LogPath), app.Error);
+        Assert.Equal((0, WorkerState.Running), (_process.Stops, app.State));
+        Assert.True(app.DownloadSpeakersCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_download_while_the_worker_is_stopped_does_not_start_it()
+    {
+        _status.Answer = Status with { Tasks = [new WorkerTaskStatus("speakers", false, "missing_extra")] };
+        var app = Create();
+        app.StartCommand.Execute(null);
+        await app.RefreshAsync();
+        var command = app.DownloadSpeakersCommand;
+        app.StopCommand.Execute(null);
+
+        Assert.False(command.CanExecute(null)); // stopped: the tasks are gone
+        Assert.Equal(WorkerState.Stopped, app.State);
+    }
+
+    [Fact]
+    public async Task Translation_missing_still_points_to_the_installation()
+    {
+        _status.Answer = Status with { Tasks = [new WorkerTaskStatus("translation", false, "missing_extra")] };
+        var app = Create();
+        app.StartCommand.Execute(null);
+
+        await app.RefreshAsync();
+
+        Assert.False(app.CanDownloadSpeakers);
     }
 
     [Fact]
@@ -275,6 +342,47 @@ public sealed class WorkerAppViewModelTests
         public bool IsEnabled => Enabled;
 
         public void Apply(bool enabled) => Writes.Add(enabled);
+    }
+
+    [Fact]
+    public void Progress_is_reported_on_the_context_it_was_made_on()
+    {
+        var context = new RecordingContext();
+        SynchronizationContext.SetSynchronizationContext(context);
+        var lines = new List<string>();
+        var progress = new ContextProgress(lines.Add);
+        SynchronizationContext.SetSynchronizationContext(null);
+
+        ((IProgress<string>)progress).Report("1/4 Python 3.13...");
+        Assert.Empty(lines);
+        context.RunPosted();
+
+        Assert.Equal(["1/4 Python 3.13..."], lines);
+    }
+
+    private sealed class RecordingContext : SynchronizationContext
+    {
+        private readonly List<(SendOrPostCallback, object?)> _posted = [];
+
+        public override void Post(SendOrPostCallback d, object? state) => _posted.Add((d, state));
+
+        public void RunPosted() => _posted.ForEach(item => item.Item1(item.Item2));
+    }
+
+    private sealed class FakeSpeakers : ISpeakerInstaller
+    {
+        public bool Result { get; set; } = true;
+
+        public Action? During { get; set; }
+
+        public string LogPath => @"C:\Users\me\AppData\Roaming\VozAta\worker\speakers-install.log";
+
+        public Task<bool> InstallAsync(IProgress<string> progress, CancellationToken cancellationToken = default)
+        {
+            progress.Report("2/4 PyTorch...");
+            During?.Invoke();
+            return Task.FromResult(Result);
+        }
     }
 
     private sealed class FakeFirewall : IFirewall

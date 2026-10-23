@@ -14,6 +14,7 @@ no_word_timestamps = "The speech API at {host} returned no word timestamps for m
 worker_unauthorized = "The VozAta worker at {host} refused the token. Copy the token shown on the worker PC into {key} (Config → Worker)."
 worker_url_missing = "{key} is empty. Enter the address of the VozAta worker (Config → Worker), e.g. http://192.168.0.20:8766."
 missing_hf_token = "{key} is not set. Speaker identification needs a Hugging Face access token: create one at huggingface.co, accept the terms of the pyannote model, then set {key} in the settings."
+speakers_not_installed = "Speaker identification is not installed on this PC. Download it with the installer (task \"Download speaker identification\"), the Download button of VozAta Worker, or: vozata-engine speakers install"
 
 [errors.session]
 audio_unavailable = "Windows audio did not respond. Restart the Windows Audio service or the PC and try again."
@@ -213,7 +214,7 @@ download_kind_translation = "translation"
 
 [cli.worker_task]
 offered = "  {task}: offered."
-missing_extra = "  {task}: not included in this VozAta installation (see Editions in the worker guide)."
+missing_extra = "  {task}: not installed on this PC (Download in VozAta Worker, or vozata-engine speakers install)."
 missing_hf_token = "  {task}: needs a Hugging Face token (HF_TOKEN in this worker's .env)."
 missing = "  {task}: not offered."
 
@@ -221,6 +222,20 @@ missing = "  {task}: not offered."
 speech = "Speech recognition"
 speakers = "Speaker identification"
 translation = "Translation"
+
+[cli.speakers]
+start = "Downloading speaker identification ({variant}, about 3 GB) into {folder}."
+step_python = "1/4 Python 3.13..."
+step_torch = "2/4 PyTorch, the largest part (this takes a while)..."
+step_pyannote = "3/4 pyannote.audio..."
+step_check = "4/4 Checking the installation..."
+done = "Speaker identification is installed in {folder}. Restart VozAta and VozAta Worker to use it."
+already_ready = "Speaker identification is already installed in {folder}."
+failed = "The download stopped (see the messages above). Run it again to start over: vozata-engine speakers install"
+status_ready = "Speaker identification is installed in {folder}."
+status_missing = "Speaker identification is not installed on this PC (vozata-engine speakers install)."
+development = "In development, speaker identification uses the virtualenv: pip install -e \"engine[diarization]\"."
+removed = "Removed {folder}."
 
 [cli.devices]
 microphones = "Microphones:"
@@ -232,6 +247,9 @@ serve = "run the local HTTP + WebSocket API used by the desktop app"
 worker = "serve speech recognition to the VozAta engine of another PC of the local network"
 worker_check = "print the version, the address and the tasks offered, then exit (installation check)"
 worker_json = "with --check: print the version, the address and the tasks as JSON"
+speakers = "download, check or remove speaker identification on this PC (pyannote, about 3 GB)"
+speakers_action = "install | status | remove"
+speakers_json = "with status: print it as JSON"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"

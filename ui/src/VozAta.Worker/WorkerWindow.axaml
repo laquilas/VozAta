@@ -88,6 +88,14 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <!-- Phase 56: speaker identification is downloaded onto this PC, not bundled -->
+          <StackPanel Spacing="4" Margin="0,8,0,0" IsVisible="{Binding CanDownloadSpeakers}">
+            <Button Classes="primary" Content="{Binding T[WorkerSpeakersDownload]}"
+                    Command="{Binding DownloadSpeakersCommand}" />
+            <TextBlock Classes="small secondary" TextWrapping="Wrap" Text="{Binding T[WorkerSpeakersDownloadHelp]}" />
+            <TextBlock Classes="small" TextWrapping="Wrap" Text="{Binding DownloadProgress}"
+                       IsVisible="{Binding IsDownloadingSpeakers}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

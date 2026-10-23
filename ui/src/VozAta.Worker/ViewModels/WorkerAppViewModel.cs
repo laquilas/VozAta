@@ -27,6 +27,7 @@ public sealed partial class WorkerAppViewModel : ObservableObject
     private readonly IWorkerStatusClient _status;
     private readonly IStartupRegistry _startup;
     private readonly IFirewall _firewall;
+    private readonly ISpeakerInstaller _speakers;
     private readonly Func<WorkerPorts> _ports;
 
     public WorkerAppViewModel(
@@ -34,6 +35,7 @@ public sealed partial class WorkerAppViewModel : ObservableObject
         IWorkerStatusClient status,
         IStartupRegistry startup,
         IFirewall firewall,
+        ISpeakerInstaller speakers,
         IWorkerTexts texts,
         Func<WorkerPorts> ports)
     {
@@ -41,6 +43,7 @@ public sealed partial class WorkerAppViewModel : ObservableObject
         _status = status;
         _startup = startup;
         _firewall = firewall;
+        _speakers = speakers;
         _ports = ports;
         T = texts;
         _startWithWindows = startup.IsEnabled;
@@ -57,6 +60,19 @@ public sealed partial class WorkerAppViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool HasTasks { get; private set; }
+
+    /// <summary>Speaker identification is not installed on this PC: it can be downloaded (phase 56).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DownloadSpeakersCommand))]
+    public partial bool CanDownloadSpeakers { get; private set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DownloadSpeakersCommand))]
+    public partial bool IsDownloadingSpeakers { get; private set; }
+
+    /// <summary>The download's last output line ("2/4 PyTorch...").</summary>
+    [ObservableProperty]
+    public partial string? DownloadProgress { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText), nameof(StateTag), nameof(IsRunning), nameof(IsFailed))]
@@ -160,6 +176,40 @@ public sealed partial class WorkerAppViewModel : ObservableObject
         }
     }
 
+    private bool CanDownload() => CanDownloadSpeakers && !IsDownloadingSpeakers;
+
+    /// <summary>Download speaker identification, then restart the worker so it offers it.</summary>
+    [RelayCommand(CanExecute = nameof(CanDownload))]
+    private async Task DownloadSpeakersAsync()
+    {
+        Message = Error = null;
+        IsDownloadingSpeakers = true;
+        DownloadProgress = T["WorkerSpeakersStarting"];
+        try
+        {
+            var ok = await _speakers.InstallAsync(new ContextProgress(line => DownloadProgress = line));
+            if (!ok)
+            {
+                Error = T.Format("WorkerSpeakersFailed", _speakers.LogPath);
+                return;
+            }
+
+            Message = T["WorkerSpeakersInstalled"];
+            CanDownloadSpeakers = false;
+            if (State is WorkerState.Starting or WorkerState.Running)
+            {
+                _process.Terminate();
+                Clear();
+                State = _process.Start() ? WorkerState.Starting : WorkerState.Failed;
+            }
+        }
+        finally
+        {
+            IsDownloadingSpeakers = false;
+            DownloadProgress = null;
+        }
+    }
+
     /// <summary>Read the worker's status (every 2 s while it runs).</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
@@ -221,6 +271,7 @@ public sealed partial class WorkerAppViewModel : ObservableObject
         }
 
         HasTasks = Tasks.Count > 0;
+        CanDownloadSpeakers = (status.Tasks ?? []).Any(task => task is { Name: "speakers", Reason: "missing_extra" });
     }
 
     private WorkerTaskRow Row(WorkerTaskStatus task)
@@ -229,6 +280,7 @@ public sealed partial class WorkerAppViewModel : ObservableObject
         {
             (true, _) => T["WorkerTaskOffered"],
             (false, "missing_hf_token") => T.Format("WorkerTaskNeedsToken", EnvFile()),
+            (false, "missing_extra") when task.Name == "speakers" => T["WorkerTaskNotInstalled"],
             (false, "missing_extra") => T["WorkerTaskNotInEdition"],
             _ => T["WorkerTaskNotOffered"],
         };
@@ -243,6 +295,27 @@ public sealed partial class WorkerAppViewModel : ObservableObject
         Name = Version = Gpu = Model = PairingCode = CodeExpires = Token = null;
         Addresses.Clear();
         Tasks.Clear();
-        HasTasks = false;
+        HasTasks = CanDownloadSpeakers = false;
+    }
+}
+
+/// <summary>
+/// Reports on the synchronization context it was made on (the UI thread), or at once without one
+/// (tests); unlike <see cref="Progress{T}"/>, which falls back to the thread pool.
+/// </summary>
+public sealed class ContextProgress(Action<string> report) : IProgress<string>
+{
+    private readonly SynchronizationContext? _context = SynchronizationContext.Current;
+
+    public void Report(string value)
+    {
+        if (_context is null)
+        {
+            report(value);
+        }
+        else
+        {
+            _context.Post(_ => report(value), null);
+        }
     }
 }
