@@ -44,9 +44,9 @@ notifications yet, so nothing shows while it sits in the tray (out of scope).
 
 ## Acceptance criteria
 
-- [ ] Joining a Teams or Zoom call with VozAta idle shows the suggestion within ~10 s; Record
+- [x] Joining a Teams or Zoom call with VozAta idle shows the suggestion within ~10 s; Record
       starts a recording; nothing appears while recording.
-- [ ] With `MEETING_DETECTION=false` nothing is polled.
+- [x] With `MEETING_DETECTION=false` nothing is polled.
 
 ## Tests
 
@@ -67,11 +67,9 @@ macOS / Linux.
 ## Progress
 
 - **Branch:** `feature/54-meeting-detection`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23
-- **Next step:** task 7: full suites and the manual check (a scratch engine with a short poll and
-  `MEETING_APPS=powershell.exe`, a WAV played by `SoundPlayer`: one `meeting_detected` over the
-  WebSocket; none while recording).
+- **Next step:** open the PR to `main`; then phase 55 (`docs/roadmap/phases/55-wer-benchmark.md`).
 
 ### Steps
 
@@ -82,7 +80,7 @@ macOS / Linux.
 - [x] Wiring: bootstrap, container, lifespan, `meeting_detected` event
 - [x] UI: event, suggestion banner, texts
 - [x] Docs and packaging
-- [ ] Full suites, manual check, phase done
+- [x] Full suites, manual check, phase done
 
 ### Decisions and notes
 
@@ -98,3 +96,10 @@ macOS / Linux.
   `WindowsAudioSessions.active_apps`.
 - The suggestion is a banner only (no extra toast: it already carries the buttons); it opens only
   while the recorder is idle and closes on a `recording` / `paused` status.
+- Manual check (2026-10-23): a scratch engine (own folder, `.env`, port) with
+  `MEETING_APPS=powershell.exe` and a 1 s poll: a WAV played through `SoundPlayer` (a powershell.exe
+  audio session) gave exactly one `meeting_detected {powershell.exe, Powershell}` on the WebSocket;
+  during a recording (`POST /sessions`, audio only) and right after Stop in the same "call" none;
+  the test meeting was deleted. `MEETING_DETECTION=false` is covered by the detector tests (nothing
+  is even polled). Engine 2590 tests (99.4 %), UI 923 + 25, ruff / dotnet format clean. Not checked:
+  a real Teams / Zoom call, the banner in the running app, the installed build.
