@@ -15,6 +15,20 @@ from vozata.config import Settings
 from vozata.domain import Channel, TranscriptSegment, VoiceCommand
 
 
+class _Heard:
+    """A `VoiceDispatch` that records the commands (phase 59: with their second)."""
+
+    def __init__(self, heard: list[tuple[str, VoiceCommand]]) -> None:
+        self.heard = heard
+        self.repeats: list[tuple[str, VoiceCommand, float | None]] = []
+
+    def __call__(self, session_id: str, command: VoiceCommand, at: float | None = None) -> None:
+        self.heard.append((session_id, command))
+
+    def repeated(self, session_id: str, command: VoiceCommand, at: float | None = None) -> None:
+        self.repeats.append((session_id, command, at))
+
+
 def _settings(tmp_path: Path, **overrides: object) -> Settings:
     return Settings(output_dir=tmp_path / "recordings", **overrides)  # type: ignore[arg-type]
 
@@ -38,7 +52,7 @@ def test_a_session_listens_with_the_saved_phrases_and_the_wake_word_leads_the_hi
         FakeSessionObserver(),
         vocabulary=["Kickoff"],
         env_file=tmp_path / ".env",
-        voice_dispatch=lambda sid, command: heard.append((sid, command)),
+        voice_dispatch=(dispatch := _Heard(heard)),
     )
 
     assert session._c.vocabulary[:2] == ("Atena", "Kickoff")
@@ -48,6 +62,10 @@ def test_a_session_listens_with_the_saved_phrases_and_the_wake_word_leads_the_hi
     assert isinstance(sink, VoiceCommandSink)
     sink.emit(_segment("Atena, resume."))
     assert heard == [("s1", VoiceCommand("resume", "minutes"))]
+    sink.emit(_segment("Atena, resume."))  # phase 59: again within the cooldown
+    assert [(sid, command) for sid, command, _ in dispatch.repeats] == [
+        ("s1", VoiceCommand("resume", "minutes"))
+    ]
 
 
 @pytest.mark.parametrize(("enabled", "dispatch"), [(False, True), (True, False)])
@@ -60,7 +78,7 @@ def test_without_commands_nothing_listens(
     session = bootstrap.build_session(
         _settings(tmp_path, voice_commands_enabled=enabled),
         FakeSessionObserver(),
-        voice_dispatch=(lambda sid, command: None) if dispatch else None,
+        voice_dispatch=_Heard([]) if dispatch else None,
     )
 
     assert session._c.voice_commands is None

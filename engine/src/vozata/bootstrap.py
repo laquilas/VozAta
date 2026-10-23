@@ -31,7 +31,7 @@ from vozata.api.partial_minutes_job import PartialMinutesJob
 from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
-from vozata.api.voice_dispatch import VoiceCommandDispatcher
+from vozata.api.voice_dispatch import VoiceCommandDispatcher, VoiceDispatch
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
 from vozata.audio.catalog import WasapiCatalog
@@ -63,7 +63,6 @@ from vozata.domain import (
     StorageInfo,
     TranscriptSegment,
     TranslationTarget,
-    VoiceCommand,
 )
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
@@ -828,7 +827,7 @@ def build_session(
     live_transcription: bool | None = None,
     downloader: ModelDownloader | None = None,
     worker_moved: Callable[[str], None] = lambda url: None,
-    voice_dispatch: Callable[[str, VoiceCommand], None] | None = None,
+    voice_dispatch: VoiceDispatch | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -923,7 +922,13 @@ def build_session(
         translate_to=translation_target,
         translator_factory=translator_factory,
         voice_commands=(
-            (lambda sid: VoiceCommandSink(matcher, lambda cmd: voice_dispatch(sid, cmd)))
+            (
+                lambda sid: VoiceCommandSink(
+                    matcher,
+                    lambda cmd, at: voice_dispatch(sid, cmd, at),
+                    on_repeat=lambda cmd, at: voice_dispatch.repeated(sid, cmd, at),
+                )
+            )
             if matcher is not None and voice_dispatch is not None
             else None
         ),
@@ -1306,7 +1311,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         requests=requests,
     )
     voice_dispatch = VoiceCommandDispatcher(
-        broadcaster, localizer, partial_minutes, voice_questions
+        broadcaster, localizer, partial_minutes, voice_questions, requests=requests
     )
 
     return ApiContainer(

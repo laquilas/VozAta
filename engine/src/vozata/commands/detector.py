@@ -18,18 +18,23 @@ FOLLOW_SECONDS = 5.0  # a wake word alone waits this long for the command in the
 class VoiceCommandSink:
     """A `TranscriptSink` of the live pipeline, after echo dedupe: only microphone segments count,
     so speech played by the speakers never runs a command. `emit` compares short texts and calls
-    `on_command`, which must return quickly (it starts a job)."""
+    `on_command(command, at)`, which must return quickly (it starts a job); `at` is when the wake
+    word was said (session seconds, phase 59). A command said again within the cooldown calls
+    `on_repeat(command, at)` instead."""
 
     def __init__(
         self,
         matcher: CommandMatcher,
-        on_command: Callable[[VoiceCommand], None],
+        on_command: Callable[[VoiceCommand, float], None],
         clock: Callable[[], float] = time.monotonic,
         cooldown: float = COOLDOWN_SECONDS,
         follow: float = FOLLOW_SECONDS,
+        on_repeat: Callable[[VoiceCommand, float], None] = lambda command, at: None,
     ) -> None:
         self._matcher = matcher
         self._on_command = on_command
+        self._on_repeat = on_repeat
+        self._wake_at = 0.0  # when the lone wake word was said
         self._clock = clock
         self._cooldown = cooldown
         self._follow = follow
@@ -52,25 +57,27 @@ class VoiceCommandSink:
         if waiting is not None and segment.start <= waiting:
             command = self._matcher.command(words(segment.text))
             if command is not None:
-                self._fire(command)
+                self._fire(command, self._wake_at)
                 return
         spoken = self._matcher.after_wake(segment.text)
         if spoken is None:
             return
         command = self._matcher.command(spoken) if spoken else None
         if command is not None:
-            self._fire(command)
+            self._fire(command, segment.start)
         elif not spoken:  # "VozAta." and a pause: the command comes in the next segment
             self._waiting_until = segment.end + self._follow
+            self._wake_at = segment.start
 
-    def _fire(self, command: VoiceCommand) -> None:
+    def _fire(self, command: VoiceCommand, at: float) -> None:
         now = self._clock()
         last = self._last.get(command.action)
         if last is not None and now - last < self._cooldown:
             _log.info(
                 "Voice command %r ignored: said again within %.0f s", command.phrase, self._cooldown
             )
+            self._on_repeat(command, at)
             return
         self._last[command.action] = now
         _log.info("Voice command: %s (%s)", command.phrase, command.action)
-        self._on_command(command)
+        self._on_command(command, at)
