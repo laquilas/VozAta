@@ -159,3 +159,24 @@ class RequestLog:
 
     def _publish(self, session_id: str, entry: RequestEntry) -> None:
         self._broadcaster.publish("request_updated", session_id, {"request": entry.to_dict()})
+
+
+def record(
+    log: RequestLog | None,
+    session_id: str,
+    kind: str,
+    source: str,
+    *,
+    text: str = "",
+    result_id: str | None = None,
+) -> str | None:
+    """`begin` on an optional log (a route about to start a job); the id or None."""
+    if log is None:
+        return None
+    return log.begin(session_id, kind, source, text=text, result_id=result_id)
+
+
+def refused(log: RequestLog | None, session_id: str, request_id: str | None, code: str) -> None:
+    """The job did not start (already running / queued): the entry is `ignored` with `code`."""
+    if log is not None and request_id is not None:
+        log.update(session_id, request_id, "ignored", message=code)

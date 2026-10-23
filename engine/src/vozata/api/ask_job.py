@@ -9,6 +9,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Protocol
 
+from vozata.api.request_log import RequestLog
 from vozata.api.ws import EventBroadcaster
 from vozata.ports import LanguageModelError, LlmUnreachableError, Localizer
 from vozata.processing.gpu_gate import GpuGate, GpuUser
@@ -45,7 +46,9 @@ class AskJob:
         gate: GpuGate | None = None,
         uses_gpu: Callable[[], bool] = lambda: False,
         origin: str | None = None,
+        requests: RequestLog | None = None,
     ) -> None:
+        self._requests = requests  # phase 59: finishes the meeting's request of this answer
         self._origin = origin  # phase 50: "voice" on the events of voice questions
         self._build = build_answerer
         self._gate = gate
@@ -107,6 +110,9 @@ class AskJob:
         finally:
             with self._lock:
                 self._busy = False
+        if self._requests is not None and session_id is not None:
+            status, code = ("failed", "answer_failed") if error else ("done", None)
+            self._requests.finish_result(session_id, answer_id, status, message=code)
         publish(
             "answer_done",
             session_id,

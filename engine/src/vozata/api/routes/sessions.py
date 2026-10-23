@@ -11,6 +11,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
 from vozata.api.payloads import segment_payload, session_summary
+from vozata.api.request_log import record, refused
 from vozata.api.routes.templates import check_template
 from vozata.api.schemas import (
     Minutes,
@@ -164,7 +165,9 @@ def regenerate_minutes(
     current = c.manager.current
     if current is not None and current.status is not None and current.id == session_id:
         raise ApiError(409, "session_still_recording", id=session_id)
+    request_id = record(c.requests, session_id, "minutes", "app")  # phase 59
     if not c.regenerate_minutes(session_id, template):  # phase 40: a queue job
+        refused(c.requests, session_id, request_id, "session_still_active")
         raise ApiError(409, "session_still_active", id=session_id)
 
 

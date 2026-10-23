@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, status
 from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
+from vozata.api.request_log import record, refused
 from vozata.api.schemas import ActionItems, EditActionItems, ExportActionItems, ExportedActionItems
 from vozata.domain import ActionItem, optional_text
 from vozata.export.tasks.session_export import export_action_items
@@ -26,7 +27,9 @@ def extract(session_id: str, c: Container) -> None:
     _check_finished(c, session_id)
     if c.extract_action_items is None:
         raise ApiError(503, "action_items_unavailable")
+    request_id = record(c.requests, session_id, "action_items", "app")  # phase 59
     if not c.extract_action_items(session_id):  # phase 40: a queue job
+        refused(c.requests, session_id, request_id, "session_still_active")
         raise ApiError(409, "session_still_active", id=session_id)
 
 
