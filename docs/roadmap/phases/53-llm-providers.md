@@ -73,16 +73,16 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - **Branch:** `feature/53-llm-providers`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 3: add the `anthropic` SDK dependency, failing tests for `llm/anthropic.py`
-  with a fake SDK client (contract suite + refusal, JSON format, effort, fallbacks), then the
-  provider and `LANGUAGE_MODELS["anthropic"]`.
+- **Next step:** task 4: Config tests `openai_llm` (GET {url}/models, model listed) and `anthropic`
+  (key set, `models.retrieve` through the provider) in `connection_checks.py`, with their locale
+  messages.
 
 ### Steps
 
 - [x] Implementation plan (`plans/53-llm-providers.md`)
 - [x] Keys, provider-neutral host / model / GPU rules, `/health.llm`
 - [x] OpenAI-compatible provider and the shared contract suite
-- [ ] Anthropic provider (official SDK)
+- [x] Anthropic provider (official SDK)
 - [ ] Config tests for both providers
 - [ ] UI: labels, tests, provider-neutral texts
 - [ ] Docs and packaging
@@ -99,3 +99,7 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
   (`net.llm_model`).
 - Without `OPENAI_LLM_MODEL` the OpenAI-compatible provider uses the first model `/models` lists (LM
   Studio serves the loaded one).
+- The Anthropic provider closes every object of the JSON schema (`additionalProperties: false`, on a
+  copy) because structured outputs need closed objects; the action-item schema has none. A read
+  timeout is a plain failure, a connection failure `LlmUnreachableError` (host `api.anthropic.com`).
+  New dependency `anthropic>=2.2,<3` (built on `httpx2`).

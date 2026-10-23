@@ -23,6 +23,7 @@ dependencies = [
     # Model downloads with progress (phase 42): relies on 2.x snapshot_download (two byte bars
     # fed through tqdm_class, IncompleteSnapshotError in the cache check).
     "huggingface_hub>=2.2,<3",
+    "anthropic>=2.2,<3",  # Claude as the language model (phase 53), the official SDK
 ]
 
 [project.optional-dependencies]

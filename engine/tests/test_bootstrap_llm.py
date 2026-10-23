@@ -7,7 +7,7 @@ from vozata.llm.openai_compatible import OpenAICompatibleLanguageModel
 
 
 def test_the_language_model_registry_offers_every_provider() -> None:
-    assert set(bootstrap.LANGUAGE_MODELS) >= {"ollama", "openai_compatible"}
+    assert set(bootstrap.LANGUAGE_MODELS) >= {"ollama", "openai_compatible", "anthropic"}
 
 
 def test_the_ollama_and_openai_compatible_providers_are_built_from_their_keys() -> None:
@@ -23,3 +23,14 @@ def test_the_ollama_and_openai_compatible_providers_are_built_from_their_keys() 
     finally:
         ollama.close()
         openai.close()
+
+
+def test_the_anthropic_provider_is_built_from_its_keys() -> None:
+    from vozata.llm.anthropic import AnthropicLanguageModel
+
+    model = bootstrap.LANGUAGE_MODELS["anthropic"](Settings(anthropic_api_key=None))
+    try:
+        assert isinstance(model, AnthropicLanguageModel)
+        assert model.is_available() is False  # no key: nothing is sent
+    finally:
+        model.close()
