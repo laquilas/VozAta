@@ -69,13 +69,14 @@ macOS / Linux.
 - **Branch:** `feature/54-meeting-detection`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 1 of `plans/54-meeting-detection.md`: failing tests for the three keys,
-  then task 2 (the detector with a fake monitor and clock).
+- **Next step:** task 2: failing tests for `meeting/detector.py` (fake monitor and clock: two polls,
+  quiet period, recording suppresses, unknown apps, case, the switch read live), then the detector
+  and the `AudioSessionMonitor` port.
 
 ### Steps
 
 - [x] Implementation plan (`plans/54-meeting-detection.md`)
-- [ ] Keys `MEETING_DETECTION`, `MEETING_APPS`, `MEETING_POLL_SECONDS`
+- [x] Keys `MEETING_DETECTION`, `MEETING_APPS`, `MEETING_POLL_SECONDS`
 - [ ] Detector (port, debounce, quiet period, recording suppresses)
 - [ ] Windows audio session monitor (pycaw)
 - [ ] Wiring: bootstrap, container, lifespan, `meeting_detected` event
@@ -88,3 +89,5 @@ macOS / Linux.
 - Commits stay local until the PR (user rule, 2026-10-20).
 - Teams running idle keeps its audio sessions *inactive* (checked on this PC with pycaw), so an
   active session of a known app is the call signal; two polls in a row skip notification sounds.
+- `MEETING_APPS` stays the raw text in `Settings` (the Config page edits it as text); the detector
+  splits it.

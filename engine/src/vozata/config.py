@@ -63,6 +63,12 @@ class ConfigError(ValueError):
         return self.render(TomlLocalizer(AppLanguage.EN))
 
 
+# The meeting apps whose call audio suggests recording (phase 54), as executables.
+DEFAULT_MEETING_APPS = (
+    "ms-teams.exe, Teams.exe, Zoom.exe, CiscoCollabHost.exe, webex.exe, slack.exe, Discord.exe"
+)
+
+
 @dataclass(frozen=True)
 class Settings:
     chunk_seconds: float = 5.0
@@ -146,6 +152,10 @@ class Settings:
     ollama_keep_alive: str = "0"
     # Action items export (phase 23)
     extract_action_items: bool = True
+    # Meeting app detection (phase 54)
+    meeting_detection: bool = True
+    meeting_apps: str = DEFAULT_MEETING_APPS
+    meeting_poll_seconds: float = 5.0
     azdo_org_url: str | None = None
     azdo_project: str | None = None
     azdo_pat: str | None = None
@@ -276,6 +286,9 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         minutes_template=_template(raw),
         ollama_keep_alive=_duration(raw, "OLLAMA_KEEP_ALIVE", "0"),
         extract_action_items=_flag(raw, "EXTRACT_ACTION_ITEMS", True),
+        meeting_detection=_flag(raw, "MEETING_DETECTION", True),
+        meeting_apps=raw.get("MEETING_APPS", DEFAULT_MEETING_APPS),
+        meeting_poll_seconds=_number(raw, "MEETING_POLL_SECONDS", 5.0, minimum=1, maximum=60),
         azdo_org_url=_url(raw, "AZDO_ORG_URL", "") if "AZDO_ORG_URL" in raw else None,
         azdo_project=raw.get("AZDO_PROJECT"),
         azdo_pat=raw.get("AZDO_PAT"),
