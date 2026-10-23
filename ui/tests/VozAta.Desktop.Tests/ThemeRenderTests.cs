@@ -49,6 +49,20 @@ public sealed class ThemeRenderTests
                 await viewModel.History.Detail.PlayLineCommand.ExecuteAsync(viewModel.History.Detail.Lines[1]);
                 Render<Views.SessionPage>(viewModel, null, $"session-transcript-playing-{theme}.png");
                 Assert.NotNull(viewModel.History.Detail.Player);
+                var detail = viewModel.History.Detail;
+                client.PartialMinutes[detail.Id] =
+                [
+                    new PartialMinutesDetail("p1", "2026-10-16T09:12:00-03:00", 0, 754, "button", "general",
+                        "## Decisions\n- Ship the beta on Tuesday\n\n## Action items\n- Carlos fixes the recovery tests by Monday\n"),
+                    new PartialMinutesDetail("p2", "2026-10-16T10:00:00-03:00", 152, 774, "range", null, "## Summary\n- The installer is ready\n"),
+                ];
+                await detail.Partials.LoadAsync(); // phase 48: the Partial minutes tab
+                detail.Partials.Selected = detail.Partials.Items[0];
+                await Task.Delay(20);
+                detail.Range.From = "2:32"; // phase 49: minutes of a part
+                detail.Range.To = "00:12:54";
+                detail.SelectedTab = SessionPageViewModel.PartialMinutesTab;
+                Render<Views.SessionPage>(viewModel, null, $"session-partial-minutes-{theme}.png");
                 await viewModel.History.CloseAsync(); // the list alone, as on opening the page (phase 36)
                 await viewModel.Meetings.LoadOlderCommand.ExecuteAsync(null);
                 Render<MeetingsPage>(viewModel, ShellViewModel.Meetings, $"meetings-week-{theme}.png");
@@ -76,6 +90,14 @@ public sealed class ThemeRenderTests
                 viewModel.Recorder.Handle(new StatusEvent("20261016_090000", "recording", 754));
                 AddTranscript(viewModel);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-{theme}.png");
+                // Minutes so far (phase 48): the panel beside the live transcript
+                var recording = viewModel.Session.SessionId!;
+                await viewModel.Recorder.WriteMinutesSoFarCommand.ExecuteAsync(null);
+                client.PartialMinutes[recording] =
+                    [new PartialMinutesDetail("p9", "t", 0, 754, "button", null, "## Decisions\n- Ship the beta on Tuesday\n")];
+                await viewModel.Recorder.MinutesSoFar.OnReadyAsync(new PartialMinutesReadyEvent(recording, "p9", 0, 754, "button"));
+                Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-minutes-so-far-{theme}.png");
+                viewModel.Recorder.MinutesSoFar.CloseCommand.Execute(null);
                 // Half downloaded: the label sits over the filled and the unfilled part (phase 42)
                 const long mb = 1024 * 1024;
                 viewModel.Downloads.OnProgress(new DownloadProgressEvent(null, "speech", "large-v3-turbo", 720 * mb, 1440 * mb, "running", null));
@@ -91,11 +113,11 @@ public sealed class ThemeRenderTests
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-collapsed-{theme}.png");
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
-                return 15;
+                return 17;
             },
             CancellationToken.None);
 
-        Assert.Equal(15, rendered);
+        Assert.Equal(17, rendered);
     }
 
 #if DEBUG
