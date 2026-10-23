@@ -116,4 +116,21 @@ public sealed class ConfigClientTests
         Assert.Equal((HttpMethod.Post, "/worker/pair"), (handler.Requests[0].Method, handler.Requests[0].Path));
         Assert.Equal("""{"url":"http://192.168.0.20:8766","code":"123456"}""", handler.Requests[0].Body);
     }
+
+    [Fact]
+    public async Task Voice_commands_are_read_and_saved()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"commands": [{"phrase": "gere a ata", "action": "minutes", "question": null}],
+             "defaults": [{"phrase": "gere a ata", "action": "minutes", "question": null}]}
+            """);
+        var client = new EngineClient(handler.Client());
+
+        var view = await client.GetVoiceCommandsAsync();
+        await client.UpdateVoiceCommandsAsync([new VoiceCommand("recap", "ask", "Q?")]);
+
+        Assert.Equal(new VoiceCommand("gere a ata", "minutes", null), Assert.Single(view.Commands));
+        Assert.Equal((HttpMethod.Put, "/voice-commands"), (handler.Requests[1].Method, handler.Requests[1].Path));
+        Assert.Equal("""{"commands":[{"phrase":"recap","action":"ask","question":"Q?"}]}""", handler.Requests[1].Body);
+    }
 }

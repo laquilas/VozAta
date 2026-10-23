@@ -430,11 +430,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
 
                 break;
+            case VoiceCommandEvent voice:
+                Notify(_localization.Format("VoiceCommandHeard", voice.Phrase));
+                Recorder.OnVoiceCommand(voice);
+                break;
             case AnswerChunkEvent chunk:
+                Recorder.VoiceAnswer.OnChunk(chunk); // a question asked by voice (phase 50)
                 History.Ask.OnAnswerChunk(chunk);
                 History.Detail?.Ask.OnAnswerChunk(chunk); // the meeting page's Ask tab (phase 37)
                 break;
             case AnswerDoneEvent done:
+                Recorder.VoiceAnswer.OnDone(done);
                 History.Ask.OnAnswerDone(done);
                 History.Detail?.Ask.OnAnswerDone(done);
                 break;

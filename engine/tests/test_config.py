@@ -780,3 +780,20 @@ def test_the_worker_identity_keys_are_read_with_their_defaults() -> None:
     )
     with pytest.raises(ConfigError):
         load_settings({"WORKER_DISCOVERY_PORT": "0"})
+
+
+def test_the_voice_command_keys_are_read_with_their_defaults() -> None:
+    defaults = load_settings({})
+    settings = load_settings(
+        {"VOICE_COMMANDS_ENABLED": "false", "WAKE_WORD": "  ", "VOICE_COMMANDS_FILE": "c.json"}
+    )
+
+    assert (defaults.voice_commands_enabled, defaults.wake_word, defaults.voice_commands_file) == (
+        True,
+        "VozAta",
+        None,
+    )
+    assert (settings.voice_commands_enabled, settings.wake_word) == (False, "VozAta")
+    assert (
+        settings.voice_commands_file is not None and settings.voice_commands_file.name == "c.json"
+    )

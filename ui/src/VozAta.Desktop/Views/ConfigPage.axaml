@@ -292,6 +292,50 @@
                 <Border Classes="card" Margin="0,0,0,16">
                   <StackPanel Spacing="12">
                     <TextBlock Text="{Binding Title}" Classes="subtitle" />
+                    <!-- Voice commands group (phase 50): the phrases said after the wake word -->
+                    <Border IsVisible="{Binding HasCommands}" Margin="0,0,0,8">
+                      <StackPanel DataContext="{Binding Commands}" x:DataType="vm:VoiceCommandsViewModel" Spacing="8">
+                        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandsHelp]}" />
+                        <ItemsControl ItemsSource="{Binding Rows}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:VoiceCommandRow">
+                              <Grid ColumnDefinitions="220,180,*,Auto" Margin="0,3">
+                                <TextBox Text="{Binding Phrase}" Margin="0,0,8,0"
+                                         PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandPhrase]}"
+                                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandPhrase]}" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action}"
+                                          HorizontalAlignment="Stretch" Margin="0,0,8,0"
+                                          AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandAction]}">
+                                  <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ChoiceOption">
+                                      <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                  </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBox Grid.Column="2" Text="{Binding Question}" IsVisible="{Binding IsAsk}" Margin="0,0,8,0"
+                                         PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandQuestion]}"
+                                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandQuestion]}" />
+                                <Button Grid.Column="3" Classes="icon"
+                                        Command="{Binding $parent[ItemsControl].((vm:VoiceCommandsViewModel)DataContext).RemoveCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandRemove]}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandRemove]}">
+                                  <PathIcon Data="{StaticResource Icon.Delete}" />
+                                </Button>
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <WrapPanel ItemSpacing="8" LineSpacing="6">
+                          <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandAdd]}" Command="{Binding AddCommand}" />
+                          <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandsRestore]}" Command="{Binding RestoreDefaultsCommand}" />
+                          <Button Classes="primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandsSave]}" Command="{Binding SaveCommand}" />
+                        </WrapPanel>
+                        <TextBlock Text="{Binding Message}" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      </StackPanel>
+                    </Border>
                     <!-- Worker group (phase 47): find a worker on the network and pair by its code -->
                     <Border IsVisible="{Binding HasPairing}" Margin="0,0,0,8">
                       <StackPanel DataContext="{Binding Pairing}" x:DataType="vm:WorkerPairingViewModel" Spacing="8">

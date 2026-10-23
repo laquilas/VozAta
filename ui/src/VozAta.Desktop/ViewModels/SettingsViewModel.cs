@@ -20,6 +20,11 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
 
     public bool HasPairing => Pairing is not null;
 
+    /// <summary>The voice command phrases (phase 50): the Voice commands group only.</summary>
+    public VoiceCommandsViewModel? Commands { get; init; }
+
+    public bool HasCommands => Commands is not null;
+
     [ObservableProperty]
     public partial string Title { get; private set; } = id;
 
@@ -56,7 +61,7 @@ public sealed partial class SettingsViewModel(
     IEngineClient client, IEngineProcess process, ILocalizationService localization, IPathPicker? paths = null)
     : ObservableObject
 {
-    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "api"];
+    public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "voice", "api"];
 
     /// <summary>The key each service check sits next to (phase 38).</summary>
     /// <summary>The keys a worker pairing saves (phase 47).</summary>
@@ -132,7 +137,12 @@ public sealed partial class SettingsViewModel(
                     Pairing = group.Key == "worker"
                         ? new WorkerPairingViewModel(client, localization) { Paired = ShowPairedAsync }
                         : null,
+                    Commands = group.Key == "voice" ? new VoiceCommandsViewModel(client, localization) : null,
                 };
+                if (section.Commands is not null)
+                {
+                    await section.Commands.LoadAsync(cancellationToken);
+                }
                 section.RefreshTexts(localization);
                 Groups.Add(section);
             }

@@ -49,6 +49,13 @@ public sealed partial class MinutesSoFarViewModel(
         }
     }
 
+    /// <summary>A voice command asked for minutes so far (phase 50): wait for them like a click.</summary>
+    public void ExpectVoice(string sessionId)
+    {
+        _sessionId = sessionId;
+        IsWriting = true;
+    }
+
     /// <summary>A <c>partial_minutes_ready</c> event: show it when it is the one this recording asked for.</summary>
     public async Task OnReadyAsync(PartialMinutesReadyEvent ready)
     {

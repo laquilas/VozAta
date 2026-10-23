@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from vozata.domain import ActionItem, ConversationLanguage, TranscriptSegment, optional_text
@@ -53,7 +53,14 @@ class ActionItemExtractor:
     every job (VRAM rule).
     """
 
-    def __init__(self, llm: LanguageModel, localizer: Localizer, max_chars: int) -> None:
+    def __init__(
+        self,
+        llm: LanguageModel,
+        localizer: Localizer,
+        max_chars: int,
+        exclude: Callable[[TranscriptSegment], bool] | None = None,
+    ) -> None:
+        self._exclude = exclude  # phase 50: voice commands stay out of the prompts
         self._llm = llm
         self._t = localizer.t
         self._max_chars = max_chars
@@ -66,7 +73,8 @@ class ActionItemExtractor:
         vocabulary: Sequence[str] = (),
         meeting_date: str | None = None,
     ) -> list[ActionItem]:
-        ordered = sorted(segments, key=lambda segment: segment.start)
+        kept = [s for s in segments if self._exclude is None or not self._exclude(s)]
+        ordered = sorted(kept, key=lambda segment: segment.start)
         known = {segment.segment_id for segment in ordered}
         lines = [_line(segment, labeler.label(segment.speaker_id)) for segment in ordered]
         parts = _split(lines, self._max_chars)

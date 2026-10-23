@@ -216,9 +216,11 @@ public sealed class ShellViewModelTests
         Assert.Equal(expected, _preferences.Data.Theme);
     }
 
+    /// <summary>Events are pumped on another task: under a loaded machine (both test projects run at once) they may take seconds.</summary>
     private static async Task WaitAsync(Func<bool> condition)
     {
-        for (var i = 0; i < 200 && !condition(); i++)
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (!condition() && DateTime.UtcNow < deadline)
         {
             await Task.Delay(5);
         }

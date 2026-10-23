@@ -29,6 +29,9 @@ action_items_failed = "Não foi possível extrair os itens de ação ({reason}).
 translation_failed = "A tradução ao vivo parou ({reason}). A transcrição continua."
 
 [errors.api]
+voice_command_busy = "Um comando de voz já está sendo atendido; tente de novo daqui a pouco."
+invalid_voice_commands = "A lista de comandos de voz não pode ser salva: {reason}."
+voice_commands_failed = "Não foi possível ler ou salvar a lista de comandos de voz ({reason})."
 range_beyond_end = "A reunião dura {length}: o trecho precisa terminar até aí."
 empty_range = "Nada foi dito nesse trecho da reunião, então não há o que resumir."
 partial_minutes_failed = "Não foi possível escrever a ata parcial ({reason}). Confira se o Ollama está rodando e o modelo foi baixado."
@@ -113,6 +116,9 @@ transcript_label = "Transcrição:"
 notes_label = "Notas:"
 
 [qa]
+so_far_instructions = "Responda à pergunta em {output_language} a partir da reunião abaixo, que ainda está em andamento. Seja breve e concreto: decisões, responsáveis e datas quando ditos. Se a reunião não responder, diga exatamente: {not_found}"
+map_instructions = "Esta é a parte {part} de {total} de uma reunião que ainda está em andamento. Escreva notas curtas de tudo nela que ajude a responder à pergunta; nada mais."
+notes_label = "NOTAS"
 system = "Você responde perguntas sobre reuniões gravadas usando apenas os trechos de reunião fornecidos. Nunca invente nomes, datas, números ou decisões. Se os trechos não contiverem a resposta, diga que ela não foi encontrada nas reuniões."
 instructions = """Responda à pergunta em {output_language}, de forma concisa, usando apenas os trechos abaixo.
 Após cada afirmação, cite a linha do trecho de onde ela vem como [session_id@hh:mm:ss], copiando o id da sessão e o horário exatamente como aparecem, por exemplo [{example}].
@@ -278,3 +284,10 @@ fallback = "O worker do VozAta em {host} não respondeu: {task} roda neste PC."
 speech = "o reconhecimento de fala"
 speakers = "a identificação de falantes"
 translation = "a tradução"
+
+[voice_commands]
+minutes_phrase = "gere a ata"
+decided_phrase = "o que foi decidido"
+decided_question = "O que foi decidido até agora nesta reunião?"
+next_phrase = "próximos passos"
+next_question = "Quais são os próximos passos combinados até agora, e quem faz cada um?"

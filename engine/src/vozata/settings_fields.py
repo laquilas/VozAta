@@ -47,6 +47,7 @@ GROUPS = (
     "minutes",
     "tasks",
     "worker",
+    "voice",
     "api",
 )
 
@@ -176,6 +177,10 @@ FIELDS: tuple[Field, ...] = (
     Field("ECHO_HOLD_SECONDS", "echo_hold_seconds", "number", group="transcription"),
     # Custom vocabulary (phase 19)
     Field("VOCABULARY_FILE", "vocabulary_file", "path", group="transcription"),
+    # Phase 50
+    Field("VOICE_COMMANDS_ENABLED", "voice_commands_enabled", "bool", group="voice"),
+    Field("WAKE_WORD", "wake_word", "string", group="voice"),
+    Field("VOICE_COMMANDS_FILE", "voice_commands_file", "path", group="voice"),
     Field("CONTEXT_PROMPT_CHARS", "context_prompt_chars", "integer", group="transcription"),
     # Editable transcript (phase 21)
     Field("LOW_CONFIDENCE_THRESHOLD", "low_confidence_threshold", "number", group="transcription"),

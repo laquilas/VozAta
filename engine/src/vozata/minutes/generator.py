@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from vozata.domain import ConversationLanguage, TranscriptSegment
-from vozata.formatting import render_line
+from vozata.formatting import render_line, split_lines
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.prompts import map_prompt, minutes_prompt, reduce_prompt
 from vozata.minutes.template_repository import LocalizedTemplate
@@ -32,7 +32,9 @@ class MinutesGenerator:
         localizer: Localizer,
         max_chars: int,
         template: LocalizedTemplate,
+        exclude: Callable[[TranscriptSegment], bool] | None = None,
     ) -> None:
+        self._exclude = exclude  # phase 50: voice commands stay out of the prompts
         self._llm = llm
         self._localizer = localizer
         self._max_chars = max_chars
@@ -53,6 +55,8 @@ class MinutesGenerator:
     ) -> str:
         """`scope` (phase 48) says which part of the meeting the segments are, for minutes of
         part of it."""
+        if self._exclude is not None:
+            segments = [segment for segment in segments if not self._exclude(segment)]
         if not segments:
             raise ValueError("Cannot write minutes for an empty transcript")
         lines = [
@@ -77,7 +81,7 @@ class MinutesGenerator:
         transcript = "\n".join(lines)
         if len(transcript) <= self._max_chars:
             return self._ask(minutes_prompt(loc, template, transcript, language, **context))
-        parts = _split(lines, self._max_chars)
+        parts = split_lines(lines, self._max_chars)
         notes = [
             self._ask(map_prompt(loc, template, part, i, len(parts), language, **context))
             for i, part in enumerate(parts, start=1)
@@ -102,17 +106,3 @@ class MinutesGenerator:
     def _ask(self, prompt: tuple[str, str]) -> str:
         system, user = prompt
         return self._llm.generate(system, user).strip()
-
-
-def _split(lines: Sequence[str], max_chars: int) -> list[str]:
-    """Group whole lines into parts of at most `max_chars` (a longer line stands alone)."""
-    parts: list[list[str]] = []
-    size = 0
-    for line in lines:
-        if parts and size + 1 + len(line) <= max_chars:
-            parts[-1].append(line)
-            size += 1 + len(line)
-        else:
-            parts.append([line])
-            size = len(line)
-    return ["\n".join(part) for part in parts]

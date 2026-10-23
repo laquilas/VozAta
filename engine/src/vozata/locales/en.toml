@@ -29,6 +29,9 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+voice_command_busy = "Voice commands are being processed already; try again in a moment."
+invalid_voice_commands = "The voice command list cannot be saved: {reason}."
+voice_commands_failed = "The voice command list could not be read or saved ({reason})."
 range_beyond_end = "The meeting lasts {length}: the part must end by then."
 empty_range = "Nothing was said in that part of the meeting, so there is nothing to summarize."
 partial_minutes_failed = "The partial minutes could not be written ({reason}). Check that Ollama is running and the model is pulled."
@@ -113,6 +116,9 @@ transcript_label = "Transcript:"
 notes_label = "Notes:"
 
 [qa]
+so_far_instructions = "Answer the question in {output_language} from the meeting below, which is still going on. Be short and concrete: decisions, owners and dates when said. If the meeting does not answer it, reply exactly: {not_found}"
+map_instructions = "This is part {part} of {total} of a meeting that is still going on. Write short notes of everything in it that helps answer the question; nothing else."
+notes_label = "NOTES"
 system = "You answer questions about recorded meetings using only the meeting excerpts you are given. Never invent names, dates, numbers or decisions. If the excerpts do not contain the answer, say that it was not found in the meetings."
 instructions = """Answer the question in {output_language}, concisely, using only the excerpts below.
 After each statement, cite the excerpt line it comes from as [session_id@hh:mm:ss], copying the session id and the time exactly as they appear, for example [{example}].
@@ -278,3 +284,10 @@ fallback = "The VozAta worker at {host} did not answer: {task} runs on this PC."
 speech = "speech recognition"
 speakers = "speaker identification"
 translation = "translation"
+
+[voice_commands]
+minutes_phrase = "make the minutes"
+decided_phrase = "what was decided"
+decided_question = "What was decided so far in this meeting?"
+next_phrase = "next steps"
+next_question = "What are the next steps agreed so far, and who does each?"

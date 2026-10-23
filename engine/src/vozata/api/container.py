@@ -74,6 +74,7 @@ class ApiContainer:
     search_index: TranscriptSearch | None = None  # `GET /search` (22); None: no hits
     templates: TemplateRepository = field(default_factory=bundled_templates)  # minutes (20)
     vocabulary_file: Callable[[], Path] = lambda: Path("vocabulary.txt")  # glossary (19)
+    voice_commands_file: Callable[[], Path] = lambda: Path("voice_commands.json")  # (50)
     ask: AskRunner | None = None  # `POST /ask` (24); None: 503 ask_unavailable
     # Minutes of part of a meeting (48); None: 503 partial_minutes_unavailable
     partial_minutes: PartialMinutesJob | None = None

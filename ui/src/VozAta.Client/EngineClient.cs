@@ -142,6 +142,13 @@ public interface IEngineClient
     /// <summary><c>DELETE /sessions/{id}/partial-minutes/{pid}</c> (phase 48).</summary>
     Task DeletePartialMinutesAsync(string sessionId, string partialId, CancellationToken cancellationToken = default);
 
+    /// <summary><c>GET /voice-commands</c> (phase 50).</summary>
+    Task<VoiceCommandsView> GetVoiceCommandsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>PUT /voice-commands</c> (phase 50): replace the list; it comes back trimmed.</summary>
+    Task<VoiceCommandsView> UpdateVoiceCommandsAsync(
+        IReadOnlyList<VoiceCommand> commands, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /worker/discover</c> (phase 47): the VozAta workers on the local network.</summary>
     Task<WorkersFound> DiscoverWorkersAsync(CancellationToken cancellationToken = default);
 
@@ -372,6 +379,13 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         using var response = await SendRawAsync(
             HttpMethod.Delete, $"sessions/{Escape(sessionId)}/partial-minutes/{Escape(partialId)}", null, cancellationToken);
     }
+
+    public Task<VoiceCommandsView> GetVoiceCommandsAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<VoiceCommandsView>(HttpMethod.Get, "voice-commands", null, cancellationToken);
+
+    public Task<VoiceCommandsView> UpdateVoiceCommandsAsync(
+        IReadOnlyList<VoiceCommand> commands, CancellationToken cancellationToken = default) =>
+        SendAsync<VoiceCommandsView>(HttpMethod.Put, "voice-commands", new { commands }, cancellationToken);
 
     public Task<WorkersFound> DiscoverWorkersAsync(CancellationToken cancellationToken = default) =>
         SendAsync<WorkersFound>(HttpMethod.Get, "worker/discover", null, cancellationToken);

@@ -337,6 +337,9 @@ def test_build_api_container_wires_real_providers(
     assert isinstance(downloader, HubDownloader) and downloader._tracker is container.downloads
     assert downloader._offline is False
     moved = built[0].pop("worker_moved")
+    from vozata.api.voice_dispatch import VoiceCommandDispatcher
+
+    assert isinstance(built[0].pop("voice_dispatch"), VoiceCommandDispatcher)  # phase 50
     assert built == [
         {
             "language": None,
