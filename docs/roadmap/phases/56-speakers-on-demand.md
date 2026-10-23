@@ -78,6 +78,19 @@ it), other runtimes (translation already ships in the standard build).
 > Start phase 56 (`docs/roadmap/phases/56-speakers-on-demand.md`): read its *Read first* files,
 > write `plans/56-speakers-on-demand.md`, then implement it task by task.
 
+## Manual check (2026-10-23, reference machine)
+
+- The real runtime, with a bundle like `build.ps1` makes (`uv.exe` 0.13.5 + `vozata.zip`):
+  `install` ran the four steps (CUDA variant) into `%LOCALAPPDATA%\VozAta\speakers`;
+  `ready.json` = torch 2.11.0+cu128, CUDA 12.8, pyannote 4.0.7; 4.6 GB on disk. The runtime's
+  Python imports `vozata` from the zip and sees the GPU.
+- `pyannote_from_settings` with that runtime diarized `benchmarks/tts-meeting/audio.wav`
+  (62.9 s, one voice): 10 turns, 1 speaker, 38.8 s including the model load.
+- The installer script compiles with Inno Setup 7.1 (the task and the uninstall entry).
+- The packaged build itself was stopped twice by Claude Code's low-memory guard during
+  PyInstaller's COLLECT step (not a build error); still to run: the full `build.ps1`, then
+  `vozata-engine.exe speakers status --json` / `worker --check --json` from the build.
+
 ## Progress
 
 - **Branch:** `feature/56-speakers-on-demand`

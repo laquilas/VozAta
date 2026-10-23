@@ -58,8 +58,8 @@ to remove them too.
 
 ## Speaker identification
 
-Telling the remote participants apart (User 1, User 2, ...) needs pyannote and PyTorch, about
-3 GB, which the installer does not carry. Download them once on the PC that runs them:
+Telling the remote participants apart (User 1, User 2, ...) needs pyannote and PyTorch (about
+3 GB to download, 4.6 GB on disk with CUDA), which the installer does not carry. Download them once on the PC that runs them:
 
 - during the setup: tick **Download speaker identification now** (a console window shows the
   download);
