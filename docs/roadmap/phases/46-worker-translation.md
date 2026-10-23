@@ -51,3 +51,24 @@ Several workers, load balancing, TLS.
 
 > Start phase 46 (`docs/roadmap/phases/46-worker-translation.md`) once phase 45 is merged: read its
 > *Read first* files, write `plans/46-worker-translation.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/46-worker-translation`
+- **Status:** in progress
+- **Updated:** 2026-10-22
+- **Next step:** Task 1 of `plans/46-worker-translation.md` (engine: worker `/translate`, the
+  worker translator, `/health` task placement; commit).
+
+### Steps
+
+- [x] Implementation plan (`plans/46-worker-translation.md`)
+- [ ] Engine: `/translate` on the worker, `TRANSLATORS["vozata_worker"]` with fallback, `/health` tasks
+- [ ] UI: Worker toggles per task, sidebar worker status
+- [ ] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- The Worker section reuses the generated Worker settings group (URL, token, Test, pairing from
+  phase 47) and adds the per-task toggles; they edit the provider keys and are saved with Save.
+
