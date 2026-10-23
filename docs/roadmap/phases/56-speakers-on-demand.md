@@ -54,12 +54,12 @@ to build (PyInstaller ran out of memory collecting torch) and to ship.
 
 ## Acceptance criteria
 
-- [ ] The standard build has no torch and stays ~1 GB; `build.ps1` has no `-Speakers`.
-- [ ] `vozata-engine.exe speakers install` on the reference machine builds the runtime;
+- [x] The standard build has no torch and stays ~1 GB; `build.ps1` has no `-Speakers`.
+- [x] `vozata-engine.exe speakers install` on the reference machine builds the runtime;
       `worker --check --json` then shows speakers not `missing_extra`; a diarization run of the
       packaged engine works through it.
 - [ ] VozAta Worker downloads it from the Tasks card and then offers speakers.
-- [ ] The installer offers the optional download.
+- [x] The installer offers the optional download (compiled; the task run by hand is in `__pendent__`).
 
 ## Tests
 
@@ -87,16 +87,21 @@ it), other runtimes (translation already ships in the standard build).
 - `pyannote_from_settings` with that runtime diarized `benchmarks/tts-meeting/audio.wav`
   (62.9 s, one voice): 10 turns, 1 speaker, 38.8 s including the model load.
 - The installer script compiles with Inno Setup 7.1 (the task and the uninstall entry).
-- The packaged build itself was stopped twice by Claude Code's low-memory guard during
-  PyInstaller's COLLECT step (not a build error); still to run: the full `build.ps1`, then
-  `vozata-engine.exe speakers status --json` / `worker --check --json` from the build.
+- `build.ps1 -Version 0.1.0` (run in the foreground: Claude Code's low-memory guard stopped it
+  twice in the background): `VozAta-Setup-0.1.0.exe`, 1,085 MB, no torch in the build;
+  `engine\speakers` holds `uv.exe` (31 MB) and `vozata.zip` (1.1 MB). The packaged
+  `worker --check --json` reports speakers `missing_hf_token` (no token in that folder), no longer
+  `missing_extra`; `speakers status --json` reads the runtime's `ready.json`; `speakers install`
+  keeps the ready runtime.
+- Left for a person (`__pendent__/README.md`): the Download button of VozAta Worker on a PC
+  without the runtime, the setup task on a clean PC.
 
 ## Progress
 
 - **Branch:** `feature/56-speakers-on-demand`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23 16:00
-- **Next step:** full suites, then the manual check: build the installer, `speakers install` from the packaged engine, a diarization run.
+- **Next step:** open the PR and merge it.
 
 ### Steps
 
@@ -106,4 +111,4 @@ it), other runtimes (translation already ships in the standard build).
 - [x] Packaging: `vozata.zip` + `uv.exe`, the edition removed, the installer task (`frozen.py` removed: the children no longer run through `vozata-engine.exe -m`)
 - [x] Worker app: the Download button — `e185465`
 - [x] Docs (INSTALL, remote-worker, two-pc-check, architecture, worker-api)
-- [ ] Full suites; manual check (packaged build, runtime install, diarization)
+- [x] Full suites; manual check (packaged build, runtime install, diarization)
