@@ -100,7 +100,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 48 | [Minutes so far and the partial-minutes list](phases/48-minutes-so-far.md) | 40, 41 | done |
 | 49 | [Minutes of a time range](phases/49-minutes-of-a-range.md) | 48 | done |
 | 50 | [Voice commands](phases/50-voice-commands.md) | 48 | done |
-| 51 | [The installed worker ships every task](phases/51-worker-every-task.md) | 45, 46, 47 | todo |
+| 51 | [The installed worker ships every task](phases/51-worker-every-task.md) | 45, 46, 47 | in progress (`feature/51-worker-every-task`) |
 | 52 | [Two-PC end-to-end check](phases/52-two-pc-check.md) | 51 | todo |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.

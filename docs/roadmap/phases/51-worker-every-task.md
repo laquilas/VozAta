@@ -112,3 +112,26 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 
 > Start phase 51 (`docs/roadmap/phases/51-worker-every-task.md`): read its *Read first* files,
 > write `plans/51-worker-every-task.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/51-worker-every-task`
+- **Status:** in progress
+- **Updated:** 2026-10-23
+- **Next step:** task 1 of `plans/51-worker-every-task.md`: failing tests for `worker/tasks.py`
+  (`worker_tasks` for every extra / token combination) and `/local/status.tasks`.
+
+### Steps
+
+- [x] Implementation plan (`plans/51-worker-every-task.md`)
+- [ ] Worker tasks: `worker_tasks`, speakers need the extra and `HF_TOKEN`, `/local/status.tasks`
+- [ ] `worker --check` lists the tasks (`--json` for the build)
+- [ ] Frozen engine runs `-m <module>` (packaged child processes)
+- [ ] Packaging: translation in every build, `-Speakers` edition
+- [ ] Worker app: Tasks card
+- [ ] Docs
+- [ ] Full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
