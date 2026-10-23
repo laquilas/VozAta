@@ -392,3 +392,147 @@ def test_a_recording_that_cannot_start_fails() -> None:
     result = check.preempt(engine, cuda=True, during=lambda: None, clock=clock, sleep=clock.sleep)
 
     assert result.ok is False and "device_timeout" in result.detail
+
+
+# The whole run
+
+
+class _Worker:
+    """A worker that offers every task, translates and cancels jobs; records the clients made."""
+
+    def __init__(self, capabilities: list[str] | None = None) -> None:
+        self.capabilities = capabilities or ["speech", "speakers", "translation"]
+        self.jobs = _Jobs()
+        self.made: list[tuple[str, str | None]] = []
+
+    def __call__(self, url: str, token: str | None) -> httpx.Client:
+        self.made.append((url, token))
+        return _client(self._handle, url)
+
+    def _handle(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/local/status":
+            return _json(200, {"pairing_code": "654321"})
+        if path == "/health":
+            return _json(200, {"capabilities": self.capabilities})
+        if path == "/translate":
+            return _json(200, {"text": "Let's postpone the beta release."})
+        return self.jobs(request)
+
+
+def _paired_engine(env_file: Path, workers: list[dict[str, str]]) -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/worker/discover":
+            return _json(200, {"workers": workers})
+        if request.url.path == "/worker/pair":
+            body = json.loads(request.content)
+            env_file.write_text(f"WORKER_URL={body['url']}\nWORKER_TOKEN=t0k\n", "utf-8")
+            return _json(200, {"id": "b", "name": "GPU-PC"})
+        return _json(404, {})
+
+    return _client(handler)
+
+
+GPU_PC = {"id": "b", "name": "GPU-PC", "url": "http://192.168.0.20:8766", "version": "0.1.0"}
+
+
+def _run(options: check.Options, engine: httpx.Client, env: Path, worker: _Worker) -> list[str]:
+    clock = _Clock()
+    results = check.run_checks(
+        options, engine, env, worker=worker, during=lambda: None, clock=clock, sleep=clock.sleep
+    )
+    return [f"{result.name}:{result.ok}" for result in results]
+
+
+def test_a_run_discovers_pairs_with_the_code_on_this_pc_and_checks_the_worker(
+    tmp_path: Path,
+) -> None:
+    env, worker = tmp_path / ".env", _Worker()
+
+    steps = _run(check.Options(code="auto"), _paired_engine(env, [GPU_PC]), env, worker)
+
+    assert steps == [
+        "discover:True",
+        "pair:True",
+        "health:True",
+        "translate:True",
+        "diarize + cancel:True",
+        "pre-emption:None",
+    ]
+    # the code from /local/status through loopback, then the saved URL and token
+    assert worker.made == [("http://127.0.0.1:8766", None), ("http://192.168.0.20:8766", "t0k")]
+
+
+def test_without_a_code_the_run_stops_after_discovery(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+
+    steps = _run(check.Options(), _paired_engine(env, [GPU_PC]), env, _Worker())
+
+    assert steps == ["discover:True", "pair:False"]
+
+
+def test_nothing_discovered_stops_the_run(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+
+    steps = _run(check.Options(code="1"), _paired_engine(env, []), env, _Worker())
+
+    assert steps == ["discover:False"]
+
+
+def test_a_given_worker_url_skips_discovery_and_pairing(tmp_path: Path) -> None:
+    worker = _Worker(["speech", "translation"])
+    options = check.Options(worker_url="http://10.0.0.5:8766", token="t", speakers=False)
+
+    steps = _run(options, _client(lambda _: _json(404, {})), tmp_path / ".env", worker)
+
+    assert steps == [
+        "discover:None",
+        "pair:None",
+        "health:True",
+        "translate:True",
+        "diarize + cancel:None",
+        "pre-emption:None",
+    ]
+    assert worker.made == [("http://10.0.0.5:8766", "t")]
+
+
+def test_a_worker_missing_a_task_stops_after_health(tmp_path: Path) -> None:
+    options = check.Options(worker_url="http://10.0.0.5:8766", token="t")
+
+    steps = _run(options, _client(lambda _: _json(404, {})), tmp_path / ".env", _Worker(["speech"]))
+
+    assert steps[-1] == "health:False"
+
+
+def test_a_pairing_that_saved_nothing_fails(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/worker/discover":
+            return _json(200, {"workers": [GPU_PC]})
+        return _json(200, {"id": "b", "name": "GPU-PC"})  # but no .env written
+
+    steps = _run(check.Options(code="1"), _client(handler), tmp_path / ".env", _Worker())
+
+    assert steps == ["discover:True", "pair:True", "health:False"]
+
+
+def test_record_runs_the_pre_emption_with_the_engine_gpu(tmp_path: Path) -> None:
+    engine = _Engine([_step("running", "diarize"), _step("paused", "diarize"), None])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/health":
+            return _json(200, {"gpu": {"available": True}})
+        return engine(request)
+
+    options = check.Options(worker_url="http://10.0.0.5:8766", token="t", record=True)
+
+    steps = _run(options, _client(handler), tmp_path / ".env", _Worker())
+
+    assert steps[-1] == "pre-emption:True"
+
+
+def test_a_scratch_env_with_a_given_worker(tmp_path: Path) -> None:
+    text = check.scratch_env(
+        tmp_path, port=1, discovery_port=2, worker_url="http://10.0.0.5:8766", worker_token="t"
+    )
+
+    assert "WORKER_URL=http://10.0.0.5:8766\n" in text and "WORKER_TOKEN=t\n" in text

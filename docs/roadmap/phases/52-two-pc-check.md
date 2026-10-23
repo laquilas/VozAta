@@ -79,15 +79,16 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - **Branch:** `feature/52-two-pc-check`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** the runtime part: `scripts/two_pc_runtime.py` (start / stop the scratch client
-  engine, play a WAV) and the command line `main()` of `two_pc_check.py`.
+- **Next step:** run the script on this PC against a scratch worker on 0.0.0.0 (other ports, scratch
+  folder) with `--code auto --record --play <TTS WAV>`, fix what it finds, then write
+  `docs/two-pc-check.md`.
 
 ### Steps
 
 - [x] Implementation plan (`plans/52-two-pc-check.md`)
 - [x] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
 - [x] Script: translate, diarize + cancel, pre-emption
-- [ ] Script runtime: scratch engine process, playback, command line
+- [x] Script runtime: scratch engine process, playback, command line
 - [ ] Checklist `docs/two-pc-check.md`
 - [ ] Full suites, one recorded run, phase done
 

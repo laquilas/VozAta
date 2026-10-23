@@ -38,8 +38,16 @@ class StepResult:
     detail: str
 
 
-def scratch_env(folder: Path, *, port: int, discovery_port: int) -> str:
-    """The client engine's `.env`: everything inside `folder`, every task on the worker."""
+def scratch_env(
+    folder: Path,
+    *,
+    port: int,
+    discovery_port: int,
+    worker_url: str | None = None,
+    worker_token: str | None = None,
+) -> str:
+    """The client engine's `.env`: everything inside `folder`, every task on the worker (pairing
+    adds `WORKER_URL` / `WORKER_TOKEN`, or they are given)."""
     values = {
         "API_PORT": str(port),
         "OUTPUT_DIR": str(folder / "recordings"),
@@ -52,6 +60,10 @@ def scratch_env(folder: Path, *, port: int, discovery_port: int) -> str:
         "EXTRACT_ACTION_ITEMS": "false",
         "WORKER_DISCOVERY_PORT": str(discovery_port),
     }
+    if worker_url:
+        values["WORKER_URL"] = worker_url
+    if worker_token:
+        values["WORKER_TOKEN"] = worker_token
     return "".join(f"{key}={value}\n" for key, value in values.items())
 
 
@@ -307,6 +319,77 @@ def _wait(
     return False
 
 
+@dataclass(frozen=True)
+class Options:
+    worker_name: str | None = None
+    code: str | None = None  # the pairing code; "auto" reads it from a worker on this PC
+    worker_url: str | None = None  # with `token`: skip discovery and pairing
+    token: str | None = None
+    speakers: bool = True
+    record: bool = False
+
+
+def run_checks(
+    options: Options,
+    engine: httpx.Client,
+    env_file: Path,
+    *,
+    worker: Callable[[str, str | None], httpx.Client],
+    during: Callable[[], None],
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> list[StepResult]:
+    """Every step in order; a failed discover / pair / health stops the steps that need it."""
+    results: list[StepResult] = []
+    url, token = options.worker_url, options.token
+    if url is None:
+        found, url = discover(engine, options.worker_name)
+        results.append(found)
+        if url is None:
+            return results
+        if options.code is None:
+            return [
+                *results,
+                StepResult("pair", False, "no --code: type the one VozAta Worker shows"),
+            ]
+        code = options.code
+        if code == "auto":
+            code = pairing_code(worker(_on_this_pc(url), None))
+        paired = pair(engine, url, code)
+        results.append(paired)
+        if not paired.ok:
+            return results
+        url, token = saved_worker(env_file)
+        if url is None:
+            return [
+                *results,
+                StepResult("health", False, f"pairing saved no WORKER_URL in {env_file}"),
+            ]
+    else:
+        skipped = "--worker-url given"
+        results += [StepResult("discover", None, skipped), StepResult("pair", None, skipped)]
+    client = worker(url, token)
+    health = worker_health(client, speakers=options.speakers)
+    results.append(health)
+    if not health.ok:
+        return results
+    results.append(translate(client))
+    if options.speakers:
+        results.append(diarize_cancel(client, synthetic_wav(), clock=clock, sleep=sleep))
+    else:
+        results.append(StepResult("diarize + cancel", None, "--no-speakers"))
+    if not options.record:
+        return [*results, StepResult("pre-emption", None, "not asked (--record)")]
+    gpu = engine.get("/health", timeout=10).json().get("gpu") or {}
+    cuda = bool(gpu.get("available"))
+    return [*results, preempt(engine, cuda=cuda, during=during, clock=clock, sleep=sleep)]
+
+
+def _on_this_pc(url: str) -> str:
+    """The worker's URL through loopback: `/local/status` answers this PC only."""
+    return f"http://127.0.0.1:{urlsplit(url).port or 8766}"
+
+
 def _loopback(url: str) -> bool:
     host = urlsplit(url).hostname or ""
     try:
@@ -320,3 +403,68 @@ def _error_code(response: httpx.Response) -> str:
         return str(response.json()["error"]["code"])
     except (ValueError, KeyError, TypeError):
         return response.text[:200]
+
+
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover - starts processes
+    import argparse
+    import tempfile
+
+    import two_pc_runtime as runtime
+
+    parser = argparse.ArgumentParser(description="Two-PC end-to-end check of the VozAta worker.")
+    parser.add_argument("--worker-name", help="the worker to pick when several answer")
+    parser.add_argument("--code", help='pairing code shown in VozAta Worker; "auto" on one PC')
+    parser.add_argument("--worker-url", help="skip discovery and pairing (needs --token)")
+    parser.add_argument("--token", help="the worker token, with --worker-url")
+    parser.add_argument("--no-speakers", action="store_true", help="the worker has no speakers")
+    parser.add_argument("--record", action="store_true", help="also check the pre-emption")
+    parser.add_argument("--play", type=Path, help="WAV played on the output while recording")
+    parser.add_argument("--record-seconds", type=float, default=30.0)
+    parser.add_argument("--discovery-port", type=int, default=8767)
+    parser.add_argument("--folder", type=Path, help="scratch folder (default: a new temp one)")
+    args = parser.parse_args(argv)
+    if args.token and not args.worker_url:
+        parser.error("--token needs --worker-url")
+    folder = args.folder or Path(tempfile.mkdtemp(prefix="vozata-two-pc-"))
+    folder.mkdir(parents=True, exist_ok=True)
+    port = runtime.free_port()
+    env_file = folder / ".env"
+    env_file.write_text(
+        scratch_env(
+            folder,
+            port=port,
+            discovery_port=args.discovery_port,
+            worker_url=args.worker_url,
+            worker_token=args.token,
+        ),
+        encoding="utf-8",
+    )
+    options = Options(
+        worker_name=args.worker_name,
+        code=args.code,
+        worker_url=args.worker_url,
+        token=args.token,
+        speakers=not args.no_speakers,
+        record=args.record,
+    )
+
+    def worker(url: str, token: str | None) -> httpx.Client:
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        return httpx.Client(base_url=url, headers=headers)
+
+    def during() -> None:
+        if args.play:
+            runtime.play(args.play.resolve())
+        else:
+            time.sleep(args.record_seconds)
+
+    print(f"Scratch client engine in {folder} on port {port}")
+    with runtime.ScratchEngine(folder, port) as engine_process:
+        engine = httpx.Client(base_url=engine_process.url)
+        results = run_checks(options, engine, env_file, worker=worker, during=during)
+    print(render_table(results))
+    return 0 if passed(results) else 1
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
