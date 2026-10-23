@@ -73,9 +73,9 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - **Branch:** `feature/53-llm-providers`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 5 (UI): labels and help for the five keys in the three RESX files,
-  `ConnectionTargets` + `TestAnchors` for `OPENAI_LLM_URL` / `ANTHROPIC_API_KEY`, and the sidebar /
-  remote note texts made provider-neutral.
+- **Next step:** task 6: `docs/language-models.md` (from `remote-ollama.md`), architecture §9 keys,
+  api-contract (`/settings/test` targets, `/health.llm`), `.env.example`, `engine.spec` hidden
+  import `anthropic`.
 
 ### Steps
 
@@ -84,7 +84,7 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - [x] OpenAI-compatible provider and the shared contract suite
 - [x] Anthropic provider (official SDK)
 - [x] Config tests for both providers
-- [ ] UI: labels, tests, provider-neutral texts
+- [x] UI: labels, tests, provider-neutral texts
 - [ ] Docs and packaging
 - [ ] Full suites, manual check, phase done
 
@@ -105,3 +105,6 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
   New dependency `anthropic>=2.2,<3` (built on `httpx2`).
 - The Anthropic Config test goes through the SDK too (`llm.anthropic.probe_status`, injected into
   `ConnectionChecks` by the composition root, so `connection_checks.py` imports no provider).
+- The sidebar keeps "start Ollama" for Ollama and says "check the language model in Config" for the
+  other providers. The remote note (phase 43) now also shows for a non-local `OPENAI_LLM_URL` and
+  always next to `ANTHROPIC_API_KEY`.

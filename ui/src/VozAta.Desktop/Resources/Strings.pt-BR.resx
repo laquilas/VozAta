@@ -550,7 +550,7 @@
     <value>Provedor do modelo da ata</value>
   </data>
   <data name="SettingHelp_LLM_PROVIDER" xml:space="preserve">
-    <value>Provedor do modelo de linguagem usado para escrever a ata.</value>
+    <value>Provedor do modelo de linguagem usado para escrever a ata: ollama, openai_compatible (LM Studio, vLLM, llama.cpp, OpenAI) ou anthropic (Claude).</value>
   </data>
   <data name="Setting_OLLAMA_URL" xml:space="preserve">
     <value>Endereço do Ollama</value>
@@ -1577,5 +1577,38 @@
   </data>
   <data name="WorkerStatusOff" xml:space="preserve">
     <value>Este PC (worker desligado)</value>
+  </data>
+  <data name="MinutesUnreachableService" xml:space="preserve">
+    <value>Ata: {0} inacessível (confira o modelo de linguagem em Config)</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_URL" xml:space="preserve">
+    <value>Endereço do servidor compatível com OpenAI</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_URL" xml:space="preserve">
+    <value>Para LLM_PROVIDER openai_compatible: LM Studio (http://localhost:1234/v1), vLLM, o servidor do llama.cpp ou https://api.openai.com/v1.</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_KEY" xml:space="preserve">
+    <value>Chave do servidor compatível com OpenAI</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_KEY" xml:space="preserve">
+    <value>Só se o servidor pedir uma (a OpenAI pede; o LM Studio não).</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_MODEL" xml:space="preserve">
+    <value>Modelo compatível com OpenAI</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_MODEL" xml:space="preserve">
+    <value>O nome do modelo que o servidor oferece; vazio usa o primeiro da lista (o modelo carregado no LM Studio).</value>
+  </data>
+  <data name="Setting_ANTHROPIC_API_KEY" xml:space="preserve">
+    <value>Chave da API da Anthropic</value>
+  </data>
+  <data name="SettingHelp_ANTHROPIC_API_KEY" xml:space="preserve">
+    <value>Para LLM_PROVIDER anthropic: a chave do console.anthropic.com. O uso é cobrado pela Anthropic.</value>
+  </data>
+  <data name="Setting_ANTHROPIC_MODEL" xml:space="preserve">
+    <value>Modelo Claude</value>
+  </data>
+  <data name="SettingHelp_ANTHROPIC_MODEL" xml:space="preserve">
+    <value>O modelo Claude que escreve a ata, por exemplo claude-opus-5-5 ou claude-sonnet-5-5.</value>
   </data>
 </root>

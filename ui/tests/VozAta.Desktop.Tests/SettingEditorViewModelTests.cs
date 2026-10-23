@@ -43,6 +43,27 @@ public sealed class SettingEditorViewModelTests
         Assert.Equal("Transcripts are sent to 192.168.0.20 to write the minutes.", editor.Note);
     }
 
+    [Theory]
+    [InlineData("http://192.168.0.9:1234/v1", "Transcripts are sent to 192.168.0.9 to write the minutes.")]
+    [InlineData("https://api.openai.com/v1", "Transcripts are sent to api.openai.com to write the minutes.")]
+    [InlineData("http://localhost:1234/v1", null)]
+    public void The_OpenAI_compatible_URL_says_where_transcripts_go(string typed, string? note)
+    {
+        var editor = Editor("OPENAI_LLM_URL", "url", "http://localhost:1234/v1");
+
+        editor.TextValue = typed;
+
+        Assert.Equal(note, editor.Note);
+    }
+
+    [Fact]
+    public void The_Anthropic_key_always_says_the_transcripts_leave_this_PC()
+    {
+        var editor = Editor("ANTHROPIC_API_KEY", "string", null, secret: true);
+
+        Assert.Equal("Transcripts are sent to api.anthropic.com to write the minutes.", editor.Note);
+    }
+
     [Fact]
     public void Other_keys_never_get_a_note()
     {
