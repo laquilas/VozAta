@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VozAta.Desktop.ViewModels"
+             x:Class="VozAta.Desktop.Views.RequestHistoryView"
+             x:DataType="vm:RequestHistoryViewModel">
+  <!-- A meeting's request history (phase 59): newest first, a coloured dot per outcome -->
+  <DockPanel>
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Classes="error" TextWrapping="Wrap" Margin="0,0,0,6"
+               IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    <TextBlock DockPanel.Dock="Top" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoRequests]}"
+               Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding !HasRows}" />
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RequestRow">
+            <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,4">
+              <Ellipse Classes="state-dot small request" Classes.ok="{Binding IsOk}" Classes.busy="{Binding IsBusy}"
+                       Classes.failed="{Binding IsFailed}" VerticalAlignment="Top" Margin="0,5,0,0" />
+              <TextBlock Grid.Column="1" Text="{Binding Time}" Classes="tabular secondary" Margin="8,0" />
+              <StackPanel Grid.Column="2" Spacing="1">
+                <TextBlock Text="{Binding What}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Text}" FontStyle="Italic" TextWrapping="Wrap" IsVisible="{Binding HasText}" />
+                <TextBlock Text="{Binding StatusText}" Classes="small secondary" TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

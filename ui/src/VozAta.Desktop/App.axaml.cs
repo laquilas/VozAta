@@ -87,6 +87,7 @@ public partial class App : Application
         services.AddSingleton<Func<IAudioPlayer>>(_ => () => new LibVlcAudioPlayer()); // one per meeting page (37)
         services.AddSingleton(baseUri); // the player streams GET /sessions/{id}/audio/{track} from here
         services.AddSingleton<IProcessingMarkers, ProcessingMarkers>(); // done checks on the meetings list (phase 40)
+        services.AddSingleton<ISoundPlayer, WindowsSoundPlayer>(); // the voice command chime (phase 59)
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

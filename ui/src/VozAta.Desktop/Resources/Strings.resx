@@ -1638,4 +1638,154 @@
   <data name="SettingHelp_MEETING_POLL_SECONDS" xml:space="preserve">
     <value>How often VozAta looks at which apps use the audio devices.</value>
   </data>
+  <data name="VoiceStatus_Idle" xml:space="preserve">
+    <value>Voice commands</value>
+  </data>
+  <data name="VoiceStatus_IdleHint" xml:space="preserve">
+    <value>Listening: say “VozAta, make the minutes” or ask a question.</value>
+  </data>
+  <data name="VoiceStatus_Minutes" xml:space="preserve">
+    <value>Make the minutes</value>
+  </data>
+  <data name="VoiceStatus_Writing" xml:space="preserve">
+    <value>Writing the minutes…</value>
+  </data>
+  <data name="VoiceStatus_Answering" xml:space="preserve">
+    <value>Answering…</value>
+  </data>
+  <data name="VoiceStatus_RepeatMinutes" xml:space="preserve">
+    <value>Already writing the minutes</value>
+  </data>
+  <data name="VoiceStatus_RepeatAsk" xml:space="preserve">
+    <value>Already answering</value>
+  </data>
+  <data name="VoiceStatus_AnswerReady" xml:space="preserve">
+    <value>Answer ready</value>
+  </data>
+  <data name="VoiceStatus_MinutesReady" xml:space="preserve">
+    <value>Minutes ready</value>
+  </data>
+  <data name="VoiceStatus_MinutesReadyUpTo" xml:space="preserve">
+    <value>Minutes ready (up to {0})</value>
+  </data>
+  <data name="VoiceStatus_Failed" xml:space="preserve">
+    <value>Failed: {0}</value>
+  </data>
+  <data name="VoiceStatus_ClickToOpen" xml:space="preserve">
+    <value>Click to open it.</value>
+  </data>
+  <data name="VoiceStatus_Error_voice_command_busy" xml:space="preserve">
+    <value>another one is running</value>
+  </data>
+  <data name="VoiceStatus_Error_voice_command_unavailable" xml:space="preserve">
+    <value>not available</value>
+  </data>
+  <data name="VoiceStatus_Error_empty_range" xml:space="preserve">
+    <value>nothing said yet</value>
+  </data>
+  <data name="VoiceStatus_Error_llm_unreachable" xml:space="preserve">
+    <value>the language model did not answer</value>
+  </data>
+  <data name="VoiceStatus_Error_partial_minutes_failed" xml:space="preserve">
+    <value>the minutes could not be written</value>
+  </data>
+  <data name="VoiceStatus_Error_answer_failed" xml:space="preserve">
+    <value>the question could not be answered</value>
+  </data>
+  <data name="VoiceStatus_Error_other" xml:space="preserve">
+    <value>see the notification</value>
+  </data>
+  <data name="VoiceCommandSound" xml:space="preserve">
+    <value>Play a short sound when a voice command is understood</value>
+  </data>
+  <data name="TabRequests" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="RecorderRequests" xml:space="preserve">
+    <value>Requests of this recording</value>
+  </data>
+  <data name="NoRequests" xml:space="preserve">
+    <value>Nothing was asked on this meeting yet: voice commands, minutes, action items and questions appear here.</value>
+  </data>
+  <data name="RequestSource_voice" xml:space="preserve">
+    <value>Voice command</value>
+  </data>
+  <data name="RequestSource_button" xml:space="preserve">
+    <value>Button</value>
+  </data>
+  <data name="RequestSource_range" xml:space="preserve">
+    <value>Part of the meeting</value>
+  </data>
+  <data name="RequestSource_app" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="RequestKind_minutes_so_far" xml:space="preserve">
+    <value>Minutes so far</value>
+  </data>
+  <data name="RequestKind_range_minutes" xml:space="preserve">
+    <value>Minutes of a part</value>
+  </data>
+  <data name="RequestKind_minutes" xml:space="preserve">
+    <value>Minutes again</value>
+  </data>
+  <data name="RequestKind_action_items" xml:space="preserve">
+    <value>Action items</value>
+  </data>
+  <data name="RequestKind_ask" xml:space="preserve">
+    <value>Question</value>
+  </data>
+  <data name="RequestStatus_recognized" xml:space="preserve">
+    <value>Understood</value>
+  </data>
+  <data name="RequestStatus_running" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="RequestStatus_done" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="RequestStatus_failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="RequestStatus_ignored" xml:space="preserve">
+    <value>Not run</value>
+  </data>
+  <data name="RequestReason_voice_command_busy" xml:space="preserve">
+    <value>another one was running</value>
+  </data>
+  <data name="RequestReason_voice_command_repeated" xml:space="preserve">
+    <value>said again within a few seconds</value>
+  </data>
+  <data name="RequestReason_voice_command_unavailable" xml:space="preserve">
+    <value>not available in this engine</value>
+  </data>
+  <data name="RequestReason_empty_range" xml:space="preserve">
+    <value>nothing was said in that part</value>
+  </data>
+  <data name="RequestReason_empty_transcript" xml:space="preserve">
+    <value>the meeting has no transcript</value>
+  </data>
+  <data name="RequestReason_llm_unreachable" xml:space="preserve">
+    <value>the language model did not answer</value>
+  </data>
+  <data name="RequestReason_partial_minutes_failed" xml:space="preserve">
+    <value>the minutes could not be written</value>
+  </data>
+  <data name="RequestReason_partial_minutes_in_progress" xml:space="preserve">
+    <value>other minutes were being written</value>
+  </data>
+  <data name="RequestReason_answer_failed" xml:space="preserve">
+    <value>the question could not be answered</value>
+  </data>
+  <data name="RequestReason_answer_in_progress" xml:space="preserve">
+    <value>another answer was running</value>
+  </data>
+  <data name="RequestReason_minutes_failed" xml:space="preserve">
+    <value>the minutes could not be written</value>
+  </data>
+  <data name="RequestReason_action_items_failed" xml:space="preserve">
+    <value>the action items could not be extracted</value>
+  </data>
+  <data name="RequestReason_session_still_active" xml:space="preserve">
+    <value>the meeting was still being processed</value>
+  </data>
 </root>

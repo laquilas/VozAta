@@ -209,4 +209,7 @@ public sealed partial class VoiceAnswerViewModel(IShellService? shell, ILocaliza
 
     [RelayCommand]
     private void Close() => IsOpen = false;
+
+    /// <summary>The sidebar's "Resposta pronta" was clicked (phase 59): show the last answer again.</summary>
+    public void Reopen() => IsOpen = _answerId is not null;
 }

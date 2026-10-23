@@ -467,6 +467,32 @@
   <Style Selector="Ellipse.state-dot.paused">
     <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
   </Style>
+  <!-- Voice command status (phase 59): gray idle, green understood / ready, yellow working, red failed -->
+  <Style Selector="PathIcon.voice-status">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.VoiceIdle}" />
+  </Style>
+  <Style Selector="PathIcon.voice-status.ok">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.VoiceOk}" />
+  </Style>
+  <Style Selector="PathIcon.voice-status.busy">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.VoiceBusy}" />
+  </Style>
+  <Style Selector="PathIcon.voice-status.failed">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.VoiceFailed}" />
+  </Style>
+  <!-- A request of the history (phase 59): gray waiting, green done, yellow in progress, red failed -->
+  <Style Selector="Ellipse.state-dot.request">
+    <Setter Property="Fill" Value="{DynamicResource Brush.TextSecondary}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.request.ok">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Success}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.request.busy">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
+  </Style>
+  <Style Selector="Ellipse.state-dot.request.failed">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Danger}" />
+  </Style>
   <Style Selector="Ellipse.state-dot.small">
     <Setter Property="Width" Value="10" />
     <Setter Property="Height" Value="10" />

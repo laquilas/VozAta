@@ -103,6 +103,19 @@
               </StackPanel>
             </Grid>
           </StackPanel>
+          <!-- Voice commands while recording (phase 59): what became of the last one; a ready result opens on click -->
+          <Button Classes="nav" Margin="0,8,0,0" IsVisible="{Binding VoiceStatus.IsVisible}"
+                  Command="{Binding VoiceStatus.OpenCommand}"
+                  ToolTip.Tip="{Binding VoiceStatus.ToolTipText}" AutomationProperties.Name="{Binding VoiceStatus.Text}">
+            <Grid ColumnDefinitions="Auto,*">
+              <PathIcon Data="{StaticResource Icon.Chat}" VerticalAlignment="Top" Classes="voice-status"
+                        Classes.ok="{Binding VoiceStatus.IsOk}" Classes.busy="{Binding VoiceStatus.IsBusy}"
+                        Classes.failed="{Binding VoiceStatus.IsFailed}" />
+              <TextBlock Grid.Column="1" Margin="12,0,0,0" Text="{Binding VoiceStatus.Text}" TextWrapping="Wrap"
+                         Classes.muted="{Binding VoiceStatus.IsIdle}" VerticalAlignment="Center"
+                         IsVisible="{Binding Shell.IsExpanded}" />
+            </Grid>
+          </Button>
         </StackPanel>
       </DockPanel>
     </Border>

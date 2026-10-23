@@ -65,7 +65,7 @@ A global history across meetings; spoken (text-to-speech) answers.
 - **Branch:** `feature/59-voice-status-and-history`
 - **Status:** in progress
 - **Updated:** 2026-10-23 19:40
-- **Next step:** `VoiceStatusViewModel` (state machine with an injected delay), sidebar row in `ShellView.axaml`, routing in `MainViewModel.Handle`, sound service + Config switch.
+- **Next step:** docs (api-contract: `request_updated`, `GET /sessions/{id}/requests`, `voice_command` fields; architecture: the request log), then the manual check on a scratch engine.
 
 ### Steps
 
@@ -75,6 +75,6 @@ A global history across meetings; spoken (text-to-speech) answers.
 - [x] Engine: hooks (partial minutes, ask, minutes again, action items; voice in the next step)
 - [x] Engine: detector command second + repeats; voice minutes end at the command
 - [x] UI client: `RequestEntry`, `RequestUpdatedEvent`, `GetRequestsAsync`
-- [ ] UI: `VoiceStatusViewModel` + sidebar + sound + Config switch
-- [ ] UI: Histórico tab + Recorder list
+- [x] UI: `VoiceStatusViewModel` + sidebar + sound + Config switch
+- [x] UI: Histórico tab + Recorder list
 - [ ] Docs (api-contract, architecture); suites; manual check; PR

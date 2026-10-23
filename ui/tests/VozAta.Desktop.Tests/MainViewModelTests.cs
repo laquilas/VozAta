@@ -216,6 +216,78 @@ public sealed class MainViewModelTests
         Assert.False(viewModel.Recorder.MinutesSoFar.IsWriting);
     }
 
+    private static RequestUpdatedEvent VoiceRequest(string sessionId, string status, string kind = "minutes_so_far") =>
+        new(sessionId, new RequestEntry("r1", "2026-10-23T10:00:00-03:00", 12, kind, "voice", "gere a ata", status, null, null, null));
+
+    [Fact]
+    public async Task Requests_drive_the_voice_status_and_the_recorders_history()
+    {
+        var viewModel = new MainViewModel(
+            _client, _events, _process, new ImmediateDispatcher(), _localization, _dialogs, _preferences, _clock, _timer, _shell,
+            new FakeFileSaver(), new FakeThemeService(), voiceDelay: (_, _) => new TaskCompletionSource().Task);
+        await viewModel.InitializeAsync();
+        await SendAsync(viewModel, new ConnectionChangedEvent(true));
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        var sessionId = viewModel.Session.SessionId!;
+        await viewModel.HistoryRefresh; // the recorder's history follows the new meeting
+        Assert.Contains($"requests {sessionId}", _client.Calls);
+
+        await SendAsync(viewModel, VoiceRequest(sessionId, "recognized"));
+
+        Assert.True(viewModel.VoiceStatus.IsVisible);
+        Assert.Equal(VoiceStatusState.Recognized, viewModel.VoiceStatus.State);
+        Assert.Equal("r1", Assert.Single(viewModel.Recorder.Requests.Rows).Entry.Id);
+    }
+
+    [Fact]
+    public async Task A_ready_voice_answer_opens_on_the_recorder()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        var sessionId = viewModel.Session.SessionId!;
+        await SendAsync(viewModel, new VoiceCommandEvent(sessionId, "ask", "o que decidimos", "O que decidimos?", "voice-1"));
+        viewModel.Recorder.VoiceAnswer.CloseCommand.Execute(null);
+        viewModel.Shell.NavigateCommand.Execute(ShellViewModel.Meetings);
+
+        await SendAsync(viewModel, VoiceRequest(sessionId, "done", "ask"));
+        viewModel.VoiceStatus.OpenCommand.Execute(null);
+
+        Assert.Equal(ShellViewModel.Recorder, viewModel.Shell.CurrentItem.Key);
+        Assert.True(viewModel.Recorder.VoiceAnswer.IsOpen);
+    }
+
+    [Fact]
+    public async Task A_ready_voice_minutes_reopen_on_the_recorder()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        var sessionId = viewModel.Session.SessionId!;
+        await viewModel.Recorder.WriteMinutesSoFarCommand.ExecuteAsync(null);
+        _client.PartialMinutes[sessionId] = [new PartialMinutesDetail("p1", "t", 0, 12, "voice", null, "# Ata\n")];
+        await SendAsync(viewModel, new PartialMinutesReadyEvent(sessionId, "p1", 0, 12, "voice"));
+        await viewModel.HistoryRefresh;
+        viewModel.Recorder.MinutesSoFar.CloseCommand.Execute(null);
+
+        await SendAsync(viewModel, VoiceRequest(sessionId, "done"));
+        viewModel.VoiceStatus.OpenCommand.Execute(null);
+
+        Assert.True(viewModel.Recorder.MinutesSoFar.IsOpen);
+    }
+
+    [Fact]
+    public async Task A_busy_voice_command_ends_the_minutes_wait()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        var sessionId = viewModel.Session.SessionId!;
+        await SendAsync(viewModel, new VoiceCommandEvent(sessionId, "minutes", "gere a ata", null, null));
+        Assert.True(viewModel.Recorder.MinutesSoFar.IsWriting);
+
+        await SendAsync(viewModel, new ErrorEvent(sessionId, "voice_command_busy", "Busy."));
+
+        Assert.False(viewModel.Recorder.MinutesSoFar.IsWriting);
+    }
+
     [Fact]
     public async Task A_worker_fallback_checks_the_health_again()
     {

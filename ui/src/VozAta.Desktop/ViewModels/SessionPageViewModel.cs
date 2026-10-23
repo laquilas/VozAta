@@ -181,6 +181,11 @@ public sealed partial class SessionPageViewModel(
     public PartialMinutesListViewModel Partials =>
         _partials ??= new PartialMinutesListViewModel(client, shell, localization, Id);
 
+    private RequestHistoryViewModel? _requests;
+
+    /// <summary>The "History" tab (phase 59): every request made on this meeting.</summary>
+    public RequestHistoryViewModel Requests => _requests ??= new RequestHistoryViewModel(client, localization, Id);
+
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
 
@@ -233,6 +238,9 @@ public sealed partial class SessionPageViewModel(
 
     public const int AskTab = 5;
 
+    /// <summary>The "History" tab (phase 59).</summary>
+    public const int RequestsTab = 6;
+
     private string? _focusSegmentId;
 
     /// <summary>Show the transcript at <paramref name="segmentId"/> (now, or once it has loaded).</summary>
@@ -264,6 +272,7 @@ public sealed partial class SessionPageViewModel(
             await ShowTranscriptAsync(cancellationToken);
             await LoadMinutesAsync(cancellationToken);
             await Partials.LoadAsync(cancellationToken: cancellationToken);
+            await Requests.LoadAsync(cancellationToken);
             if (!IsLive)
             {
                 await ActionItems.LoadAsync(cancellationToken);

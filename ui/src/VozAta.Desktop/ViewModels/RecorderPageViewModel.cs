@@ -88,6 +88,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         session.PropertyChanged += OnSessionChanged;
         MinutesSoFar = new MinutesSoFarViewModel(client, shell, localization, notify);
         VoiceAnswer = new VoiceAnswerViewModel(shell, localization, notify);
+        Requests = new RequestHistoryViewModel(client, localization);
         MinutesSoFar.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(MinutesSoFarViewModel.IsWriting))
@@ -103,6 +104,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
     /// <summary>The answer to a question asked by voice (phase 50).</summary>
     public VoiceAnswerViewModel VoiceAnswer { get; }
+
+    /// <summary>The requests of the meeting being recorded (phase 59): voice commands and the rest.</summary>
+    public RequestHistoryViewModel Requests { get; }
 
     /// <summary>A <c>voice_command</c> event of this recording: wait for its minutes or answer.</summary>
     public void OnVoiceCommand(VoiceCommandEvent command)

@@ -18,7 +18,8 @@ public sealed record UiPreferencesData(
     bool MinimizeToTray = false,
     string Theme = "system",
     bool SidebarCollapsed = false,
-    bool? LiveTranscription = null);
+    bool? LiveTranscription = null,
+    bool VoiceCommandSound = true);
 
 public interface IUiPreferences
 {
