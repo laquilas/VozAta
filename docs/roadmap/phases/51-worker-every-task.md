@@ -118,13 +118,13 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - **Branch:** `feature/51-worker-every-task`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 1 of `plans/51-worker-every-task.md`: failing tests for `worker/tasks.py`
-  (`worker_tasks` for every extra / token combination) and `/local/status.tasks`.
+- **Next step:** task 2 of the plan: `run_worker` prints one localized line per task with `--check`,
+  and `--check --json` prints `{version, url, tasks}`.
 
 ### Steps
 
 - [x] Implementation plan (`plans/51-worker-every-task.md`)
-- [ ] Worker tasks: `worker_tasks`, speakers need the extra and `HF_TOKEN`, `/local/status.tasks`
+- [x] Worker tasks: `worker_tasks`, speakers need the extra and `HF_TOKEN`, `/local/status.tasks`
 - [ ] `worker --check` lists the tasks (`--json` for the build)
 - [ ] Frozen engine runs `-m <module>` (packaged child processes)
 - [ ] Packaging: translation in every build, `-Speakers` edition
@@ -135,3 +135,6 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 ### Decisions and notes
 
 - Commits stay local until the PR (user rule, 2026-10-20).
+- A worker with `HF_TOKEN` but without the `diarization` extra offered speakers and failed every
+  job: speakers now need both (`worker/tasks.py`). Without an explicit task list `create_worker_app`
+  reports the services present with no reason.

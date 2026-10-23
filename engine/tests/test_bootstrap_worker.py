@@ -326,20 +326,36 @@ def test_the_speaker_registries_build_through_the_worker(
 
 
 @pytest.mark.parametrize(
-    ("token", "capabilities"), [("hf_x", ["speech", "speakers"]), (None, ["speech"])]
+    ("token", "extra", "capabilities", "reason"),
+    [
+        ("hf_x", True, ["speech", "speakers"], None),
+        (None, True, ["speech"], "missing_hf_token"),
+        # phase 51: a token without pyannote no longer offers speakers (every job failed)
+        ("hf_x", False, ["speech"], "missing_extra"),
+    ],
 )
-def test_the_worker_offers_speakers_with_a_hugging_face_token(
-    monkeypatch: pytest.MonkeyPatch, token: str | None, capabilities: list[str]
+def test_the_worker_offers_speakers_with_the_extra_and_a_hugging_face_token(
+    monkeypatch: pytest.MonkeyPatch,
+    token: str | None,
+    extra: bool,
+    capabilities: list[str],
+    reason: str | None,
 ) -> None:
     from fastapi.testclient import TestClient
 
     from vozata.api.system_info import GpuInfo
+    from vozata.diarization import models
+    from vozata.translation import opus_mt
 
     monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    monkeypatch.setattr(models, "has_extra", lambda: extra)
+    monkeypatch.setattr(opus_mt, "has_extra", lambda: False)
     app = bootstrap.build_worker_app(Settings(hf_token=token), None)
 
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 50000)) as client:
         assert client.get("/health").json()["capabilities"] == capabilities
+        speakers = client.get("/local/status").json()["tasks"][1]
+    assert (speakers["name"], speakers["reason"]) == ("speakers", reason)
 
 
 # Translation on the worker (phase 46)
@@ -393,7 +409,7 @@ def test_the_worker_offers_translation_with_the_extra(
 
     monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
     monkeypatch.setattr(opus_mt, "has_extra", lambda: extra)
-    app = bootstrap.build_worker_app(Settings(), None)
+    app = bootstrap.build_worker_app(Settings(hf_token=None), None)
 
     with TestClient(app) as client:
         assert client.get("/health").json()["capabilities"] == capabilities

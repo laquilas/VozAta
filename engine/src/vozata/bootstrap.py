@@ -45,6 +45,7 @@ from vozata.commands.matcher import CommandMatcher
 from vozata.commands.store import VoiceCommandStore
 from vozata.config import ConfigError, Settings
 from vozata.connection_checks import ConnectionChecks
+from vozata.diarization import models as diarization_models
 from vozata.diarization.models import DIARIZATION_MODEL, EMBEDDING_MODEL
 from vozata.diarization.subprocess_diarizer import pyannote_from_settings
 from vozata.diarization.subprocess_embedder import pyannote_embedder_from_settings
@@ -134,6 +135,7 @@ from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
 from vozata.worker.local import lan_addresses
+from vozata.worker.tasks import WorkerTask, offered, worker_tasks
 from vozata.worker_client.client import WorkerClient
 from vozata.worker_client.discovery import discover_workers
 from vozata.worker_client.notices import LoggedNotices, ObserverNotices
@@ -442,6 +444,8 @@ def build_worker_app(
 
     # a loopback worker (no id) cannot be reached from the network: nothing to answer
     responders = [DiscoveryResponder(settings.worker_discovery_port, found)] if worker_id else []
+    tasks = build_worker_tasks(settings)
+    on = set(offered(tasks))
     return create_worker_app(
         token,
         gpu_info=gpu_info,
@@ -449,23 +453,33 @@ def build_worker_app(
         identity=WorkerIdentity(worker_id, name, settings.worker_port),
         addresses=lan_addresses,
         background=responders,
-        # phase 45: speakers need the pyannote models, i.e. HF_TOKEN on the worker PC
+        # phase 45: speakers need the pyannote models (HF_TOKEN) and, phase 51, the extra
         diarize_jobs=DiarizeJobs(
             lambda: DIARIZERS[LOCAL_SPEAKERS](settings, _downloader(settings, None))
         )
-        if settings.hf_token
+        if "speakers" in on
         else None,
         embedder=EmbedService(
             lambda: EMBEDDERS[LOCAL_SPEAKERS](settings, _downloader(settings, None))
         )
-        if settings.hf_token
+        if "speakers" in on
         else None,
         # phase 46: translation needs the `translation` extra on the worker PC
         translator=TranslateService(
             lambda: TRANSLATORS[LOCAL_TRANSLATION](settings, _downloader(settings, None))
         )
-        if opus_mt.has_extra()
+        if "translation" in on
         else None,
+        tasks=tasks,
+    )
+
+
+def build_worker_tasks(settings: Settings) -> list[WorkerTask]:
+    """Phase 51: what this PC's worker offers and why a task is missing."""
+    return worker_tasks(
+        settings.hf_token,
+        translation_extra=opus_mt.has_extra(),
+        diarization_extra=diarization_models.has_extra(),
     )
 
 
