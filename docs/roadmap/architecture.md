@@ -883,7 +883,7 @@ only validator.
   (`python -m vozata.diarization.child`, request with the token on stdin, turns in a temp JSON
   file). `torch` and `ctranslate2` each bundle CUDA/cuDNN, so they never share a process, and
   the child's exit frees the VRAM before the minutes. `torch`/`pyannote` are imported lazily:
-  the engine works without the extra. The installer (13) never bundles it (the speakers edition
+  the engine works without the extra. The installers (13; since 57 two: `VozAta-Setup` with the desktop app, `VozAta-Worker-Setup` with VozAta Worker, both with the engine and `packaging/speakers.iss`) never bundle it (the speakers edition
   of 51 was dropped in 56) but bundles the `translation` extra. **Speaker runtime (56):** the
   packaged engine runs the children with the Python of `%LOCALAPPDATA%\VozAta\speakers`
   (`Settings.speakers_runtime_dir`; `diarization/runtime.py`), a separate Python 3.13

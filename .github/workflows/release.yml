@@ -59,7 +59,9 @@ jobs:
 
       - name: Install test (install, app starts the engine, uninstall keeps data)
         shell: pwsh
-        run: ./packaging/install-test.ps1 -Setup (Get-ChildItem build/installer/*.exe).FullName
+        run: |
+          ./packaging/install-test.ps1 -Setup (Get-ChildItem build/installer/VozAta-Setup-*.exe).FullName
+          ./packaging/install-test.ps1 -Setup (Get-ChildItem build/installer/VozAta-Worker-Setup-*.exe).FullName -Worker
 
       - uses: actions/upload-artifact@v4
         with:

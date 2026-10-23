@@ -20,8 +20,9 @@ The language model (minutes, action items, Ask) can move to another PC too, with
 
 ## What the worker offers
 
-One installer, `VozAta-Setup-<version>.exe`, for both PCs: speech recognition and live
-translation are in it. Speaker identification (pyannote and torch, about 3 GB) is downloaded onto
+The GPU PC gets `VozAta-Worker-Setup-<version>.exe` (VozAta Worker and the engine); the PCs
+that record meetings get `VozAta-Setup-<version>.exe`. Speech recognition and live translation
+are in both. Speaker identification (pyannote and torch, about 3 GB) is downloaded onto
 the GPU PC when wanted: **Download speaker identification** in VozAta Worker, the setup task of
 the same name, or `vozata-engine speakers install` (see
 [Speaker identification](INSTALL.md#speaker-identification)). VozAta Worker lists under **Tasks
@@ -30,8 +31,9 @@ PC (with the Download button), or no Hugging Face token (`HF_TOKEN`, see below).
 
 ## On the GPU PC
 
-1. Install VozAta on the GPU PC (for speaker identification, tick **Download speaker
-   identification now**, or download it later from VozAta Worker, see
+1. Install VozAta Worker on the GPU PC with `VozAta-Worker-Setup-<version>.exe` (for speaker
+   identification, tick **Download speaker identification now**, or download it later from
+   VozAta Worker, see
    [What the worker offers](#what-the-worker-offers)).
 2. Open **VozAta Worker** from the Start menu. It starts the worker and shows:
    - its state (the first start downloads the speech model, `WHISPER_MODEL`, which takes a while);
@@ -103,7 +105,7 @@ When the worker does not answer, a notification says "speaker identification run
 ## Live translation on the worker
 
 Tick **Live translation** under **Use the worker for**. The worker translates each line with
-opus-mt (on its CPU, about 300 MB of memory). The installer includes it; a worker run from the
+opus-mt (on its CPU, about 300 MB of memory). Both installers include it; a worker run from the
 sources needs the `translation` extra (`pip install -e ".[translation]"`). A worker without it
 does not offer translation, and this PC translates instead.
 
