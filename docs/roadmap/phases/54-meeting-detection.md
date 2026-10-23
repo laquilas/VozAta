@@ -69,15 +69,15 @@ macOS / Linux.
 - **Branch:** `feature/54-meeting-detection`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 2: failing tests for `meeting/detector.py` (fake monitor and clock: two polls,
-  quiet period, recording suppresses, unknown apps, case, the switch read live), then the detector
-  and the `AudioSessionMonitor` port.
+- **Next step:** task 3: `audio/sessions.py` (`WindowsAudioSessions` over pycaw: every active render
+  and capture endpoint, sessions in state Active, process names; COM initialized on the polling
+  thread), the `pycaw` dependency, a smoke run on this PC.
 
 ### Steps
 
 - [x] Implementation plan (`plans/54-meeting-detection.md`)
 - [x] Keys `MEETING_DETECTION`, `MEETING_APPS`, `MEETING_POLL_SECONDS`
-- [ ] Detector (port, debounce, quiet period, recording suppresses)
+- [x] Detector (port, debounce, quiet period, recording suppresses)
 - [ ] Windows audio session monitor (pycaw)
 - [ ] Wiring: bootstrap, container, lifespan, `meeting_detected` event
 - [ ] UI: event, suggestion banner, texts

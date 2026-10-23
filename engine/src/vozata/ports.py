@@ -610,3 +610,11 @@ class RecoverableStore(Protocol):
         """Repair what a crash left half-written. Returns the recorded length in seconds when
         this store holds the audio, else None; raises `StoreRepairError` when it cannot."""
         ...
+
+
+@runtime_checkable
+class AudioSessionMonitor(Protocol):
+    """Which apps play or capture audio right now (phase 54): the executable names (e.g.
+    `ms-teams.exe`) of the active Windows audio sessions."""
+
+    def active_apps(self) -> set[str]: ...
