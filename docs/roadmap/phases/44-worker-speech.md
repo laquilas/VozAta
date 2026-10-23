@@ -106,15 +106,15 @@ to the worker), `docs/roadmap/worker-api.md` (the worker's API), `architecture.m
 
 ## Acceptance criteria
 
-- [ ] `vozata worker` starts with a token, refuses a LAN host without one, and answers `/health`
+- [x] `vozata worker` starts with a token, refuses a LAN host without one, and answers `/health`
       and `/transcribe` only with the token.
-- [ ] With `STT_PROVIDER=vozata_worker`, a recording is transcribed live by the worker and the
+- [x] With `STT_PROVIDER=vozata_worker`, a recording is transcribed live by the worker and the
       laptop loads no Whisper; `/health` reports the worker.
-- [ ] With the worker off, the next recording (and a queued transcribe step) runs on this PC and a
+- [x] With the worker off, the next recording (and a queued transcribe step) runs on this PC and a
       `worker_fallback` notification names the host; losing the worker mid-recording does the same
       without stopping the recording.
-- [ ] The Config page has `WORKER_URL`, `WORKER_TOKEN` and a working Test button.
-- [ ] Guide and contract docs updated.
+- [x] The Config page has `WORKER_URL`, `WORKER_TOKEN` and a working Test button.
+- [x] Guide and contract docs updated.
 
 ## Tests
 
@@ -138,10 +138,9 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 ## Progress
 
 - **Branch:** `feature/44-worker-speech`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-22
-- **Next step:** Task 7 of `plans/44-worker-speech.md` (full suites, manual check with this PC's
-  LAN address as the worker, phase done, PR).
+- **Next step:** open the PR to `main`; after the merge, start phase 47 (`docs/roadmap/phases/47-worker-app.md`).
 
 ### Steps
 
@@ -152,7 +151,7 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - [x] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
 - [x] Engine: settings, connection check, `/health.worker`; UI Test anchor
 - [x] Packaging entry and smoke test; guide and contract docs
-- [ ] Full suites, manual check (this PC's LAN address as the worker), phase done
+- [x] Full suites, manual check (this PC's LAN address as the worker), phase done
 
 ### Decisions and notes
 
@@ -179,3 +178,12 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
   (empty until it loads one or when it is off). The Config group `worker` sits after `tasks`.
 - Phases 47–50 were planned on this branch (user, 2026-10-22): worker app and discovery, minutes so
   far, minutes of a range, voice commands. Order: finish 44, then 47–50, then 45–46.
+- Manual check (2026-10-22): `vozata worker` on `192.168.68.109:8766` with a generated token and
+  Whisper `large-v3` on the RTX 3050; the engine side (`build_transcriber`, `ConnectionChecks`,
+  `worker_status`) ran from a scratch script with `STT_PROVIDER=vozata_worker`. No token → 401;
+  the Test message named the version and the GPU; a Portuguese TTS meeting was transcribed by the
+  worker (first request 17 s with the model load, then 2.3 s; real probabilities and
+  `avg_logprob`); stopping the worker mid-session sent one `worker_fallback` event (pt-BR message
+  with the host) and the next chunks ran on this PC; with the worker off at start the transcriber
+  was the local one with the same notice. `worker --check` exits 0. A full desktop recording
+  through the worker was not run (no second PC; the engine path is the same).

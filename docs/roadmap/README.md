@@ -93,7 +93,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 41 | [Live transcription toggle](phases/41-record-only.md) | 40 | done |
 | 42 | [Model download progress bar](phases/42-download-progress.md) | 26, 35 | done |
 | 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | done |
-| 44 | [Worker: server and remote speech](phases/44-worker-speech.md) | 43 | in progress (`feature/44-worker-speech`) |
+| 44 | [Worker: server and remote speech](phases/44-worker-speech.md) | 43 | done |
 | 45 | [Worker: speaker identification](phases/45-worker-speakers.md) | 44 | todo |
 | 46 | [Worker: translation and one-switch setup](phases/46-worker-translation.md) | 44, 45 | todo |
 | 47 | [Worker app and automatic discovery](phases/47-worker-app.md) | 44 | todo |

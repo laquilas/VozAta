@@ -1,6 +1,6 @@
 # Phase 44 — Worker: Server and Remote Speech Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A `vozata worker` command serves Whisper transcription on a GPU PC of the local network, behind a token; the engine's new `vozata_worker` speech provider uses it live and after Stop, and falls back to the local faster-whisper with a `worker_fallback` notice when the worker does not answer.
 
@@ -37,44 +37,44 @@
 
 **Files:** create `worker/__init__.py`, `worker/app.py`, `worker/auth.py`, `cli/worker.py`, tests `tests/worker/test_auth.py`, `tests/worker/test_health.py`, `tests/cli/test_worker.py`; modify `config.py` (`worker_host`, `worker_port`, `worker_token`, `worker_url`), `__main__.py`, `locales/*.toml`, `.env.example`.
 
-- [ ] Failing tests: 401 without / with a wrong token, 200 with the right one; `/health` body `{version, gpu, capabilities: ["speech"], models: []}`; command refuses nothing on loopback without a token, generates and saves a token for `0.0.0.0` and prints it; `--check` exits 0 without loading a model.
-- [ ] Implement; `ruff`; commit `feat(worker): serve /health behind a token with the vozata worker command`.
+- [x] Failing tests: 401 without / with a wrong token, 200 with the right one; `/health` body `{version, gpu, capabilities: ["speech"], models: []}`; command refuses nothing on loopback without a token, generates and saves a token for `0.0.0.0` and prints it; `--check` exits 0 without loading a model.
+- [x] Implement; `ruff`; commit `feat(worker): serve /health behind a token with the vozata worker command`.
 
 ### Task 2: `/transcribe` with a kept faster-whisper
 
 **Files:** create `worker/speech.py`, `tests/worker/test_transcribe.py`; modify `worker/app.py`.
 
-- [ ] Failing tests (fake transcriber factory): samples, language, hints and prompt reach the transcriber unchanged; the reply carries probabilities and `avg_logprob`; the model is built once and reused; concurrent requests are serialized; a body that is not float32 (odd length) → 422; `/health` lists the loaded model after the first request.
-- [ ] Implement (`SpeechService(factory)` with a lock); commit `feat(worker): transcribe with a kept Whisper model`.
+- [x] Failing tests (fake transcriber factory): samples, language, hints and prompt reach the transcriber unchanged; the reply carries probabilities and `avg_logprob`; the model is built once and reused; concurrent requests are serialized; a body that is not float32 (odd length) → 422; `/health` lists the loaded model after the first request.
+- [x] Implement (`SpeechService(factory)` with a lock); commit `feat(worker): transcribe with a kept Whisper model`.
 
 ### Task 3: Engine worker client and `WorkerTranscriber`
 
 **Files:** create `worker_client/__init__.py`, `worker_client/client.py`, `worker_client/transcriber.py`, tests `tests/worker_client/test_client.py`, `tests/worker_client/test_transcriber.py`; modify `ports.py` (`WorkerUnreachableError` next to the other errors if shared, `FallbackNotices`).
 
-- [ ] Failing tests: Bearer header; probe once; unreachable shapes → `WorkerUnreachableError` with the host; 401 → `ConfigError` on `WORKER_TOKEN`; retry on 503 then success; silence not sent; result mapping; `check_transcriber_contract` with a scripted worker; mid-session switch builds the local transcriber once, notifies once, and later chunks stay local; `close()` closes both.
-- [ ] Implement; commit `feat(engine): transcribe through the VozAta worker`.
+- [x] Failing tests: Bearer header; probe once; unreachable shapes → `WorkerUnreachableError` with the host; 401 → `ConfigError` on `WORKER_TOKEN`; retry on 503 then success; silence not sent; result mapping; `check_transcriber_contract` with a scripted worker; mid-session switch builds the local transcriber once, notifies once, and later chunks stay local; `close()` closes both.
+- [x] Implement; commit `feat(engine): transcribe through the VozAta worker`.
 
 ### Task 4: `build_transcriber`, fallback notice, gate rule
 
 **Files:** modify `bootstrap.py` (registry entry, `build_transcriber`, the three call sites, notices wiring to the broadcaster / console), `bootstrap_processing.py`, `processing/gpu_gate.py`, `locales/*.toml`; tests in `tests/test_bootstrap.py`, `tests/test_bootstrap_processing.py`, `tests/processing/test_gpu_gate.py`.
 
-- [ ] Failing tests: reachable worker → `WorkerTranscriber`, `speech_remote` true, no GPU priority taken by the live lease; unreachable → local transcriber, one `worker_fallback` error event with the host and the localized task, gate local again; the queue's transcribe step does the same; other providers untouched.
-- [ ] Implement; commit `feat(engine): fall back to local speech when the worker does not answer`.
+- [x] Failing tests: reachable worker → `WorkerTranscriber`, `speech_remote` true, no GPU priority taken by the live lease; unreachable → local transcriber, one `worker_fallback` error event with the host and the localized task, gate local again; the queue's transcribe step does the same; other providers untouched.
+- [x] Implement; commit `feat(engine): fall back to local speech when the worker does not answer`.
 
 ### Task 5: Settings, connection check, `/health.worker`, UI
 
 **Files:** modify `settings_fields.py` (`WORKER_URL` url, `WORKER_TOKEN` secret, group `worker`), `connection_checks.py` (target `worker`), `api/routes/health.py`, `api/schemas.py`, `locales/*.toml`; UI `SettingsViewModel.cs` (`TestAnchors["WORKER_URL"] = ConnectionTargets.Worker`), `VozAta.Client/Config.cs` (`ConnectionTargets.Worker`), `SettingsViewModel` group order, resources (labels, help, group title, en / pt-BR / es); tests in `tests/api/test_health.py`, `tests/api/test_settings_test.py`, `tests/api/test_settings_get.py`, UI `ConfigPageViewModelTests`, `LocalizationResourcesTests`.
 
-- [ ] Failing tests, implement, `dotnet test`, `dotnet format`; commit `feat: configure and test the worker from the Config page`.
+- [x] Failing tests, implement, `dotnet test`, `dotnet format`; commit `feat: configure and test the worker from the Config page`.
 
 ### Task 6: Packaging, guide, contract docs
 
 **Files:** `packaging/build.ps1` (smoke `vozata-engine.exe worker --check`), `docs/remote-worker.md` (new), `docs/remote-ollama.md`, `docs/INSTALL.md` (link), `docs/roadmap/worker-api.md` (new), `docs/roadmap/architecture.md` (§5 ports, §9 keys), `docs/roadmap/api-contract.md` (`/health.worker`, `worker_fallback`).
 
-- [ ] Write; commit `docs: guide and API for the VozAta worker`.
+- [x] Write; commit `docs: guide and API for the VozAta worker`.
 
 ### Task 7: Full suites, manual check, phase done
 
-- [ ] Engine `pytest --cov` to a file (exits on its own), ruff; UI `dotnet test`, `dotnet format --verify-no-changes`.
-- [ ] Manual (no second PC): scratch `.env` for a worker on this PC's LAN address with a token; scratch engine (port 8799, scratch data) with `STT_PROVIDER=vozata_worker` and `WORKER_URL` → transcription of a scratch meeting through the worker (the CLI `vozata transcribe <id>`), `/health.worker.reachable`; stop the worker → the next run falls back with the `worker_fallback` event. Close both processes afterwards.
-- [ ] Tick the acceptance criteria, README `done`, Progress `ready for PR`; commit `docs(roadmap): finish phase 44`; push once, open the PR; the user merges.
+- [x] Engine `pytest --cov` to a file (exits on its own), ruff; UI `dotnet test`, `dotnet format --verify-no-changes`.
+- [x] Manual (no second PC): scratch `.env` for a worker on this PC's LAN address with a token; scratch engine (port 8799, scratch data) with `STT_PROVIDER=vozata_worker` and `WORKER_URL` → transcription of a scratch meeting through the worker (the CLI `vozata transcribe <id>`), `/health.worker.reachable`; stop the worker → the next run falls back with the `worker_fallback` event. Close both processes afterwards.
+- [x] Tick the acceptance criteria, README `done`, Progress `ready for PR`; commit `docs(roadmap): finish phase 44`; push once, open the PR; the user merges.
