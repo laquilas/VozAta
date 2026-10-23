@@ -73,14 +73,15 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - **Branch:** `feature/53-llm-providers`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 2: `tests/llm/contract.py` (the shared `LanguageModel` suite) run against
-  Ollama, then failing tests for `llm/openai_compatible.py`.
+- **Next step:** task 3: add the `anthropic` SDK dependency, failing tests for `llm/anthropic.py`
+  with a fake SDK client (contract suite + refusal, JSON format, effort, fallbacks), then the
+  provider and `LANGUAGE_MODELS["anthropic"]`.
 
 ### Steps
 
 - [x] Implementation plan (`plans/53-llm-providers.md`)
 - [x] Keys, provider-neutral host / model / GPU rules, `/health.llm`
-- [ ] OpenAI-compatible provider and the shared contract suite
+- [x] OpenAI-compatible provider and the shared contract suite
 - [ ] Anthropic provider (official SDK)
 - [ ] Config tests for both providers
 - [ ] UI: labels, tests, provider-neutral texts
@@ -96,3 +97,5 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - `load_settings` only reads keys declared in `settings_fields.py`, so the five keys live there
   (group `minutes`). `/health.llm.model` now names the model of the chosen provider
   (`net.llm_model`).
+- Without `OPENAI_LLM_MODEL` the OpenAI-compatible provider uses the first model `/models` lists (LM
+  Studio serves the loaded one).
