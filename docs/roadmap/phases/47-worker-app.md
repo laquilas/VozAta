@@ -101,15 +101,15 @@ mDNS / Bonjour.
 - **Branch:** `feature/47-worker-app`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 3 of `plans/47-worker-app.md` (`build_transcriber` finds a moved worker by
-  `WORKER_ID` before the fallback and saves its new `WORKER_URL`).
+- **Next step:** Task 4 of `plans/47-worker-app.md` (desktop Config: Find workers, pairing with
+  the code; client methods and DTOs).
 
 ### Steps
 
 - [x] Implementation plan (`plans/47-worker-app.md`)
 - [x] Worker: identity, pairing codes, `/pair`, `/local/status`
 - [x] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
-- [ ] Engine: find a moved worker before the fallback
+- [x] Engine: find a moved worker before the fallback
 - [ ] Desktop Config: Find workers and pair
 - [ ] The worker app (`VozAta.Worker`)
 - [ ] Packaging and docs
@@ -127,3 +127,5 @@ mDNS / Bonjour.
 - Discovery sends one broadcast per IPv4 address of this PC (Windows sends a limited broadcast
   through one interface only) and dedupes answers by worker id. A loopback worker (no id) does not
   answer discovery.
+- Relocation happens where a transcriber is built (recording start, queue step); a worker lost
+  in the middle of a recording still falls back (phase 44) and is found again at the next start.

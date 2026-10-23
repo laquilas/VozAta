@@ -52,6 +52,7 @@ def build_processing_job(
     gate_usage: GpuUsage,
     shared: SharedTranscriber | None = None,
     downloader: ModelDownloader | None = None,
+    worker_moved: Callable[[str], None] = lambda url: None,
 ) -> ProcessingJob:
     """The processing job of a stopped (or crashed, `repair`) meeting (phase 40).
 
@@ -84,7 +85,8 @@ def build_processing_job(
             # cancelled by a live start: keep the model, the live session leases it next
             return shared.lease(keep=not after, keep_when=lambda: token.cancelled)
         notices = ObserverNotices(observer, root.build_localizer(settings))
-        return root.build_transcriber(settings, downloader, notices)
+        relocate = root.worker_relocator(worker_moved)
+        return root.build_transcriber(settings, downloader, notices, relocate)
 
     def transcription(token: CancelToken) -> OfflineTranscription:
         return build_offline_transcription(
