@@ -74,6 +74,15 @@ public sealed class EngineEventsTests
     }
 
     [Fact]
+    public void A_meeting_app_in_a_call_is_parsed()
+    {
+        var parsed = EngineEventParser.Parse(
+            """{"type":"meeting_detected","session_id":null,"data":{"app":"ms-teams.exe","name":"Microsoft Teams"}}""");
+
+        Assert.Equal(new MeetingDetectedEvent(null, "ms-teams.exe", "Microsoft Teams"), parsed);
+    }
+
+    [Fact]
     public void Parser_reads_the_recovery_offer()
     {
         var parsed = EngineEventParser.Parse(

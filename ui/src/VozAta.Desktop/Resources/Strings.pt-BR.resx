@@ -1611,4 +1611,31 @@
   <data name="SettingHelp_ANTHROPIC_MODEL" xml:space="preserve">
     <value>O modelo Claude que escreve a ata, por exemplo claude-opus-5-5 ou claude-sonnet-5-5.</value>
   </data>
+  <data name="MeetingDetected" xml:space="preserve">
+    <value>O {0} está em uma chamada. Gravar?</value>
+  </data>
+  <data name="MeetingRecord" xml:space="preserve">
+    <value>Gravar</value>
+  </data>
+  <data name="MeetingNotNow" xml:space="preserve">
+    <value>Agora não</value>
+  </data>
+  <data name="Setting_MEETING_DETECTION" xml:space="preserve">
+    <value>Sugerir gravar chamadas de reunião</value>
+  </data>
+  <data name="SettingHelp_MEETING_DETECTION" xml:space="preserve">
+    <value>Quando o Teams, o Zoom, o Webex, o Slack ou o Discord estiver em uma chamada e nada estiver sendo gravado, o VozAta oferece gravar. Ele nunca grava sozinho.</value>
+  </data>
+  <data name="Setting_MEETING_APPS" xml:space="preserve">
+    <value>Apps de reunião</value>
+  </data>
+  <data name="SettingHelp_MEETING_APPS" xml:space="preserve">
+    <value>Os programas (nomes dos executáveis, separados por vírgulas) cujo áudio de chamada faz o VozAta sugerir a gravação.</value>
+  </data>
+  <data name="Setting_MEETING_POLL_SECONDS" xml:space="preserve">
+    <value>Procurar chamadas a cada (segundos)</value>
+  </data>
+  <data name="SettingHelp_MEETING_POLL_SECONDS" xml:space="preserve">
+    <value>Com que frequência o VozAta verifica quais apps usam os dispositivos de áudio.</value>
+  </data>
 </root>

@@ -39,6 +39,9 @@ public sealed record ProcessingEvent(string? SessionId, ProcessingInfo Info) : E
 /// <summary>Sessions a crash cut short (phase 17), sent on connect; recover them with <c>POST /sessions/{id}/recover</c>.</summary>
 public sealed record RecoveryAvailableEvent(string? SessionId, IReadOnlyList<string> SessionIds) : EngineEvent(SessionId);
 
+/// <summary>A meeting app is in a call while nothing records (phase 54): suggest recording it.</summary>
+public sealed record MeetingDetectedEvent(string? SessionId, string App, string Name) : EngineEvent(SessionId);
+
 /// <summary>A committed segment translated live (phase 29); arrives after its <see cref="SegmentEvent"/>.</summary>
 public sealed record TranslationEvent(string? SessionId, string SegmentId, string Language, string Text)
     : EngineEvent(SessionId);
@@ -108,6 +111,8 @@ public static class EngineEventParser
                 "recovery_available" => new RecoveryAvailableEvent(
                     sessionId,
                     data.GetProperty("session_ids").Deserialize<List<string>>(EngineJson.Options) ?? throw new JsonException()),
+                "meeting_detected" => new MeetingDetectedEvent(
+                    sessionId, data.GetProperty("app").GetString() ?? "", data.GetProperty("name").GetString() ?? ""),
                 "translation" => new TranslationEvent(
                     sessionId,
                     data.GetProperty("segment_id").GetString() ?? "",

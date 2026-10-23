@@ -134,6 +134,18 @@
             </DockPanel>
           </Border>
 
+          <!-- Phase 54: a meeting app is in a call; VozAta never records by itself -->
+          <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
+                  IsVisible="{Binding Meeting.IsOpen}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+                <Button Content="{Binding L[MeetingNotNow]}" Command="{Binding Meeting.NotNowCommand}" />
+                <Button Classes="primary" Content="{Binding L[MeetingRecord]}" Command="{Binding Meeting.RecordCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding Meeting.Message}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+
           <!-- Crash recovery (phase 17): interrupted sessions with Recover / Later -->
           <Border DockPanel.Dock="Top" Margin="16,12,16,0" Padding="16,12" Classes="banner info"
                   IsVisible="{Binding Recovery.IsOpen}">

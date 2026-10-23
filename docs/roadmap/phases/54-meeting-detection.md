@@ -69,9 +69,8 @@ macOS / Linux.
 - **Branch:** `feature/54-meeting-detection`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 5 (UI): `MeetingDetectedEvent` in `EngineEvents.cs`,
-  `MeetingSuggestionViewModel` (Record via the recorder Start, Not now, replaced by a new event,
-  closed when recording starts), the banner in `ShellView`, RESX texts and the three setting labels.
+- **Next step:** task 6: `engine.spec` hidden imports (pycaw, comtypes, psutil), architecture §9
+  keys, a user-guide section, `.env.example`.
 
 ### Steps
 
@@ -80,7 +79,7 @@ macOS / Linux.
 - [x] Detector (port, debounce, quiet period, recording suppresses)
 - [x] Windows audio session monitor (pycaw)
 - [x] Wiring: bootstrap, container, lifespan, `meeting_detected` event
-- [ ] UI: event, suggestion banner, texts
+- [x] UI: event, suggestion banner, texts
 - [ ] Docs and packaging
 - [ ] Full suites, manual check, phase done
 
@@ -96,3 +95,5 @@ macOS / Linux.
   adds `powershell.exe`, also when called from another thread (COM initialized per thread).
 - Tests never read the real audio sessions: an autouse fixture in `tests/conftest.py` stubs
   `WindowsAudioSessions.active_apps`.
+- The suggestion is a banner only (no extra toast: it already carries the buttons); it opens only
+  while the recorder is idle and closes on a `recording` / `paused` status.

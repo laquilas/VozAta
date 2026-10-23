@@ -68,6 +68,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
+        Meeting = new MeetingSuggestionViewModel(localization, Recorder.StartCommand);
         Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates, markers: markers);
         History.Players = players is null ? null : (id, tracks) => new PlayerBarViewModel(
             players(), dispatcher, track => AudioUri(engineUri, id, track), tracks, localization);
@@ -130,6 +131,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Crash recovery dialog (phase 17), opened by <c>recovery_available</c>.</summary>
     public RecoveryViewModel Recovery { get; }
+
+    /// <summary>The suggestion to record a meeting app's call (phase 54).</summary>
+    public MeetingSuggestionViewModel Meeting { get; }
 
     /// <summary>The import of the old meeting folders (phase 33): banner, counts and errors.</summary>
     public MigrationViewModel Migration { get; }
@@ -447,7 +451,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 History.Ask.OnAnswerDone(done);
                 History.Detail?.Ask.OnAnswerDone(done);
                 break;
+            case MeetingDetectedEvent detected:
+                if (Session.IsIdle)
+                {
+                    Meeting.Offer(detected); // never while recording: the engine sends none then either
+                }
+
+                break;
             case StatusEvent status:
+                if (status.Status is "recording" or "paused")
+                {
+                    Meeting.OnRecordingStarted();
+                }
+
                 var wasIdle = Session.IsIdle;
                 Recorder.Handle(status);
                 RecoveryRefresh = Recovery.OnStatusAsync(status);
@@ -538,6 +554,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Meetings.RefreshTexts();
         Config.RefreshTexts();
         Tray.RefreshTexts();
+        Meeting.RefreshTexts();
         Shell.RefreshTexts();
         Processing.RefreshTexts();
         Migration.RefreshTexts();

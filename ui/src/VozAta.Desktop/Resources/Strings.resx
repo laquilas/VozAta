@@ -1611,4 +1611,31 @@
   <data name="SettingHelp_ANTHROPIC_MODEL" xml:space="preserve">
     <value>The Claude model that writes the minutes, e.g. claude-opus-5-5 or claude-sonnet-5-5.</value>
   </data>
+  <data name="MeetingDetected" xml:space="preserve">
+    <value>{0} is in a call. Record it?</value>
+  </data>
+  <data name="MeetingRecord" xml:space="preserve">
+    <value>Record</value>
+  </data>
+  <data name="MeetingNotNow" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+  <data name="Setting_MEETING_DETECTION" xml:space="preserve">
+    <value>Suggest recording meeting calls</value>
+  </data>
+  <data name="SettingHelp_MEETING_DETECTION" xml:space="preserve">
+    <value>When Teams, Zoom, Webex, Slack or Discord is in a call and nothing is being recorded, VozAta offers to record it. It never records by itself.</value>
+  </data>
+  <data name="Setting_MEETING_APPS" xml:space="preserve">
+    <value>Meeting apps</value>
+  </data>
+  <data name="SettingHelp_MEETING_APPS" xml:space="preserve">
+    <value>The programs (executable names, separated by commas) whose call audio makes VozAta suggest recording.</value>
+  </data>
+  <data name="Setting_MEETING_POLL_SECONDS" xml:space="preserve">
+    <value>Check for calls every (seconds)</value>
+  </data>
+  <data name="SettingHelp_MEETING_POLL_SECONDS" xml:space="preserve">
+    <value>How often VozAta looks at which apps use the audio devices.</value>
+  </data>
 </root>
