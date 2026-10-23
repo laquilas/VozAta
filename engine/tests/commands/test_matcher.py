@@ -24,6 +24,7 @@ def test_words_are_casefolded_without_accents_or_punctuation() -> None:
         ("Bom, VozAta, o que foi decidido?", DECIDED),  # the wake word in the middle
         ("Vozatta, quais são os próximos passos até agora?", NEXT),  # misspelled, extra words
         ("Boz Ata, o que foi decidido", DECIDED),
+        ("VozAta, então, gere a ata.", MINUTES),  # a few words before the phrase
     ],
 )
 def test_a_command_after_the_wake_word_is_found(said: str, command: VoiceCommand) -> None:
@@ -39,6 +40,7 @@ def test_a_command_after_the_wake_word_is_found(said: str, command: VoiceCommand
         "A ata do vozatario saiu.",
         "",
         "VozAta",  # the wake word alone (the command may come in the next segment)
+        "VozAta, um dois três quatro cinco seis sete oito nove gere a ata",  # too far
     ],
 )
 def test_other_speech_is_no_command(said: str) -> None:

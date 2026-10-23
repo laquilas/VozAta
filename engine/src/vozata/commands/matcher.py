@@ -16,6 +16,7 @@ from vozata.domain import VoiceCommand
 
 WAKE_RATIO = 0.8
 PHRASE_RATIO = 0.75
+SEARCH_WORDS = 8  # where after the wake word a phrase may start ("VozAta, então, gere a ata")
 _WORD = re.compile(r"\w+")
 
 
@@ -50,17 +51,20 @@ class CommandMatcher:
         return None
 
     def command(self, spoken: Sequence[str]) -> VoiceCommand | None:
-        """The command whose phrase best matches the first words of `spoken`."""
+        """The command whose phrase best matches a run of words near the start of `spoken`
+        ("VozAta, então, gere a ata"); an earlier run wins a tie."""
         best: tuple[float, VoiceCommand] | None = None
         for command, phrase in self._commands:
             if not phrase:
                 continue
-            for size in range(max(1, len(phrase) - 1), len(phrase) + 2):
-                if size > len(spoken):
-                    break
-                score = _ratio(" ".join(spoken[:size]), " ".join(phrase))
-                if score >= PHRASE_RATIO and (best is None or score > best[0]):
-                    best = (score, command)
+            target = " ".join(phrase)
+            for first in range(min(len(spoken), SEARCH_WORDS)):
+                for size in range(max(1, len(phrase) - 1), len(phrase) + 2):
+                    if first + size > len(spoken):
+                        break
+                    score = _ratio(" ".join(spoken[first : first + size]), target)
+                    if score >= PHRASE_RATIO and (best is None or score > best[0]):
+                        best = (score, command)
         return best[1] if best is not None else None
 
     def find(self, text: str) -> VoiceCommand | None:
