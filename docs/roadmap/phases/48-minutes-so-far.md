@@ -103,3 +103,27 @@ minutes; turning a partial into the final minutes.
 
 > Start phase 48 (`docs/roadmap/phases/48-minutes-so-far.md`): read its *Read first* files, write
 > `plans/48-minutes-so-far.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/48-minutes-so-far`
+- **Status:** in progress
+- **Updated:** 2026-10-22
+- **Next step:** Task 1 of `plans/48-minutes-so-far.md` (storage of partial minutes, both backends).
+
+### Steps
+
+- [x] Implementation plan (`plans/48-minutes-so-far.md`)
+- [ ] Storage of partial minutes (both backends, export / import)
+- [ ] Range filter, scope line, `write_partial_minutes`
+- [ ] Job, routes, events
+- [ ] Desktop: recorder button and panel, Partial minutes tab
+- [ ] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- Live segments are stored as they are committed, so minutes so far read the stored transcript
+  like a regeneration does (no access to the live pipeline); the conversation language is the one
+  in the metadata (`auto` until it is detected).
+
