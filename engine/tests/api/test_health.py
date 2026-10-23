@@ -163,6 +163,7 @@ def test_health_reports_the_worker(tmp_path: Path) -> None:
         "url": "http://192.168.0.30:8766",
         "reachable": True,
         "version": "0.9.0",
+        "tasks": {"speech": "local", "speakers": "local", "translation": "local"},
     }
     assert body["stt"]["provider"] == "faster_whisper"  # the worker is set up but not used
     assert api.asked == ["t0k"]  # type: ignore[attr-defined]
@@ -189,6 +190,24 @@ def test_a_worker_that_is_off_is_reported_unreachable(tmp_path: Path) -> None:
 
     assert body["worker"]["reachable"] is False
     assert body["stt"]["model"] == ""
+    assert body["worker"]["tasks"]["speech"] == "fallback"
+
+
+@pytest.mark.parametrize(("reachable", "placed"), [(True, "worker"), (False, "fallback")])
+def test_health_says_where_each_task_runs(tmp_path: Path, reachable: bool, placed: str) -> None:
+    from vozata.worker_client.status import WorkerStatus
+
+    api = _with_worker(
+        tmp_path,
+        WorkerStatus(reachable),
+        stt_provider="vozata_worker",
+        diarization_provider="vozata_worker",
+        translation_provider="vozata_worker",
+    )
+    with api.client:
+        tasks = api.client.get("/health").json()["worker"]["tasks"]
+
+    assert tasks == {"speech": placed, "speakers": placed, "translation": placed}
 
 
 def test_health_without_gpu_or_llm(api: Api) -> None:

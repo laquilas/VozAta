@@ -340,3 +340,60 @@ def test_the_worker_offers_speakers_with_a_hugging_face_token(
 
     with TestClient(app) as client:
         assert client.get("/health").json()["capabilities"] == capabilities
+
+
+# Translation on the worker (phase 46)
+
+
+@pytest.mark.parametrize(
+    ("reachable", "notified"), [(True, []), (False, [("translation", "gpu-pc")])]
+)
+def test_translation_runs_on_the_worker_or_falls_back_here(
+    monkeypatch: pytest.MonkeyPatch,
+    worker: type[_Client],
+    tmp_path: Path,
+    reachable: bool,
+    notified: list[tuple[str, str]],
+) -> None:
+    from vozata.domain import TranslationTarget
+    from vozata.worker_client.translator import WorkerTranslator
+
+    monkeypatch.setitem(bootstrap.TRANSLATORS, "opus_mt", _LocalSpeakers)
+    worker.reachable = reachable
+    settings = _settings(tmp_path, translation_provider="vozata_worker")
+    notices = _Notices()
+
+    target, factory = bootstrap.build_translator_factory(
+        settings,
+        TranslationTarget("en"),
+        object(),
+        notices,  # type: ignore[arg-type]
+    )
+    translator = factory()  # type: ignore[misc]
+
+    assert target == "en"
+    assert isinstance(translator, WorkerTranslator if reachable else _LocalSpeakers)
+    assert notices.calls == notified
+    assert isinstance(
+        bootstrap.TRANSLATORS["vozata_worker"](settings, object()),  # type: ignore[arg-type]
+        WorkerTranslator if reachable else _LocalSpeakers,
+    )
+
+
+@pytest.mark.parametrize(
+    ("extra", "capabilities"), [(True, ["speech", "translation"]), (False, ["speech"])]
+)
+def test_the_worker_offers_translation_with_the_extra(
+    monkeypatch: pytest.MonkeyPatch, extra: bool, capabilities: list[str]
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from vozata.api.system_info import GpuInfo
+    from vozata.translation import opus_mt
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    monkeypatch.setattr(opus_mt, "has_extra", lambda: extra)
+    app = bootstrap.build_worker_app(Settings(), None)
+
+    with TestClient(app) as client:
+        assert client.get("/health").json()["capabilities"] == capabilities

@@ -21,6 +21,7 @@ from vozata.worker.pairing import PairingCodes, PairResult
 from vozata.worker.speaker_routes import add_speaker_routes
 from vozata.worker.speakers import DiarizeJobs, EmbedService
 from vozata.worker.speech import SpeechService
+from vozata.worker.translation import TranslateService, add_translation_route
 
 CAPABILITIES = ["speech"]
 INVALID_AUDIO = "worker_invalid_audio"
@@ -54,6 +55,7 @@ def create_worker_app(
     background: Sequence[Background] = (),
     diarize_jobs: DiarizeJobs | None = None,
     embedder: EmbedService | None = None,
+    translator: TranslateService | None = None,
 ) -> FastAPI:
     """`/health` and `/transcribe` need `token` (None: no check, for a worker on loopback);
     `/pair` needs the pairing code instead, and `/local/status` answers this PC only."""
@@ -70,6 +72,8 @@ def create_worker_app(
         speech.close()  # frees the GPU when the worker stops
         if embedder is not None:
             embedder.close()
+        if translator is not None:
+            translator.close()
 
     app = FastAPI(
         title="VozAta worker",
@@ -92,7 +96,11 @@ def create_worker_app(
             "worker": "ok",
             "version": __version__,
             "gpu": gpu(),
-            "capabilities": [*CAPABILITIES, *(["speakers"] if diarize_jobs is not None else [])],
+            "capabilities": [
+                *CAPABILITIES,
+                *(["speakers"] if diarize_jobs is not None else []),
+                *(["translation"] if translator is not None else []),
+            ],
             "models": speech.models(),
         }
 
@@ -150,6 +158,7 @@ def create_worker_app(
         )
 
     add_speaker_routes(guarded, diarize_jobs, embedder)  # phase 45
+    add_translation_route(guarded, translator)  # phase 46
     app.include_router(guarded)
     return app
 

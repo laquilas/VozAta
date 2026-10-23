@@ -145,9 +145,14 @@ class CTranslate2Marian:
         return [self._target.decode(result.hypotheses[0]).strip() for result in results]
 
 
+def has_extra() -> bool:
+    """Can this PC translate (the `sentencepiece` of the extra is installed)?"""
+    return importlib.util.find_spec("sentencepiece") is not None
+
+
 def require_extra() -> None:
     """Fail fast (before any download) when `sentencepiece` is missing."""
-    if importlib.util.find_spec("sentencepiece") is None:
+    if not has_extra():
         raise TranslationError(MISSING_EXTRA)
 
 

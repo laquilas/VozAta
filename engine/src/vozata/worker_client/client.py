@@ -138,6 +138,13 @@ class WorkerClient:
         )
         return np.asarray(reply["vector"], dtype=np.float32)
 
+    def translate(self, text: str, source: str, target: str) -> str:
+        """Phase 46: one committed segment through the worker's opus-mt."""
+        reply = self._call(
+            "POST", "/translate", json={"text": text, "source": source, "target": target}
+        )
+        return str(reply["text"])
+
     def _call(self, method: str, path: str, **options: Any) -> dict[str, Any]:
         """One request: no answer is `WorkerUnreachableError`, a refused token a `ConfigError`,
         another HTTP error `WorkerRequestError` with the worker's code."""

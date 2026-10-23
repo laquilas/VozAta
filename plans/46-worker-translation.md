@@ -13,6 +13,6 @@
 
 ## Tasks
 
-- [ ] Task 1: engine (worker route, client, translator, registry, health tasks) with tests; commit.
+- [x] Task 1: engine (worker route, client, translator, registry, health tasks) with tests; commit.
 - [ ] Task 2: UI (DTO, toggles, sidebar line, resources) with tests; commit.
 - [ ] Task 3: docs, suites, manual check, PR, merge.
