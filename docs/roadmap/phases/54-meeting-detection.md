@@ -69,8 +69,9 @@ macOS / Linux.
 - **Branch:** `feature/54-meeting-detection`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 6: `engine.spec` hidden imports (pycaw, comtypes, psutil), architecture §9
-  keys, a user-guide section, `.env.example`.
+- **Next step:** task 7: full suites and the manual check (a scratch engine with a short poll and
+  `MEETING_APPS=powershell.exe`, a WAV played by `SoundPlayer`: one `meeting_detected` over the
+  WebSocket; none while recording).
 
 ### Steps
 
@@ -80,7 +81,7 @@ macOS / Linux.
 - [x] Windows audio session monitor (pycaw)
 - [x] Wiring: bootstrap, container, lifespan, `meeting_detected` event
 - [x] UI: event, suggestion banner, texts
-- [ ] Docs and packaging
+- [x] Docs and packaging
 - [ ] Full suites, manual check, phase done
 
 ### Decisions and notes
