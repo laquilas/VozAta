@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-MISSING_EXTRA = "missing_extra"  # not in this edition / the extra is not installed
+MISSING_EXTRA = "missing_extra"  # the speaker runtime is not downloaded / the extra is not installed
 MISSING_HF_TOKEN = "missing_hf_token"  # speakers: the pyannote models need a Hugging Face token
 
 

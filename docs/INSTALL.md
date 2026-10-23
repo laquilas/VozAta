@@ -56,6 +56,23 @@ recording meeting calls", "Meeting apps").
 Windows Settings → Apps → VozAta → Uninstall. Recordings and settings stay; delete the folders above
 to remove them too.
 
+## Speaker identification
+
+Telling the remote participants apart (User 1, User 2, ...) needs pyannote and PyTorch, about
+3 GB, which the installer does not carry. Download them once on the PC that runs them:
+
+- during the setup: tick **Download speaker identification now** (a console window shows the
+  download);
+- later, in **VozAta Worker**: **Download speaker identification** on the *Tasks for the other
+  PCs* card;
+- or in a terminal: `"%LOCALAPPDATA%\Programs\VozAta\engine\vozata-engine.exe" speakers install`
+  (`speakers status` says whether it is there, `speakers remove` deletes it).
+
+It goes into `%LOCALAPPDATA%\VozAta\speakers` (a Python 3.13 environment made with `uv`; the CUDA
+build of PyTorch when the PC has an NVIDIA GPU) and is removed when VozAta is uninstalled. Restart
+VozAta afterwards. It also needs a Hugging Face token (`HF_TOKEN`) and the pyannote model terms
+accepted, as before.
+
 ## Troubleshooting
 
 | Symptom | What to do |
@@ -70,12 +87,12 @@ to remove them too.
 
 ```powershell
 python -m pip install -e "engine[cuda,translation,package]"  # engine, CUDA, translation, PyInstaller
-pwsh packaging/build.ps1 -Version 1.0.0           # needs the .NET 10 SDK and Inno Setup 6
+pwsh packaging/build.ps1 -Version 1.0.0           # needs the .NET 10 SDK and Inno Setup 6 or 7
 pwsh packaging/build.ps1 -Version 1.0.0 -CpuOnly  # smaller build without the CUDA libraries
-# the speakers edition (VozAta-Setup-1.0.0-speakers.exe) also bundles pyannote / torch:
-python -m pip install -e "engine[diarization]"    # CUDA torch first, see engine/pyproject.toml
-pwsh packaging/build.ps1 -Version 1.0.0 -Speakers
 ```
+
+Speaker identification (pyannote and torch, about 3 GB) is not in the installer: the PC that needs
+it downloads it, see [Speaker identification](#speaker-identification).
 
 The installer lands in `build/installer/`. The GitHub workflow `Release` builds it on every `v*` tag
 and can be run by hand.

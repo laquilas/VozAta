@@ -883,11 +883,18 @@ only validator.
   (`python -m vozata.diarization.child`, request with the token on stdin, turns in a temp JSON
   file). `torch` and `ctranslate2` each bundle CUDA/cuDNN, so they never share a process, and
   the child's exit frees the VRAM before the minutes. `torch`/`pyannote` are imported lazily:
-  the engine works without the extra. The standard installer (13) does not bundle it; the
-  **speakers edition** (51, `build.ps1 -Speakers`, `VozAta-Setup-<v>-speakers.exe`) does, and
-  every build bundles the `translation` extra. In the packaged build `sys.executable` is
-  `vozata-engine.exe`, which runs `-m <module>` itself (`vozata/frozen.py`, called from
-  `packaging/engine_main.py`), so the child command is the same.
+  the engine works without the extra. The installer (13) never bundles it (the speakers edition
+  of 51 was dropped in 56) but bundles the `translation` extra. **Speaker runtime (56):** the
+  packaged engine runs the children with the Python of `%LOCALAPPDATA%\VozAta\speakers`
+  (`Settings.speakers_runtime_dir`; `diarization/runtime.py`), a separate Python 3.13
+  environment built on that PC by `vozata-engine speakers install | status [--json] | remove`
+  (`diarization/runtime_install.py`: `uv`, shipped as `engine\speakers\uv.exe`, installs the
+  pinned torch / torchaudio — CUDA 12.8 wheels with an NVIDIA GPU, else CPU — torchcodec and
+  pyannote.audio; an import check writes `ready.json`). The children import `vozata` from
+  `engine\speakers\vozata.zip` (`PYTHONPATH`), so the runtime holds no copy of VozAta. Without the
+  runtime, `pyannote` is the configuration error `speakers_not_installed` (no model download) and
+  the worker reports speakers `missing_extra`. In development the children run with
+  `sys.executable` (the venv's `diarization` extra), as before.
 - `python -m vozata diarize <session_dir> [--minutes]` diarizes a stored session (ignores
   `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
 - `python -m vozata transcribe <id | session_dir>` transcribes, from the stored audio, whatever a

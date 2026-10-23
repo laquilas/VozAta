@@ -9,7 +9,7 @@ and runs the script. Part of it is a script, part of it is done by hand in the a
 | Where | What |
 |-------|------|
 | Both PCs | On the same local network, with the **Private** network profile (Windows Settings → Network). |
-| GPU PC | VozAta installed: the **speakers edition** (`VozAta-Setup-<v>-speakers.exe`) to check speaker identification, see [Editions](remote-worker.md#editions). |
+| GPU PC | VozAta installed, with speaker identification downloaded (**Download speaker identification** in VozAta Worker) to check it, see [What the worker offers](remote-worker.md#what-the-worker-offers). |
 | GPU PC | `HF_TOKEN=...` in `%APPDATA%\VozAta\worker\.env` (for speakers), then VozAta Worker opened, **Allow on the network** done once. The **Tasks for the other PCs** card lists all three tasks as offered. |
 | Client PC | The repository with its `.venv` (`pip install -e "engine[dev]"`), for the script. VozAta installed, for the manual steps. |
 | Client PC | For the pre-emption step: a working microphone and output device (the script records and plays a WAV on the default output, so the system track hears speech). |

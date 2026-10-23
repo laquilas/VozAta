@@ -134,7 +134,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
   stopping the recording, minutes of a time range of a recorded meeting, and voice commands
   ("VozAta, gere a ata").
 - **M10 — Worker in the field** (51–52): the installed worker offers every task (translation in
-  every build, speakers in the speakers edition) and says why one is missing; a two-PC check
+  every build, speakers downloaded on the PC since 56) and says why one is missing; a two-PC check
   (script + checklist) for discovery, pairing, translation, cancel and the app's worker switches.
 - **M11 — Choice and tuning** (53–55): minutes on an OpenAI-compatible server or Anthropic,
   a suggestion to record when Teams / Zoom is in a call, and a WER benchmark to tune the
