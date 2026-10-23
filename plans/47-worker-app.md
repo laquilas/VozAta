@@ -1,6 +1,6 @@
 # Phase 47 — Worker App and Automatic Discovery Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** On the GPU PC the user opens **VozAta Worker.exe** (no command line); on this PC the Config page finds the worker on the LAN and pairs with a 6-digit code; a worker whose address changed is found again before the phase 44 fallback.
 
@@ -26,29 +26,29 @@
 
 ### Task 1: Worker identity, pairing codes, `/pair`, `/local/status`
 Files: `config.py`, `settings_fields.py` (worker group: `WORKER_ID`, `WORKER_NAME`, `WORKER_DISCOVERY_PORT`), `worker/pairing.py`, `worker/app.py` (routers), `worker/local.py` (`lan_addresses`), `cli/worker.py` (id generated like the token), locales, `.env.example`; tests.
-- [ ] Commit `feat(worker): pair with a rotating code and report the local status`.
+- [x] Commit `feat(worker): pair with a rotating code and report the local status`.
 
 ### Task 2: UDP discovery (worker responder, engine client, routes)
 Files: `worker/discovery.py` (responder thread, started by the worker app lifespan), `worker_client/discovery.py` (`discover_workers`), `api/routes/worker.py` (`/worker/discover`, `/worker/pair`), `worker_client/pairing.py`, container + bootstrap wiring, locales; tests with fake sockets / `MockTransport`.
-- [ ] Commit `feat: find VozAta workers on the network and pair with them`.
+- [x] Commit `feat: find VozAta workers on the network and pair with them`.
 
 ### Task 3: Find the worker again after an address change
 Files: `bootstrap.py` (`build_transcriber(relocate=…)`, API container `worker_moved`), `bootstrap_processing.py`; tests.
-- [ ] Commit `feat(engine): find a moved worker before falling back`.
+- [x] Commit `feat(engine): find a moved worker before falling back`.
 
 ### Task 4: Desktop Config — Find workers and pair
 Files: `VozAta.Client` (`DiscoverWorkersAsync`, `PairWorkerAsync`, DTOs), `WorkerPairingViewModel`, `ConfigPage.axaml` (worker group block), RESX; tests (`FakeEngineClient`, view model, client).
-- [ ] Commit `feat(ui): find and pair a worker from the Config page`.
+- [x] Commit `feat(ui): find and pair a worker from the Config page`.
 
 ### Task 5: The worker app
 Files: `ui/src/VozAta.Worker/` (csproj, Program, App, `WorkerWindow`, `WorkerAppViewModel`, services: `WorkerStatusClient`, `RegistryStartup`, `ElevatedRunner`, `WorkerOptions`), `VozAta.sln`, tests project reference + `WorkerAppViewModelTests`, resource parity.
-- [ ] Commit `feat(worker-app): run the worker from a window on the GPU PC`.
+- [x] Commit `feat(worker-app): run the worker from a window on the GPU PC`.
 
 ### Task 6: Packaging and docs
 Files: `packaging/build.ps1` (publish `VozAta.Worker` to the UI output), `packaging/installer.iss` (shortcut), `docs/remote-worker.md` (around the app), `docs/roadmap/worker-api.md`, `api-contract.md`, `architecture.md` §9.
-- [ ] Commit `docs: the worker app, discovery and pairing`.
+- [x] Commit `docs: the worker app, discovery and pairing`.
 
 ### Task 7: Full suites, manual check, phase done
-- [ ] Engine `pytest --cov`, ruff; UI `dotnet test`, `dotnet format --verify-no-changes`.
-- [ ] Manual: run the worker app (dev) on this PC; Config → Find workers lists it; pairing with the shown code fills URL + token; Test ok; change `WORKER_PORT` → the next transcriber build relocates.
-- [ ] Phase done, push, PR; the user merges.
+- [x] Engine `pytest --cov`, ruff; UI `dotnet test`, `dotnet format --verify-no-changes`.
+- [x] Manual: run the worker app (dev) on this PC; Config → Find workers lists it; pairing with the shown code fills URL + token; Test ok; change `WORKER_PORT` → the next transcriber build relocates.
+- [x] Phase done, push, PR; the user merges.

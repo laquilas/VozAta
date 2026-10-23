@@ -73,11 +73,11 @@ rewritten around the app; `worker-api.md` (`/pair`, `/local/status`, UDP discove
 
 ## Acceptance criteria
 
-- [ ] On the GPU PC, `VozAta Worker.exe` starts the worker, shows its address, GPU and pairing
+- [x] On the GPU PC, `VozAta Worker.exe` starts the worker, shows its address, GPU and pairing
       code, can start with Windows and add the firewall rules.
-- [ ] On this PC, "Find workers" lists the worker; pairing with the code fills URL and token and
+- [x] On this PC, "Find workers" lists the worker; pairing with the code fills URL and token and
       the Test is ok.
-- [ ] After the worker's address changes, the next recording finds it again without a fallback.
+- [x] After the worker's address changes, the next recording finds it again without a fallback.
 
 ## Tests
 
@@ -99,10 +99,10 @@ mDNS / Bonjour.
 ## Progress
 
 - **Branch:** `feature/47-worker-app`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-22
-- **Next step:** Task 7 of `plans/47-worker-app.md` (full suites, manual check: worker app on this
-  PC, Find workers, pairing, relocation; phase done, PR).
+- **Next step:** open the PR to `main`; after the merge, start phase 48
+  (`docs/roadmap/phases/48-minutes-so-far.md`).
 
 ### Steps
 
@@ -113,7 +113,7 @@ mDNS / Bonjour.
 - [x] Desktop Config: Find workers and pair
 - [x] The worker app (`VozAta.Worker`)
 - [x] Packaging and docs
-- [ ] Full suites, manual check, phase done
+- [x] Full suites, manual check, phase done
 
 ### Decisions and notes
 
@@ -135,3 +135,17 @@ mDNS / Bonjour.
   failed once in a full run and passed on four reruns (timing, not related to this phase).
 - The worker app reads `worker.settings.json`, not `appsettings.json`: it is published into the
   desktop app's folder, which has its own `appsettings.json`.
+- The worker app uses the desktop app's design system (`Themes/*.axaml` linked into the project,
+  user request 2026-10-22): brand band with the logo and a state tag, cards, banners.
+- Manual check (2026-10-22, this PC as both sides): the worker app (Debug) found the repository's
+  Python, started the worker in `%APPDATA%\VozAta\worker` (token and id made there) and showed
+  the pairing code, four LAN addresses, the RTX 3050 and the token. A scratch engine (port 8799)
+  found it with `GET /worker/discover` in 1.6 s; a wrong code got the localized 409, the shown
+  code paired and saved `WORKER_URL` / `WORKER_TOKEN` / `WORKER_ID` (token equal to the
+  worker's); `POST /settings/test/worker` and `/health.worker` were ok. With `WORKER_URL` pointing
+  at a dead address, `build_transcriber` found the worker by its id in 5.2 s and saved the new
+  address. Found and fixed: the state sentence was cut, the log lost its accents (UTF-8). The
+  test folder was removed afterwards. On one PC the worker answers through whichever adapter
+  replies first (a virtual one here); between two PCs only the shared network can carry the
+  answer. Not checked by hand: the firewall rules (administrator prompt), Start with Windows,
+  the desktop Config "Find workers" block (covered by view-model tests), a second PC.
