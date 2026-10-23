@@ -1,5 +1,6 @@
 """Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex |
-recover [<dir> | --all] | migrate [--dry-run] | transcribe <id> | speakers install`."""
+recover [<dir> | --all] | migrate [--dry-run] | transcribe <id> | speakers install |
+cuda install`."""
 
 from __future__ import annotations
 
@@ -27,6 +28,8 @@ from vozata.audio.devices import (
 )
 from vozata.bootstrap_processing import build_resume_job, build_transcribe_command
 from vozata.cli.console import ConsoleObserver
+from vozata.cli.cuda import ACTIONS as CUDA_ACTIONS
+from vozata.cli.cuda import run_cuda
 from vozata.cli.diarize import run_diarize
 from vozata.cli.migrate import run_migrate
 from vozata.cli.minutes import run_minutes
@@ -42,6 +45,7 @@ from vozata.config import ConfigError, Settings, load_settings
 from vozata.diarization.runtime import runtime_for
 from vozata.domain import ConversationLanguage
 from vozata.ports import Localizer
+from vozata.transcription.cuda_runtime import CudaRuntime
 
 
 def tolerant_output(stream: TextIO) -> TextIO:
@@ -87,6 +91,9 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     speakers = commands.add_parser("speakers", help=t("cli.help.speakers"))
     speakers.add_argument("action", choices=SPEAKER_ACTIONS, help=t("cli.help.speakers_action"))
     speakers.add_argument("--json", action="store_true", help=t("cli.help.speakers_json"))
+    cuda = commands.add_parser("cuda", help=t("cli.help.cuda"))
+    cuda.add_argument("action", choices=CUDA_ACTIONS, help=t("cli.help.cuda_action"))
+    cuda.add_argument("--json", action="store_true", help=t("cli.help.cuda_json"))
     return parser
 
 
@@ -155,6 +162,14 @@ def main(
                 console,
                 localizer,
                 cuda=lambda: bootstrap.query_gpu().available,
+                json_output=args.json,
+            )
+        if args.command == "cuda":
+            return run_cuda(
+                args.action,
+                CudaRuntime(settings.cuda_runtime_dir),
+                console,
+                localizer,
                 json_output=args.json,
             )
         if args.command == "reindex":

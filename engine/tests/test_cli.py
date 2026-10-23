@@ -346,3 +346,10 @@ def test_speakers_status_as_json_names_the_runtime_folder(tmp_path: Path) -> Non
 
     assert code == 0
     assert json.loads(out)["folder"] == str(tmp_path / "VozAta" / "speakers")
+
+
+def test_cuda_status_as_json_names_the_runtime_folder(tmp_path: Path) -> None:
+    code, out = _main(["cuda", "status", "--json"], env={"LOCALAPPDATA": str(tmp_path)})
+
+    assert code == 0
+    assert json.loads(out) == {"ready": False, "folder": str(tmp_path / "VozAta" / "cuda")}

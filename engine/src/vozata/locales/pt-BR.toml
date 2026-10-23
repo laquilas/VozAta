@@ -237,6 +237,18 @@ status_missing = "A identificação de participantes não está instalada neste 
 development = "Em desenvolvimento, a identificação de participantes usa o virtualenv: pip install -e \"engine[diarization]\"."
 removed = "{folder} removida."
 
+[cli.cuda]
+start = "Baixando o suporte a GPU (bibliotecas NVIDIA CUDA, cerca de 1,2 GB) para {folder}."
+step_download = "Baixando {name} ({size} MB)..."
+progress = "  {name}: {percent} %"
+step_extract = "Descompactando {name}..."
+done = "O suporte a GPU está instalado em {folder}. Reinicie o VozAta e o VozAta Worker para usá-lo."
+already_ready = "O suporte a GPU já está instalado em {folder}."
+failed = "O download parou ({reason}). Rode de novo para tentar outra vez: vozata-engine cuda install"
+status_ready = "O suporte a GPU (CUDA) está instalado em {folder}."
+status_missing = "O suporte a GPU (CUDA) não está instalado neste PC: o reconhecimento de fala roda na CPU (vozata-engine cuda install)."
+removed = "{folder} removida."
+
 [cli.devices]
 microphones = "Microfones:"
 loopbacks = "Áudio do sistema (loopback):"
@@ -250,6 +262,9 @@ worker_json = "com --check: mostra a versão, o endereço e as tarefas em JSON"
 speakers = "baixar, verificar ou remover a identificação de participantes neste PC (pyannote, cerca de 3 GB)"
 speakers_action = "install | status | remove"
 speakers_json = "com status: mostrar em JSON"
+cuda = "baixar, verificar ou remover o suporte a GPU (bibliotecas NVIDIA CUDA, cerca de 1,2 GB) neste PC"
+cuda_action = "install | status | remove"
+cuda_json = "com status: mostrar em JSON"
 description = "Transcrição de reuniões quase em tempo real e geração de atas."
 record = "grava o microfone e o áudio do sistema com transcrição ao vivo"
 language = "idioma falado na reunião (padrão: TRANSCRIPTION_LANGUAGE)"
