@@ -11,6 +11,8 @@ invalid_url = "Valor no válido \"{value}\" para {key}: se esperaba una URL http
 invalid_duration = "Valor no válido \"{value}\" para {key}: se esperaban segundos (0, -1, 300) o una duración como 5m o 1h30m."
 unknown_key = "Configuración desconocida: {key}."
 no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por palabra para el modelo \"{value}\". Elige un modelo que admita timestamp_granularities=word."
+worker_unauthorized = "El worker de VozAta en {host} rechazó el token. Copia el token que se muestra en el PC del worker en {key} (Config → Worker)."
+worker_url_missing = "{key} está vacío. Indica la dirección del worker de VozAta (Config → Worker), por ejemplo http://192.168.0.20:8766."
 missing_hf_token = "{key} no está definido. La identificación de participantes necesita un token de acceso de Hugging Face: crea uno en huggingface.co, acepta los términos del modelo pyannote y define {key} en la configuración."
 
 [errors.session]
@@ -139,6 +141,9 @@ invalid_reply = "{target} devolvió una respuesta inesperada."
 
 [cli]
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
+worker_listening = "Worker de VozAta escuchando en {url} (Ctrl+C para detener)."
+worker_token_created = "Nuevo token del worker, guardado en {file}: {token}. Indícalo en el VozAta del otro PC (Config → Worker)."
+worker_check = "Worker de VozAta {version}, escucharía en {url}."
 serve_public_host = "No se escuchará en {host}: la API del motor no tiene autenticación. Usa 127.0.0.1 o localhost en API_HOST."
 loading_model = "Cargando el modelo de reconocimiento de voz — ya grabando..."
 model_ready = "Modelo de reconocimiento de voz listo."
@@ -193,6 +198,8 @@ default = "predeterminado"
 
 [cli.help]
 serve = "ejecuta la API HTTP + WebSocket local que usa la aplicación de escritorio"
+worker = "ofrece reconocimiento de voz al motor de VozAta de otro PC de la red local"
+worker_check = "muestra la versión y la dirección y sale (comprobación de la instalación)"
 description = "Transcripción de reuniones casi en tiempo real y generación de actas."
 record = "graba el micrófono y el audio del sistema con transcripción en vivo"
 language = "idioma hablado en la reunión (predeterminado: TRANSCRIPTION_LANGUAGE)"
@@ -237,6 +244,7 @@ no_space = "No hay suficiente espacio libre en disco para importar {folder}: se 
 ollama_ok = "Ollama respondió y el modelo {model} está instalado."
 ollama_model_missing = "Ollama respondió, pero el modelo {model} no está instalado: ejecuta `ollama pull {model}`."
 stt_api_ok = "La API de voz en {host} aceptó la clave."
+worker_ok = "El worker de VozAta {version} en {host} aceptó el token ({gpu})."
 hf_token_ok = "El token abre {models}."
 azure_devops_ok = "Proyecto {project} de Azure DevOps encontrado; el token funciona."
 github_ok = "Repositorio {repo} de GitHub encontrado; el token funciona."
@@ -248,3 +256,11 @@ http_error = "El servicio respondió con HTTP {status}."
 unreachable = "No se pudo acceder a {host}."
 invalid_response = "El servicio respondió algo inesperado."
 unavailable = "Las pruebas de conexión no están disponibles en este motor."
+
+[errors.worker]
+fallback = "El worker de VozAta en {host} no respondió: {task} se ejecuta en este PC."
+
+[worker.task]
+speech = "el reconocimiento de voz"
+speakers = "la identificación de hablantes"
+translation = "la traducción"

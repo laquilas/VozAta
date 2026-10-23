@@ -3,17 +3,26 @@
 from __future__ import annotations
 
 from typing import Annotated
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends
 
 from vozata import __version__
 from vozata.api.container import ApiContainer
 from vozata.api.deps import container
-from vozata.api.schemas import GpuStatus, Health, LlmStatus, StorageStatus, SttStatus
+from vozata.api.schemas import (
+    GpuStatus,
+    Health,
+    LlmStatus,
+    StorageStatus,
+    SttStatus,
+    WorkerHealth,
+)
 from vozata.config import Settings
 from vozata.net import remote_llm_host
 from vozata.storage.usage import database_size
 from vozata.transcription.openai_compatible import remote_host
+from vozata.worker_client.status import WorkerStatus
 
 router = APIRouter(tags=["health"])
 
@@ -24,10 +33,11 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
     current = c.settings_file.current
     gpu = c.gpu_info()
     llm_host = remote_llm_host(current)
+    worker = c.worker_status(current) if current.worker_url else None
     return Health(
         version=__version__,
         gpu=GpuStatus(available=gpu.available, name=gpu.name, vram_total_mb=gpu.vram_total_mb),
-        stt=_stt(settings),
+        stt=_stt(settings, worker),
         llm=LlmStatus(
             provider=current.llm_provider,
             model=current.ollama_model,
@@ -36,6 +46,11 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
             host=llm_host,
         ),
         storage=_storage(c),
+        worker=WorkerHealth(
+            url=current.worker_url, reachable=worker.reachable, version=worker.version
+        )
+        if worker is not None and current.worker_url
+        else None,
     )
 
 
@@ -56,8 +71,15 @@ def _storage(c: ApiContainer) -> StorageStatus:
     )
 
 
-def _stt(settings: Settings) -> SttStatus:
-    """Local Whisper reports its model and device; a remote API its model and host (privacy)."""
+def _stt(settings: Settings, worker: WorkerStatus | None) -> SttStatus:
+    """Local Whisper reports its model and device; a remote API or the VozAta worker its model
+    and host (privacy: audio leaves this PC)."""
+    if settings.stt_provider == "vozata_worker":
+        url = settings.worker_url or ""
+        model = worker.models[0] if worker is not None and worker.models else ""
+        return SttStatus(
+            provider=settings.stt_provider, model=model, device=urlparse(url).hostname or url
+        )
     host = remote_host(settings)
     if host is not None:
         return SttStatus(

@@ -148,6 +148,12 @@ class Settings:
     # API (phase 06)
     api_host: str = "127.0.0.1"
     api_port: int = 8765
+    # Worker on another PC (phase 44): the engine's `WORKER_URL`, both sides' `WORKER_TOKEN`, and
+    # where `vozata worker` listens on the worker PC
+    worker_url: str | None = None
+    worker_token: str | None = None
+    worker_host: str = "0.0.0.0"
+    worker_port: int = 8766
     # Storage (phase 31)
     storage_backend: StorageBackend = StorageBackend.SQLITE
     database_path: Path | None = None  # None: `OUTPUT_DIR/vozata.db`
@@ -255,6 +261,10 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
+        worker_url=raw.get("WORKER_URL"),
+        worker_token=raw.get("WORKER_TOKEN"),
+        worker_host=raw.get("WORKER_HOST", "0.0.0.0"),
+        worker_port=_integer(raw, "WORKER_PORT", 8766, minimum=1, maximum=65535),
         storage_backend=_choice(raw, "STORAGE_BACKEND", StorageBackend, StorageBackend.SQLITE),
         database_path=Path(raw["DATABASE_PATH"]) if "DATABASE_PATH" in raw else None,
         audio_cache_mb=_integer(raw, "AUDIO_CACHE_MB", 2048, minimum=0, maximum=1_048_576),

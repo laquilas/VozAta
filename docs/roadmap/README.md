@@ -93,10 +93,19 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 41 | [Live transcription toggle](phases/41-record-only.md) | 40 | done |
 | 42 | [Model download progress bar](phases/42-download-progress.md) | 26, 35 | done |
 | 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | done |
+| 44 | [Worker: server and remote speech](phases/44-worker-speech.md) | 43 | done |
+| 45 | [Worker: speaker identification](phases/45-worker-speakers.md) | 44 | todo |
+| 46 | [Worker: translation and one-switch setup](phases/46-worker-translation.md) | 44, 45 | todo |
+| 47 | [Worker app and automatic discovery](phases/47-worker-app.md) | 44 | todo |
+| 48 | [Minutes so far and the partial-minutes list](phases/48-minutes-so-far.md) | 40, 41 | todo |
+| 49 | [Minutes of a time range](phases/49-minutes-of-a-range.md) | 48 | todo |
+| 50 | [Voice commands](phases/50-voice-commands.md) | 48 | todo |
+
+**Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·
-32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43.
+32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43 · 45 / 47 / 48 · 49 / 50.
 
 **Milestones**
 - **M1 — CLI MVP** (00–05): record, live transcript in the terminal, three WAVs, minutes.
@@ -112,6 +121,12 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 - **M7 — Back-to-back meetings** (40–43): Stop frees the recorder and meetings are processed in a
   background queue with progress; optional audio-only recording; model download progress;
   minutes on an Ollama server elsewhere on the local network.
+- **M8 — Work on another PC** (44–47): a VozAta worker on a GPU PC of the local network runs
+  speech, speakers and translation; this PC falls back to local work when the worker is off; the
+  worker has its own app and is found and paired from the Config page.
+- **M9 — In-meeting minutes and commands** (48–50): minutes of what was said so far without
+  stopping the recording, minutes of a time range of a recorded meeting, and voice commands
+  ("VozAta, gere a ata").
 
 ## Dependency graph
 
@@ -181,11 +196,19 @@ graph LR
   P26 --> P42[42 Download progress]
   P35 --> P42
   P40 --> P43[43 Remote Ollama]
+  P43 --> P44[44 Worker: speech]
+  P44 --> P45[45 Worker: speakers]
+  P44 --> P46[46 Worker: translation]
+  P45 --> P46
+  P44 --> P47[47 Worker app + discovery]
+  P40 --> P48[48 Minutes so far]
+  P41 --> P48
+  P48 --> P49[49 Minutes of a range]
+  P48 --> P50[50 Voice commands]
 ```
 
 ## Backlog (not scheduled)
 
-- Live rolling summary ("catch me up" during the meeting).
 - Additional LLM providers (OpenAI-compatible chat, Anthropic) behind `LanguageModel`.
 - Auto-detect meeting apps (Teams / Zoom / Meet audio sessions) and suggest recording.
 - WER benchmark harness with reference recordings to tune `CHUNK_SECONDS` and models.

@@ -125,6 +125,10 @@ class RecordingSession:
         self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
         self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
 
+    def hold_speech_fallback(self) -> None:
+        """The VozAta worker did not answer: hold the GPU before the local Whisper loads."""
+        self._gpu.hold_speech_fallback()
+
     @property
     def id(self) -> str:
         if self._id is None:

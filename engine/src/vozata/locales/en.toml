@@ -11,6 +11,8 @@ invalid_url = "Invalid value \"{value}\" for {key}: expected an http:// or https
 invalid_duration = "Invalid value \"{value}\" for {key}: expected seconds (0, -1, 300) or a duration such as 5m or 1h30m."
 unknown_key = "Unknown setting {key}."
 no_word_timestamps = "The speech API at {host} returned no word timestamps for model \"{value}\". Choose a model that supports timestamp_granularities=word."
+worker_unauthorized = "The VozAta worker at {host} refused the token. Copy the token shown on the worker PC into {key} (Config → Worker)."
+worker_url_missing = "{key} is empty. Enter the address of the VozAta worker (Config → Worker), e.g. http://192.168.0.20:8766."
 missing_hf_token = "{key} is not set. Speaker identification needs a Hugging Face access token: create one at huggingface.co, accept the terms of the pyannote model, then set {key} in the settings."
 
 [errors.session]
@@ -139,6 +141,9 @@ invalid_reply = "{target} returned an unexpected reply."
 
 [cli]
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
+worker_listening = "VozAta worker listening on {url} (Ctrl+C to stop)."
+worker_token_created = "New worker token, saved in {file}: {token}. Enter it in VozAta on the other PC (Config → Worker)."
+worker_check = "VozAta worker {version}, would listen on {url}."
 serve_public_host = "Refusing to listen on {host}: the engine API has no authentication. Use 127.0.0.1 or localhost in API_HOST."
 loading_model = "Loading the speech recognition model — already recording..."
 model_ready = "Speech recognition model ready."
@@ -193,6 +198,8 @@ default = "default"
 
 [cli.help]
 serve = "run the local HTTP + WebSocket API used by the desktop app"
+worker = "serve speech recognition to the VozAta engine of another PC of the local network"
+worker_check = "print the version and the address, then exit (installation check)"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"
@@ -237,6 +244,7 @@ no_space = "Not enough free disk space to import {folder}: {needed} MB needed, {
 ollama_ok = "Ollama answered and the model {model} is installed."
 ollama_model_missing = "Ollama answered, but the model {model} is not installed: run `ollama pull {model}`."
 stt_api_ok = "The speech API at {host} accepted the key."
+worker_ok = "The VozAta worker {version} at {host} accepted the token ({gpu})."
 hf_token_ok = "The token opens {models}."
 azure_devops_ok = "Azure DevOps project {project} found; the token works."
 github_ok = "GitHub repository {repo} found; the token works."
@@ -248,3 +256,11 @@ http_error = "The service answered with HTTP {status}."
 unreachable = "Could not reach {host}."
 invalid_response = "The service answered with something unexpected."
 unavailable = "Connection tests are not available in this engine."
+
+[errors.worker]
+fallback = "The VozAta worker at {host} did not answer: {task} runs on this PC."
+
+[worker.task]
+speech = "speech recognition"
+speakers = "speaker identification"
+translation = "translation"

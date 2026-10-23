@@ -1347,4 +1347,31 @@
   <data name="DownloadFailed" xml:space="preserve">
     <value>No se pudo descargar el modelo {0} {1}: {2}</value>
   </data>
+  <data name="SettingsGroup_worker" xml:space="preserve">
+    <value>Worker (otro PC)</value>
+  </data>
+  <data name="Setting_WORKER_URL" xml:space="preserve">
+    <value>Dirección del worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_URL" xml:space="preserve">
+    <value>Dirección del worker de VozAta en un PC de tu red con GPU, por ejemplo http://192.168.0.20:8766. Elige vozata_worker como proveedor de voz para usarlo; si no responde, este PC transcribe y una notificación lo avisa.</value>
+  </data>
+  <data name="Setting_WORKER_TOKEN" xml:space="preserve">
+    <value>Token del worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_TOKEN" xml:space="preserve">
+    <value>El token que el worker mostró la primera vez que se inició (también está en el .env del PC del worker).</value>
+  </data>
+  <data name="Setting_WORKER_HOST" xml:space="preserve">
+    <value>El worker escucha en</value>
+  </data>
+  <data name="SettingHelp_WORKER_HOST" xml:space="preserve">
+    <value>Solo en el PC del worker: la interfaz en la que escucha el worker. 0.0.0.0 es toda la red de ese PC y exige token.</value>
+  </data>
+  <data name="Setting_WORKER_PORT" xml:space="preserve">
+    <value>Puerto del worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_PORT" xml:space="preserve">
+    <value>Solo en el PC del worker: el puerto en el que escucha el worker (8766 por defecto).</value>
+  </data>
 </root>

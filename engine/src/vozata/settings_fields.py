@@ -46,6 +46,7 @@ GROUPS = (
     "speakers",
     "minutes",
     "tasks",
+    "worker",
     "api",
 )
 
@@ -213,6 +214,11 @@ FIELDS: tuple[Field, ...] = (
     # Crash recovery (phase 17)
     Field("AUTOSAVE_SECONDS", "autosave_seconds", "number", group="general"),
     # API (phase 06)
+    # Worker on another PC (phase 44): URL and token on this PC, host and port on the worker PC
+    Field("WORKER_URL", "worker_url", "url", group="worker"),
+    Field("WORKER_TOKEN", "worker_token", "string", secret=True, group="worker"),
+    Field("WORKER_HOST", "worker_host", "string", group="worker", applies="restart"),
+    Field("WORKER_PORT", "worker_port", "integer", group="worker", applies="restart"),
     Field("API_HOST", "api_host", "string", group="api", applies="restart"),
     Field("API_PORT", "api_port", "integer", group="api", applies="restart"),
 )

@@ -156,6 +156,24 @@ def test_gpu_usage_speech(provider, device, cuda, expected):
 
 
 @pytest.mark.parametrize(
+    ("provider", "device", "cuda", "fallback"),
+    [
+        ("vozata_worker", WhisperDevice.AUTO, True, True),
+        ("vozata_worker", WhisperDevice.CPU, True, False),
+        ("vozata_worker", WhisperDevice.AUTO, False, False),
+        ("faster_whisper", WhisperDevice.AUTO, True, False),
+    ],
+)
+def test_speech_on_the_worker_is_not_local_gpu_work_but_its_fallback_is(
+    provider, device, cuda, fallback
+):
+    usage = gpu_usage(_settings(stt_provider=provider, whisper_device=device), cuda=cuda)
+
+    assert usage.speech_fallback is fallback
+    assert usage.speech is (provider == "faster_whisper")
+
+
+@pytest.mark.parametrize(
     ("diarization", "live", "device", "cuda", "expected"),
     [
         (True, False, WhisperDevice.AUTO, True, True),

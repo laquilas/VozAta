@@ -28,6 +28,7 @@ class LiveGpuLease:
     def __init__(self, gate: GpuGate | None, usage: GpuUsage | None) -> None:
         self._gate = gate if usage is not None else None
         self._speech = usage is not None and usage.speech
+        self._speech_fallback = usage is not None and usage.speech_fallback
         self._speakers = usage is not None and usage.live_speakers
         self._lock = threading.Lock()
         self._held: contextlib.ExitStack | None = None
@@ -36,6 +37,11 @@ class LiveGpuLease:
     def hold_speech(self) -> None:
         """Before the live speech model loads."""
         if self._speech:
+            self._hold()
+
+    def hold_speech_fallback(self) -> None:
+        """Before the local Whisper loads because the VozAta worker did not answer (phase 44)."""
+        if self._speech_fallback:
             self._hold()
 
     def hold_speakers(self) -> None:

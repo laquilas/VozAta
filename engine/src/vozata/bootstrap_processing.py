@@ -17,6 +17,7 @@ from vozata.config import Settings
 from vozata.domain import ConversationLanguage, SessionStatus, TranscriptSegment
 from vozata.minutes.session_minutes import stored_vocabulary
 from vozata.ports import (
+    FallbackNotices,
     ModelDownloader,
     RecoverableStore,
     SessionAudio,
@@ -36,6 +37,7 @@ from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.offline import OfflineTranscription
 from vozata.transcription.shared import SharedTranscriber
 from vozata.vocabulary import build_hints
+from vozata.worker_client.notices import ObserverNotices
 
 
 def build_processing_job(
@@ -81,8 +83,8 @@ def build_processing_job(
         if shared is not None and gate_usage.speech:
             # cancelled by a live start: keep the model, the live session leases it next
             return shared.lease(keep=not after, keep_when=lambda: token.cancelled)
-        provider = root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
-        return provider(settings, downloader)
+        notices = ObserverNotices(observer, root.build_localizer(settings))
+        return root.build_transcriber(settings, downloader, notices)
 
     def transcription(token: CancelToken) -> OfflineTranscription:
         return build_offline_transcription(
@@ -119,19 +121,18 @@ def build_offline_transcription(
     transcriber: Callable[[], Transcriber] | None = None,
     on_segment: Callable[[TranscriptSegment], None] | None = None,
     downloader: ModelDownloader | None = None,
+    notices: FallbackNotices | None = None,
 ) -> OfflineTranscription:
     """The transcription of what a meeting's raw transcript does not cover, built from its
     stored metadata: the conversation language (selected, or detected live; a language detected
     now is stored back), the session vocabulary and the configured chunker. The speech provider
-    is `STT_PROVIDER` (its model fetched through `downloader`, default: the CLI's) unless
-    `transcriber` is given."""
+    is `STT_PROVIDER` (its model fetched through `downloader`, default: the CLI's; a fallback
+    from the worker told through `notices`) unless `transcriber` is given."""
     stored = store.read_meta(session_id)
     language = ConversationLanguage(stored.get("language", ConversationLanguage.AUTO.value))
     if transcriber is None:
         transcriber = functools.partial(
-            root._provider(root.TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider),
-            settings,
-            root._downloader(settings, downloader),
+            root.build_transcriber, settings, root._downloader(settings, downloader), notices
         )
     return OfflineTranscription(
         settings,

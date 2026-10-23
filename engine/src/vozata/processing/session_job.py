@@ -116,7 +116,9 @@ def session_job(
     if parts.repair is not None:
         repair = parts.repair
         steps.append(Step(StepKind.REPAIR, REPAIR_WEIGHT, False, lambda token, p: repair()))
-    steps.append(Step(StepKind.TRANSCRIBE, weight, usage.speech, transcribe))
+    # with the worker, the step is gated too: a fallback to this PC must not race a recording
+    speech = usage.speech or usage.speech_fallback
+    steps.append(Step(StepKind.TRANSCRIBE, weight, speech, transcribe))
     steps.append(finishing(StepKind.MIX, lambda finisher, token: finisher.mix()))
     if parts.diarize:
         steps.append(finishing(StepKind.DIARIZE, SessionFinisher.identify_speakers))

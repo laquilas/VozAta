@@ -30,6 +30,9 @@ Write-Host "== Engine smoke test"
 $engine = Join-Path $out "dist/vozata-engine/vozata-engine.exe"
 & $engine --version
 if ($LASTEXITCODE -ne 0) { throw "vozata-engine.exe --version failed" }
+# phase 44: the same bundle runs the worker on a GPU PC of the network
+& $engine worker --check
+if ($LASTEXITCODE -ne 0) { throw "vozata-engine.exe worker --check failed" }
 
 Write-Host "== Desktop app (self-contained)"
 dotnet publish (Join-Path $root "ui/src/VozAta.Desktop") -c Release -r win-x64 --self-contained `

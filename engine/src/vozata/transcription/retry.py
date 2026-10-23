@@ -27,7 +27,8 @@ def send_with_retry(
     """Call `send` until it answers below 500 and not 429, at most `attempts` times.
 
     Waits `Retry-After` seconds when given (capped at `max_delay`), else `base_delay`, doubling.
-    Other responses (including 4xx) are returned for the caller to handle.
+    Other responses (including 4xx) are returned for the caller to handle. When the last attempt
+    got no answer at all, the error is chained (`__cause__`) to the network failure.
     """
     pause = sleep or time.sleep
     attempt = 1
@@ -35,15 +36,15 @@ def send_with_retry(
         try:
             response = send()
         except httpx.TransportError as error:  # timeouts and connection failures
-            reason, response = str(error), None
+            reason, response, cause = str(error), None, error
         else:
             if response.status_code != 429 and response.status_code < 500:
                 return response
-            reason = f"HTTP {response.status_code}"
+            reason, cause = f"HTTP {response.status_code}", None
         if attempt >= attempts:
             raise TranscriptionRequestError(
                 f"The speech API request failed after {attempts} attempts: {reason}"
-            )
+            ) from cause
         backoff = min(base_delay * 2 ** (attempt - 1), max_delay)
         pause(_retry_after(response, max_delay) or backoff)
         attempt += 1

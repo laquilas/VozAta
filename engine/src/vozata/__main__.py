@@ -35,6 +35,7 @@ from vozata.cli.recover import run_recover
 from vozata.cli.reindex import run_reindex
 from vozata.cli.serve import run_serve
 from vozata.cli.transcribe import run_transcribe
+from vozata.cli.worker import run_worker
 from vozata.config import ConfigError, Settings, load_settings
 from vozata.domain import ConversationLanguage
 from vozata.ports import Localizer
@@ -63,6 +64,8 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     record.add_argument("--system", type=int, metavar="ID", help=t("cli.help.system"))
     record.add_argument("--list-devices", action="store_true", help=t("cli.help.list_devices"))
     commands.add_parser("serve", help=t("cli.help.serve"))
+    worker = commands.add_parser("worker", help=t("cli.help.worker"))
+    worker.add_argument("--check", action="store_true", help=t("cli.help.worker_check"))
     minutes = commands.add_parser("minutes", help=t("cli.help.minutes"))
     minutes.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
     diarize = commands.add_parser("diarize", help=t("cli.help.diarize"))
@@ -101,6 +104,16 @@ def main(
     try:
         if args.command == "serve":
             return run_serve(settings, console, localizer, _build_app, _uvicorn_run)
+        if args.command == "worker":
+            return run_worker(
+                settings,
+                console,
+                localizer,
+                bootstrap.build_worker_app,
+                _uvicorn_run,
+                env_file=Path(".env"),
+                check=args.check,
+            )
         if args.command in ("minutes", "diarize"):
             open_folder = functools.partial(bootstrap.open_session_folder, settings)
 
