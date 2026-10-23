@@ -22,6 +22,11 @@ Python and .NET are **not** needed: both are inside the installer.
 2. Run it. It installs for your user only, in `%LOCALAPPDATA%\Programs\VozAta`, and adds VozAta to
    the Start menu.
 
+A GPU PC that transcribes for the other PCs of the network gets its own installer,
+`VozAta-Worker-Setup-<version>.exe` (VozAta Worker and the engine, without the meeting app; it
+installs in `%LOCALAPPDATA%\Programs\VozAta Worker`): see
+[Using a VozAta worker on another PC](remote-worker.md).
+
 ## First run
 
 - The app starts its engine by itself. The **first recording downloads the Whisper speech model**
@@ -59,17 +64,19 @@ to remove them too.
 ## Speaker identification
 
 Telling the remote participants apart (User 1, User 2, ...) needs pyannote and PyTorch (about
-3 GB to download, 4.6 GB on disk with CUDA), which the installer does not carry. Download them once on the PC that runs them:
+3 GB to download, 4.6 GB on disk with CUDA), which the installers do not carry. Download them
+once on the PC that runs them:
 
-- during the setup: tick **Download speaker identification now** (a console window shows the
-  download);
-- later, in **VozAta Worker**: **Download speaker identification** on the *Tasks for the other
-  PCs* card;
+- during the setup (either installer): tick **Download speaker identification now** (a console
+  window shows the download); running the setup again later offers it again;
+- on a worker PC, later, in **VozAta Worker**: **Download speaker identification** on the *Tasks
+  for the other PCs* card;
 - or in a terminal: `"%LOCALAPPDATA%\Programs\VozAta\engine\vozata-engine.exe" speakers install`
   (`speakers status` says whether it is there, `speakers remove` deletes it).
 
 It goes into `%LOCALAPPDATA%\VozAta\speakers` (a Python 3.13 environment made with `uv`; the CUDA
-build of PyTorch when the PC has an NVIDIA GPU) and is removed when VozAta is uninstalled. Restart
+build of PyTorch when the PC has an NVIDIA GPU), shared by VozAta and VozAta Worker on the same
+PC, and removed when the last of them is uninstalled. Restart
 VozAta afterwards. It also needs a Hugging Face token (`HF_TOKEN`) and the pyannote model terms
 accepted, as before.
 
@@ -94,5 +101,6 @@ pwsh packaging/build.ps1 -Version 1.0.0 -CpuOnly  # smaller build without the CU
 Speaker identification (pyannote and torch, about 3 GB) is not in the installer: the PC that needs
 it downloads it, see [Speaker identification](#speaker-identification).
 
-The installer lands in `build/installer/`. The GitHub workflow `Release` builds it on every `v*` tag
+Both installers (`VozAta-Setup-<v>.exe` and `VozAta-Worker-Setup-<v>.exe`) land in
+`build/installer/`. The GitHub workflow `Release` builds it on every `v*` tag
 and can be run by hand.

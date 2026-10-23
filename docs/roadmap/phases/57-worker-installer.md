@@ -54,13 +54,13 @@ A combined "both" installer, a machine-wide install.
 - **Branch:** `feature/57-worker-installer`
 - **Status:** in progress
 - **Updated:** 2026-10-23 18:10
-- **Next step:** commit the installers and build.ps1, then the version, the docs, the build.
+- **Next step:** build both installers (foreground), `install-test.ps1 -Worker` (move the real speaker runtime aside first), copy both to `F:\VozAta`.
 
 ### Steps
 
 - [x] Phase start
-- [ ] Installers: `installer-worker.iss`, `speakers.iss`, the client without the worker; build.ps1;
+- [x] Installers: `installer-worker.iss`, `speakers.iss`, the client without the worker; build.ps1;
       install-test.ps1 `-Worker`; Release workflow
-- [ ] Version 0.2.1
-- [ ] Docs (INSTALL, remote-worker, two-pc-check, architecture)
+- [x] Version 0.2.1 — `db07ba5`
+- [x] Docs (INSTALL, remote-worker, two-pc-check, architecture)
 - [ ] Build both, install test, copy to F:
