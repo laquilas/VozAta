@@ -60,17 +60,17 @@ Several ranges at once, a waveform selector, trimming the audio.
 - **Branch:** `feature/49-minutes-of-a-range`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 2 of `plans/49-minutes-of-a-range.md` (`TimeText`, `RangeMinutesViewModel`,
-  views, texts).
+- **Next step:** Task 3 of `plans/49-minutes-of-a-range.md` (docs, full suites, manual check, PR).
 
 ### Steps
 
 - [x] Implementation plan (`plans/49-minutes-of-a-range.md`)
 - [x] Engine: refuse a range beyond the recorded length
-- [ ] Desktop: Minutes of a part (From / To, player position, line shortcuts)
+- [x] Desktop: Minutes of a part (From / To, player position, line shortcuts)
 - [ ] Docs, full suites, manual check, phase done
 
 ### Decisions and notes
 
 - Commits stay local until the PR; GitHub Actions is disabled, every check runs locally.
-
+- The line shortcut is a small ⋯ button with a menu on each transcript line (the selectable text
+  keeps its own copy menu), not a right-click.

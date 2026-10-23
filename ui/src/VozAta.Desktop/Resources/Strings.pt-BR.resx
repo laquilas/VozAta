@@ -1461,4 +1461,37 @@
   <data name="DeletePartialMinutes" xml:space="preserve">
     <value>Excluir</value>
   </data>
+  <data name="RangeTitle" xml:space="preserve">
+    <value>Ata de um trecho</value>
+  </data>
+  <data name="RangeFrom" xml:space="preserve">
+    <value>De</value>
+  </data>
+  <data name="RangeTo" xml:space="preserve">
+    <value>Até</value>
+  </data>
+  <data name="RangeUsePlayer" xml:space="preserve">
+    <value>Usar a posição do player</value>
+  </data>
+  <data name="RangeGenerate" xml:space="preserve">
+    <value>Gerar a ata do trecho</value>
+  </data>
+  <data name="RangeHint" xml:space="preserve">
+    <value>Horários em hh:mm:ss ou mm:ss. Na aba Transcrição, o botão … de uma linha começa ou termina o trecho nela.</value>
+  </data>
+  <data name="RangeInvalidTime" xml:space="preserve">
+    <value>Digite os horários como hh:mm:ss ou mm:ss (minutos e segundos abaixo de 60).</value>
+  </data>
+  <data name="RangeEndBeforeStart" xml:space="preserve">
+    <value>O fim precisa vir depois do início.</value>
+  </data>
+  <data name="RangeBeyondEnd" xml:space="preserve">
+    <value>A reunião dura {0}: termine o trecho até aí.</value>
+  </data>
+  <data name="RangeStartHere" xml:space="preserve">
+    <value>Começar o trecho aqui</value>
+  </data>
+  <data name="RangeEndHere" xml:space="preserve">
+    <value>Terminar o trecho aqui</value>
+  </data>
 </root>

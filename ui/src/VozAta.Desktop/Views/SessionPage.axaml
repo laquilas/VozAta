@@ -157,6 +157,37 @@
         </TabItem>
         <!-- Partial minutes (phase 48): so far while recording, or a part of the meeting -->
         <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabPartialMinutes]}">
+          <DockPanel>
+          <!-- Minutes of a part (phase 49): a recorded meeting only -->
+          <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,8" IsVisible="{Binding !IsLive}">
+            <StackPanel DataContext="{Binding Range}" x:DataType="vm:RangeMinutesViewModel" Spacing="6">
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeTitle]}" Classes="subtitle" />
+              <WrapPanel ItemSpacing="8" LineSpacing="6">
+                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeFrom]}" VerticalAlignment="Center" />
+                <TextBox Width="96" Text="{Binding From}" PlaceholderText="00:00:00"
+                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeFrom]}" />
+                <Button Classes="icon" Command="{Binding FromPlayerCommand}"
+                        ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeUsePlayer]}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeUsePlayer]}">
+                  <PathIcon Data="{StaticResource Icon.Play}" />
+                </Button>
+                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeTo]}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <TextBox Width="96" Text="{Binding To}" PlaceholderText="00:12:54"
+                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeTo]}" />
+                <Button Classes="icon" Command="{Binding ToPlayerCommand}"
+                        ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeUsePlayer]}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeUsePlayer]}">
+                  <PathIcon Data="{StaticResource Icon.Play}" />
+                </Button>
+                <Button Classes="primary" Margin="8,0,0,0" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeGenerate]}"
+                        Command="{Binding GenerateCommand}" />
+                <ProgressBar IsIndeterminate="True" Width="80" VerticalAlignment="Center" IsVisible="{Binding IsWriting}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding ValidationError}" Classes="warning" TextWrapping="Wrap"
+                         IsVisible="{Binding ValidationError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                         IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeHint]}" Classes="small secondary" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
           <Grid ColumnDefinitions="280,*" DataContext="{Binding Partials}" x:DataType="vm:PartialMinutesListViewModel">
             <TextBlock Grid.ColumnSpan="2" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoPartialMinutes]}"
                        Classes="secondary" Margin="8" TextWrapping="Wrap" IsVisible="{Binding !HasItems}" />
@@ -191,6 +222,7 @@
               </ScrollViewer>
             </DockPanel>
           </Grid>
+          </DockPanel>
         </TabItem>
         <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabTranscript]}">
           <DockPanel>
@@ -247,6 +279,23 @@
                                 ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayLine]}"
                                 AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[PlayLine]}">
                           <PathIcon Data="{StaticResource Icon.Play}" Width="12" Height="12" />
+                        </Button>
+                        <!-- Minutes of a part (phase 49): this line starts or ends the part -->
+                        <Button DockPanel.Dock="Right" Classes="icon" Padding="4" Margin="6,0,0,0" VerticalAlignment="Top"
+                                IsVisible="{Binding !$parent[UserControl].((vm:SessionPageViewModel)DataContext).IsLive}"
+                                ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeTitle]}"
+                                AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeTitle]}">
+                          <PathIcon Data="{StaticResource Icon.More}" Width="12" Height="12" />
+                          <Button.Flyout>
+                            <MenuFlyout>
+                              <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeStartHere]}"
+                                        Command="{Binding $parent[UserControl].((vm:SessionPageViewModel)DataContext).RangeStartHereCommand}"
+                                        CommandParameter="{Binding}" />
+                              <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[RangeEndHere]}"
+                                        Command="{Binding $parent[UserControl].((vm:SessionPageViewModel)DataContext).RangeEndHereCommand}"
+                                        CommandParameter="{Binding}" />
+                            </MenuFlyout>
+                          </Button.Flyout>
                         </Button>
                         <SelectableTextBlock views:ConfidenceText.Parts="{Binding DisplayParts}" Classes="channel reading"
                                              Classes.mic="{Binding IsMic}" Classes.system="{Binding IsSystem}"
