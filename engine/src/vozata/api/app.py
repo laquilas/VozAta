@@ -31,6 +31,7 @@ from vozata.api.routes import (
 from vozata.api.routes import ask as ask_routes
 from vozata.api.routes import bundle as bundle_routes
 from vozata.api.routes import migration as migration_routes
+from vozata.api.routes import worker as worker_routes
 from vozata.api.schemas import ErrorResponse
 
 ERROR_RESPONSES = {status: {"model": ErrorResponse} for status in (404, 409, 422, 500, 503)}
@@ -73,6 +74,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     app.include_router(settings_tools.router, responses=ERROR_RESPONSES)  # phase 38
     app.include_router(migration_routes.router, responses=ERROR_RESPONSES)  # phase 33
     app.include_router(bundle_routes.router, responses=ERROR_RESPONSES)  # phase 39
+    app.include_router(worker_routes.router, responses=ERROR_RESPONSES)  # phase 47
     app.include_router(branding.router)
 
     @app.websocket("/ws")

@@ -20,6 +20,7 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from vozata import __version__
 from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
@@ -124,7 +125,9 @@ from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
+from vozata.worker.local import lan_addresses
 from vozata.worker_client.client import WorkerClient
+from vozata.worker_client.discovery import discover_workers
 from vozata.worker_client.notices import LoggedNotices, ObserverNotices
 from vozata.worker_client.status import worker_status
 from vozata.worker_client.transcriber import WorkerTranscriber
@@ -299,7 +302,8 @@ def build_worker_app(
 ) -> FastAPI:
     """`vozata worker` (phases 44, 47): the worker's API over this PC's models."""
     from vozata.worker.app import create_worker_app
-    from vozata.worker.local import WorkerIdentity, lan_addresses
+    from vozata.worker.discovery import DiscoveryResponder
+    from vozata.worker.local import WorkerIdentity
     from vozata.worker.speech import LoadedModel, SpeechService
 
     def whisper() -> LoadedModel:
@@ -310,12 +314,27 @@ def build_worker_app(
         )
 
     name = settings.worker_name or socket.gethostname()
+    gpu_info = functools.cache(query_gpu)
+
+    def found() -> dict[str, object]:  # what a discovery answer says: nothing secret
+        gpu = gpu_info()
+        return {
+            "id": worker_id,
+            "name": name,
+            "port": settings.worker_port,
+            "version": __version__,
+            "gpu": gpu.name if gpu.available else None,
+        }
+
+    # a loopback worker (no id) cannot be reached from the network: nothing to answer
+    responders = [DiscoveryResponder(settings.worker_discovery_port, found)] if worker_id else []
     return create_worker_app(
         token,
-        gpu_info=functools.cache(query_gpu),
+        gpu_info=gpu_info,
         speech=SpeechService(whisper),
         identity=WorkerIdentity(worker_id, name, settings.worker_port),
         addresses=lan_addresses,
+        background=responders,
     )
 
 
@@ -1035,4 +1054,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         ).run,
         downloads=downloads,
         worker_status=lambda current: worker_status(current.worker_url or "", current.worker_token),
+        discover_workers=lambda current: discover_workers(
+            current.worker_discovery_port, lan_addresses()
+        ),
     )

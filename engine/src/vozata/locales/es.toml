@@ -29,6 +29,10 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+worker_pairing_refused = "El worker de VozAta rechazó el código. Escribe el código que muestra ahora VozAta Worker en el otro PC."
+worker_pairing_locked = "Demasiados códigos erróneos: el emparejamiento con el worker está bloqueado durante un minuto."
+worker_no_token = "Ese worker no tiene token (solo escucha en su propio PC), así que no hay nada que emparejar."
+worker_unreachable = "No se pudo contactar con el worker de VozAta en {host}."
 unsupported_format = "Formato de exportación no admitido: \"{format}\". Usa uno de estos: {allowed}."
 settings_write_failed = "No se pudo guardar el archivo de configuración ({reason}). Cierra los programas que puedan estar usándolo, como una herramienta de sincronización, e inténtalo de nuevo."
 minutes_failed = "No se pudo generar el acta ({reason}). Comprueba que Ollama esté en ejecución y que el modelo esté descargado."

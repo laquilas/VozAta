@@ -54,6 +54,31 @@ class WorkerHealth(BaseModel):
     version: str | None = None
 
 
+class FoundWorkerOut(BaseModel):
+    """Phase 47: a worker that answered the discovery broadcast (no secret)."""
+
+    id: str
+    name: str
+    url: str
+    version: str
+    gpu: str | None = None
+
+
+class WorkersFound(BaseModel):
+    workers: list[FoundWorkerOut]
+
+
+class PairWorkerRequest(BaseModel):
+    url: str = Field(pattern=r"^https?://")
+    code: str = Field(min_length=1, max_length=32)
+
+
+class PairedWorkerOut(BaseModel):
+    id: str | None
+    name: str
+    url: str
+
+
 class Health(BaseModel):
     engine: Literal["ok"] = "ok"
     version: str

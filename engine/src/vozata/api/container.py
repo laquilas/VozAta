@@ -30,6 +30,8 @@ from vozata.ports import (
 )
 from vozata.settings_file import SettingsFile
 from vozata.settings_options import OptionLists
+from vozata.worker_client.discovery import FoundWorker
+from vozata.worker_client.pairing import PairedWorker, pair_with_worker
 from vozata.worker_client.status import WorkerStatus
 
 
@@ -98,3 +100,6 @@ class ApiContainer:
     downloads: DownloadTracker = field(default_factory=lambda: DownloadTracker(lambda state: None))
     # The VozAta worker (44): `GET /health` asks it with the current `WORKER_URL` / `WORKER_TOKEN`.
     worker_status: Callable[[Settings], WorkerStatus] = lambda settings: WorkerStatus(False)
+    # Phase 47: the workers that answer a broadcast, and pairing by the code shown on the worker
+    discover_workers: Callable[[Settings], list[FoundWorker]] = lambda settings: []
+    pair_worker: Callable[[str, str], PairedWorker] = pair_with_worker

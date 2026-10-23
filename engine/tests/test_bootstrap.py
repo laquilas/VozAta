@@ -932,6 +932,38 @@ def test_the_worker_app_knows_its_identity(
     assert (body["id"], body["name"], body["port"]) == ("4f1c", shown, 9000)
 
 
+@pytest.mark.parametrize(("worker_id", "answers"), [("4f1c", True), (None, False)])
+def test_only_a_worker_on_the_network_answers_discovery(
+    monkeypatch: pytest.MonkeyPatch, worker_id: str | None, answers: bool
+) -> None:
+    from fastapi.testclient import TestClient
+
+    import vozata.worker.discovery as discovery
+    from vozata.api.system_info import GpuInfo
+
+    replies: list[dict[str, object]] = []
+
+    class _Responder:
+        def __init__(self, port: int, reply) -> None:  # type: ignore[no-untyped-def]
+            self.port, self.reply = port, reply
+
+        def start(self) -> None:
+            replies.append({**self.reply(), "udp": self.port})
+
+        def stop(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(True, "RTX 3050", 6144))
+    monkeypatch.setattr(discovery, "DiscoveryResponder", _Responder)
+    settings = Settings(worker_name="GPU-PC", worker_discovery_port=9767)
+
+    with TestClient(bootstrap.build_worker_app(settings, "t0ken", worker_id)):
+        pass
+
+    expected = {"udp": 9767, "port": 8766, "id": "4f1c", "name": "GPU-PC", "gpu": "RTX 3050"}
+    assert [{k: r[k] for k in expected} for r in replies] == ([expected] if answers else [])
+
+
 @pytest.mark.parametrize(("device", "listed"), [("cuda", "large-v3"), ("cpu", "small")])
 def test_the_worker_lists_the_whisper_model_it_loaded(
     monkeypatch: pytest.MonkeyPatch, device: str, listed: str

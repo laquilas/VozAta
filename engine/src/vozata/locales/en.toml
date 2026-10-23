@@ -29,6 +29,10 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+worker_pairing_refused = "The VozAta worker refused the code. Type the code shown now in VozAta Worker on the other PC."
+worker_pairing_locked = "Too many wrong codes: pairing with the worker is locked for a minute."
+worker_no_token = "That worker has no token (it listens on its own PC only), so there is nothing to pair."
+worker_unreachable = "Could not reach the VozAta worker at {host}."
 unsupported_format = "Unsupported export format \"{format}\". Use one of: {allowed}."
 settings_write_failed = "The settings file could not be saved ({reason}). Close programs that may be using it, such as a sync tool, and try again."
 minutes_failed = "The minutes could not be generated ({reason}). Check that Ollama is running and the model is pulled."

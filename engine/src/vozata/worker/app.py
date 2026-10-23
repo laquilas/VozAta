@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
+from typing import Protocol
 from urllib.parse import unquote
 
 import numpy as np
@@ -32,6 +33,14 @@ class PairRequest(BaseModel):
     code: str
 
 
+class Background(Protocol):
+    """Runs while the worker serves, e.g. the discovery responder (phase 47)."""
+
+    def start(self) -> None: ...
+
+    def stop(self) -> None: ...
+
+
 def create_worker_app(
     token: str | None,
     *,
@@ -40,6 +49,7 @@ def create_worker_app(
     identity: WorkerIdentity | None = None,
     pairing: PairingCodes | None = None,
     addresses: Callable[[], list[str]] = list,
+    background: Sequence[Background] = (),
 ) -> FastAPI:
     """`/health` and `/transcribe` need `token` (None: no check, for a worker on loopback);
     `/pair` needs the pairing code instead, and `/local/status` answers this PC only."""
@@ -48,7 +58,11 @@ def create_worker_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        for part in background:
+            part.start()
         yield
+        for part in background:
+            part.stop()
         speech.close()  # frees the GPU when the worker stops
 
     app = FastAPI(

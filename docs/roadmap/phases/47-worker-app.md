@@ -101,14 +101,14 @@ mDNS / Bonjour.
 - **Branch:** `feature/47-worker-app`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 2 of `plans/47-worker-app.md` (UDP discovery: worker responder, engine
-  client, `/worker/discover`, `/worker/pair`).
+- **Next step:** Task 3 of `plans/47-worker-app.md` (`build_transcriber` finds a moved worker by
+  `WORKER_ID` before the fallback and saves its new `WORKER_URL`).
 
 ### Steps
 
 - [x] Implementation plan (`plans/47-worker-app.md`)
 - [x] Worker: identity, pairing codes, `/pair`, `/local/status`
-- [ ] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
+- [x] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
 - [ ] Engine: find a moved worker before the fallback
 - [ ] Desktop Config: Find workers and pair
 - [ ] The worker app (`VozAta.Worker`)
@@ -124,3 +124,6 @@ mDNS / Bonjour.
 - `/pair` and `/local/status` sit outside the token guard (a router carries it now); a wrong code
   is 403 `worker_pairing_refused`, the lockout 423 `worker_pairing_locked`. `WORKER_ID` is made
   only for a worker on the network, like the token.
+- Discovery sends one broadcast per IPv4 address of this PC (Windows sends a limited broadcast
+  through one interface only) and dedupes answers by worker id. A loopback worker (no id) does not
+  answer discovery.
