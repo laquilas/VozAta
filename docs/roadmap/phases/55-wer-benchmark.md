@@ -27,8 +27,9 @@ backlog ("WER benchmark harness").
 - `scripts/wer_benchmark.py`: for each benchmark and each configuration of a grid
   (`--grid CHUNK_SECONDS=4,6,8 CHUNK_MODE=vad,fixed WHISPER_MODEL=large-v3`), runs the offline
   transcription of the engine on the audio (as the mic channel) and reports **WER**, word
-  substitutions / insertions / deletions, real-time factor and the first-word latency, as a
-  Markdown table (stdout and `benchmarks/results/<date>.md`, git-ignored).
+  substitutions / insertions / deletions and the real-time factor, as a Markdown table (stdout
+  and `benchmarks/results/<date>.md`, git-ignored). First-word latency does not exist offline;
+  the live latency is the chunk length plus the transcription time, which the RTF bounds.
 - WER on normalized words: lower case, punctuation removed, numbers as written; Levenshtein
   alignment on words (no new dependency).
 - Pure parts (normalization, alignment, WER, grid parsing, report) unit-tested; the run itself
@@ -53,3 +54,23 @@ Speaker-attributed WER (cpWER), downloading public corpora, CI runs.
 
 > Start phase 55 (`docs/roadmap/phases/55-wer-benchmark.md`): read its *Read first* files, write
 > `plans/55-wer-benchmark.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/55-wer-benchmark`
+- **Status:** in progress
+- **Updated:** 2026-10-23
+- **Next step:** failing tests in `engine/tests/scripts/test_wer_benchmark.py` for `normalize`,
+  `align`, `wer`, `parse_grid` and `render`.
+
+### Steps
+
+- [x] Implementation plan (`plans/55-wer-benchmark.md`)
+- [ ] Pure parts: normalization, alignment, WER, grid, report
+- [ ] Runtime (offline transcription of a WAV) and the TTS reference
+- [ ] First benchmark run, defaults kept or changed
+- [ ] Docs, full suites, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
