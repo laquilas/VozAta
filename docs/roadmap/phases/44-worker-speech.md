@@ -140,8 +140,8 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - **Branch:** `feature/44-worker-speech`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 4 of `plans/44-worker-speech.md` (`build_transcriber` with the fallback and
-  the `worker_fallback` notice at the three call sites; gate rule `speech_remote`).
+- **Next step:** Task 5 of `plans/44-worker-speech.md` (connection check target `worker`,
+  `/health.worker`, UI Test anchor on `WORKER_URL`, group `worker` in the UI, RESX labels).
 
 ### Steps
 
@@ -149,7 +149,7 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - [x] Worker: settings, token auth, `/health`, `vozata worker` command
 - [x] Worker: `/transcribe` with a kept faster-whisper
 - [x] Engine: worker client and `WorkerTranscriber`
-- [ ] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
+- [x] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
 - [ ] Engine: settings, connection check, `/health.worker`; UI Test anchor
 - [ ] Packaging entry and smoke test; guide and contract docs
 - [ ] Full suites, manual check (this PC's LAN address as the worker), phase done
@@ -169,5 +169,10 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - `send_with_retry` chains the last network failure (`__cause__`), so the worker client tells a
   lost worker (`WorkerUnreachableError`, fallback) from a failing one (`TranscriptionRequestError`,
   the chunk is skipped as today).
+- Gate rule: `GpuUsage.speech_fallback` (speech on the worker, but its fallback would load
+  Whisper on this GPU). A live session holds the gate only when it actually falls back (the
+  notice runs before the local model loads); the queue's transcribe step is gated whenever
+  `speech_fallback` is set, so a fallback there never races a recording. The kept Whisper
+  (`WHISPER_KEEP_LOADED`) is not used with the worker. The CLI `transcribe` logs the fallback.
 - Phases 47–50 were planned on this branch (user, 2026-10-22): worker app and discovery, minutes so
   far, minutes of a range, voice commands. Order: finish 44, then 47–50, then 45–46.

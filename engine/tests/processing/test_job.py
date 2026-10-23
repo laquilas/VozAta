@@ -1,3 +1,5 @@
+import pytest
+
 from vozata.processing.job import ProcessingJob, Step, StepKind, shown_kind
 
 
@@ -121,6 +123,39 @@ def test_the_job_waits_for_the_live_pipeline_and_warns_while_it_does(caplog):
 
     assert not waiting.is_alive()
     assert "still waiting for the live pipeline of meeting s1" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("usage", "gated"),
+    [
+        ((True, False), True),
+        ((False, True), True),  # speech on the worker: a fallback must not race a recording
+        ((False, False), False),
+    ],
+)
+def test_the_transcribe_step_is_gated_when_speech_may_use_this_gpu(usage, gated):
+    from vozata.processing.gpu_gate import GpuUsage
+    from vozata.processing.session_job import JobParts, session_job
+
+    speech, fallback = usage
+    parts = JobParts(
+        finisher=lambda models: None,  # type: ignore[arg-type, return-value]
+        transcription=lambda: None,  # type: ignore[arg-type, return-value]
+        diarize=False,
+        minutes=False,
+        action_items=False,
+    )
+    job = session_job(
+        "s1",
+        parts,
+        GpuUsage(speech, False, False, speech_fallback=fallback),
+        weight=2.0,
+        closed=None,
+        on_finished=lambda: None,
+    )
+
+    transcribe = next(step for step in job.steps if step.kind is StepKind.TRANSCRIBE)
+    assert transcribe.gpu is gated
 
 
 def test_run_job_inline_stops_at_an_aborting_step_without_on_finished():

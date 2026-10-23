@@ -46,8 +46,8 @@ class WorkerTranscriber:
             try:
                 return self._client.transcribe(samples, language, hints, prompt)
             except WorkerUnreachableError as error:
+                self._notices.fallback("speech", error.host)  # first: it may take the GPU gate
                 self._local = self._local_factory()
-                self._notices.fallback("speech", error.host)
         return self._local.transcribe(samples, language, hints, prompt)
 
     def close(self) -> None:

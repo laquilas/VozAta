@@ -30,21 +30,27 @@ class GpuUsage:
     speakers: bool  # post-session or live diarization
     llm: bool
     live_speakers: bool = False  # the live speaker embedder (live diarization only)
+    # speech runs on the VozAta worker, but its fallback (phase 44) would load Whisper on this GPU
+    speech_fallback: bool = False
 
 
 def gpu_usage(settings: Settings, cuda: bool) -> GpuUsage:
     """Which model families would run on the GPU with these settings."""
-    speech = (
-        settings.stt_provider == "faster_whisper"
-        and settings.whisper_device != WhisperDevice.CPU
-        and cuda
-    )
+    whisper_on_gpu = settings.whisper_device != WhisperDevice.CPU and cuda
+    speech = settings.stt_provider == "faster_whisper" and whisper_on_gpu
+    speech_fallback = settings.stt_provider == "vozata_worker" and whisper_on_gpu
     wants_speakers = settings.diarization_enabled or settings.live_diarization_enabled
     speakers_on_gpu = settings.diarization_device != WhisperDevice.CPU and cuda
     speakers = wants_speakers and speakers_on_gpu
     live_speakers = settings.live_diarization_enabled and speakers_on_gpu
     llm = settings.llm_provider == "ollama" and cuda and remote_llm_host(settings) is None
-    return GpuUsage(speech=speech, speakers=speakers, llm=llm, live_speakers=live_speakers)
+    return GpuUsage(
+        speech=speech,
+        speakers=speakers,
+        llm=llm,
+        live_speakers=live_speakers,
+        speech_fallback=speech_fallback,
+    )
 
 
 class GpuGate:

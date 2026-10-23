@@ -74,6 +74,7 @@ from vozata.ports import (
     Chunker,
     Diarizer,
     DocumentExporter,
+    FallbackNotices,
     LanguageModel,
     Localizer,
     ModelDownloader,
@@ -86,6 +87,7 @@ from vozata.ports import (
     Transcriber,
     TranscriptSearch,
     Translator,
+    WorkerUnreachableError,
 )
 from vozata.processing.gpu_gate import GpuGate, GpuUsage, GpuUser, gpu_usage
 from vozata.processing.job import ProcessingJob, StepKind
@@ -121,6 +123,9 @@ from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
+from vozata.worker_client.client import WorkerClient
+from vozata.worker_client.notices import LoggedNotices, ObserverNotices
+from vozata.worker_client.transcriber import WorkerTranscriber
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
 AUDIO_CACHE_DIR = "cache"  # in `OUTPUT_DIR` (phase 32)
@@ -131,7 +136,11 @@ _log = logging.getLogger(__name__)
 TRANSCRIBERS: dict[str, Callable[[Settings, ModelDownloader], Transcriber]] = {
     "faster_whisper": FasterWhisperTranscriber,
     "openai_compatible": openai_compatible.from_settings,
+    # phase 44: Whisper on a GPU PC of the local network, this PC's when it does not answer
+    "vozata_worker": lambda settings, downloader: build_transcriber(settings, downloader),
 }
+WORKER = "vozata_worker"
+LOCAL_SPEECH = "faster_whisper"  # what speech falls back to when the worker does not answer
 DIARIZERS: dict[str, Callable[[Settings, ModelDownloader], Diarizer]] = {
     "pyannote": pyannote_from_settings,  # child process: keeps torch away from ctranslate2
 }
@@ -253,6 +262,34 @@ def _provider[T](registry: Mapping[str, T], key: str, value: str) -> T:
     if value not in registry:
         raise ConfigError(key, value, "invalid_choice", allowed=", ".join(sorted(registry)))
     return registry[value]
+
+
+def build_transcriber(
+    settings: Settings, downloader: ModelDownloader, notices: FallbackNotices | None = None
+) -> Transcriber:
+    """The `STT_PROVIDER` transcriber. For `vozata_worker` the worker is probed now (<= 3 s): when
+    it does not answer, speech runs on this PC (`faster_whisper`) and `notices` says so; when it
+    is lost later, `WorkerTranscriber` switches the same way. A refused token is a `ConfigError`."""
+    if settings.stt_provider != WORKER:
+        return _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)(settings, downloader)
+    if not settings.worker_url:
+        raise ConfigError("WORKER_URL", "", "worker_url_missing")
+    notices = notices or LoggedNotices()
+
+    def local() -> Transcriber:
+        return TRANSCRIBERS[LOCAL_SPEECH](settings, downloader)
+
+    client = WorkerClient(settings.worker_url, settings.worker_token)
+    try:
+        client.probe()
+    except WorkerUnreachableError as error:
+        client.close()
+        notices.fallback("speech", error.host)
+        return local()
+    except BaseException:
+        client.close()
+        raise
+    return WorkerTranscriber(client, local, notices)
 
 
 def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
@@ -566,9 +603,17 @@ def build_session(
     phase 41) is the per-recording option; it is stored in `session.json`. `downloader` (default:
     the CLI's) fetches the models that are not cached yet (phase 42).
     """
-    transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
+    _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)  # fail before any device opens
     downloader = _downloader(settings, downloader)
     localizer = build_localizer(settings)
+
+    def before_fallback(task: str) -> None:
+        if task == "speech":  # the local Whisper loads next: hold the GPU like a local session
+            session.hold_speech_fallback()
+
+    notices = ObserverNotices(observer, localizer, before=before_fallback)
+    if settings.stt_provider == WORKER:
+        shared = None  # the kept Whisper is this PC's; the worker keeps its own
     template = template or settings.minutes_template
     MINUTES_TEMPLATES.get(template)  # an unknown template fails before any device is opened
     minutes = (
@@ -601,7 +646,7 @@ def build_session(
         device_names={channel: device.name for channel, device in devices.items()},
         clock=clock,
         transcriber_factory=(
-            (lambda: transcriber(settings, downloader))
+            (lambda: build_transcriber(settings, downloader, notices))
             if shared is None
             else functools.partial(shared.lease, keep=minutes is None and diarizer_factory is None)
         ),
@@ -629,7 +674,7 @@ def build_session(
         if live_transcription is None
         else live_transcription,
     )
-    return RecordingSession(
+    session = RecordingSession(
         settings,
         build_store(settings),
         build_audio_store(settings),
@@ -637,6 +682,7 @@ def build_session(
         observer,
         language or settings.transcription_language,
     )
+    return session
 
 
 class _CaptureOver:
@@ -813,7 +859,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     env_file = env_file or Path(".env")
     settings_file = SettingsFile(env_file, settings)
     shared = None
-    if settings.whisper_keep_loaded:
+    if settings.whisper_keep_loaded and settings.stt_provider != WORKER:
         transcriber = _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)
         shared = SharedTranscriber(lambda: transcriber(settings, downloader))
     gpu_info = functools.cache(query_gpu)  # the GPU does not change while running

@@ -12,6 +12,7 @@ invalid_duration = "Valor no válido \"{value}\" para {key}: se esperaban segund
 unknown_key = "Configuración desconocida: {key}."
 no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por palabra para el modelo \"{value}\". Elige un modelo que admita timestamp_granularities=word."
 worker_unauthorized = "El worker de VozAta en {host} rechazó el token. Copia el token que se muestra en el PC del worker en {key} (Config → Worker)."
+worker_url_missing = "{key} está vacío. Indica la dirección del worker de VozAta (Config → Worker), por ejemplo http://192.168.0.20:8766."
 missing_hf_token = "{key} no está definido. La identificación de participantes necesita un token de acceso de Hugging Face: crea uno en huggingface.co, acepta los términos del modelo pyannote y define {key} en la configuración."
 
 [errors.session]
@@ -254,3 +255,11 @@ http_error = "El servicio respondió con HTTP {status}."
 unreachable = "No se pudo acceder a {host}."
 invalid_response = "El servicio respondió algo inesperado."
 unavailable = "Las pruebas de conexión no están disponibles en este motor."
+
+[errors.worker]
+fallback = "El worker de VozAta en {host} no respondió: {task} se ejecuta en este PC."
+
+[worker.task]
+speech = "el reconocimiento de voz"
+speakers = "la identificación de hablantes"
+translation = "la traducción"

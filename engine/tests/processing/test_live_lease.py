@@ -63,6 +63,21 @@ def test_nothing_is_held_without_a_gate_or_a_live_gpu_model(
     lease.release()  # harmless
 
 
+def test_a_fallback_from_the_worker_holds_the_gate_only_when_whisper_would_use_the_gpu() -> None:
+    gate = GpuGate()
+    on_worker = LiveGpuLease(gate, GpuUsage(False, False, False, speech_fallback=True))
+    on_cpu = LiveGpuLease(gate, NONE)
+
+    on_worker.hold_speech()  # the worker's model: nothing here
+    on_cpu.hold_speech_fallback()
+    assert not gate.priority_held
+
+    on_worker.hold_speech_fallback()
+    assert gate.priority_held
+    on_worker.release()
+    assert not gate.priority_held
+
+
 def test_a_hold_after_release_does_nothing() -> None:
     gate = GpuGate()
     lease = LiveGpuLease(gate, SPEECH)
