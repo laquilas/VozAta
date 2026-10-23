@@ -81,11 +81,11 @@ user guide.
 
 ## Acceptance criteria
 
-- [ ] While recording, Minutes so far writes minutes of what was said until now; the recording
+- [x] While recording, Minutes so far writes minutes of what was said until now; the recording
       goes on; the result shows in the recorder and is kept on the meeting.
-- [ ] The meeting's Partial minutes tab lists, shows, copies, exports and deletes them; the final
+- [x] The meeting's Partial minutes tab lists, shows, copies, exports and deletes them; the final
       minutes after Stop are separate.
-- [ ] Recording without live transcription: the button is disabled and the API answers 409.
+- [x] Recording without live transcription: the button is disabled and the API answers 409.
 
 ## Tests
 
@@ -107,9 +107,10 @@ minutes; turning a partial into the final minutes.
 ## Progress
 
 - **Branch:** `feature/48-minutes-so-far`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-22
-- **Next step:** Task 5 of `plans/48-minutes-so-far.md` (user guide, full suites, manual check, PR).
+- **Next step:** open the PR to `main`; after the merge, start phase 49
+  (`docs/roadmap/phases/49-minutes-of-a-range.md`).
 
 ### Steps
 
@@ -118,7 +119,7 @@ minutes; turning a partial into the final minutes.
 - [x] Range filter, scope line, `write_partial_minutes`
 - [x] Job, routes, events
 - [x] Desktop: recorder button and panel, Partial minutes tab
-- [ ] Docs, full suites, manual check, phase done
+- [x] Docs, full suites, manual check, phase done
 
 ### Decisions and notes
 
@@ -131,3 +132,11 @@ minutes; turning a partial into the final minutes.
 - The Partial minutes tab is the second tab of the meeting page (after Minutes); the tab index
   constants moved by one. Copy uses a new `IShellService.CopyTextAsync` (the main window's
   clipboard). GitHub Actions is disabled (no quota, user 2026-10-22): every check runs locally.
+- Manual check (2026-10-22): a scratch engine (port 8799, scratch database, local Ollama
+  `qwen2.5:7b`) started a recording on the real default devices; six Portuguese meeting sentences
+  were written into its stored transcript (no audio played on the speakers). `POST
+  .../partial-minutes` answered 202 and the minutes so far were written in 67 s with the right
+  decision (beta moved to Tuesday), action item (Carlos, Monday) and open question (macOS); the
+  meeting was still recording and had no final minutes (404). After Stop the final minutes were
+  written by the queue and the partial minutes were kept. Not checked by hand: the desktop button
+  and panel (view-model tests), a recording transcribed from real speech.

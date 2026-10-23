@@ -1,6 +1,6 @@
 # Phase 48 — Minutes So Far Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** While recording, **Minutes so far** writes minutes of what was said until now without stopping; every such result (and, from phase 49, minutes of a time range) is kept on the meeting in a **Partial minutes** list, apart from the final minutes.
 
@@ -21,16 +21,16 @@
 ## Tasks
 
 ### Task 1: Storage of partial minutes
-- [ ] Domain type, port, SQLite migration + annotations, files backend, folder writer / reader / migration; tests for both backends; commit `feat(storage): keep partial minutes on a meeting`.
+- [x] Domain type, port, SQLite migration + annotations, files backend, folder writer / reader / migration; tests for both backends; commit `feat(storage): keep partial minutes on a meeting`.
 
 ### Task 2: Range, scope line and the service
-- [ ] `segments_in_range`, scope keys, prompts / generator `scope`, `write_partial_minutes`; tests; commit `feat(minutes): write minutes of part of a meeting`.
+- [x] `segments_in_range`, scope keys, prompts / generator `scope`, `write_partial_minutes`; tests; commit `feat(minutes): write minutes of part of a meeting`.
 
 ### Task 3: Job, routes, events
-- [ ] `PartialMinutesJob`, routes, container wiring, error locales, contract docs; tests; commit `feat(api): minutes so far while recording`.
+- [x] `PartialMinutesJob`, routes, container wiring, error locales, contract docs; tests; commit `feat(api): minutes so far while recording`.
 
 ### Task 4: Desktop
-- [ ] Client + event, recorder button and panel, meeting page tab, RESX; tests; commit `feat(ui): minutes so far and the partial minutes tab`.
+- [x] Client + event, recorder button and panel, meeting page tab, RESX; tests; commit `feat(ui): minutes so far and the partial minutes tab`.
 
 ### Task 5: Docs, suites, manual check, phase done
-- [ ] User guide, `architecture.md` (data model, port), full suites, manual check (scratch engine, a TTS meeting played while recording, Minutes so far, Stop, final minutes separate); PR.
+- [x] User guide, `architecture.md` (data model, port), full suites, manual check (scratch engine, a TTS meeting played while recording, Minutes so far, Stop, final minutes separate); PR.
