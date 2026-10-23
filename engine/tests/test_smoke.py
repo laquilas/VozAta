@@ -9,7 +9,7 @@ import vozata
 
 
 def test_package_exposes_version() -> None:
-    assert vozata.__version__ == "0.1.0"
+    assert vozata.__version__ == "0.2.1"
 
 
 def test_running_as_module_prints_the_version(capsys, monkeypatch) -> None:
@@ -20,4 +20,4 @@ def test_running_as_module_prints_the_version(capsys, monkeypatch) -> None:
         runpy.run_module("vozata", run_name="__main__", alter_sys=True)
 
     assert exit_.value.code == 0
-    assert capsys.readouterr().out.strip() == "0.1.0"
+    assert capsys.readouterr().out.strip() == "0.2.1"

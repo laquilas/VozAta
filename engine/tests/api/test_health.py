@@ -18,7 +18,7 @@ def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "engine": "ok",
-        "version": "0.1.0",
+        "version": "0.2.1",
         "gpu": {"available": True, "name": "RTX 3050", "vram_total_mb": 6144},
         "stt": {"provider": "faster_whisper", "model": "large-v3-turbo", "device": "auto"},
         "llm": {
