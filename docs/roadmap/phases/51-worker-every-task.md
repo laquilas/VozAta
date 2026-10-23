@@ -118,15 +118,16 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - **Branch:** `feature/51-worker-every-task`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 3 of the plan: `vozata/frozen.py` `run_module_args` (runs `-m <module>` with
-  runpy when frozen), called from `packaging/engine_main.py`.
+- **Next step:** task 4 of the plan: `engine.spec` collects sentencepiece always and torch /
+  pyannote with `SPEAKERS=1`; `build.ps1 -Speakers`, smoke test on `worker --check --json`;
+  `installer.iss` edition suffix.
 
 ### Steps
 
 - [x] Implementation plan (`plans/51-worker-every-task.md`)
 - [x] Worker tasks: `worker_tasks`, speakers need the extra and `HF_TOKEN`, `/local/status.tasks`
 - [x] `worker --check` lists the tasks (`--json` for the build)
-- [ ] Frozen engine runs `-m <module>` (packaged child processes)
+- [x] Frozen engine runs `-m <module>` (packaged child processes)
 - [ ] Packaging: translation in every build, `-Speakers` edition
 - [ ] Worker app: Tasks card
 - [ ] Docs
@@ -138,3 +139,6 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - A worker with `HF_TOKEN` but without the `diarization` extra offered speakers and failed every
   job: speakers now need both (`worker/tasks.py`). Without an explicit task list `create_worker_app`
   reports the services present with no reason.
+- The packaged engine could never run speakers: the pyannote children start `sys.executable -m ...`
+  and `vozata-engine.exe` did not understand `-m`. `engine_main.py` now runs it through
+  `vozata.frozen.run_module_args`.
