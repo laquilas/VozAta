@@ -550,7 +550,7 @@
     <value>Minutes model provider</value>
   </data>
   <data name="SettingHelp_LLM_PROVIDER" xml:space="preserve">
-    <value>Language-model provider used to write the minutes.</value>
+    <value>Language-model provider used to write the minutes: ollama, openai_compatible (LM Studio, vLLM, llama.cpp, OpenAI) or anthropic (Claude).</value>
   </data>
   <data name="Setting_OLLAMA_URL" xml:space="preserve">
     <value>Ollama address</value>
@@ -1577,5 +1577,38 @@
   </data>
   <data name="WorkerStatusOff" xml:space="preserve">
     <value>This PC (worker off)</value>
+  </data>
+  <data name="MinutesUnreachableService" xml:space="preserve">
+    <value>Minutes: {0} not reachable (check the language model in Config)</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_URL" xml:space="preserve">
+    <value>OpenAI-compatible server address</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_URL" xml:space="preserve">
+    <value>For LLM_PROVIDER openai_compatible: LM Studio (http://localhost:1234/v1), vLLM, the llama.cpp server or https://api.openai.com/v1.</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_KEY" xml:space="preserve">
+    <value>OpenAI-compatible server key</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_KEY" xml:space="preserve">
+    <value>Only if the server asks for one (OpenAI does; LM Studio does not).</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_MODEL" xml:space="preserve">
+    <value>OpenAI-compatible model</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_MODEL" xml:space="preserve">
+    <value>The model name the server serves; empty uses the first one it lists (the model loaded in LM Studio).</value>
+  </data>
+  <data name="Setting_ANTHROPIC_API_KEY" xml:space="preserve">
+    <value>Anthropic API key</value>
+  </data>
+  <data name="SettingHelp_ANTHROPIC_API_KEY" xml:space="preserve">
+    <value>For LLM_PROVIDER anthropic: the key from console.anthropic.com. Usage is billed by Anthropic.</value>
+  </data>
+  <data name="Setting_ANTHROPIC_MODEL" xml:space="preserve">
+    <value>Claude model</value>
+  </data>
+  <data name="SettingHelp_ANTHROPIC_MODEL" xml:space="preserve">
+    <value>The Claude model that writes the minutes, e.g. claude-opus-5-5 or claude-sonnet-5-5.</value>
   </data>
 </root>

@@ -80,6 +80,8 @@ public sealed partial class SettingsViewModel(
         ["AZDO_PAT"] = ConnectionTargets.AzureDevOps,
         ["GITHUB_TOKEN"] = ConnectionTargets.GitHub,
         ["WORKER_URL"] = ConnectionTargets.Worker,
+        ["OPENAI_LLM_URL"] = ConnectionTargets.OpenAiLlm,
+        ["ANTHROPIC_API_KEY"] = ConnectionTargets.Anthropic,
     };
 
     private SettingOptions? _options;

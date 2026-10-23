@@ -98,6 +98,7 @@ a = Analysis(  # noqa: F821
         collect_submodules("vozata")
         + collect_submodules("uvicorn")
         + collect_submodules("sentencepiece")
+        + collect_submodules("anthropic")  # phase 53: Claude, imported by the registry
         + ["pyaudiowpatch", "multipart"]
         + SPEAKER_IMPORTS
     ),

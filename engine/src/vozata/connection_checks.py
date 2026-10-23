@@ -19,11 +19,15 @@ from urllib.parse import quote, urlparse
 import httpx
 
 from vozata.config import Settings
+from vozata.net import ANTHROPIC_URL, url_host
 
 _log = logging.getLogger(__name__)
 
 GITHUB_API = "https://api.github.com"
 HUGGING_FACE = "https://huggingface.co"
+
+
+AnthropicProbe = Callable[[str, str], int | None]
 
 
 class CheckTarget(StrEnum):
@@ -33,6 +37,8 @@ class CheckTarget(StrEnum):
     AZURE_DEVOPS = "azure_devops"
     GITHUB = "github"
     WORKER = "worker"  # phase 44
+    OPENAI_LLM = "openai_llm"  # phase 53
+    ANTHROPIC = "anthropic"  # phase 53
 
 
 # Checks that load a model on the GPU take the Config-test GPU priority (phase 40). None does
@@ -61,7 +67,11 @@ class ConnectionChecks:
         timeout: float = 10.0,
         priority: Callable[[Settings], AbstractContextManager[None]] | None = None,
         model_targets: frozenset[CheckTarget] = MODEL_TARGETS,
+        anthropic_probe: AnthropicProbe | None = None,
     ) -> None:
+        # phase 53: (API key, model) -> the HTTP status of the model lookup, None when the
+        # API did not answer; it goes through the official SDK, built by the composition root
+        self._anthropic_probe = anthropic_probe
         # phase 40: the checks in `model_targets` run under the Config-test GPU priority
         # (`priority(settings)` is a no-op unless the model runs on the local GPU)
         self._priority = priority or (lambda settings: contextlib.nullcontext())
@@ -76,6 +86,8 @@ class ConnectionChecks:
             CheckTarget.AZURE_DEVOPS: _azure_devops,
             CheckTarget.GITHUB: _github,
             CheckTarget.WORKER: _worker,
+            CheckTarget.OPENAI_LLM: _openai_llm,
+            CheckTarget.ANTHROPIC: self._anthropic,
         }
 
     def run(self, target: CheckTarget, settings: Settings) -> CheckResult:
@@ -109,6 +121,17 @@ class ConnectionChecks:
             if status >= 400:
                 return CheckResult(False, "http_error", {"status": status})
         return CheckResult(True, "hf_token_ok", {"models": ", ".join(self._hf_models)})
+
+    def _anthropic(self, client: httpx.Client, settings: Settings) -> CheckResult:
+        if self._anthropic_probe is None:
+            return CheckResult(False, "unavailable")
+        if not settings.anthropic_api_key:
+            return CheckResult(False, "not_configured", {"keys": "ANTHROPIC_API_KEY"})
+        model = settings.anthropic_model
+        status = self._anthropic_probe(settings.anthropic_api_key, model)
+        if status is None:
+            return CheckResult(False, "unreachable", {"host": url_host(ANTHROPIC_URL)})
+        return _by_status(status, "anthropic_ok", {"model": model}, model)
 
 
 def _has_request(error: httpx.HTTPError) -> bool:
@@ -185,6 +208,23 @@ def _worker(client: httpx.Client, settings: Settings) -> CheckResult:
             True, "worker_ok", {"host": host, "version": body["version"], "gpu": gpu or "CPU"}
         )
     return result
+
+
+def _openai_llm(client: httpx.Client, settings: Settings) -> CheckResult:
+    """The server answers `GET /models` and serves the model (or, unset, any model)."""
+    url = settings.openai_llm_url
+    key = settings.openai_llm_key
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
+    response = client.get(url.rstrip("/") + "/models", headers=headers)
+    host = urlparse(url).hostname or url
+    result = _by_status(response.status_code, "openai_llm_ok", {"host": host}, host)
+    if not result.ok:
+        return result
+    served = [str(model["id"]) for model in response.json().get("data", [])]
+    model = settings.openai_llm_model or (served[0] if served else "")
+    if model and model in served:
+        return CheckResult(True, "openai_llm_ok", {"host": host, "model": model})
+    return CheckResult(False, "openai_llm_model_missing", {"host": host, "model": model})
 
 
 def _by_status(status: int, ok_code: str, params: dict[str, object], what: str) -> CheckResult:

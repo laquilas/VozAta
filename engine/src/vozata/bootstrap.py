@@ -69,7 +69,10 @@ from vozata.export.tasks.azure_devops import AzureDevOpsExporter
 from vozata.export.tasks.github import GitHubIssuesExporter
 from vozata.i18n import TomlLocalizer
 from vozata.labels import SpeakerLabeler
+from vozata.llm.anthropic import AnthropicLanguageModel
+from vozata.llm.anthropic import probe_status as anthropic_probe_status
 from vozata.llm.ollama import OllamaLanguageModel
+from vozata.llm.openai_compatible import OpenAICompatibleLanguageModel
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
@@ -173,6 +176,13 @@ EMBEDDERS: dict[str, Callable[[Settings, ModelDownloader], SpeakerEmbedder]] = {
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(
         settings.ollama_url, settings.ollama_model, settings.ollama_keep_alive
+    ),
+    # phase 53: LM Studio, vLLM, the llama.cpp server, OpenAI
+    "openai_compatible": lambda settings: OpenAICompatibleLanguageModel(
+        settings.openai_llm_url, settings.openai_llm_model, settings.openai_llm_key
+    ),
+    "anthropic": lambda settings: AnthropicLanguageModel(
+        settings.anthropic_api_key, settings.anthropic_model
     ),
 }
 
@@ -1307,7 +1317,9 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         bundle_importer=build_bundle_importer(settings),
         setting_options=options.collect,
         connection_check=ConnectionChecks(
-            (DIARIZATION_MODEL, EMBEDDING_MODEL), priority=check_priority
+            (DIARIZATION_MODEL, EMBEDDING_MODEL),
+            priority=check_priority,
+            anthropic_probe=anthropic_probe_status,  # phase 53
         ).run,
         downloads=downloads,
         worker_status=lambda current: worker_status(current.worker_url or "", current.worker_token),

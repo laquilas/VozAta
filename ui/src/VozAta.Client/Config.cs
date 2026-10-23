@@ -23,6 +23,8 @@ public static class ConnectionTargets
     public const string AzureDevOps = "azure_devops";
     public const string GitHub = "github";
     public const string Worker = "worker";
+    public const string OpenAiLlm = "openai_llm"; // phase 53
+    public const string Anthropic = "anthropic"; // phase 53
 }
 
 /// <summary><c>POST /settings/test/{target}</c>: the engine's localized message (never a secret).</summary>

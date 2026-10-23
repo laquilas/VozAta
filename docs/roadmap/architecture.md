@@ -784,10 +784,15 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `WHISPER_COMPUTE_TYPE` | `int8_float16` | 03 | CTranslate2 compute type on GPU |
 | `WHISPER_CPU_MODEL` | `small` | 03 | fallback model on CPU |
 | `MIX_MODE` | `mono` | 02 | `mono` / `stereo` |
-| `LLM_PROVIDER` | `ollama` | 04 | registry key |
+| `LLM_PROVIDER` | `ollama` | 04 | registry key: `ollama`, `openai_compatible`, `anthropic` (53) |
 | `OLLAMA_URL` | `http://localhost:11434` | 04 | |
 | `OLLAMA_MODEL` | `qwen2.5:7b` | 04 | must fit 6 GB VRAM |
 | `LLM_MAX_CHARS` | `12000` | 04 | above this, map-reduce summarization |
+| `OPENAI_LLM_URL` | `http://localhost:1234/v1` | 53 | an OpenAI-compatible chat server (LM Studio's default) |
+| `OPENAI_LLM_KEY` | — | 53 | secret; Bearer key, only when the server asks for one |
+| `OPENAI_LLM_MODEL` | (empty) | 53 | empty: the first model `GET /models` lists |
+| `ANTHROPIC_API_KEY` | — | 53 | secret; Claude through the official `anthropic` SDK |
+| `ANTHROPIC_MODEL` | `claude-opus-5-5` | 53 | effort `medium`, server-side refusal fallbacks, always streamed |
 | `GENERATE_MINUTES` | `true` | 05 | generate minutes at stop |
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8765` | 06 | never bind to 0.0.0.0 |
 | `OPENAI_STT_URL` / `OPENAI_STT_KEY` / `OPENAI_STT_MODEL` | `https://api.openai.com/v1` / *(empty)* / `whisper-1` | 12 | OpenAI-style `/audio/transcriptions` provider (`STT_PROVIDER=openai_compatible`); the key is secret |

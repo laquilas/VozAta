@@ -22,6 +22,8 @@ public sealed class ConfigPageViewModelTests
         Add("OPENAI_STT_URL", "url", "https://api.openai.com/v1", "transcription");
         Add("HF_TOKEN", "string", "********", "speakers", secret: true);
         Add("OLLAMA_URL", "url", "http://localhost:11434", "minutes");
+        Add("OPENAI_LLM_URL", "url", "http://localhost:1234/v1", "minutes");
+        Add("ANTHROPIC_API_KEY", "string", null, "minutes", secret: true);
         Add("OLLAMA_MODEL", "string", "qwen2.5:7b", "minutes", source: "ollama_models");
         Add("AZDO_PAT", "string", null, "tasks", secret: true);
         Add("GITHUB_TOKEN", "string", null, "tasks", secret: true);
@@ -387,6 +389,8 @@ public sealed class ConfigPageViewModelTests
                 ["AZDO_PAT"] = ConnectionTargets.AzureDevOps,
                 ["GITHUB_TOKEN"] = ConnectionTargets.GitHub,
                 ["WORKER_URL"] = ConnectionTargets.Worker,
+                ["OPENAI_LLM_URL"] = ConnectionTargets.OpenAiLlm,
+                ["ANTHROPIC_API_KEY"] = ConnectionTargets.Anthropic,
             },
             page.Settings.Editors.Where(editor => editor.HasTest).ToDictionary(editor => editor.Key, editor => editor.Test!.Target));
         Assert.Equal(_localization["ConnectionTest"], Editor(page, "HF_TOKEN").Test!.ButtonText);

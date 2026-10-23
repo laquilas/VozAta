@@ -41,6 +41,19 @@ public sealed class HealthViewModelTests
         Assert.Equal("Minutes: qwen2.5:7b ready", health.MinutesText);
     }
 
+    [Theory]
+    [InlineData("openai_compatible", "qwen2.5-7b-instruct")]
+    [InlineData("anthropic", "claude-opus-5-5")]
+    public async Task Another_provider_out_of_reach_points_at_the_Config_page(string provider, string model)
+    {
+        _client.Health = _client.Health with { Llm = new LlmStatus(provider, model, false) };
+        var health = Create();
+
+        await health.LoadAsync();
+
+        Assert.Equal($"Minutes: {model} not reachable (check the language model in Config)", health.MinutesText);
+    }
+
     [Fact]
     public async Task An_unreachable_engine_is_reported_and_the_texts_stay_empty()
     {

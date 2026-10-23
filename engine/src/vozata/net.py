@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     from vozata.config import Settings
 
+ANTHROPIC_URL = "https://api.anthropic.com"  # the transcripts always leave this PC
+
 
 def url_host(url: str) -> str:
     """The host name of `url` (no scheme, port or path), or the raw text when none parses.
@@ -39,11 +41,32 @@ def is_local_url(url: str) -> bool:
     return address.is_loopback or address.is_unspecified
 
 
+def llm_url(settings: Settings) -> str | None:
+    """The server of the `LLM_PROVIDER` language model (phase 53); None for an unknown provider."""
+    urls = {
+        "ollama": settings.ollama_url,
+        "openai_compatible": settings.openai_llm_url,
+        "anthropic": ANTHROPIC_URL,
+    }
+    return urls.get(settings.llm_provider)
+
+
+def llm_model(settings: Settings) -> str:
+    """The model the `LLM_PROVIDER` language model runs (phase 53); empty for an unknown one."""
+    models = {
+        "ollama": settings.ollama_model,
+        "openai_compatible": settings.openai_llm_model,
+        "anthropic": settings.anthropic_model,
+    }
+    return models.get(settings.llm_provider, "")
+
+
 def remote_llm_host(settings: Settings) -> str | None:
     """The host transcripts are sent to, or None when the language model runs on this PC."""
-    if settings.llm_provider != "ollama" or is_local_url(settings.ollama_url):
+    url = llm_url(settings)
+    if url is None or is_local_url(url):
         return None
-    return url_host(settings.ollama_url)
+    return url_host(url)
 
 
 def _hostname(text: str) -> str | None:

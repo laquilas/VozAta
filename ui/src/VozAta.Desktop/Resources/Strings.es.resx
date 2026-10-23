@@ -550,7 +550,7 @@
     <value>Proveedor del modelo del acta</value>
   </data>
   <data name="SettingHelp_LLM_PROVIDER" xml:space="preserve">
-    <value>Proveedor del modelo de lenguaje usado para escribir el acta.</value>
+    <value>Proveedor del modelo de lenguaje usado para escribir el acta: ollama, openai_compatible (LM Studio, vLLM, llama.cpp, OpenAI) o anthropic (Claude).</value>
   </data>
   <data name="Setting_OLLAMA_URL" xml:space="preserve">
     <value>Dirección de Ollama</value>
@@ -1577,5 +1577,38 @@
   </data>
   <data name="WorkerStatusOff" xml:space="preserve">
     <value>Este PC (worker apagado)</value>
+  </data>
+  <data name="MinutesUnreachableService" xml:space="preserve">
+    <value>Acta: {0} inaccesible (revisa el modelo de lenguaje en Config)</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_URL" xml:space="preserve">
+    <value>Dirección del servidor compatible con OpenAI</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_URL" xml:space="preserve">
+    <value>Para LLM_PROVIDER openai_compatible: LM Studio (http://localhost:1234/v1), vLLM, el servidor de llama.cpp o https://api.openai.com/v1.</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_KEY" xml:space="preserve">
+    <value>Clave del servidor compatible con OpenAI</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_KEY" xml:space="preserve">
+    <value>Solo si el servidor pide una (OpenAI la pide; LM Studio no).</value>
+  </data>
+  <data name="Setting_OPENAI_LLM_MODEL" xml:space="preserve">
+    <value>Modelo compatible con OpenAI</value>
+  </data>
+  <data name="SettingHelp_OPENAI_LLM_MODEL" xml:space="preserve">
+    <value>El nombre del modelo que ofrece el servidor; vacío usa el primero de la lista (el modelo cargado en LM Studio).</value>
+  </data>
+  <data name="Setting_ANTHROPIC_API_KEY" xml:space="preserve">
+    <value>Clave de la API de Anthropic</value>
+  </data>
+  <data name="SettingHelp_ANTHROPIC_API_KEY" xml:space="preserve">
+    <value>Para LLM_PROVIDER anthropic: la clave de console.anthropic.com. El uso lo cobra Anthropic.</value>
+  </data>
+  <data name="Setting_ANTHROPIC_MODEL" xml:space="preserve">
+    <value>Modelo Claude</value>
+  </data>
+  <data name="SettingHelp_ANTHROPIC_MODEL" xml:space="preserve">
+    <value>El modelo Claude que escribe el acta, por ejemplo claude-opus-5-5 o claude-sonnet-5-5.</value>
   </data>
 </root>

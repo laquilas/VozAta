@@ -23,6 +23,8 @@ SECRETS = (
     "azdo-secret-pat",
     "ghp_secret_token",
     "wk-secret-token",
+    "sk-openai-llm-secret",
+    "sk-ant-secret",
 )
 
 
@@ -40,6 +42,11 @@ def _settings(**overrides: object) -> Settings:
         "github_token": "ghp_secret_token",
         "worker_url": "http://gpu-pc:8766",
         "worker_token": "wk-secret-token",
+        "openai_llm_url": "http://lmstudio.test:1234/v1",
+        "openai_llm_key": "sk-openai-llm-secret",
+        "openai_llm_model": "qwen2.5-7b-instruct",
+        "anthropic_api_key": "sk-ant-secret",
+        "anthropic_model": "claude-opus-5-5",
     }
     values.update(overrides)
     return Settings(**values)  # type: ignore[arg-type]
@@ -351,6 +358,106 @@ def test_worker_not_configured() -> None:
     assert result == CheckResult(False, "not_configured", {"keys": "WORKER_URL"})
 
 
+# OpenAI-compatible language model and Anthropic (phase 53)
+
+
+def _served(*names: str) -> Callable[[httpx.Request], httpx.Response]:
+    return _status(200, json={"object": "list", "data": [{"id": name} for name in names]})
+
+
+def test_openai_llm_success_when_the_model_is_served() -> None:
+    result, seen = _run(CheckTarget.OPENAI_LLM, _served("qwen2.5-7b-instruct"))
+
+    assert result == CheckResult(
+        True, "openai_llm_ok", {"host": "lmstudio.test", "model": "qwen2.5-7b-instruct"}
+    )
+    assert str(seen[0].url) == "http://lmstudio.test:1234/v1/models"
+    assert seen[0].headers["Authorization"] == "Bearer sk-openai-llm-secret"
+
+
+def test_openai_llm_reports_a_model_the_server_does_not_serve() -> None:
+    result, _ = _run(CheckTarget.OPENAI_LLM, _served("llama-3"))
+
+    assert result == CheckResult(
+        False, "openai_llm_model_missing", {"host": "lmstudio.test", "model": "qwen2.5-7b-instruct"}
+    )
+
+
+def test_openai_llm_without_a_model_names_the_first_one_served() -> None:
+    result, _ = _run(CheckTarget.OPENAI_LLM, _served("llama-3"), _settings(openai_llm_model=""))
+
+    assert result == CheckResult(
+        True, "openai_llm_ok", {"host": "lmstudio.test", "model": "llama-3"}
+    )
+
+
+def test_openai_llm_without_a_key_sends_no_authorization() -> None:
+    _, seen = _run(
+        CheckTarget.OPENAI_LLM, _served("qwen2.5-7b-instruct"), _settings(openai_llm_key=None)
+    )
+
+    assert "Authorization" not in seen[0].headers
+
+
+@pytest.mark.parametrize(("status", "code"), [(401, "unauthorized"), (500, "http_error")])
+def test_openai_llm_http_errors(status: int, code: str) -> None:
+    result, _ = _run(CheckTarget.OPENAI_LLM, _status(status))
+
+    assert (result.ok, result.code) == (False, code)
+
+
+def test_openai_llm_unreachable() -> None:
+    result, _ = _run(CheckTarget.OPENAI_LLM, _refused)
+
+    assert result == CheckResult(False, "unreachable", {"host": "lmstudio.test"})
+
+
+def _anthropic(
+    status: int | None, settings: Settings | None = None
+) -> tuple[CheckResult, list[tuple[str, str]]]:
+    asked: list[tuple[str, str]] = []
+
+    def probe(key: str, model: str) -> int | None:
+        asked.append((key, model))
+        return status
+
+    checks = ConnectionChecks(HF_MODELS, anthropic_probe=probe)
+    return checks.run(CheckTarget.ANTHROPIC, settings or _settings()), asked
+
+
+def test_anthropic_success_retrieves_the_model_with_the_key() -> None:
+    result, asked = _anthropic(200)
+
+    assert result == CheckResult(True, "anthropic_ok", {"model": "claude-opus-5-5"})
+    assert asked == [("sk-ant-secret", "claude-opus-5-5")]
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (401, CheckResult(False, "unauthorized", {"status": 401})),
+        (404, CheckResult(False, "not_found", {"what": "claude-opus-5-5"})),
+        (529, CheckResult(False, "http_error", {"status": 529})),
+        (None, CheckResult(False, "unreachable", {"host": "api.anthropic.com"})),
+    ],
+)
+def test_anthropic_failures(status: int | None, expected: CheckResult) -> None:
+    assert _anthropic(status)[0] == expected
+
+
+def test_anthropic_without_a_key_asks_nothing() -> None:
+    result, asked = _anthropic(200, _settings(anthropic_api_key=None))
+
+    assert result == CheckResult(False, "not_configured", {"keys": "ANTHROPIC_API_KEY"})
+    assert asked == []
+
+
+def test_without_an_anthropic_probe_the_check_is_unavailable() -> None:
+    result, _ = _run(CheckTarget.ANTHROPIC, _status(200))
+
+    assert result == CheckResult(False, "unavailable")
+
+
 # Secrets
 
 
@@ -445,6 +552,9 @@ def test_every_result_code_has_a_message_in_every_language(language: str) -> Non
         "azure_devops_ok",
         "github_ok",
         "worker_ok",
+        "openai_llm_ok",
+        "openai_llm_model_missing",
+        "anthropic_ok",
         "not_configured",
         "unauthorized",
         "terms_not_accepted",

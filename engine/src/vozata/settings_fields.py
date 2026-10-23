@@ -203,6 +203,12 @@ FIELDS: tuple[Field, ...] = (
         "OLLAMA_MODEL", "ollama_model", "string", group="minutes", options_source="ollama_models"
     ),
     Field("LLM_MAX_CHARS", "llm_max_chars", "integer", group="minutes"),
+    # Other language model providers (phase 53)
+    Field("OPENAI_LLM_URL", "openai_llm_url", "url", group="minutes"),
+    Field("OPENAI_LLM_KEY", "openai_llm_key", "string", secret=True, group="minutes"),
+    Field("OPENAI_LLM_MODEL", "openai_llm_model", "string", group="minutes"),
+    Field("ANTHROPIC_API_KEY", "anthropic_api_key", "string", secret=True, group="minutes"),
+    Field("ANTHROPIC_MODEL", "anthropic_model", "string", group="minutes"),
     # Minutes templates (phase 20)
     Field("MINUTES_TEMPLATE", "minutes_template", "choice", MinutesTemplateId, group="minutes"),
     # LLM VRAM release (phase 25)

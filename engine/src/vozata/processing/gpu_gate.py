@@ -47,7 +47,9 @@ def gpu_usage(settings: Settings, cuda: bool) -> GpuUsage:
     speakers = wants_speakers and speakers_on_gpu and local_speakers
     live_speakers = settings.live_diarization_enabled and speakers_on_gpu and local_speakers
     speakers_fallback = wants_speakers and speakers_on_gpu and not local_speakers
-    llm = settings.llm_provider == "ollama" and cuda and remote_llm_host(settings) is None
+    # phase 53: an OpenAI-compatible server on this PC (LM Studio, llama.cpp) uses its GPU too
+    local_llm = settings.llm_provider in ("ollama", "openai_compatible")
+    llm = local_llm and cuda and remote_llm_host(settings) is None
     return GpuUsage(
         speech=speech,
         speakers=speakers,

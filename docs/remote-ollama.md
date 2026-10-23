@@ -1,5 +1,8 @@
 # Using Ollama on another PC
 
+> Other language models (an OpenAI-compatible server such as LM Studio, or Claude) are
+> described in [Language models](language-models.md).
+
 The minutes, the action items and "Ask the meeting" are written by an Ollama model. By default that
 model runs on the same computer as VozAta. If you have a stronger PC on the same local network, it
 can run Ollama instead, and this computer's GPU is left to the speech recognition.

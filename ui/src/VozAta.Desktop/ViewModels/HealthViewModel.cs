@@ -67,13 +67,17 @@ public sealed partial class HealthViewModel(IEngineClient client, ILocalizationS
             ? localization.Format("GpuName", health.Gpu.Name, health.Gpu.VramTotalMb)
             : localization["GpuNone"];
         SpeechText = localization.Format("SpeechModel", health.Stt.Model, health.Stt.Device);
-        MinutesText = localization.Format(health.Llm.Reachable ? "MinutesReachable" : "MinutesUnreachable", health.Llm.Model);
+        MinutesText = localization.Format(MinutesKey(health.Llm), health.Llm.Model);
         var places = health.Worker?.Tasks?.Values ?? [];
         IsWorkerOff = places.Contains("fallback");
         WorkerText = IsWorkerOff ? localization["WorkerStatusOff"]
             : places.Contains("worker") ? localization.Format("WorkerStatusOn", Host(health.Worker!.Url))
             : null;
     }
+
+    /// <summary>"Start Ollama" only helps Ollama; other providers are set up on the Config page (53).</summary>
+    private static string MinutesKey(LlmStatus llm) =>
+        llm.Reachable ? "MinutesReachable" : llm.Provider == "ollama" ? "MinutesUnreachable" : "MinutesUnreachableService";
 
     private static string Host(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;

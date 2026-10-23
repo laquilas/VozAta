@@ -356,10 +356,18 @@ public sealed partial class SettingEditorViewModel : ObservableObject
         UpdateNote();
     }
 
+    private const string AnthropicHost = "api.anthropic.com";
+
+    /// <summary>Where the transcripts go to write the minutes: a language model server that is not
+    /// this PC (phase 43), and Anthropic always (phase 53).</summary>
     private void UpdateNote() =>
-        Note = Key == "OLLAMA_URL" && !NetworkAddress.IsLocalUrl(TextValue)
-            ? _localization.Format("RemoteOllamaNote", NetworkAddress.Host(TextValue))
-            : null;
+        Note = Key switch
+        {
+            "OLLAMA_URL" or "OPENAI_LLM_URL" when !NetworkAddress.IsLocalUrl(TextValue) =>
+                _localization.Format("RemoteOllamaNote", NetworkAddress.Host(TextValue)),
+            "ANTHROPIC_API_KEY" => _localization.Format("RemoteOllamaNote", AnthropicHost),
+            _ => null,
+        };
 
     partial void OnNumberValueChanged(decimal? value) => Error = null;
 
