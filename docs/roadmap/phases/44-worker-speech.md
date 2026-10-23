@@ -140,9 +140,8 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - **Branch:** `feature/44-worker-speech`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 6 of `plans/44-worker-speech.md` (packaging smoke test
-  `vozata-engine.exe worker --check`, `docs/remote-worker.md`, `docs/roadmap/worker-api.md`,
-  architecture / api-contract updates, pointer in `docs/remote-ollama.md`).
+- **Next step:** Task 7 of `plans/44-worker-speech.md` (full suites, manual check with this PC's
+  LAN address as the worker, phase done, PR).
 
 ### Steps
 
@@ -152,7 +151,7 @@ transcriber, client probe and retry with `httpx.MockTransport`, `WorkerTranscrib
 - [x] Engine: worker client and `WorkerTranscriber`
 - [x] Engine: `build_transcriber` with fallback and the `worker_fallback` notice; gate rule
 - [x] Engine: settings, connection check, `/health.worker`; UI Test anchor
-- [ ] Packaging entry and smoke test; guide and contract docs
+- [x] Packaging entry and smoke test; guide and contract docs
 - [ ] Full suites, manual check (this PC's LAN address as the worker), phase done
 
 ### Decisions and notes

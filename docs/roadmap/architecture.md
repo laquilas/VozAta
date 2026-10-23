@@ -128,6 +128,9 @@ class Transcriber(Protocol):
     def transcribe(self, samples: np.ndarray, language: str | None, hints: str | None = None,
                    prompt: str | None = None) -> TranscriptionResult: ...  # hints = vocabulary, prompt = rolling context (19)
     def close(self) -> None: ...     # releases GPU memory
+class FallbackNotices(Protocol):     # phase 44: ObserverNotices (`error` worker_fallback) / LoggedNotices
+    def fallback(self, task: str, host: str) -> None: ...  # `task` runs on this PC: the worker did not answer
+# WorkerUnreachableError(host): the VozAta worker did not answer at all (WorkerClient, phase 44)
 class TranscriptSink(Protocol):
     def emit(self, segment: TranscriptSegment) -> None: ...
     def close(self) -> None: ...
@@ -407,7 +410,7 @@ step or job; the meeting stays `finalizing` and the next start resumes it.
 
 **GPU gate** (phase 40, `processing/gpu_gate.py`, one per engine, built in `bootstrap.py`):
 `gpu_usage(settings, cuda)` says which model families run on the local GPU (speech: faster-whisper
-not on CPU; speakers: pyannote not on CPU; LLM: Ollama on this PC; an Ollama on another PC (43, `net.py`: `OLLAMA_URL` is not loopback) is not local GPU work, and Whisper is not unloaded before it); without CUDA nothing is gated. Priority:
+not on CPU; speakers: pyannote not on CPU; LLM: Ollama on this PC; an Ollama on another PC (43, `net.py`: `OLLAMA_URL` is not loopback) is not local GPU work, and Whisper is not unloaded before it; speech on the VozAta worker (44) is not local GPU work either, but `speech_fallback` marks that its fallback would load Whisper here: a live session takes the gate only when it falls back, and the queue's transcribe step is gated); without CUDA nothing is gated. Priority:
 live recording > Ask > Config tests > queue. A live session takes `gate.priority(LIVE)` on the
 model-load thread before a live model that runs on the local GPU loads (`LiveGpuLease`: the speech
 model when `usage.speech`, the live speaker embedder when `usage.live_speakers`, i.e.
@@ -771,7 +774,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `STORAGE_BACKEND` | `sqlite` | 31 | `sqlite` (one database, `vozata.db`, audio included since 32) / `files` (one folder of JSON, Markdown and WAVs per session); restart |
 | `DATABASE_PATH` | *(empty)* = `OUTPUT_DIR/vozata.db` | 31 | the SQLite database file; keep it out of OneDrive-synced folders (warning at start and in `GET /health`); restart |
 | `AUDIO_CACHE_MB` | `2048` | 32 | `sqlite`: size limit of `OUTPUT_DIR/cache` (WAVs built from the database for tools that need a file), least recently used first out; 0–1048576; restart |
-| `STT_PROVIDER` | `faster_whisper` | 03 | registry key |
+| `STT_PROVIDER` | `faster_whisper` | 03 | registry key: `faster_whisper` / `openai_compatible` (12) / `vozata_worker` (44: Whisper on the worker, this PC's when it does not answer) |
 | `WHISPER_MODEL` | `large-v3-turbo` | 03 | GPU model |
 | `WHISPER_DEVICE` | `auto` | 03 | `auto` / `cuda` / `cpu` |
 | `WHISPER_COMPUTE_TYPE` | `int8_float16` | 03 | CTranslate2 compute type on GPU |
@@ -784,6 +787,8 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `GENERATE_MINUTES` | `true` | 05 | generate minutes at stop |
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8765` | 06 | never bind to 0.0.0.0 |
 | `OPENAI_STT_URL` / `OPENAI_STT_KEY` / `OPENAI_STT_MODEL` | `https://api.openai.com/v1` / *(empty)* / `whisper-1` | 12 | OpenAI-style `/audio/transcriptions` provider (`STT_PROVIDER=openai_compatible`); the key is secret |
+| `WORKER_URL` / `WORKER_TOKEN` | *(empty)* / *(empty)* | 44 | the VozAta worker this engine sends speech to (`STT_PROVIDER=vozata_worker`); the token is secret |
+| `WORKER_HOST` / `WORKER_PORT` | `0.0.0.0` / `8766` | 44 | on the worker PC only (`vozata worker`): where it listens; a non-loopback host needs `WORKER_TOKEN` (generated on first run); restart |
 | `DIARIZATION_ENABLED` | `false` | 14 | |
 | `DIARIZATION_PROVIDER` | `pyannote` | 14 | |
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
@@ -1018,8 +1023,8 @@ graph LR
   the list is kept and flagged "not installed"), `path` → text + Browse (`IPathPicker`), `url` →
   validated while typing (blocks Save), secrets → "Replace" / "Remove" (the stored value never
   reaches the page). "Restart needed" and "Changed" badges, a sticky Save / Discard bar while
-  dirty, and "Test" buttons next to `OLLAMA_URL`, `OPENAI_STT_URL`, `HF_TOKEN`, `AZDO_PAT` and
-  `GITHUB_TOKEN` (`POST /settings/test/{target}`, saved settings, run only on click).
+  dirty, and "Test" buttons next to `OLLAMA_URL`, `OPENAI_STT_URL`, `HF_TOKEN`, `AZDO_PAT`,
+  `GITHUB_TOKEN` and `WORKER_URL` (44) (`POST /settings/test/{target}`, saved settings, run only on click).
 - Meeting page (phase 37): opening a meeting (a Meetings row, a search hit, an Ask citation) shows
   `SessionPageViewModel` as the shell's `SessionPage`, over the Meetings entry; Back, deleting it,
   or picking any sidebar page closes it (unsaved transcript edits are asked about first).

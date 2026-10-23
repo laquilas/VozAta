@@ -4,8 +4,10 @@ The minutes, the action items and "Ask the meeting" are written by an Ollama mod
 model runs on the same computer as VozAta. If you have a stronger PC on the same local network, it
 can run Ollama instead, and this computer's GPU is left to the speech recognition.
 
-Only the **language model** moves. Recording, transcription and speaker detection always run on the
-computer where VozAta is installed (see [The engine cannot run on another PC](#the-engine-cannot-run-on-another-pc)).
+Only the **language model** moves with this guide. Speech recognition can move to a GPU PC too, with
+a VozAta worker: see [Using a VozAta worker on another PC](remote-worker.md). Recording always runs
+on the computer where VozAta is installed (see
+[The engine cannot run on another PC](#the-engine-cannot-run-on-another-pc)).
 
 > **Privacy.** With a remote Ollama, the transcript text of your meetings is sent to the other PC.
 > Use it only on a network you trust.
@@ -91,5 +93,6 @@ What can be moved to another machine is the heavy work that does not need your a
 | Work | Where it can run | How |
 |------|------------------|-----|
 | Minutes, action items, Ask | another PC | this guide |
+| Speech recognition (Whisper) | a VozAta worker on a GPU PC of your network | [Using a VozAta worker on another PC](remote-worker.md) (`STT_PROVIDER=vozata_worker`); this PC takes over when the worker does not answer |
 | Speech recognition (Whisper) | an OpenAI-compatible speech server | **Config → Transcription**: set the speech provider to the OpenAI-compatible one and its URL (`STT_PROVIDER`, `OPENAI_STT_URL`). It sends the **audio** to that server |
 | Speaker detection | this computer only | – |

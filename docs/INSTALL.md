@@ -54,7 +54,7 @@ to remove them too.
 | "The audio device … did not open within 20 s" | Another app may hold the device, or the Windows audio service is stuck: restart *Windows Audio* (services) or the PC. |
 | The engine does not start | Check that no other program uses port 8765 (`API_PORT` in `%APPDATA%\VozAta\.env`). To see the engine's messages, close VozAta, open a terminal in `%APPDATA%\VozAta` and run `"%LOCALAPPDATA%\Programs\VozAta\engine\vozata-engine.exe" serve`. |
 | Transcription is slow | Without an NVIDIA GPU (or a recent driver) Whisper runs on the CPU. Install the NVIDIA driver, or use a smaller CPU model in the settings. |
-| "Minutes: … not reachable (start Ollama)" | Start Ollama and pull the model shown in the status bar. To use Ollama on another PC of your network, see [Using Ollama on another PC](remote-ollama.md). |
+| "Minutes: … not reachable (start Ollama)" | Start Ollama and pull the model shown in the status bar. To use Ollama on another PC of your network, see [Using Ollama on another PC](remote-ollama.md); to move speech recognition to a GPU PC, see [Using a VozAta worker on another PC](remote-worker.md). |
 | No sound from the system audio | Pick the output device you actually listen on (headphones vs. speakers) on the Recording tab. |
 
 ## Building the installer yourself
