@@ -154,14 +154,29 @@ def test_a_worker_error_is_a_diarization_error(tmp_path: Path) -> None:
     def refused(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/health":
             return httpx.Response(200, json={})
-        return httpx.Response(503, json={"error": {"code": "worker_speakers_unavailable"}})
+        return httpx.Response(507, json={"error": {"code": "worker_disk_full"}})
 
     diarizer = WorkerDiarizer(
         WorkerClient(URL, "t", transport=httpx.MockTransport(refused)), _LocalDiarizer, _Notices()
     )
 
-    with pytest.raises(DiarizationError, match="worker_speakers_unavailable"):
+    with pytest.raises(DiarizationError, match="worker_disk_full"):
         diarizer.diarize(_wav(tmp_path), None, None)
+
+
+def test_a_worker_without_speakers_is_replaced_by_this_pc(tmp_path: Path) -> None:
+    def unavailable(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/health":
+            return httpx.Response(200, json={})
+        return httpx.Response(503, json={"error": {"code": "worker_speakers_unavailable"}})
+
+    notices = _Notices()
+    diarizer = WorkerDiarizer(
+        WorkerClient(URL, "t", transport=httpx.MockTransport(unavailable)), _LocalDiarizer, notices
+    )
+
+    assert diarizer.diarize(_wav(tmp_path), None, None) == LOCAL_TURNS
+    assert notices.calls == [("speakers", "gpu-pc")]
 
 
 def test_the_embedder_uses_the_worker_then_this_pc_when_it_is_lost() -> None:

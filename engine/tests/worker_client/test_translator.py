@@ -85,3 +85,19 @@ def test_a_worker_error_is_a_translation_error() -> None:
 
     with pytest.raises(TranslationError, match="worker_translation_failed"):
         WorkerTranslator(_client(worker), _Local, _Notices()).translate("x", "pt", "en")
+
+
+def test_a_worker_without_translation_is_replaced_by_this_pc() -> None:
+    notices = _Notices()
+
+    def unavailable(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/health":
+            return httpx.Response(200, json={})
+        return httpx.Response(503, json={"error": {"code": "worker_translation_unavailable"}})
+
+    translator = WorkerTranslator(
+        WorkerClient(URL, "t", transport=httpx.MockTransport(unavailable)), _Local, notices
+    )
+
+    assert translator.translate("olá", "pt", "en") == "local:olá"
+    assert notices.calls == [("translation", "gpu-pc")]
