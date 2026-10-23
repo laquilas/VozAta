@@ -32,6 +32,15 @@ Python and .NET are **not** needed: both are inside the installer.
 - **Settings tab**: interface and meeting language, minutes model, how audio is cut, the external
   speech API, and more. Most changes apply from the next recording; a few ask to restart the engine.
 
+## When a meeting starts
+
+When Microsoft Teams, Zoom, Webex, Slack or Discord is in a call and VozAta is not recording,
+a banner offers **Record** / **Not now**. VozAta never starts recording by itself: you decide,
+and you are responsible for telling the other participants. It looks at which programs use
+the audio devices (Windows audio sessions), so a call in a browser (Google Meet) is not
+noticed. Turn it off, or change the list of programs, on **Config → General** ("Suggest
+recording meeting calls", "Meeting apps").
+
 ## Where things are
 
 | What | Where | Kept when uninstalling |

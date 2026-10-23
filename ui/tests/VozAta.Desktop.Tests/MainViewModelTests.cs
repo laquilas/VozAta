@@ -992,6 +992,60 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task A_meeting_app_in_a_call_suggests_recording_and_Record_starts_it()
+    {
+        var viewModel = await ReadyAsync();
+
+        await SendAsync(viewModel, new MeetingDetectedEvent(null, "ms-teams.exe", "Microsoft Teams"));
+
+        Assert.True(viewModel.Meeting.IsOpen);
+        Assert.Equal(_localization.Format("MeetingDetected", "Microsoft Teams"), viewModel.Meeting.Message);
+        await viewModel.Meeting.RecordCommand.ExecuteAsync(null);
+        Assert.False(viewModel.Meeting.IsOpen);
+        Assert.Single(_client.StartRequests);
+    }
+
+    [Fact]
+    public async Task Not_now_closes_the_suggestion_and_a_new_call_replaces_it()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new MeetingDetectedEvent(null, "zoom.exe", "Zoom"));
+        await SendAsync(viewModel, new MeetingDetectedEvent(null, "slack.exe", "Slack"));
+        Assert.Equal(_localization.Format("MeetingDetected", "Slack"), viewModel.Meeting.Message);
+
+        viewModel.Meeting.NotNowCommand.Execute(null);
+
+        Assert.False(viewModel.Meeting.IsOpen);
+        Assert.Empty(_client.StartRequests);
+    }
+
+    [Fact]
+    public async Task A_recording_closes_the_suggestion_and_one_arriving_while_recording_is_ignored()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new MeetingDetectedEvent(null, "zoom.exe", "Zoom"));
+
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new StatusEvent("20261016_090000", "recording", 1));
+        Assert.False(viewModel.Meeting.IsOpen);
+
+        await SendAsync(viewModel, new MeetingDetectedEvent(null, "zoom.exe", "Zoom"));
+        Assert.False(viewModel.Meeting.IsOpen);
+    }
+
+    [Fact]
+    public async Task The_suggestion_follows_the_interface_language()
+    {
+        var viewModel = await ReadyAsync();
+        await SendAsync(viewModel, new MeetingDetectedEvent(null, "zoom.exe", "Zoom"));
+
+        _localization.SetLanguage("pt-BR");
+        viewModel.Meeting.RefreshTexts();
+
+        Assert.Equal("O Zoom está em uma chamada. Gravar?", viewModel.Meeting.Message);
+    }
+
+    [Fact]
     public async Task A_recovery_offer_opens_the_dialog_and_recovery_progress_shows_as_status()
     {
         const string id = "20261015_202358";

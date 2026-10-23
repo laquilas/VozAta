@@ -11,6 +11,7 @@ import functools
 import logging
 import os
 import socket
+import sys
 import threading
 from collections.abc import Callable, Collection, Mapping, Sequence
 from contextlib import AbstractContextManager
@@ -73,6 +74,7 @@ from vozata.llm.anthropic import AnthropicLanguageModel
 from vozata.llm.anthropic import probe_status as anthropic_probe_status
 from vozata.llm.ollama import OllamaLanguageModel
 from vozata.llm.openai_compatible import OpenAICompatibleLanguageModel
+from vozata.meeting.detector import MeetingDetector
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
@@ -83,6 +85,7 @@ from vozata.models.tracker import DownloadTracker
 from vozata.net import remote_llm_host
 from vozata.ports import (
     AudioMixer,
+    AudioSessionMonitor,
     BundleImporter,
     Chunker,
     Diarizer,
@@ -1100,6 +1103,27 @@ def build_setting_options(
     )
 
 
+def build_meeting_detector(
+    settings: Callable[[], Settings],
+    recording: Callable[[], bool],
+    broadcaster: EventBroadcaster,
+    monitor: AudioSessionMonitor | None = None,
+) -> MeetingDetector | None:
+    """Phase 54: `meeting_detected {app, name}` when a meeting app is in a call and nothing
+    records. Windows only (its audio session API); None elsewhere."""
+    if monitor is None:
+        if sys.platform != "win32":
+            return None
+        from vozata.audio.sessions import WindowsAudioSessions
+
+        monitor = WindowsAudioSessions()
+
+    def publish(app: str, name: str) -> None:
+        broadcaster.publish("meeting_detected", None, {"app": app, "name": name})
+
+    return MeetingDetector(monitor, settings, recording, publish)
+
+
 def build_api_container(settings: Settings, env_file: Path | None = None) -> ApiContainer:
     """Everything `api.app.create_app` needs, wired with the real providers.
 
@@ -1279,6 +1303,9 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         manager=manager,
         devices=WasapiCatalog(),
         gpu_info=gpu_info,
+        meeting_detector=build_meeting_detector(
+            lambda: settings_file.current, lambda: manager.current is not None, broadcaster
+        ),
         llm_reachable=llm_reachable,
         regenerate_minutes=MinutesJob(
             store,

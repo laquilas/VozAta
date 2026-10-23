@@ -20,6 +20,14 @@ def _no_onedrive_registry(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_audio_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never read the real Windows audio sessions (meeting detection, phase 54)."""
+    from vozata.audio import sessions
+
+    monkeypatch.setattr(sessions.WindowsAudioSessions, "active_apps", lambda self: set())
+
+
+@pytest.fixture(autouse=True)
 def _close_databases() -> Iterator[None]:
     """Close the `vozata.db` connections `bootstrap` opened in a test (phase 31), so the next
     test starts clean and Windows can delete the test's temporary folder."""

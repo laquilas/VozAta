@@ -46,7 +46,11 @@ def create_app(container: ApiContainer) -> FastAPI:
         container.manager.resume_pending()  # phase 40: unfinished meetings, before the import
         if container.migration is not None:
             container.migration.start()  # phase 33: after `bind`, so its events reach clients
+        if container.meeting_detector is not None:
+            container.meeting_detector.start()  # phase 54
         yield
+        if container.meeting_detector is not None:
+            await asyncio.to_thread(container.meeting_detector.stop)
         await asyncio.to_thread(container.stop_processing)  # 40: e.g. ends a diarizer child
         container.release_models()
 

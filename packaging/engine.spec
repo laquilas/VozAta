@@ -99,7 +99,9 @@ a = Analysis(  # noqa: F821
         + collect_submodules("uvicorn")
         + collect_submodules("sentencepiece")
         + collect_submodules("anthropic")  # phase 53: Claude, imported by the registry
-        + ["pyaudiowpatch", "multipart"]
+        + collect_submodules("pycaw")  # phase 54: the Windows audio sessions
+        + collect_submodules("comtypes")
+        + ["pyaudiowpatch", "multipart", "psutil"]
         + SPEAKER_IMPORTS
     ),
     # The analysis follows the lazy `import torch` of the diarization modules, so an environment

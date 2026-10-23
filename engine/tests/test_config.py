@@ -225,6 +225,30 @@ def test_minutes_values_are_parsed() -> None:
     assert settings.ollama_keep_alive == "5m"
 
 
+def test_meeting_detection_defaults_and_values() -> None:
+    defaults = load_settings(env={})
+    settings = load_settings(
+        env={
+            "MEETING_DETECTION": "false",
+            "MEETING_APPS": " Zoom.exe , ms-teams.exe ,,",
+            "MEETING_POLL_SECONDS": "2",
+        }
+    )
+
+    assert defaults.meeting_detection is True
+    assert "ms-teams.exe" in defaults.meeting_apps and "Zoom.exe" in defaults.meeting_apps
+    assert defaults.meeting_poll_seconds == 5.0
+    assert settings.meeting_detection is False
+    assert settings.meeting_apps == "Zoom.exe , ms-teams.exe ,,"  # trimmed; the detector splits it
+    assert settings.meeting_poll_seconds == 2.0
+
+
+@pytest.mark.parametrize("value", ["0", "61", "x"])
+def test_the_meeting_poll_interval_is_bounded(value: str) -> None:
+    with pytest.raises(ConfigError):
+        load_settings(env={"MEETING_POLL_SECONDS": value})
+
+
 def test_the_other_language_model_providers_default_and_parse() -> None:
     defaults = load_settings(env={})
     settings = load_settings(

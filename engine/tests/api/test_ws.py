@@ -135,6 +135,24 @@ def test_the_processing_queue_is_stopped_before_the_models_are_released(api: Api
     assert calls == ["stop_processing", "release_models"]
 
 
+def test_the_meeting_detector_runs_while_the_api_serves(api: Api) -> None:
+    calls: list[str] = []
+
+    class _Detector:
+        def start(self) -> None:
+            calls.append("start")
+
+        def stop(self) -> None:
+            calls.append("stop")
+
+    container = dataclasses.replace(api.app.state.container, meeting_detector=_Detector())
+
+    with TestClient(create_app(container)):
+        assert calls == ["start"]
+
+    assert calls == ["start", "stop"]
+
+
 def test_ws_connect_sends_processing_snapshot_after_status(api: Api) -> None:
     running = hold_in_queue(api.manager, "20261014_090000")
     queued = hold_in_queue(api.manager, SESSION)

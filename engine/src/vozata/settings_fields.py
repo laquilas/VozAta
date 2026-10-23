@@ -77,6 +77,10 @@ FIELDS: tuple[Field, ...] = (
     Field("DATABASE_PATH", "database_path", "path", group="general", applies="restart"),
     Field("AUDIO_CACHE_MB", "audio_cache_mb", "integer", group="general", applies="restart"),
     Field("MIX_MODE", "mix_mode", "choice", MixMode, group="audio"),
+    # Meeting app detection (phase 54)
+    Field("MEETING_DETECTION", "meeting_detection", "bool", group="general"),
+    Field("MEETING_APPS", "meeting_apps", "string", group="general"),
+    Field("MEETING_POLL_SECONDS", "meeting_poll_seconds", "number", group="general"),
     # Transcription (phase 03)
     Field("TAIL_MARGIN_SECONDS", "tail_margin_seconds", "number", group="transcription"),
     Field("PAUSE_GAP_SECONDS", "pause_gap_seconds", "number", group="transcription"),

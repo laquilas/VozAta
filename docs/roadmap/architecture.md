@@ -784,6 +784,9 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `WHISPER_COMPUTE_TYPE` | `int8_float16` | 03 | CTranslate2 compute type on GPU |
 | `WHISPER_CPU_MODEL` | `small` | 03 | fallback model on CPU |
 | `MIX_MODE` | `mono` | 02 | `mono` / `stereo` |
+| `MEETING_DETECTION` | `true` | 54 | suggest recording when a meeting app is in a call (Windows audio sessions); read on every poll |
+| `MEETING_APPS` | `ms-teams.exe, Teams.exe, Zoom.exe, CiscoCollabHost.exe, webex.exe, slack.exe, Discord.exe` | 54 | executables, comma-separated, case-insensitive |
+| `MEETING_POLL_SECONDS` | `5` | 54 | 1–60; a call needs two polls in a row, a quiet minute ends it |
 | `LLM_PROVIDER` | `ollama` | 04 | registry key: `ollama`, `openai_compatible`, `anthropic` (53) |
 | `OLLAMA_URL` | `http://localhost:11434` | 04 | |
 | `OLLAMA_MODEL` | `qwen2.5:7b` | 04 | must fit 6 GB VRAM |
