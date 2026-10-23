@@ -69,9 +69,9 @@ macOS / Linux.
 - **Branch:** `feature/54-meeting-detection`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 4: wire the detector in `bootstrap` (Windows monitor, "recording" = a live
-  session, `meeting_detected {app, name}` through the broadcaster), the container field and the API
-  lifespan start / stop; api-contract row.
+- **Next step:** task 5 (UI): `MeetingDetectedEvent` in `EngineEvents.cs`,
+  `MeetingSuggestionViewModel` (Record via the recorder Start, Not now, replaced by a new event,
+  closed when recording starts), the banner in `ShellView`, RESX texts and the three setting labels.
 
 ### Steps
 
@@ -79,7 +79,7 @@ macOS / Linux.
 - [x] Keys `MEETING_DETECTION`, `MEETING_APPS`, `MEETING_POLL_SECONDS`
 - [x] Detector (port, debounce, quiet period, recording suppresses)
 - [x] Windows audio session monitor (pycaw)
-- [ ] Wiring: bootstrap, container, lifespan, `meeting_detected` event
+- [x] Wiring: bootstrap, container, lifespan, `meeting_detected` event
 - [ ] UI: event, suggestion banner, texts
 - [ ] Docs and packaging
 - [ ] Full suites, manual check, phase done
@@ -94,3 +94,5 @@ macOS / Linux.
 - Smoke run of `WindowsAudioSessions` on this PC: 0.12 s per poll; idle it lists only
   `QuantumServer.exe` (the JBL headset software keeps a session), a WAV played through `SoundPlayer`
   adds `powershell.exe`, also when called from another thread (COM initialized per thread).
+- Tests never read the real audio sessions: an autouse fixture in `tests/conftest.py` stubs
+  `WindowsAudioSessions.active_apps`.

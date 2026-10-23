@@ -52,6 +52,14 @@ class DeviceCatalog(Protocol):
     def default_loopback(self) -> DeviceInfo | None: ...
 
 
+class BackgroundJob(Protocol):
+    """Runs on its own thread while the API serves (phase 54: the meeting detector)."""
+
+    def start(self) -> None: ...
+
+    def stop(self) -> None: ...
+
+
 @dataclass(frozen=True)
 class ApiContainer:
     settings: Settings  # as the engine started (keys that apply on restart)
@@ -93,6 +101,8 @@ class ApiContainer:
     # The import of the session folders recorded before phase 31 (33): `GET /migration` and the
     # first WebSocket messages; None: nothing to import (file backend).
     migration: MigrationJob | None = None
+    # Meeting app detection (54): polls while the API serves; None: off (not Windows).
+    meeting_detector: BackgroundJob | None = None
     # Meeting ZIPs (39): `POST /sessions/import`; None: 503 import_unavailable.
     bundle_importer: BundleImporter | None = None
     # Config page (38): `GET /settings/options` lists and `POST /settings/test/{target}` checks.
