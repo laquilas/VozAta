@@ -11,6 +11,7 @@ from vozata.worker.app import create_worker_app
 from vozata.worker.local import WorkerIdentity, is_loopback_client, lan_addresses
 from vozata.worker.pairing import PairingCodes
 from vozata.worker.speech import LoadedModel, SpeechService
+from vozata.worker.tasks import MISSING_HF_TOKEN, WorkerTask
 
 TOKEN = "s3cret-token"
 IDENTITY = WorkerIdentity("4f1c", "GPU-PC", 8766)
@@ -81,6 +82,33 @@ def test_the_local_status_shows_what_the_worker_app_needs() -> None:
         "code_expires_in": 300,
         "gpu": {"available": True, "name": "RTX 4070", "vram_total_mb": 12282},
         "models": [],
+        "tasks": [
+            {"name": "speech", "available": True, "reason": None},
+            {"name": "speakers", "available": False, "reason": None},
+            {"name": "translation", "available": False, "reason": None},
+        ],
+    }
+
+
+def test_the_local_status_says_why_a_task_is_missing() -> None:
+    tasks = [
+        WorkerTask("speech", True),
+        WorkerTask("speakers", False, MISSING_HF_TOKEN),
+        WorkerTask("translation", True),
+    ]
+    app = create_worker_app(
+        TOKEN,
+        gpu_info=lambda: GpuInfo(False),
+        speech=SpeechService(lambda: LoadedModel(None, "")),  # type: ignore[arg-type]
+        tasks=tasks,
+    )
+
+    body = TestClient(app, client=("127.0.0.1", 50000)).get("/local/status").json()
+
+    assert body["tasks"][1] == {
+        "name": "speakers",
+        "available": False,
+        "reason": "missing_hf_token",
     }
 
 

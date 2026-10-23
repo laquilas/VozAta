@@ -99,4 +99,28 @@
   <data name="WorkerTag_Failed" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="WorkerTasks" xml:space="preserve">
+    <value>Tasks for the other PCs</value>
+  </data>
+  <data name="WorkerTask_speech" xml:space="preserve">
+    <value>Speech recognition</value>
+  </data>
+  <data name="WorkerTask_speakers" xml:space="preserve">
+    <value>Speaker identification</value>
+  </data>
+  <data name="WorkerTask_translation" xml:space="preserve">
+    <value>Translation</value>
+  </data>
+  <data name="WorkerTaskOffered" xml:space="preserve">
+    <value>Offered</value>
+  </data>
+  <data name="WorkerTaskNeedsToken" xml:space="preserve">
+    <value>Needs a Hugging Face token: add HF_TOKEN=… to {0}, then stop and start the worker.</value>
+  </data>
+  <data name="WorkerTaskNotInEdition" xml:space="preserve">
+    <value>Not included in this installation: install the speakers edition of VozAta on this PC.</value>
+  </data>
+  <data name="WorkerTaskNotOffered" xml:space="preserve">
+    <value>Not offered</value>
+  </data>
 </root>

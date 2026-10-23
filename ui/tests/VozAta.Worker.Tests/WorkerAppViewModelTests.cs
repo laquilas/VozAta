@@ -46,6 +46,74 @@ public sealed class WorkerAppViewModelTests
     }
 
     [Fact]
+    public async Task The_tasks_say_what_is_offered_and_why_one_is_missing()
+    {
+        _status.Answer = Status with
+        {
+            Tasks =
+            [
+                new WorkerTaskStatus("speech", true, null),
+                new WorkerTaskStatus("speakers", false, "missing_hf_token"),
+                new WorkerTaskStatus("translation", false, "missing_extra"),
+            ],
+        };
+        var app = Create();
+        app.StartCommand.Execute(null);
+
+        await app.RefreshAsync();
+
+        var env = @"C:\Users\me\AppData\Roaming\VozAta\worker\.env";
+        Assert.Equal(
+            [
+                new WorkerTaskRow(_texts["WorkerTask_speech"], true, _texts["WorkerTaskOffered"]),
+                new WorkerTaskRow(_texts["WorkerTask_speakers"], false, _texts.Format("WorkerTaskNeedsToken", env)),
+                new WorkerTaskRow(_texts["WorkerTask_translation"], false, _texts["WorkerTaskNotInEdition"]),
+            ],
+            app.Tasks);
+        Assert.True(app.HasTasks);
+    }
+
+    [Fact]
+    public async Task A_task_missing_for_an_unknown_reason_is_just_not_offered()
+    {
+        _status.Answer = Status with { Tasks = [new WorkerTaskStatus("speakers", false, null)] };
+        var app = Create();
+        app.StartCommand.Execute(null);
+
+        await app.RefreshAsync();
+        await app.RefreshAsync(); // the same answer again: the rows stay
+
+        Assert.Equal([new WorkerTaskRow(_texts["WorkerTask_speakers"], false, _texts["WorkerTaskNotOffered"])], app.Tasks);
+    }
+
+    [Fact]
+    public async Task An_older_worker_without_tasks_shows_no_task_card()
+    {
+        _status.Answer = Status; // no `tasks` in /local/status (before phase 51)
+        var app = Create();
+        app.StartCommand.Execute(null);
+
+        await app.RefreshAsync();
+
+        Assert.Empty(app.Tasks);
+        Assert.False(app.HasTasks);
+    }
+
+    [Fact]
+    public async Task Stopping_clears_the_tasks()
+    {
+        _status.Answer = Status with { Tasks = [new WorkerTaskStatus("speech", true, null)] };
+        var app = Create();
+        app.StartCommand.Execute(null);
+        await app.RefreshAsync();
+
+        app.StopCommand.Execute(null);
+
+        Assert.Empty(app.Tasks);
+        Assert.False(app.HasTasks);
+    }
+
+    [Fact]
     public async Task A_worker_without_gpu_model_or_token_says_so()
     {
         _status.Answer = Status with { Gpu = new WorkerGpu(false, null), Models = [], Token = null, PairingCode = null, CodeExpiresIn = null };

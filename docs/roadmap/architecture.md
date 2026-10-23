@@ -875,7 +875,11 @@ only validator.
   (`python -m vozata.diarization.child`, request with the token on stdin, turns in a temp JSON
   file). `torch` and `ctranslate2` each bundle CUDA/cuDNN, so they never share a process, and
   the child's exit frees the VRAM before the minutes. `torch`/`pyannote` are imported lazily:
-  the engine works without the extra. The installer (13) does not bundle it.
+  the engine works without the extra. The standard installer (13) does not bundle it; the
+  **speakers edition** (51, `build.ps1 -Speakers`, `VozAta-Setup-<v>-speakers.exe`) does, and
+  every build bundles the `translation` extra. In the packaged build `sys.executable` is
+  `vozata-engine.exe`, which runs `-m <module>` itself (`vozata/frozen.py`, called from
+  `packaging/engine_main.py`), so the child command is the same.
 - `python -m vozata diarize <session_dir> [--minutes]` diarizes a stored session (ignores
   `DIARIZATION_ENABLED`) and optionally regenerates its minutes.
 - `python -m vozata transcribe <id | session_dir>` transcribes, from the stored audio, whatever a

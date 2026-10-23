@@ -66,6 +66,7 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     commands.add_parser("serve", help=t("cli.help.serve"))
     worker = commands.add_parser("worker", help=t("cli.help.worker"))
     worker.add_argument("--check", action="store_true", help=t("cli.help.worker_check"))
+    worker.add_argument("--json", action="store_true", help=t("cli.help.worker_json"))
     minutes = commands.add_parser("minutes", help=t("cli.help.minutes"))
     minutes.add_argument("session_dir", type=Path, help=t("cli.help.session_dir"))
     diarize = commands.add_parser("diarize", help=t("cli.help.diarize"))
@@ -113,6 +114,8 @@ def main(
                 _uvicorn_run,
                 env_file=Path(".env"),
                 check=args.check,
+                json_output=args.json,
+                tasks=bootstrap.build_worker_tasks,
             )
         if args.command in ("minutes", "diarize"):
             open_folder = functools.partial(bootstrap.open_session_folder, settings)

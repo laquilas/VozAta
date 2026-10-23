@@ -5,6 +5,9 @@ using VozAta.Worker.Services;
 
 namespace VozAta.Worker.ViewModels;
 
+/// <summary>A row of the Tasks card (phase 51): "Speaker identification", offered or why not.</summary>
+public sealed record WorkerTaskRow(string Name, bool Offered, string Detail);
+
 public enum WorkerState
 {
     Stopped,
@@ -48,6 +51,12 @@ public sealed partial class WorkerAppViewModel : ObservableObject
 
     /// <summary>One address per network of this PC, e.g. <c>http://192.168.0.20:8766</c>.</summary>
     public ObservableCollection<string> Addresses { get; } = [];
+
+    /// <summary>What the worker offers to the other PCs, and why a task is missing (phase 51).</summary>
+    public ObservableCollection<WorkerTaskRow> Tasks { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasTasks { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText), nameof(StateTag), nameof(IsRunning), nameof(IsFailed))]
@@ -200,11 +209,40 @@ public sealed partial class WorkerAppViewModel : ObservableObject
                 Addresses.Add(url);
             }
         }
+
+        var rows = (status.Tasks ?? []).Select(Row).ToList();
+        if (!rows.SequenceEqual(Tasks))
+        {
+            Tasks.Clear();
+            foreach (var row in rows)
+            {
+                Tasks.Add(row);
+            }
+        }
+
+        HasTasks = Tasks.Count > 0;
     }
+
+    private WorkerTaskRow Row(WorkerTaskStatus task)
+    {
+        var detail = (task.Available, task.Reason) switch
+        {
+            (true, _) => T["WorkerTaskOffered"],
+            (false, "missing_hf_token") => T.Format("WorkerTaskNeedsToken", EnvFile()),
+            (false, "missing_extra") => T["WorkerTaskNotInEdition"],
+            _ => T["WorkerTaskNotOffered"],
+        };
+        return new WorkerTaskRow(T[$"WorkerTask_{task.Name}"], task.Available, detail);
+    }
+
+    /// <summary>The worker's <c>.env</c>, next to its log.</summary>
+    private string EnvFile() => Path.Combine(Path.GetDirectoryName(_process.LogPath) ?? "", ".env");
 
     private void Clear()
     {
         Name = Version = Gpu = Model = PairingCode = CodeExpires = Token = null;
         Addresses.Clear();
+        Tasks.Clear();
+        HasTasks = false;
     }
 }

@@ -21,6 +21,7 @@ from vozata.worker.pairing import PairingCodes, PairResult
 from vozata.worker.speaker_routes import add_speaker_routes
 from vozata.worker.speakers import DiarizeJobs, EmbedService
 from vozata.worker.speech import SpeechService
+from vozata.worker.tasks import WorkerTask
 from vozata.worker.translation import TranslateService, add_translation_route
 
 CAPABILITIES = ["speech"]
@@ -56,11 +57,14 @@ def create_worker_app(
     diarize_jobs: DiarizeJobs | None = None,
     embedder: EmbedService | None = None,
     translator: TranslateService | None = None,
+    tasks: Sequence[WorkerTask] | None = None,
 ) -> FastAPI:
     """`/health` and `/transcribe` need `token` (None: no check, for a worker on loopback);
-    `/pair` needs the pairing code instead, and `/local/status` answers this PC only."""
+    `/pair` needs the pairing code instead, and `/local/status` answers this PC only. `tasks`
+    says why a task is missing (phase 51); without it only the services present are known."""
     identity = identity or WorkerIdentity(None, "worker", 8766)
     pairing = pairing or PairingCodes()
+    task_list = list(tasks) if tasks is not None else _present(diarize_jobs, translator)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -154,6 +158,7 @@ def create_worker_app(
                 "code_expires_in": round(expires_in) if token else None,
                 "gpu": gpu(),
                 "models": speech.models(),
+                "tasks": [task.to_dict() for task in task_list],
             }
         )
 
@@ -161,6 +166,16 @@ def create_worker_app(
     add_translation_route(guarded, translator)  # phase 46
     app.include_router(guarded)
     return app
+
+
+def _present(
+    diarize_jobs: DiarizeJobs | None, translator: TranslateService | None
+) -> list[WorkerTask]:
+    return [
+        WorkerTask("speech", True),
+        WorkerTask("speakers", diarize_jobs is not None),
+        WorkerTask("translation", translator is not None),
+    ]
 
 
 def _error(status: int, code: str) -> JSONResponse:
