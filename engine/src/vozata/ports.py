@@ -24,6 +24,7 @@ from vozata.domain import (
     ImportedSession,
     ModelKind,
     PartialMinutes,
+    RequestEntry,
     SearchHit,
     SessionStatus,
     SpeakerTurn,
@@ -466,6 +467,14 @@ class SessionRepository(Protocol):
 
     def write_partial_minutes(self, session_id: str, items: Sequence[PartialMinutes]) -> None:
         """Replace the partial minutes atomically."""
+        ...
+
+    def read_requests(self, session_id: str) -> list[RequestEntry]:
+        """The meeting's request history, oldest first; empty when none (phase 59)."""
+        ...
+
+    def write_requests(self, session_id: str, items: Sequence[RequestEntry]) -> None:
+        """Replace the request history atomically."""
         ...
 
     def folder(self, session_id: str) -> Path | None:

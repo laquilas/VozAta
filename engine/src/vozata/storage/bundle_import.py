@@ -26,6 +26,7 @@ FOLDER_FILES = frozenset(
         "minutes.md",
         "action_items.json",
         "partial_minutes.json",
+        "requests.json",
         "mic.wav",
         "system.wav",
         "mixed.wav",

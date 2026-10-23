@@ -22,6 +22,7 @@ from vozata.domain import (
     ActionItem,
     Channel,
     PartialMinutes,
+    RequestEntry,
     TranscriptSegment,
     Translation,
     Word,
@@ -322,6 +323,41 @@ class RepositoryContract:
 
         assert repository.read_partial_minutes(session_id) == []
 
+    def test_requests_round_trip_in_order(self, repository: SessionRepository) -> None:
+        session_id = self._session(repository)
+        voice = RequestEntry(
+            "r1",
+            "2026-10-23T10:05:00-03:00",
+            312.5,
+            "minutes_so_far",
+            "voice",
+            "gere a ata",
+            "done",
+            "p1",
+            None,
+            "2026-10-23T10:05:40-03:00",
+        )
+        failed = RequestEntry(
+            "r2",
+            "2026-10-23T11:00:00-03:00",
+            None,
+            "action_items",
+            "app",
+            "",
+            "failed",
+            None,
+            "llm_unreachable",
+        )
+        assert repository.read_requests(session_id) == []
+
+        repository.write_requests(session_id, [voice, failed])
+        assert repository.read_requests(session_id) == [voice, failed]
+        repository.write_requests(session_id, [failed])
+        assert repository.read_requests(session_id) == [failed]
+        repository.write_requests(session_id, [])
+
+        assert repository.read_requests(session_id) == []
+
     # meeting title (phase 35): a metadata field every backend keeps
 
     @pytest.mark.parametrize("title", ["Weekly sync", "Reunião — planejamento 2027", None])
@@ -427,6 +463,11 @@ class RepositoryContract:
             ],
         )
 
+        repository.write_requests(
+            session_id,
+            [RequestEntry("r1", "2026-10-23T10:05:00-03:00", 1.0, "ask", "voice", "?", "done")],
+        )
+
         repository.delete(session_id)
 
         assert repository.list_sessions() == [kept]
@@ -440,6 +481,7 @@ class RepositoryContract:
         assert repository.speaker_count(reused) == 0
         assert repository.read_action_items(reused) == []
         assert repository.read_partial_minutes(reused) == []
+        assert repository.read_requests(reused) == []
 
     @pytest.mark.parametrize("session_id", ["20991231_000000", "../etc", ""])
     def test_deleting_an_unknown_session_is_not_found(

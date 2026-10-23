@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from vozata.domain import ActionItem, PartialMinutes, TranscriptSegment, Translation
+from vozata.domain import ActionItem, PartialMinutes, RequestEntry, TranscriptSegment, Translation
 from vozata.labels import SpeakerLabeler
 from vozata.output.sinks import CompositeSink, JsonlSink, MarkdownSink
 from vozata.ports import (
@@ -24,7 +24,7 @@ from vozata.ports import (
     TranscriptSink,
     TranslationWriter,
 )
-from vozata.storage import action_items, partial_minutes
+from vozata.storage import action_items, partial_minutes, requests
 from vozata.storage.files.layout import SessionPaths
 from vozata.storage.files.repair import repair_transcript
 from vozata.storage.files.translations import TranslationsFile, read_translations
@@ -140,6 +140,12 @@ class FileSessionRepository:
 
     def write_partial_minutes(self, session_id: str, items: Sequence[PartialMinutes]) -> None:
         partial_minutes.write_partial_minutes(self.paths(session_id), items)
+
+    def read_requests(self, session_id: str) -> list[RequestEntry]:
+        return requests.read_requests(self.paths(session_id))
+
+    def write_requests(self, session_id: str, items: Sequence[RequestEntry]) -> None:
+        requests.write_requests(self.paths(session_id), items)
 
     def folder(self, session_id: str) -> Path | None:
         """The folder as configured (relative when `OUTPUT_DIR` is)."""

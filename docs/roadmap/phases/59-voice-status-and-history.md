@@ -65,12 +65,12 @@ A global history across meetings; spoken (text-to-speech) answers.
 - **Branch:** `feature/59-voice-status-and-history`
 - **Status:** in progress
 - **Updated:** 2026-10-23 19:40
-- **Next step:** `RequestEntry` in `domain.py` and its storage (files + SQLite) with tests.
+- **Next step:** `api/request_log.py` (begin / update, `request_updated`) and `GET /sessions/{id}/requests`.
 
 ### Steps
 
 - [x] Phase start (phase file, plan, README)
-- [ ] Engine: `RequestEntry` + storage (files, SQLite migration, bundle)
+- [x] Engine: `RequestEntry` + storage (files, SQLite migration, bundle)
 - [ ] Engine: `RequestLog`, `request_updated`, `GET /sessions/{id}/requests`
 - [ ] Engine: hooks (voice, partial minutes, ask, minutes again, action items)
 - [ ] Engine: detector command second + repeats; voice minutes end at the command
