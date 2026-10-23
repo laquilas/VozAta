@@ -26,6 +26,14 @@ class WorkerRequestError(RuntimeError):
     """The worker answered, with an error (phase 45: a speaker request it could not run)."""
 
 
+class WorkerTaskUnavailableError(WorkerUnreachableError):
+    """The worker answered but does not offer the task (no `HF_TOKEN` or no `translation` extra
+    there): callers fall back to this PC exactly as when it does not answer."""
+
+
+UNAVAILABLE_CODES = ("worker_speakers_unavailable", "worker_translation_unavailable")
+
+
 class WorkerClient:
     """One client per transcriber. The first request is a short `GET /health`, so a worker that is
     off raises `WorkerUnreachableError` in seconds; a refused token is a `ConfigError` on
@@ -138,6 +146,13 @@ class WorkerClient:
         )
         return np.asarray(reply["vector"], dtype=np.float32)
 
+    def translate(self, text: str, source: str, target: str) -> str:
+        """Phase 46: one committed segment through the worker's opus-mt."""
+        reply = self._call(
+            "POST", "/translate", json={"text": text, "source": source, "target": target}
+        )
+        return str(reply["text"])
+
     def _call(self, method: str, path: str, **options: Any) -> dict[str, Any]:
         """One request: no answer is `WorkerUnreachableError`, a refused token a `ConfigError`,
         another HTTP error `WorkerRequestError` with the worker's code."""
@@ -151,6 +166,8 @@ class WorkerClient:
                 code = str(response.json()["error"]["code"])
             except (ValueError, KeyError, TypeError):
                 code = f"HTTP {response.status_code}"
+            if code in UNAVAILABLE_CODES:
+                raise WorkerTaskUnavailableError(self.host, code)
             raise WorkerRequestError(f"The VozAta worker at {self.host} answered {code}")
         return response.json()
 

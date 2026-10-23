@@ -143,6 +143,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>The last recovery step started by an event (tests await it).</summary>
     public Task RecoveryRefresh { get; private set; } = Task.CompletedTask;
 
+    /// <summary>The health check run after a <c>worker_fallback</c> (phase 46): the sidebar shows this PC.</summary>
+    public Task HealthRefresh { get; private set; } = Task.CompletedTask;
+
     /// <summary>The last history reload started by an event (tests await it).</summary>
     public Task HistoryRefresh { get; private set; } = Task.CompletedTask;
 
@@ -494,6 +497,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 History.OnError(error.SessionId, error.Code, error.Message);
                 Recorder.MinutesSoFar.OnError(error.SessionId, error.Code);
                 RecoveryRefresh = Recovery.OnErrorAsync(error);
+                if (error.Code == "worker_fallback")
+                {
+                    HealthRefresh = Health.LoadAsync(_stop.Token);
+                }
+
                 break;
             default:
                 Recorder.Handle(engineEvent); // segments, partials, levels, languages, model loading

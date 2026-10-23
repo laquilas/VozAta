@@ -17,7 +17,19 @@ public sealed record EngineHealth(
     GpuStatus Gpu,
     SttStatus Stt,
     LlmStatus Llm,
-    StorageStatus? Storage = null);
+    StorageStatus? Storage = null,
+    WorkerHealth? Worker = null);
+
+/// <summary>
+/// The VozAta worker of <c>WORKER_URL</c> (phase 44); <c>Tasks</c> (phase 46) says where
+/// <c>speech</c>, <c>speakers</c> and <c>translation</c> run: <c>worker</c>, <c>local</c> or
+/// <c>fallback</c> (the worker is chosen but does not answer).
+/// </summary>
+public sealed record WorkerHealth(
+    string Url,
+    bool Reachable,
+    string? Version = null,
+    IReadOnlyDictionary<string, string>? Tasks = null);
 
 public sealed record AudioDevice(int Id, string Name, int SampleRate, int Channels)
 {

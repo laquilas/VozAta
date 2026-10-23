@@ -140,6 +140,7 @@ from vozata.worker_client.notices import LoggedNotices, ObserverNotices
 from vozata.worker_client.speakers import WorkerDiarizer, WorkerEmbedder
 from vozata.worker_client.status import worker_status
 from vozata.worker_client.transcriber import WorkerTranscriber
+from vozata.worker_client.translator import WorkerTranslator
 
 DEFAULT_VOCABULARY_FILE = "vocabulary.txt"  # next to `.env` when VOCABULARY_FILE is empty
 DEFAULT_VOICE_COMMANDS_FILE = "voice_commands.json"  # phase 50, next to `.env` as well
@@ -157,6 +158,7 @@ TRANSCRIBERS: dict[str, Callable[[Settings, ModelDownloader], Transcriber]] = {
 WORKER = "vozata_worker"
 LOCAL_SPEECH = "faster_whisper"  # what speech falls back to when the worker does not answer
 LOCAL_SPEAKERS = "pyannote"  # phase 45: what speaker identification falls back to
+LOCAL_TRANSLATION = "opus_mt"  # phase 46: what live translation falls back to
 DIARIZERS: dict[str, Callable[[Settings, ModelDownloader], Diarizer]] = {
     "pyannote": pyannote_from_settings,  # child process: keeps torch away from ctranslate2
     # phase 45: pyannote on the worker PC, this PC's when it does not answer
@@ -176,6 +178,8 @@ TRANSLATORS: dict[str, Callable[[Settings, ModelDownloader], Translator]] = {
     "opus_mt": lambda settings, downloader: opus_mt.from_settings(
         settings.translation_model_dir, downloader
     ),
+    # phase 46: opus-mt on the worker PC, this PC's when it does not answer
+    "vozata_worker": lambda settings, downloader: build_worker_translator(settings, downloader),
 }
 
 
@@ -362,6 +366,22 @@ def build_worker_embedder(
     return local() if client is None else WorkerEmbedder(client, local, notices)
 
 
+def build_worker_translator(
+    settings: Settings,
+    downloader: ModelDownloader,
+    notices: FallbackNotices | None = None,
+    relocate: Callable[[Settings], str | None] | None = None,
+) -> Translator:
+    """Phase 46: live translation on the worker, else the local opus-mt with a notice."""
+    notices = notices or LoggedNotices()
+
+    def local() -> Translator:
+        return TRANSLATORS[LOCAL_TRANSLATION](settings, downloader)
+
+    client = _reach_worker(settings, "translation", notices, relocate)
+    return local() if client is None else WorkerTranslator(client, local, notices)
+
+
 def _probed_worker(url: str, token: str | None) -> WorkerClient:
     client = WorkerClient(url, token)
     try:
@@ -398,6 +418,7 @@ def build_worker_app(
     from vozata.worker.local import WorkerIdentity
     from vozata.worker.speakers import DiarizeJobs, EmbedService
     from vozata.worker.speech import LoadedModel, SpeechService
+    from vozata.worker.translation import TranslateService
 
     def whisper() -> LoadedModel:
         transcriber = FasterWhisperTranscriber(settings, _downloader(settings, None))
@@ -438,6 +459,12 @@ def build_worker_app(
             lambda: EMBEDDERS[LOCAL_SPEAKERS](settings, _downloader(settings, None))
         )
         if settings.hf_token
+        else None,
+        # phase 46: translation needs the `translation` extra on the worker PC
+        translator=TranslateService(
+            lambda: TRANSLATORS[LOCAL_TRANSLATION](settings, _downloader(settings, None))
+        )
+        if opus_mt.has_extra()
         else None,
     )
 
@@ -735,6 +762,7 @@ def build_translator_factory(
     settings: Settings,
     translate_to: TranslationTarget | None = None,
     downloader: ModelDownloader | None = None,
+    notices: FallbackNotices | None = None,
 ) -> tuple[str | None, Callable[[], Translator] | None]:
     """The live translation target and translator factory (phase 29); `(None, None)` when off.
 
@@ -745,6 +773,10 @@ def build_translator_factory(
     if target is TranslationTarget.OFF:
         return None, None
     factory = _provider(TRANSLATORS, "TRANSLATION_PROVIDER", settings.translation_provider)
+    if settings.translation_provider == WORKER:  # phase 46: a fallback is told through `notices`
+        return target.value, functools.partial(
+            build_worker_translator, settings, _downloader(settings, downloader), notices
+        )
     return target.value, functools.partial(factory, settings, _downloader(settings, downloader))
 
 
@@ -809,7 +841,7 @@ def build_session(
     )
     diarizer_factory = build_diarizer_factory(settings, downloader, notices)
     translation_target, translator_factory = build_translator_factory(
-        settings, translate_to, downloader
+        settings, translate_to, downloader, notices
     )
     try:
         audio = PortAudioThread()

@@ -1557,4 +1557,25 @@
   <data name="VoiceAnswerTitle" xml:space="preserve">
     <value>VozAta responde</value>
   </data>
+  <data name="WorkerTasksTitle" xml:space="preserve">
+    <value>Usar el worker para</value>
+  </data>
+  <data name="WorkerTasksHelp" xml:space="preserve">
+    <value>Cada tarea marcada se ejecuta en el worker; si el worker no responde, este PC la hace y una notificación lo avisa. Guarda para aplicar.</value>
+  </data>
+  <data name="WorkerUseForSpeech" xml:space="preserve">
+    <value>Reconocimiento de voz (se aplica al reiniciar el motor)</value>
+  </data>
+  <data name="WorkerUseForSpeakers" xml:space="preserve">
+    <value>Identificación de hablantes (necesita el token de Hugging Face en el worker)</value>
+  </data>
+  <data name="WorkerUseForTranslation" xml:space="preserve">
+    <value>Traducción en vivo</value>
+  </data>
+  <data name="WorkerStatusOn" xml:space="preserve">
+    <value>Worker: {0}</value>
+  </data>
+  <data name="WorkerStatusOff" xml:space="preserve">
+    <value>Este PC (worker apagado)</value>
+  </data>
 </root>

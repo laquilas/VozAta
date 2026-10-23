@@ -25,6 +25,11 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
 
     public bool HasCommands => Commands is not null;
 
+    /// <summary>Use the worker for speech, speakers, translation (phase 46): the Worker group only.</summary>
+    public WorkerTasksViewModel? Tasks { get; set; }
+
+    public bool HasTasks => Tasks is not null;
+
     [ObservableProperty]
     public partial string Title { get; private set; } = id;
 
@@ -114,6 +119,7 @@ public sealed partial class SettingsViewModel(
         {
             var settings = await client.GetSettingsAsync(cancellationToken);
             Groups.Clear();
+            var sections = new List<SettingGroupViewModel>();
             foreach (var group in settings.Schema.GroupBy(item => item.Group).OrderBy(group => Order(group.Key)))
             {
                 var editors = group
@@ -144,6 +150,17 @@ public sealed partial class SettingsViewModel(
                     await section.Commands.LoadAsync(cancellationToken);
                 }
                 section.RefreshTexts(localization);
+                sections.Add(section);
+            }
+
+            // the provider keys sit in other groups: the switches are made once every editor exists
+            if (sections.FirstOrDefault(section => section.Id == "worker") is { } worker)
+            {
+                worker.Tasks = new WorkerTasksViewModel(sections.SelectMany(section => section.Editors));
+            }
+
+            foreach (var section in sections)
+            {
                 Groups.Add(section);
             }
 

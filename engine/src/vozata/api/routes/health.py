@@ -25,6 +25,7 @@ from vozata.transcription.openai_compatible import remote_host
 from vozata.worker_client.status import WorkerStatus
 
 router = APIRouter(tags=["health"])
+WORKER = "vozata_worker"
 
 
 @router.get("/health", response_model=Health)
@@ -47,7 +48,10 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
         ),
         storage=_storage(c),
         worker=WorkerHealth(
-            url=current.worker_url, reachable=worker.reachable, version=worker.version
+            url=current.worker_url,
+            reachable=worker.reachable,
+            version=worker.version,
+            tasks=_tasks(settings, current, worker.reachable),
         )
         if worker is not None and current.worker_url
         else None,
@@ -71,10 +75,24 @@ def _storage(c: ApiContainer) -> StorageStatus:
     )
 
 
+def _tasks(settings: Settings, current: Settings, reachable: bool) -> dict[str, str]:
+    """Phase 46: where each task runs; speech providers apply on restart (`settings`), the others
+    with the next recording (`current`)."""
+    providers = {
+        "speech": settings.stt_provider,
+        "speakers": current.diarization_provider,
+        "translation": current.translation_provider,
+    }
+    return {
+        task: "local" if provider != WORKER else "worker" if reachable else "fallback"
+        for task, provider in providers.items()
+    }
+
+
 def _stt(settings: Settings, worker: WorkerStatus | None) -> SttStatus:
     """Local Whisper reports its model and device; a remote API or the VozAta worker its model
     and host (privacy: audio leaves this PC)."""
-    if settings.stt_provider == "vozata_worker":
+    if settings.stt_provider == WORKER:
         url = settings.worker_url or ""
         model = worker.models[0] if worker is not None and worker.models else ""
         return SttStatus(

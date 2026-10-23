@@ -826,7 +826,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `LIVE_PARTIALS` | `true` | 28 | send interim text while speaking |
 | `PARTIAL_INTERVAL_SECONDS` | `1.5` | 28 | minimum time between partials per channel |
 | `TRANSLATE_TO` | `off` | 29 | live translation target: `off` \| `en` \| `pt` \| `es` (empty = off); `POST /sessions` `translate_to` overrides it per session |
-| `TRANSLATION_PROVIDER` | `opus_mt` | 29 | `TRANSLATORS` registry key (§14) |
+| `TRANSLATION_PROVIDER` | `opus_mt` | 29 | `TRANSLATORS` registry key (§14): `opus_mt` / `vozata_worker` (46: opus-mt on the worker; this PC's when it does not answer) |
 | `TRANSLATION_MODEL_DIR` | *(empty)* | 29 | folder holding `opus-mt-ROMANCE-en/` and `opus-mt-en-ROMANCE/`; empty = download into the Hugging Face cache on first use |
 | `CONTEXT_PROMPT_CHARS` | `200` | 19 | rolling context prompt length, 0–1000 (0 = off) |
 

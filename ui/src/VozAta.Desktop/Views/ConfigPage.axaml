@@ -336,6 +336,21 @@
                                    IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
                       </StackPanel>
                     </Border>
+                    <!-- Worker group (phase 46): which tasks use the worker -->
+                    <Border IsVisible="{Binding HasTasks}" Margin="0,0,0,8">
+                      <StackPanel DataContext="{Binding Tasks}" x:DataType="vm:WorkerTasksViewModel" Spacing="6">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerTasksTitle]}" />
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerTasksHelp]}" />
+                        <CheckBox IsChecked="{Binding UseForSpeech}" IsVisible="{Binding HasSpeech}"
+                                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerUseForSpeech]}" />
+                        <CheckBox IsChecked="{Binding UseForSpeakers}" IsVisible="{Binding HasSpeakers}"
+                                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerUseForSpeakers]}" />
+                        <CheckBox IsChecked="{Binding UseForTranslation}" IsVisible="{Binding HasTranslation}"
+                                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerUseForTranslation]}" />
+                      </StackPanel>
+                    </Border>
                     <!-- Worker group (phase 47): find a worker on the network and pair by its code -->
                     <Border IsVisible="{Binding HasPairing}" Margin="0,0,0,8">
                       <StackPanel DataContext="{Binding Pairing}" x:DataType="vm:WorkerPairingViewModel" Spacing="8">

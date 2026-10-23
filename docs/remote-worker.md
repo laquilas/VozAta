@@ -48,12 +48,15 @@ Never expose the worker to the internet (no router port forwarding).
 2. Type the code shown in VozAta Worker on the GPU PC next to it and press **Pair**. The address,
    the token and the worker's id are saved.
 3. Press **Test** next to the address. A success message names the worker's version and GPU.
-4. Open **Config → Transcription** and set the speech provider (`STT_PROVIDER`) to
-   `vozata_worker`. Restart the engine when asked.
+4. Under **Use the worker for**, tick what the worker should do: **Speech recognition**,
+   **Speaker identification**, **Live translation**. Press **Save**; speech asks for an engine
+   restart, the others apply from the next recording.
 
 Five wrong codes lock pairing on the worker for a minute. The settings live in
-`%APPDATA%\VozAta\.env` as `WORKER_URL`, `WORKER_TOKEN`, `WORKER_ID` and `STT_PROVIDER`. The
-**Status** of the app (`GET /health`) shows the worker host as the speech device.
+`%APPDATA%\VozAta\.env` as `WORKER_URL`, `WORKER_TOKEN`, `WORKER_ID` and the providers the
+switches set (`STT_PROVIDER`, `DIARIZATION_PROVIDER`, `TRANSLATION_PROVIDER` = `vozata_worker`).
+The sidebar shows **Worker: <host>** under the engine status while the worker does the work, and
+**This PC (worker off)** when a chosen task fell back to this PC.
 
 ### Without discovery
 
@@ -75,11 +78,18 @@ labels are on.
 
 1. On the GPU PC, put your Hugging Face token in `%APPDATA%\VozAta\worker\.env` as
    `HF_TOKEN=...` (the same token and model terms as on this PC) and restart VozAta Worker.
-2. On this computer, set **Config → Speakers → Speaker provider** (`DIARIZATION_PROVIDER`) to
-   `vozata_worker`. This computer then needs no Hugging Face token of its own, unless the worker is
+2. On this computer, tick **Speaker identification** under **Config → Worker → Use the worker
+   for**. This computer then needs no Hugging Face token of its own, unless the worker is
    off: then its own pyannote runs, which needs one.
 
 When the worker does not answer, a notification says "speaker identification runs on this PC".
+
+## Live translation on the worker
+
+Tick **Live translation** under **Use the worker for**. The worker translates each line with
+opus-mt (on its CPU, about 300 MB of memory); it needs the `translation` extra there
+(`pip install -e ".[translation]"` when it runs from the sources). A worker without it does not
+offer translation, and this PC translates instead.
 
 ## VRAM on the GPU PC
 
@@ -90,6 +100,7 @@ minutes, both share its GPU:
 |-------|-------------|
 | Whisper `large-v3-turbo` (`int8_float16`) | 1.5–2 GB |
 | pyannote (diarization, only while it runs; the embedder stays loaded) | about 1 GB |
+| opus-mt (translation) | none: it runs on the CPU (about 300 MB of RAM) |
 | Ollama `qwen2.5:7b` (Q4) | 5–6 GB |
 
 An 8 GB GPU fits both; with less, use a smaller Ollama model or `OLLAMA_KEEP_ALIVE=0` (the default)

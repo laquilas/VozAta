@@ -52,6 +52,9 @@ class WorkerHealth(BaseModel):
     url: str
     reachable: bool
     version: str | None = None
+    # phase 46: where `speech`, `speakers` and `translation` run now: `worker`, `local` (another
+    # provider is chosen) or `fallback` (the worker is chosen but does not answer: this PC runs it)
+    tasks: dict[str, Literal["worker", "local", "fallback"]] = {}
 
 
 class FoundWorkerOut(BaseModel):

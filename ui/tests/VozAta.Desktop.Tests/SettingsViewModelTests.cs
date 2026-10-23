@@ -260,4 +260,51 @@ public sealed class SettingsViewModelTests
         Assert.Equal("stereo", Editor(settings, "MIX_MODE").Choices[1].ToString());
         Assert.Equal("Portuguese", main.ToString());
     }
+
+    [Fact]
+    public async Task The_worker_switches_set_the_provider_keys()
+    {
+        Add("STT_PROVIDER", "string", "openai_compatible", "transcription", applies: "restart");
+        Add("DIARIZATION_PROVIDER", "string", "vozata_worker", "speakers");
+        Add("TRANSLATION_PROVIDER", "string", "opus_mt", "transcription");
+        Add("WORKER_URL", "url", "http://192.168.0.30:8766", "worker");
+        var settings = await LoadedAsync();
+        var tasks = settings.Groups.Single(group => group.Id == "worker").Tasks!;
+        Assert.Null(settings.Groups.Single(group => group.Id == "general").Tasks);
+        Assert.Equal((false, true, false), (tasks.UseForSpeech, tasks.UseForSpeakers, tasks.UseForTranslation));
+
+        tasks.UseForSpeech = true;
+        tasks.UseForTranslation = true;
+        tasks.UseForSpeakers = true; // already on: unchanged
+
+        Assert.Equal("vozata_worker", Editor(settings, "STT_PROVIDER").TextValue);
+        Assert.Equal("vozata_worker", Editor(settings, "TRANSLATION_PROVIDER").TextValue);
+        Assert.False(Editor(settings, "DIARIZATION_PROVIDER").IsDirty);
+        Assert.True(settings.IsDirty);
+
+        tasks.UseForSpeech = false; // back to the provider it had
+        Assert.Equal("openai_compatible", Editor(settings, "STT_PROVIDER").TextValue);
+    }
+
+    [Fact]
+    public async Task Switching_the_worker_off_goes_back_to_the_default_provider_and_follows_edits()
+    {
+        _client.Schema.Add(new SettingSchema("DIARIZATION_PROVIDER", "string", JsonSerializer.SerializeToElement("pyannote"), null, false, "speakers"));
+        _client.SettingValues["DIARIZATION_PROVIDER"] = "vozata_worker";
+        Add("WORKER_URL", "url", "http://192.168.0.30:8766", "worker");
+        var settings = await LoadedAsync();
+        var tasks = settings.Groups.Single(group => group.Id == "worker").Tasks!;
+        var changed = new List<string?>();
+        tasks.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        tasks.UseForSpeakers = false;
+        Assert.Equal("pyannote", Editor(settings, "DIARIZATION_PROVIDER").TextValue);
+
+        Editor(settings, "DIARIZATION_PROVIDER").TextValue = "vozata_worker"; // typed in its own group
+        Assert.True(tasks.UseForSpeakers);
+        Assert.Contains(nameof(WorkerTasksViewModel.UseForSpeakers), changed);
+        Assert.False(tasks.HasSpeech); // no such key: the switch is hidden
+        tasks.UseForSpeech = true; // and does nothing
+        Assert.False(tasks.UseForSpeech);
+    }
 }
