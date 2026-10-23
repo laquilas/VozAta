@@ -79,13 +79,13 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - **Branch:** `feature/52-two-pc-check`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** failing tests in `engine/tests/scripts/test_two_pc_check.py` for the scratch
-  `.env`, the synthetic WAV, the table and the discover / pair / health steps.
+- **Next step:** failing tests for `translate`, `diarize_cancel` and `preempt` in
+  `scripts/two_pc_check.py` (MockTransport, fake clock).
 
 ### Steps
 
 - [x] Implementation plan (`plans/52-two-pc-check.md`)
-- [ ] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
+- [x] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
 - [ ] Script: translate, diarize + cancel, pre-emption
 - [ ] Script runtime: scratch engine process, playback, command line
 - [ ] Checklist `docs/two-pc-check.md`
