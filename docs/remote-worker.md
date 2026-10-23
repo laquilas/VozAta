@@ -68,6 +68,19 @@ The worker is `vozata-engine.exe worker` in the `engine` folder of VozAta (`pyth
 worker` from the sources); `vozata-engine.exe worker --check` prints the version and the address
 without starting anything. The first start prints the token once.
 
+## Speaker identification on the worker
+
+The worker can also identify the speakers (pyannote): after a meeting, and live when live speaker
+labels are on.
+
+1. On the GPU PC, put your Hugging Face token in `%APPDATA%\VozAta\worker\.env` as
+   `HF_TOKEN=...` (the same token and model terms as on this PC) and restart VozAta Worker.
+2. On this computer, set **Config → Speakers → Speaker provider** (`DIARIZATION_PROVIDER`) to
+   `vozata_worker`. This computer then needs no Hugging Face token of its own, unless the worker is
+   off: then its own pyannote runs, which needs one.
+
+When the worker does not answer, a notification says "speaker identification runs on this PC".
+
 ## VRAM on the GPU PC
 
 The worker keeps Whisper loaded between meetings. When the same PC also runs Ollama for the
@@ -76,6 +89,7 @@ minutes, both share its GPU:
 | Model | VRAM, about |
 |-------|-------------|
 | Whisper `large-v3-turbo` (`int8_float16`) | 1.5–2 GB |
+| pyannote (diarization, only while it runs; the embedder stays loaded) | about 1 GB |
 | Ollama `qwen2.5:7b` (Q4) | 5–6 GB |
 
 An 8 GB GPU fits both; with less, use a smaller Ollama model or `OLLAMA_KEEP_ALIVE=0` (the default)

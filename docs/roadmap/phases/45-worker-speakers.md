@@ -46,10 +46,10 @@ fallback, gate.
 
 ## Acceptance criteria
 
-- [ ] With the worker, a meeting's speakers are identified after Stop and live, with no pyannote
+- [x] With the worker, a meeting's speakers are identified after Stop and live, with no pyannote
       on the laptop.
-- [ ] Cancelling the diarize step (a live recording takes priority) cancels the worker job.
-- [ ] Worker off → local pyannote runs and the notification names the host.
+- [x] Cancelling the diarize step (a live recording takes priority) cancels the worker job.
+- [x] Worker off → local pyannote runs and the notification names the host.
 
 ## Tests
 
@@ -65,3 +65,29 @@ Translation (phase 46); diarizing the microphone channel.
 > Start phase 45 (`docs/roadmap/phases/45-worker-speakers.md`) once phases 44 and 47–50 are merged
 > (order chosen by the user): read its
 > *Read first* files, write `plans/45-worker-speakers.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/45-worker-speakers`
+- **Status:** ready for PR
+- **Updated:** 2026-10-22
+- **Next step:** open the PR to `main`; then phase 46 (`docs/roadmap/phases/46-worker-translation.md`).
+
+### Steps
+
+- [x] Implementation plan (`plans/45-worker-speakers.md`)
+- [x] Worker `/diarize` jobs and `/embed`; engine providers with fallback; gate
+- [x] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- Order chosen by the user: after 47–50; GitHub Actions disabled, checks run locally; the user
+  asked to go on without stopping (2026-10-22).
+- Speakers on the worker need `HF_TOKEN` there; without it the worker answers 503 and does not list
+  `speakers` in its capabilities.
+- Manual check (2026-10-22): `vozata worker` on `127.0.0.1:8777` with this PC's `HF_TOKEN` listed
+  `["speech", "speakers"]`; the engine's `WorkerDiarizer` diarized the phase 44 TTS meeting (one
+  voice) through `/diarize` in 154 s (the child process and model loaded cold) — one speaker,
+  five turns; `WorkerEmbedder` returned 256-value embeddings in 8 s for two clips (same voice,
+  cosine 0.68). No fallback happened. Not checked by hand: a second PC, a cancel during a real job
+  (covered by tests).

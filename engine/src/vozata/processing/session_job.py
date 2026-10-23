@@ -67,8 +67,8 @@ _WEIGHTS = {
 
 def _gpu(kind: StepKind, usage: GpuUsage) -> bool:
     """Whether a finisher step runs on the local GPU (and is cancelled by a priority user)."""
-    if kind is StepKind.DIARIZE:
-        return usage.speakers
+    if kind is StepKind.DIARIZE:  # with the worker, gated too: its fallback runs pyannote here
+        return usage.speakers or usage.speakers_fallback
     return usage.llm if kind in (StepKind.MINUTES, StepKind.ACTION_ITEMS) else False
 
 

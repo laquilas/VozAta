@@ -261,3 +261,82 @@ def test_the_relocator_looks_for_the_paired_id(
     assert result == moved
     assert saved == ([moved] if moved else [])
     assert broadcasts == ([] if worker_id is None else [(8767, ["192.168.0.5"])])
+
+
+# Speakers on the worker (phase 45)
+
+
+class _LocalSpeakers:
+    def __init__(self, settings: Settings, downloader: object) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+@pytest.fixture
+def speakers(monkeypatch: pytest.MonkeyPatch, worker: type[_Client]) -> type[_Client]:
+    monkeypatch.setitem(bootstrap.DIARIZERS, "pyannote", _LocalSpeakers)
+    monkeypatch.setitem(bootstrap.EMBEDDERS, "pyannote", _LocalSpeakers)
+    return worker
+
+
+def _speaker_settings(tmp_path: Path, **overrides: object) -> Settings:
+    values = {"diarization_provider": "vozata_worker", "diarization_enabled": True}
+    values.update(overrides)
+    return _settings(tmp_path, **values)
+
+
+def test_speakers_run_on_a_reachable_worker(tmp_path: Path, speakers: type[_Client]) -> None:
+    from vozata.worker_client.speakers import WorkerDiarizer, WorkerEmbedder
+
+    settings = _speaker_settings(tmp_path, live_diarization_enabled=True)
+    notices = _Notices()
+
+    diarizer = bootstrap.build_diarizer_factory(settings, object(), notices)()  # type: ignore[arg-type,misc]
+    embedder = bootstrap.build_embedder_factory(settings, object(), notices)()  # type: ignore[arg-type,misc]
+
+    assert isinstance(diarizer, WorkerDiarizer) and isinstance(embedder, WorkerEmbedder)
+    assert notices.calls == []
+
+
+def test_speakers_fall_back_to_this_pc_with_a_notice(
+    tmp_path: Path, speakers: type[_Client]
+) -> None:
+    speakers.reachable = False
+    settings = _speaker_settings(tmp_path, live_diarization_enabled=True)
+    notices = _Notices()
+
+    diarizer = bootstrap.build_diarizer(settings, object(), notices)  # type: ignore[arg-type]
+    embedder = bootstrap.build_embedder_factory(settings, object(), notices)()  # type: ignore[arg-type,misc]
+
+    assert isinstance(diarizer, _LocalSpeakers) and isinstance(embedder, _LocalSpeakers)
+    assert notices.calls == [("speakers", "gpu-pc"), ("speakers", "gpu-pc")]
+
+
+def test_the_speaker_registries_build_through_the_worker(
+    tmp_path: Path, speakers: type[_Client]
+) -> None:
+    from vozata.worker_client.speakers import WorkerDiarizer, WorkerEmbedder
+
+    settings = _speaker_settings(tmp_path)
+
+    assert isinstance(bootstrap.DIARIZERS["vozata_worker"](settings, object()), WorkerDiarizer)  # type: ignore[arg-type]
+    assert isinstance(bootstrap.EMBEDDERS["vozata_worker"](settings, object()), WorkerEmbedder)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("token", "capabilities"), [("hf_x", ["speech", "speakers"]), (None, ["speech"])]
+)
+def test_the_worker_offers_speakers_with_a_hugging_face_token(
+    monkeypatch: pytest.MonkeyPatch, token: str | None, capabilities: list[str]
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from vozata.api.system_info import GpuInfo
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    app = bootstrap.build_worker_app(Settings(hf_token=token), None)
+
+    with TestClient(app) as client:
+        assert client.get("/health").json()["capabilities"] == capabilities

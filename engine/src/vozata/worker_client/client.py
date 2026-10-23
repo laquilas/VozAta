@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlparse
 
@@ -18,6 +20,10 @@ PROBE_TIMEOUT = 3.0  # an off worker must fail in seconds, not after the request
 CONNECT_TIMEOUT = 3.0
 REQUEST_TIMEOUT = 120.0  # a long chunk on a busy GPU
 _UNANSWERED = (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout)
+
+
+class WorkerRequestError(RuntimeError):
+    """The worker answered, with an error (phase 45: a speaker request it could not run)."""
 
 
 class WorkerClient:
@@ -93,6 +99,60 @@ class WorkerClient:
 
     def close(self) -> None:
         self._client.close()
+
+    # Speakers (phase 45) ------------------------------------------------------------------
+
+    def diarize_start(self, wav: Path, min_speakers: int | None, max_speakers: int | None) -> str:
+        """Upload `system.wav` and start a diarization job; returns its id."""
+        self.probe()
+        params = {
+            key: value
+            for key, value in (("min_speakers", min_speakers), ("max_speakers", max_speakers))
+            if value is not None
+        }
+        reply = self._call(
+            "POST",
+            "/diarize",
+            params=params,
+            content=wav.read_bytes(),
+            headers={"Content-Type": "audio/wav"},
+        )
+        return str(reply["job_id"])
+
+    def diarize_status(self, job_id: str) -> dict[str, Any]:
+        """`{state: running|done|failed|cancelled, turns, message}`."""
+        return self._call("GET", f"/diarize/{job_id}")
+
+    def diarize_cancel(self, job_id: str) -> None:
+        """Best effort: a worker that is gone has nothing left to cancel."""
+        with contextlib.suppress(httpx.HTTPError):
+            self._client.delete(f"/diarize/{job_id}", timeout=PROBE_TIMEOUT)
+
+    def embed(self, samples: np.ndarray) -> np.ndarray:
+        self.probe()
+        reply = self._call(
+            "POST",
+            "/embed",
+            content=np.asarray(samples, dtype="<f4").tobytes(),
+            headers={"Content-Type": "application/octet-stream"},
+        )
+        return np.asarray(reply["vector"], dtype=np.float32)
+
+    def _call(self, method: str, path: str, **options: Any) -> dict[str, Any]:
+        """One request: no answer is `WorkerUnreachableError`, a refused token a `ConfigError`,
+        another HTTP error `WorkerRequestError` with the worker's code."""
+        try:
+            response = self._client.request(method, path, **options)
+        except httpx.TransportError as error:
+            raise self._unreachable(error) from error
+        self._check_token(response)
+        if response.status_code >= 400:
+            try:
+                code = str(response.json()["error"]["code"])
+            except (ValueError, KeyError, TypeError):
+                code = f"HTTP {response.status_code}"
+            raise WorkerRequestError(f"The VozAta worker at {self.host} answered {code}")
+        return response.json()
 
     def _check_token(self, response: httpx.Response) -> None:
         if response.status_code == 401:

@@ -47,6 +47,24 @@ different port, its own settings, and a token on every request.
 - The notice is an `error` event with code `worker_fallback` and the localized message
   `errors.worker.fallback` ("The VozAta worker at {host} did not answer: {task} runs on this PC.").
 
+## Speakers (phase 45)
+
+Only on a worker whose `.env` has `HF_TOKEN` (the pyannote models); otherwise these routes answer
+`503 worker_speakers_unavailable` and `/health` lists only `speech`.
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/diarize?min_speakers=&max_speakers=` | the meeting's `system.wav` | `202 {job_id}`; one job runs at a time (pyannote in its child process); an empty body is `422 worker_invalid_audio` |
+| GET | `/diarize/{job_id}` | — | `{state: running\|done\|failed\|cancelled, turns: [{start, end, speaker_index}], message}`; `404 worker_job_not_found` (finished jobs are kept for the last 20) |
+| DELETE | `/diarize/{job_id}` | — | `204`; cancels a running job (the child process is stopped) |
+| POST | `/embed` | float32 little-endian samples (a voice clip) | `{vector: [float]}`; the live speaker embedder, loaded on the first request and kept |
+
+The engine's `WorkerDiarizer` uploads `system.wav`, polls every second and, when the queue's
+diarize step is cancelled (a live recording takes priority), sends `DELETE`. `WorkerEmbedder`
+sends one clip per request; a slow worker is caught by the live tagger's existing latency budget.
+A worker that does not answer is replaced by the local pyannote, once, with a `worker_fallback`
+notice for the `speakers` task.
+
 ## Open routes (phase 47)
 
 These two need no token; `/health` and `/transcribe` still do.
@@ -75,5 +93,4 @@ phase 44 fallback.
 
 ## Later phases
 
-- 45: `/diarize` (job API) and `/embed` for speaker identification.
 - 46: `/translate`.

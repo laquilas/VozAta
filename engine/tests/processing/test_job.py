@@ -189,3 +189,33 @@ def test_a_step_reads_its_gpu_use_at_each_attempt():
 
     assert (first, step.uses_gpu()) == (False, True)
     assert Step(StepKind.MIX, 1.0, True, lambda token, progress: None).uses_gpu() is True
+
+
+@pytest.mark.parametrize(
+    ("speakers", "fallback", "gated"),
+    [(True, False, True), (False, True, True), (False, False, False)],
+)
+def test_the_diarize_step_is_gated_when_speakers_may_use_this_gpu(speakers, fallback, gated):
+    import contextlib
+
+    from vozata.processing.gpu_gate import GpuUsage
+    from vozata.processing.session_job import JobParts, session_job
+
+    parts = JobParts(
+        finisher=lambda kind: contextlib.nullcontext(None),  # type: ignore[arg-type, return-value]
+        transcription=lambda: None,  # type: ignore[arg-type, return-value]
+        diarize=True,
+        minutes=False,
+        action_items=False,
+    )
+    job = session_job(
+        "s1",
+        parts,
+        GpuUsage(False, speakers, False, speakers_fallback=fallback),
+        weight=2.0,
+        closed=None,
+        on_finished=lambda: None,
+    )
+
+    diarize = next(step for step in job.steps if step.kind is StepKind.DIARIZE)
+    assert diarize.uses_gpu() is gated

@@ -243,3 +243,31 @@ def test_gpu_usage_remote_ollama_leaves_the_speech_model_on_the_gpu():
 
 def test_gpu_usage_is_a_frozen_value():
     assert GpuUsage(speech=True, speakers=False, llm=False) == GpuUsage(True, False, False)
+
+
+@pytest.mark.parametrize(
+    ("provider", "device", "cuda", "local", "fallback"),
+    [
+        ("pyannote", WhisperDevice.AUTO, True, True, False),
+        ("vozata_worker", WhisperDevice.AUTO, True, False, True),
+        ("vozata_worker", WhisperDevice.CPU, True, False, False),
+        ("vozata_worker", WhisperDevice.AUTO, False, False, False),
+    ],
+)
+def test_speakers_on_the_worker_are_not_local_gpu_work_but_their_fallback_is(
+    provider, device, cuda, local, fallback
+):
+    settings = _settings(
+        diarization_provider=provider,
+        diarization_device=device,
+        diarization_enabled=True,
+        live_diarization_enabled=True,
+    )
+
+    usage = gpu_usage(settings, cuda=cuda)
+
+    assert (usage.speakers, usage.live_speakers, usage.speakers_fallback) == (
+        local,
+        local,
+        fallback,
+    )

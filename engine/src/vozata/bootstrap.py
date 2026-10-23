@@ -137,6 +137,7 @@ from vozata.worker.local import lan_addresses
 from vozata.worker_client.client import WorkerClient
 from vozata.worker_client.discovery import discover_workers
 from vozata.worker_client.notices import LoggedNotices, ObserverNotices
+from vozata.worker_client.speakers import WorkerDiarizer, WorkerEmbedder
 from vozata.worker_client.status import worker_status
 from vozata.worker_client.transcriber import WorkerTranscriber
 
@@ -155,11 +156,15 @@ TRANSCRIBERS: dict[str, Callable[[Settings, ModelDownloader], Transcriber]] = {
 }
 WORKER = "vozata_worker"
 LOCAL_SPEECH = "faster_whisper"  # what speech falls back to when the worker does not answer
+LOCAL_SPEAKERS = "pyannote"  # phase 45: what speaker identification falls back to
 DIARIZERS: dict[str, Callable[[Settings, ModelDownloader], Diarizer]] = {
     "pyannote": pyannote_from_settings,  # child process: keeps torch away from ctranslate2
+    # phase 45: pyannote on the worker PC, this PC's when it does not answer
+    "vozata_worker": lambda settings, downloader: build_worker_diarizer(settings, downloader),
 }
 EMBEDDERS: dict[str, Callable[[Settings, ModelDownloader], SpeakerEmbedder]] = {
     "pyannote": pyannote_embedder_from_settings,  # long-lived child process (phase 15)
+    "vozata_worker": lambda settings, downloader: build_worker_embedder(settings, downloader),
 }
 LANGUAGE_MODELS: dict[str, Callable[[Settings], LanguageModel]] = {
     "ollama": lambda settings: OllamaLanguageModel(
@@ -290,25 +295,71 @@ def build_transcriber(
     `WorkerTranscriber` switches the same way. A refused token is a `ConfigError`."""
     if settings.stt_provider != WORKER:
         return _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)(settings, downloader)
-    if not settings.worker_url:
-        raise ConfigError("WORKER_URL", "", "worker_url_missing")
     notices = notices or LoggedNotices()
 
     def local() -> Transcriber:
         return TRANSCRIBERS[LOCAL_SPEECH](settings, downloader)
 
+    client = _reach_worker(settings, "speech", notices, relocate)
+    return local() if client is None else WorkerTranscriber(client, local, notices)
+
+
+def _reach_worker(
+    settings: Settings,
+    task: str,
+    notices: FallbackNotices,
+    relocate: Callable[[Settings], str | None] | None,
+) -> WorkerClient | None:
+    """A probed client of `WORKER_URL` (or of the address `relocate` finds, phase 47); None after
+    telling `notices` that `task` runs on this PC. Raises `ConfigError` without `WORKER_URL` or
+    for a refused token."""
+    if not settings.worker_url:
+        raise ConfigError("WORKER_URL", "", "worker_url_missing")
     try:
-        client = _probed_worker(settings.worker_url, settings.worker_token)
+        return _probed_worker(settings.worker_url, settings.worker_token)
     except WorkerUnreachableError as error:
         moved = relocate(settings) if relocate is not None else None
         try:
-            client = _probed_worker(moved, settings.worker_token) if moved else None
+            return _probed_worker(moved, settings.worker_token) if moved else _gone(error)
         except WorkerUnreachableError:
-            client = None
-        if client is None:
-            notices.fallback("speech", error.host)
-            return local()
-    return WorkerTranscriber(client, local, notices)
+            notices.fallback(task, error.host)
+            return None
+
+
+def _gone(error: WorkerUnreachableError) -> WorkerClient:
+    raise error
+
+
+def build_worker_diarizer(
+    settings: Settings,
+    downloader: ModelDownloader,
+    notices: FallbackNotices | None = None,
+    relocate: Callable[[Settings], str | None] | None = None,
+) -> Diarizer:
+    """Phase 45: diarization on the worker, else the local pyannote with a notice."""
+    notices = notices or LoggedNotices()
+
+    def local() -> Diarizer:
+        return DIARIZERS[LOCAL_SPEAKERS](settings, downloader)
+
+    client = _reach_worker(settings, "speakers", notices, relocate)
+    return local() if client is None else WorkerDiarizer(client, local, notices)
+
+
+def build_worker_embedder(
+    settings: Settings,
+    downloader: ModelDownloader,
+    notices: FallbackNotices | None = None,
+    relocate: Callable[[Settings], str | None] | None = None,
+) -> SpeakerEmbedder:
+    """Phase 45: the live speaker embedder on the worker, else the local one with a notice."""
+    notices = notices or LoggedNotices()
+
+    def local() -> SpeakerEmbedder:
+        return EMBEDDERS[LOCAL_SPEAKERS](settings, downloader)
+
+    client = _reach_worker(settings, "speakers", notices, relocate)
+    return local() if client is None else WorkerEmbedder(client, local, notices)
 
 
 def _probed_worker(url: str, token: str | None) -> WorkerClient:
@@ -345,6 +396,7 @@ def build_worker_app(
     from vozata.worker.app import create_worker_app
     from vozata.worker.discovery import DiscoveryResponder
     from vozata.worker.local import WorkerIdentity
+    from vozata.worker.speakers import DiarizeJobs, EmbedService
     from vozata.worker.speech import LoadedModel, SpeechService
 
     def whisper() -> LoadedModel:
@@ -376,6 +428,17 @@ def build_worker_app(
         identity=WorkerIdentity(worker_id, name, settings.worker_port),
         addresses=lan_addresses,
         background=responders,
+        # phase 45: speakers need the pyannote models, i.e. HF_TOKEN on the worker PC
+        diarize_jobs=DiarizeJobs(
+            lambda: DIARIZERS[LOCAL_SPEAKERS](settings, _downloader(settings, None))
+        )
+        if settings.hf_token
+        else None,
+        embedder=EmbedService(
+            lambda: EMBEDDERS[LOCAL_SPEAKERS](settings, _downloader(settings, None))
+        )
+        if settings.hf_token
+        else None,
     )
 
 
@@ -625,7 +688,9 @@ def build_task_exporter(settings: Settings, target: str) -> TaskExporter | None:
 
 
 def build_diarizer_factory(
-    settings: Settings, downloader: ModelDownloader | None = None
+    settings: Settings,
+    downloader: ModelDownloader | None = None,
+    notices: FallbackNotices | None = None,
 ) -> Callable[[], Diarizer] | None:
     """The configured diarizer, built only when a session needs it; None when disabled.
     `downloader` (default: the CLI's) fetches its model; the same holds for the factories
@@ -633,23 +698,36 @@ def build_diarizer_factory(
     if not settings.diarization_enabled:
         return None
     _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)  # fail fast
-    return functools.partial(build_diarizer, settings, downloader)
+    return functools.partial(build_diarizer, settings, downloader, notices)
 
 
-def build_diarizer(settings: Settings, downloader: ModelDownloader | None = None) -> Diarizer:
-    """The `DIARIZATION_PROVIDER` diarizer, whether or not `DIARIZATION_ENABLED` is set."""
+def build_diarizer(
+    settings: Settings,
+    downloader: ModelDownloader | None = None,
+    notices: FallbackNotices | None = None,
+) -> Diarizer:
+    """The `DIARIZATION_PROVIDER` diarizer, whether or not `DIARIZATION_ENABLED` is set; a
+    fallback from the worker is told through `notices` (phase 45)."""
+    if settings.diarization_provider == WORKER:
+        return build_worker_diarizer(settings, _downloader(settings, downloader), notices)
     factory = _provider(DIARIZERS, "DIARIZATION_PROVIDER", settings.diarization_provider)
     return factory(settings, _downloader(settings, downloader))
 
 
 def build_embedder_factory(
-    settings: Settings, downloader: ModelDownloader | None = None
+    settings: Settings,
+    downloader: ModelDownloader | None = None,
+    notices: FallbackNotices | None = None,
 ) -> Callable[[], SpeakerEmbedder] | None:
     """The live speaker embedder (`DIARIZATION_PROVIDER`), built on the live worker's thread;
     None unless `LIVE_DIARIZATION_ENABLED`."""
     if not settings.live_diarization_enabled:
         return None
     factory = _provider(EMBEDDERS, "DIARIZATION_PROVIDER", settings.diarization_provider)
+    if settings.diarization_provider == WORKER:
+        return functools.partial(
+            build_worker_embedder, settings, _downloader(settings, downloader), notices
+        )
     return functools.partial(factory, settings, _downloader(settings, downloader))
 
 
@@ -729,7 +807,7 @@ def build_session(
         if settings.generate_minutes
         else None
     )
-    diarizer_factory = build_diarizer_factory(settings, downloader)
+    diarizer_factory = build_diarizer_factory(settings, downloader, notices)
     translation_target, translator_factory = build_translator_factory(
         settings, translate_to, downloader
     )
@@ -780,7 +858,7 @@ def build_session(
         action_items=build_action_item_extractor(settings, localizer)
         if minutes is not None and settings.extract_action_items
         else None,
-        embedder_factory=build_embedder_factory(settings, downloader),
+        embedder_factory=build_embedder_factory(settings, downloader, notices),
         translate_to=translation_target,
         translator_factory=translator_factory,
         voice_commands=(
@@ -827,6 +905,7 @@ def _stored_components(
     session_id: str,
     models: Collection[StepKind] | None = None,
     downloader: ModelDownloader | None = None,
+    notices: FallbackNotices | None = None,
 ) -> tuple[SessionComponents, dict[str, Any]]:
     """The stop-step components of a stored session, and its metadata.
 
@@ -861,7 +940,7 @@ def _stored_components(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        diarizer_factory=build_diarizer_factory(settings, downloader)
+        diarizer_factory=build_diarizer_factory(settings, downloader, notices)
         if StepKind.DIARIZE in wanted
         else None,
         search_index=build_search_index(settings) if in_output_dir else None,
@@ -891,7 +970,8 @@ def build_finisher(
     `SessionFinisher.close()` closes the language model clients built; the diarizer gets its model
     through `downloader` (default: the CLI's).
     """
-    components, meta = _stored_components(settings, store, session_id, models, downloader)
+    notices = ObserverNotices(observer, build_localizer(settings))  # phase 45: speakers fallback
+    components, meta = _stored_components(settings, store, session_id, models, downloader, notices)
     language = ConversationLanguage(meta.get("language", ConversationLanguage.AUTO.value))
     return SessionFinisher(
         settings,
