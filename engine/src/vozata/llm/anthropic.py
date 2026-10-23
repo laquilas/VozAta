@@ -26,6 +26,23 @@ def sdk_client(api_key: str) -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key, max_retries=2)
 
 
+def probe_status(
+    api_key: str, model: str, client_factory: ClientFactory = sdk_client
+) -> int | None:
+    """The Config test (phase 53): the HTTP status of looking the model up with the key, None
+    when the API did not answer."""
+    client = client_factory(api_key)
+    try:
+        client.models.retrieve(model)
+    except anthropic.APIStatusError as error:
+        return error.status_code
+    except anthropic.APIConnectionError:
+        return None
+    finally:
+        client.close()
+    return 200
+
+
 class AnthropicLanguageModel:
     """Claude through the Messages API. A connection failure is `LlmUnreachableError`; an API
     error, a timeout, a refusal or a reply cut at `max_tokens` is a `LanguageModelError`. Without

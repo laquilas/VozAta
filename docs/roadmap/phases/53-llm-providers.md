@@ -73,9 +73,9 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - **Branch:** `feature/53-llm-providers`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 4: Config tests `openai_llm` (GET {url}/models, model listed) and `anthropic`
-  (key set, `models.retrieve` through the provider) in `connection_checks.py`, with their locale
-  messages.
+- **Next step:** task 5 (UI): labels and help for the five keys in the three RESX files,
+  `ConnectionTargets` + `TestAnchors` for `OPENAI_LLM_URL` / `ANTHROPIC_API_KEY`, and the sidebar /
+  remote note texts made provider-neutral.
 
 ### Steps
 
@@ -83,7 +83,7 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - [x] Keys, provider-neutral host / model / GPU rules, `/health.llm`
 - [x] OpenAI-compatible provider and the shared contract suite
 - [x] Anthropic provider (official SDK)
-- [ ] Config tests for both providers
+- [x] Config tests for both providers
 - [ ] UI: labels, tests, provider-neutral texts
 - [ ] Docs and packaging
 - [ ] Full suites, manual check, phase done
@@ -103,3 +103,5 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
   copy) because structured outputs need closed objects; the action-item schema has none. A read
   timeout is a plain failure, a connection failure `LlmUnreachableError` (host `api.anthropic.com`).
   New dependency `anthropic>=2.2,<3` (built on `httpx2`).
+- The Anthropic Config test goes through the SDK too (`llm.anthropic.probe_status`, injected into
+  `ConnectionChecks` by the composition root, so `connection_checks.py` imports no provider).

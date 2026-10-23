@@ -220,3 +220,24 @@ def test_the_sdk_client_gets_the_key_and_a_bounded_retry() -> None:
         assert client.max_retries == 2
     finally:
         client.close()
+
+
+@pytest.mark.parametrize(
+    ("error", "status"),
+    [
+        (None, 200),
+        (_status_error(401), 401),
+        (_status_error(404), 404),
+        (_connection_error(), None),
+    ],
+)
+def test_the_config_probe_reports_the_status_of_the_model_lookup(
+    error: Exception | None, status: int | None
+) -> None:
+    from vozata.llm.anthropic import probe_status
+
+    client = _Client(error=error)
+
+    assert probe_status("sk-ant-test", "claude-opus-5-5", lambda key: client) == status
+    assert client.retrieved == ["claude-opus-5-5"]
+    assert client.closed
