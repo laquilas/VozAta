@@ -109,8 +109,7 @@ minutes; turning a partial into the final minutes.
 - **Branch:** `feature/48-minutes-so-far`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 4 of `plans/48-minutes-so-far.md` (desktop: client and event, recorder
-  Minutes so far button and panel, meeting page Partial minutes tab).
+- **Next step:** Task 5 of `plans/48-minutes-so-far.md` (user guide, full suites, manual check, PR).
 
 ### Steps
 
@@ -118,7 +117,7 @@ minutes; turning a partial into the final minutes.
 - [x] Storage of partial minutes (both backends, export / import)
 - [x] Range filter, scope line, `write_partial_minutes`
 - [x] Job, routes, events
-- [ ] Desktop: recorder button and panel, Partial minutes tab
+- [x] Desktop: recorder button and panel, Partial minutes tab
 - [ ] Docs, full suites, manual check, phase done
 
 ### Decisions and notes
@@ -129,3 +128,6 @@ minutes; turning a partial into the final minutes.
   in the metadata (`auto` until it is detected).
 - The scope line uses the engine's localizer (the app language at start), like the other job
   messages; the minutes text follows `APP_LANGUAGE` as now.
+- The Partial minutes tab is the second tab of the meeting page (after Minutes); the tab index
+  constants moved by one. Copy uses a new `IShellService.CopyTextAsync` (the main window's
+  clipboard). GitHub Actions is disabled (no quota, user 2026-10-22): every check runs locally.

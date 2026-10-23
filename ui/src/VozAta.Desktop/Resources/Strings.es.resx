@@ -1419,4 +1419,46 @@
   <data name="WorkerNoGpu" xml:space="preserve">
     <value>solo CPU</value>
   </data>
+  <data name="MinutesSoFar" xml:space="preserve">
+    <value>Acta hasta ahora</value>
+  </data>
+  <data name="MinutesSoFarHint" xml:space="preserve">
+    <value>Escribe el acta de lo dicho hasta ahora, sin detener la grabación.</value>
+  </data>
+  <data name="MinutesSoFarWriting" xml:space="preserve">
+    <value>Escribiendo el acta hasta ahora…</value>
+  </data>
+  <data name="MinutesSoFarCaption" xml:space="preserve">
+    <value>Acta hasta {0}</value>
+  </data>
+  <data name="PartialMinutesReady" xml:space="preserve">
+    <value>El acta parcial está lista.</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copiar</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copiado.</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="TabPartialMinutes" xml:space="preserve">
+    <value>Actas parciales</value>
+  </data>
+  <data name="NoPartialMinutes" xml:space="preserve">
+    <value>Aún no hay actas parciales. Mientras grabas, usa "Acta hasta ahora" para obtener el acta de lo dicho hasta ese momento.</value>
+  </data>
+  <data name="PartialOrigin_button" xml:space="preserve">
+    <value>Hasta ahora</value>
+  </data>
+  <data name="PartialOrigin_voice" xml:space="preserve">
+    <value>Comando de voz</value>
+  </data>
+  <data name="PartialOrigin_range" xml:space="preserve">
+    <value>Tramo</value>
+  </data>
+  <data name="DeletePartialMinutes" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
 </root>

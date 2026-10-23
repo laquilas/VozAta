@@ -1419,4 +1419,46 @@
   <data name="WorkerNoGpu" xml:space="preserve">
     <value>CPU only</value>
   </data>
+  <data name="MinutesSoFar" xml:space="preserve">
+    <value>Minutes so far</value>
+  </data>
+  <data name="MinutesSoFarHint" xml:space="preserve">
+    <value>Write minutes of what was said until now, without stopping the recording.</value>
+  </data>
+  <data name="MinutesSoFarWriting" xml:space="preserve">
+    <value>Writing the minutes so far…</value>
+  </data>
+  <data name="MinutesSoFarCaption" xml:space="preserve">
+    <value>Minutes up to {0}</value>
+  </data>
+  <data name="PartialMinutesReady" xml:space="preserve">
+    <value>Partial minutes are ready.</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copied.</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="TabPartialMinutes" xml:space="preserve">
+    <value>Partial minutes</value>
+  </data>
+  <data name="NoPartialMinutes" xml:space="preserve">
+    <value>No partial minutes yet. While recording, use "Minutes so far" to get minutes of what was said until then.</value>
+  </data>
+  <data name="PartialOrigin_button" xml:space="preserve">
+    <value>So far</value>
+  </data>
+  <data name="PartialOrigin_voice" xml:space="preserve">
+    <value>Voice command</value>
+  </data>
+  <data name="PartialOrigin_range" xml:space="preserve">
+    <value>Part</value>
+  </data>
+  <data name="DeletePartialMinutes" xml:space="preserve">
+    <value>Delete</value>
+  </data>
 </root>

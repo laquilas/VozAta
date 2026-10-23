@@ -59,7 +59,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Session = new RecordingSessionService();
         var templates = new MinutesTemplatesViewModel(client);
         Recorder = new RecorderPageViewModel(
-            client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token);
+            client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token, shell: shell);
         History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs, markers: markers);
         Health = new HealthViewModel(client, localization);
         Processing = new ProcessingIndicatorViewModel(localization);
@@ -472,6 +472,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Notify(_localization["MinutesReady"]);
                 HistoryRefresh = Task.WhenAll(History.OnMinutesReadyAsync(minutes.SessionId), Meetings.LoadAsync());
                 break;
+            case PartialMinutesReadyEvent partial:
+                Notify(_localization["PartialMinutesReady"]);
+                HistoryRefresh = Task.WhenAll(
+                    Recorder.MinutesSoFar.OnReadyAsync(partial), History.OnPartialMinutesReadyAsync(partial));
+                break;
             case ActionItemsReadyEvent ready:
                 HistoryRefresh = Task.WhenAll(History.OnActionItemsReadyAsync(ready.SessionId), Meetings.LoadAsync());
                 break;
@@ -481,6 +486,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case ErrorEvent error:
                 Notify(error.Message);
                 History.OnError(error.SessionId, error.Code, error.Message);
+                Recorder.MinutesSoFar.OnError(error.SessionId, error.Code);
                 RecoveryRefresh = Recovery.OnErrorAsync(error);
                 break;
             default:

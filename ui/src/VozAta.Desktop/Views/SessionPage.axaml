@@ -155,6 +155,43 @@
             </ScrollViewer>
           </Panel>
         </TabItem>
+        <!-- Partial minutes (phase 48): so far while recording, or a part of the meeting -->
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabPartialMinutes]}">
+          <Grid ColumnDefinitions="280,*" DataContext="{Binding Partials}" x:DataType="vm:PartialMinutesListViewModel">
+            <TextBlock Grid.ColumnSpan="2" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoPartialMinutes]}"
+                       Classes="secondary" Margin="8" TextWrapping="Wrap" IsVisible="{Binding !HasItems}" />
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Margin="0,0,8,0"
+                     IsVisible="{Binding HasItems}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:PartialMinutesRow">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Detail}" Classes="tiny secondary" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <DockPanel Grid.Column="1" IsVisible="{Binding HasSelection}">
+              <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,0,0,8">
+                <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Copy]}" Command="{Binding CopyCommand}" />
+                <Button Classes="danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[DeletePartialMinutes]}" Command="{Binding DeleteCommand}" />
+              </StackPanel>
+              <TextBlock DockPanel.Dock="Top" Text="{Binding Error}" Classes="error" Margin="8,0" TextWrapping="Wrap"
+                         IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Blocks}" Margin="8">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MarkdownBlock">
+                      <SelectableTextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,2"
+                                           Classes.h1="{Binding IsHeading1}" Classes.h2="{Binding IsHeading2}"
+                                           Classes.h3="{Binding IsHeading3}" Classes.item="{Binding IsItem}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </Grid>
+        </TabItem>
         <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabTranscript]}">
           <DockPanel>
             <!-- Edit mode toolbar (phase 21) and "follow playback" (phase 37) -->

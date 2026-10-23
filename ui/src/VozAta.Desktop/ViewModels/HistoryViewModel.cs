@@ -154,6 +154,10 @@ public sealed partial class HistoryViewModel(
     public void OnError(string? sessionId, string code, string message) => Detail?.OnError(sessionId, code, message);
 
     /// <summary>An <c>action_items_ready</c> event (phase 23): reload the open detail's action items.</summary>
+    /// <summary>A <c>partial_minutes_ready</c> event (phase 48): the open meeting shows the new one.</summary>
+    public Task OnPartialMinutesReadyAsync(PartialMinutesReadyEvent ready) =>
+        Detail?.Partials.OnReadyAsync(ready) ?? Task.CompletedTask;
+
     public Task OnActionItemsReadyAsync(string? sessionId) =>
         Detail?.ActionItems.OnReadyAsync(sessionId) ?? Task.CompletedTask;
 
