@@ -34,9 +34,10 @@ From the backlog ("Auto-detect meeting apps").
 - Keys: `MEETING_DETECTION` (bool, default true), `MEETING_APPS`, `MEETING_POLL_SECONDS`.
 - Browser calls (Meet in Chrome / Edge) are not detected: a browser playing audio is not a call.
 
-**UI**: a toast (and a tray balloon when the window is hidden) "{name} is in a call. Record it?"
-with **Record** (starts a recording with the current devices) and **Not now**; texts in
-en / pt-BR / es; a Config switch for `MEETING_DETECTION`.
+**UI**: a banner on top of the window (like the recovery offer) and an in-app toast "{name} is in a
+call. Record it?" with **Record** (starts a recording with the current devices) and **Not now**;
+texts in en / pt-BR / es; a Config switch for `MEETING_DETECTION`. The app has no Windows
+notifications yet, so nothing shows while it sits in the tray (out of scope).
 
 **Packaging / docs**: `pycaw` (and `comtypes`) in the engine bundle; api-contract
 (`meeting_detected`), architecture §9 keys, `docs/USER_GUIDE` section.
@@ -55,9 +56,35 @@ starts a session, Not now dismisses), resource parity.
 
 ## Out of scope
 
-Detecting browser calls, auto-start, auto-stop when the call ends, macOS / Linux.
+Detecting browser calls, auto-start, auto-stop when the call ends, Windows toast notifications,
+macOS / Linux.
 
 ## Kickoff prompt
 
 > Start phase 54 (`docs/roadmap/phases/54-meeting-detection.md`): read its *Read first* files,
 > write `plans/54-meeting-detection.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/54-meeting-detection`
+- **Status:** in progress
+- **Updated:** 2026-10-23
+- **Next step:** task 1 of `plans/54-meeting-detection.md`: failing tests for the three keys,
+  then task 2 (the detector with a fake monitor and clock).
+
+### Steps
+
+- [x] Implementation plan (`plans/54-meeting-detection.md`)
+- [ ] Keys `MEETING_DETECTION`, `MEETING_APPS`, `MEETING_POLL_SECONDS`
+- [ ] Detector (port, debounce, quiet period, recording suppresses)
+- [ ] Windows audio session monitor (pycaw)
+- [ ] Wiring: bootstrap, container, lifespan, `meeting_detected` event
+- [ ] UI: event, suggestion banner, texts
+- [ ] Docs and packaging
+- [ ] Full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- Teams running idle keeps its audio sessions *inactive* (checked on this PC with pycaw), so an
+  active session of a known app is the call signal; two polls in a row skip notification sounds.
