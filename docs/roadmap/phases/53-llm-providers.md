@@ -67,3 +67,30 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 
 > Start phase 53 (`docs/roadmap/phases/53-llm-providers.md`): read its *Read first* files, write
 > `plans/53-llm-providers.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/53-llm-providers`
+- **Status:** in progress
+- **Updated:** 2026-10-23
+- **Next step:** task 1 of `plans/53-llm-providers.md`: failing tests for the new keys, `llm_url`
+  / `llm_model` / `remote_llm_host` per provider and `gpu_usage.llm` for a loopback
+  OpenAI-compatible server.
+
+### Steps
+
+- [x] Implementation plan (`plans/53-llm-providers.md`)
+- [ ] Keys, provider-neutral host / model / GPU rules, `/health.llm`
+- [ ] OpenAI-compatible provider and the shared contract suite
+- [ ] Anthropic provider (official SDK)
+- [ ] Config tests for both providers
+- [ ] UI: labels, tests, provider-neutral texts
+- [ ] Docs and packaging
+- [ ] Full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- Anthropic goes through the official `anthropic` SDK (the project's Claude API rule), not raw
+  HTTP; defaults from its current guidance: `claude-opus-5-5`, effort `medium`, server-side
+  refusal fallbacks on, always streamed.

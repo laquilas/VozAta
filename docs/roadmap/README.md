@@ -102,7 +102,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 50 | [Voice commands](phases/50-voice-commands.md) | 48 | done |
 | 51 | [The installed worker ships every task](phases/51-worker-every-task.md) | 45, 46, 47 | done |
 | 52 | [Two-PC end-to-end check](phases/52-two-pc-check.md) | 51 | done |
-| 53 | [More language model providers](phases/53-llm-providers.md) | 43, 38 | todo |
+| 53 | [More language model providers](phases/53-llm-providers.md) | 43, 38 | in progress (`feature/53-llm-providers`) |
 | 54 | [Suggest recording when a meeting app is in a call](phases/54-meeting-detection.md) | 11, 35 | todo |
 | 55 | [WER benchmark](phases/55-wer-benchmark.md) | 27, 40 | todo |
 
