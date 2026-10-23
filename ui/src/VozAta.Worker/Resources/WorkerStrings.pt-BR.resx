@@ -118,9 +118,27 @@
     <value>Precisa de um token do Hugging Face: adicione HF_TOKEN=… em {0} e pare e inicie o worker.</value>
   </data>
   <data name="WorkerTaskNotInEdition" xml:space="preserve">
-    <value>Não incluído nesta instalação: instale neste PC a edição do VozAta com locutores.</value>
+    <value>Não incluído nesta instalação do VozAta.</value>
   </data>
   <data name="WorkerTaskNotOffered" xml:space="preserve">
     <value>Não oferecido</value>
+  </data>
+  <data name="WorkerTaskNotInstalled" xml:space="preserve">
+    <value>Não instalada neste PC: baixe-a abaixo.</value>
+  </data>
+  <data name="WorkerSpeakersDownload" xml:space="preserve">
+    <value>Baixar identificação de participantes</value>
+  </data>
+  <data name="WorkerSpeakersDownloadHelp" xml:space="preserve">
+    <value>Cerca de 3 GB (Python, PyTorch e pyannote), uma vez só, no AppData deste PC. O worker reinicia ao terminar.</value>
+  </data>
+  <data name="WorkerSpeakersStarting" xml:space="preserve">
+    <value>Iniciando o download...</value>
+  </data>
+  <data name="WorkerSpeakersInstalled" xml:space="preserve">
+    <value>A identificação de participantes foi instalada. O worker está reiniciando para oferecê-la.</value>
+  </data>
+  <data name="WorkerSpeakersFailed" xml:space="preserve">
+    <value>O download parou. Veja {0} e tente de novo.</value>
   </data>
 </root>

@@ -16,6 +16,17 @@ public sealed class WorkerOptions
 /// <summary>How to start the worker.</summary>
 public sealed record WorkerCommand(string FileName, string Arguments, string WorkingDirectory)
 {
+    private const string Worker = "worker";
+
+    /// <summary>The same engine running <c>speakers install</c> (phase 56) instead of the worker.</summary>
+    public WorkerCommand SpeakersInstall() =>
+        this with
+        {
+            Arguments = Arguments.EndsWith(Worker, StringComparison.Ordinal)
+                ? Arguments[..^Worker.Length] + "speakers install"
+                : "speakers install",
+        };
+
     /// <summary>
     /// The packaged engine, else Python with the source engine. Relative paths are looked for in
     /// <paramref name="appDirectory"/> and each folder above it (the build output sits inside
@@ -27,11 +38,11 @@ public sealed record WorkerCommand(string FileName, string Arguments, string Wor
         var folder = Path.GetFullPath(Environment.ExpandEnvironmentVariables(options.WorkingDirectory));
         if (Find(options.ExecutablePath, appDirectory, exists) is { } engine)
         {
-            return new WorkerCommand(engine, "worker", folder);
+            return new WorkerCommand(engine, Worker, folder);
         }
 
         return Find(options.PythonPath, appDirectory, exists) is { } python
-            ? new WorkerCommand(python, "-m vozata worker", folder)
+            ? new WorkerCommand(python, $"-m vozata {Worker}", folder)
             : null;
     }
 
