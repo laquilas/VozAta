@@ -798,7 +798,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `WORKER_NAME` / `WORKER_DISCOVERY_PORT` | *(empty)* = the PC name / `8767` | 47 | the name a worker answers discovery with, and the UDP port of discovery (the same on both PCs); restart |
 | `WORKER_HOST` / `WORKER_PORT` | `0.0.0.0` / `8766` | 44 | on the worker PC only (`vozata worker`): where it listens; a non-loopback host needs `WORKER_TOKEN` (generated on first run); restart |
 | `DIARIZATION_ENABLED` | `false` | 14 | |
-| `DIARIZATION_PROVIDER` | `pyannote` | 14 | |
+| `DIARIZATION_PROVIDER` | `pyannote` | 14 | `pyannote` / `vozata_worker` (45: diarization and the live embedder on the worker, `HF_TOKEN` there; this PC's pyannote when it does not answer) |
 | `DIARIZATION_DEVICE` | `auto` | 14 | `auto` / `cuda` / `cpu` |
 | `HF_TOKEN` | *(empty)* | 14 | Hugging Face token for pyannote models |
 | `HF_HUB_OFFLINE` | *(empty)* | 42 | Hugging Face's own variable, read from the process environment only (not `.env`, not on the Config page): `1` never downloads a model; unset or empty, `TRANSFORMERS_OFFLINE` is read instead, as huggingface_hub does |

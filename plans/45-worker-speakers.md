@@ -12,5 +12,5 @@
 
 ## Tasks
 
-- [ ] Task 1: worker services and routes, engine client, providers, wiring, gate, tests; commit `feat: identify speakers on the VozAta worker`.
-- [ ] Task 2: docs (worker API, contract, guide), suites, manual check, PR, merge.
+- [x] Task 1: worker services and routes, engine client, providers, wiring, gate, tests; commit `feat: identify speakers on the VozAta worker`.
+- [x] Task 2: docs (worker API, contract, guide), suites, manual check, PR, merge.
