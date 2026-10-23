@@ -1392,4 +1392,31 @@
   <data name="SettingHelp_WORKER_DISCOVERY_PORT" xml:space="preserve">
     <value>The UDP port used to find workers on the network (default 8767). It must be the same on both PCs.</value>
   </data>
+  <data name="WorkerFindHelp" xml:space="preserve">
+    <value>Open VozAta Worker on the GPU PC, then look for it here and type the code it shows.</value>
+  </data>
+  <data name="WorkerFind" xml:space="preserve">
+    <value>Find workers</value>
+  </data>
+  <data name="WorkerSearching" xml:space="preserve">
+    <value>Looking for workers on the network…</value>
+  </data>
+  <data name="WorkerNoneFound" xml:space="preserve">
+    <value>No worker answered. Check that VozAta Worker is open on the GPU PC, that both PCs are on the same network, and that its "Allow on the network" step was done.</value>
+  </data>
+  <data name="WorkerTypeCode" xml:space="preserve">
+    <value>Type the code VozAta Worker shows on that PC, then Pair.</value>
+  </data>
+  <data name="WorkerCode" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="WorkerPair" xml:space="preserve">
+    <value>Pair</value>
+  </data>
+  <data name="WorkerPaired" xml:space="preserve">
+    <value>Paired with {0}. Its address and token are saved; choose vozata_worker as the speech provider to use it.</value>
+  </data>
+  <data name="WorkerNoGpu" xml:space="preserve">
+    <value>CPU only</value>
+  </data>
 </root>

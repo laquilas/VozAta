@@ -101,8 +101,8 @@ mDNS / Bonjour.
 - **Branch:** `feature/47-worker-app`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 4 of `plans/47-worker-app.md` (desktop Config: Find workers, pairing with
-  the code; client methods and DTOs).
+- **Next step:** Task 5 of `plans/47-worker-app.md` (the worker app `ui/src/VozAta.Worker`: process,
+  `/local/status` window, autostart, firewall, tray; tests).
 
 ### Steps
 
@@ -110,7 +110,7 @@ mDNS / Bonjour.
 - [x] Worker: identity, pairing codes, `/pair`, `/local/status`
 - [x] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
 - [x] Engine: find a moved worker before the fallback
-- [ ] Desktop Config: Find workers and pair
+- [x] Desktop Config: Find workers and pair
 - [ ] The worker app (`VozAta.Worker`)
 - [ ] Packaging and docs
 - [ ] Full suites, manual check, phase done

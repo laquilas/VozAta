@@ -126,6 +126,12 @@ public interface IEngineClient
 
     /// <summary><c>GET /migration</c> (phase 33): the import of the old meeting folders.</summary>
     Task<MigrationSummary> GetMigrationAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /worker/discover</c> (phase 47): the VozAta workers on the local network.</summary>
+    Task<WorkersFound> DiscoverWorkersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>POST /worker/pair</c> (phase 47): trade the code shown on the worker PC for its token.</summary>
+    Task<PairedWorker> PairWorkerAsync(string url, string code, CancellationToken cancellationToken = default);
 }
 
 /// <summary>The engine answered with the error envelope; <see cref="Exception.Message"/> is localized.</summary>
@@ -331,6 +337,12 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<MigrationSummary> GetMigrationAsync(CancellationToken cancellationToken = default) =>
         SendAsync<MigrationSummary>(HttpMethod.Get, "migration", null, cancellationToken);
+
+    public Task<WorkersFound> DiscoverWorkersAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<WorkersFound>(HttpMethod.Get, "worker/discover", null, cancellationToken);
+
+    public Task<PairedWorker> PairWorkerAsync(string url, string code, CancellationToken cancellationToken = default) =>
+        SendAsync<PairedWorker>(HttpMethod.Post, "worker/pair", new { url, code }, cancellationToken);
 
     public Task<CacheCleared> ClearAudioCacheAsync(CancellationToken cancellationToken = default) =>
         SendAsync<CacheCleared>(HttpMethod.Delete, "storage/cache", null, cancellationToken);

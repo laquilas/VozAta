@@ -91,4 +91,29 @@ public sealed class ConfigClientTests
 
         Assert.Equal("invalid_request", error.Code);
     }
+
+    [Fact]
+    public async Task Workers_are_discovered_with_a_get()
+    {
+        var handler = FakeHttpHandler.Json("""
+            {"workers": [{"id": "4f1c", "name": "GPU-PC", "url": "http://192.168.0.20:8766", "version": "0.9.0", "gpu": null}]}
+            """);
+
+        var found = await new EngineClient(handler.Client()).DiscoverWorkersAsync();
+
+        Assert.Equal(new FoundWorker("4f1c", "GPU-PC", "http://192.168.0.20:8766", "0.9.0", null), Assert.Single(found.Workers));
+        Assert.Equal((HttpMethod.Get, "/worker/discover"), (handler.Requests[0].Method, handler.Requests[0].Path));
+    }
+
+    [Fact]
+    public async Task Pairing_posts_the_address_and_code()
+    {
+        var handler = FakeHttpHandler.Json("""{"id": "4f1c", "name": "GPU-PC", "url": "http://192.168.0.20:8766"}""");
+
+        var paired = await new EngineClient(handler.Client()).PairWorkerAsync("http://192.168.0.20:8766", "123456");
+
+        Assert.Equal(new PairedWorker("4f1c", "GPU-PC", "http://192.168.0.20:8766"), paired);
+        Assert.Equal((HttpMethod.Post, "/worker/pair"), (handler.Requests[0].Method, handler.Requests[0].Path));
+        Assert.Equal("""{"url":"http://192.168.0.20:8766","code":"123456"}""", handler.Requests[0].Body);
+    }
 }

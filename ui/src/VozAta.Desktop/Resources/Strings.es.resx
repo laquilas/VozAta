@@ -1392,4 +1392,31 @@
   <data name="SettingHelp_WORKER_DISCOVERY_PORT" xml:space="preserve">
     <value>El puerto UDP usado para encontrar workers en la red (8767 por defecto). Debe ser el mismo en los dos PC.</value>
   </data>
+  <data name="WorkerFindHelp" xml:space="preserve">
+    <value>Abre VozAta Worker en el PC con GPU, búscalo aquí y escribe el código que muestra.</value>
+  </data>
+  <data name="WorkerFind" xml:space="preserve">
+    <value>Buscar workers</value>
+  </data>
+  <data name="WorkerSearching" xml:space="preserve">
+    <value>Buscando workers en la red…</value>
+  </data>
+  <data name="WorkerNoneFound" xml:space="preserve">
+    <value>Ningún worker respondió. Comprueba que VozAta Worker está abierto en el PC con GPU, que los dos PC están en la misma red y que se hizo el paso "Permitir en la red".</value>
+  </data>
+  <data name="WorkerTypeCode" xml:space="preserve">
+    <value>Escribe el código que muestra VozAta Worker en ese PC y pulsa Emparejar.</value>
+  </data>
+  <data name="WorkerCode" xml:space="preserve">
+    <value>Código</value>
+  </data>
+  <data name="WorkerPair" xml:space="preserve">
+    <value>Emparejar</value>
+  </data>
+  <data name="WorkerPaired" xml:space="preserve">
+    <value>Emparejado con {0}. Su dirección y su token se guardaron; elige vozata_worker como proveedor de voz para usarlo.</value>
+  </data>
+  <data name="WorkerNoGpu" xml:space="preserve">
+    <value>solo CPU</value>
+  </data>
 </root>
