@@ -60,12 +60,12 @@ versions.
 - **Branch:** `feature/58-cuda-on-demand`
 - **Status:** in progress
 - **Updated:** 2026-10-23 18:40
-- **Next step:** `transcription/cuda_runtime.py` with tests.
+- **Next step:** `cli/cuda.py` (install | status | remove) + locales + `__main__`.
 
 ### Steps
 
 - [x] Phase start
-- [ ] Engine: CUDA runtime download, DLL registration, the CPU shortcut
+- [x] Engine: CUDA runtime download, DLL registration, the CPU shortcut
 - [ ] CLI `cuda install | status | remove`
 - [ ] Packaging: no CUDA in the build; `gpu.iss` in both installers
 - [ ] Docs; suites; build; GPU check with the downloaded runtime; copy to F:

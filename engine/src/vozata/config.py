@@ -187,6 +187,8 @@ class Settings:
     onedrive_roots: tuple[Path, ...] = ()
     # The speaker runtime of the packaged engine (phase 56): `%LOCALAPPDATA%\VozAta\speakers`
     speakers_runtime_dir: Path = Path("speakers")
+    # The CUDA libraries downloaded for the packaged engine (phase 58): `%LOCALAPPDATA%\VozAta\cuda`
+    cuda_runtime_dir: Path = Path("cuda")
 
     @property
     def database_file(self) -> Path:
@@ -318,15 +320,21 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
             else onedrive_roots(env)  # an explicit mapping (tests): no registry
         ),
         speakers_runtime_dir=speakers_runtime_dir(os.environ if env is None else env),
+        cuda_runtime_dir=local_data_dir(os.environ if env is None else env) / "cuda",
     )
 
 
 def speakers_runtime_dir(env: Mapping[str, str]) -> Path:
-    """`%LOCALAPPDATA%\\VozAta\\speakers` (phase 56), shared by VozAta and VozAta Worker; under
-    the home folder when `LOCALAPPDATA` is not set (not Windows)."""
+    """`%LOCALAPPDATA%\\VozAta\\speakers` (phase 56), shared by VozAta and VozAta Worker."""
+    return local_data_dir(env) / "speakers"
+
+
+def local_data_dir(env: Mapping[str, str]) -> Path:
+    """`%LOCALAPPDATA%\\VozAta`, where the downloaded runtimes live (phases 56, 58); under the
+    home folder when `LOCALAPPDATA` is not set (not Windows)."""
     local = (env.get("LOCALAPPDATA") or "").strip()
     base = Path(local) if local else Path.home() / ".local" / "share"
-    return base / "VozAta" / "speakers"
+    return base / "VozAta"
 
 
 def onedrive_roots(env: Mapping[str, str], registry: Sequence[Path] = ()) -> tuple[Path, ...]:
