@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- VozAta Worker (phase 47): runs `vozata-engine.exe worker` on a GPU PC of the network -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>VozAta.Worker</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\..\assets\desktop\windows\vozata.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="VozAta.Worker.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- not appsettings.json: it is published next to the desktop app, which has one -->
+    <None Update="worker.settings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\..\assets\desktop\windows\vozata.ico" Link="Assets\vozata.ico" />
+    <AvaloniaResource Include="..\..\..\assets\desktop\windows\vozata-64.png" Link="Assets\vozata-64.png" />
+    <!-- The VozAta look (phase 34 design system), linked from the desktop app: one source for both -->
+    <AvaloniaXaml Include="..\VozAta.Desktop\Themes\Tokens.axaml" Link="Themes\Tokens.axaml" />
+    <AvaloniaXaml Include="..\VozAta.Desktop\Themes\Icons.axaml" Link="Themes\Icons.axaml" />
+    <AvaloniaXaml Include="..\VozAta.Desktop\Themes\Controls.axaml" Link="Themes\Controls.axaml" />
+  </ItemGroup>
+</Project>

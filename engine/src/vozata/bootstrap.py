@@ -10,6 +10,7 @@ import dataclasses
 import functools
 import logging
 import os
+import socket
 import threading
 from collections.abc import Callable, Collection, Mapping, Sequence
 from contextlib import AbstractContextManager
@@ -19,6 +20,7 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from vozata import __version__
 from vozata.api.action_items_job import ActionItemsJob
 from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
@@ -98,7 +100,7 @@ from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_finisher import SessionFinisher
 from vozata.session_title import stored_title
-from vozata.settings_file import SettingsFile
+from vozata.settings_file import SettingsFile, SettingsWriteError
 from vozata.settings_options import SettingsOptions
 from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
@@ -123,7 +125,9 @@ from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.shared import SharedTranscriber
 from vozata.translation import opus_mt
 from vozata.vocabulary import VocabularyStore, merge_terms
+from vozata.worker.local import lan_addresses
 from vozata.worker_client.client import WorkerClient
+from vozata.worker_client.discovery import discover_workers
 from vozata.worker_client.notices import LoggedNotices, ObserverNotices
 from vozata.worker_client.status import worker_status
 from vozata.worker_client.transcriber import WorkerTranscriber
@@ -266,11 +270,15 @@ def _provider[T](registry: Mapping[str, T], key: str, value: str) -> T:
 
 
 def build_transcriber(
-    settings: Settings, downloader: ModelDownloader, notices: FallbackNotices | None = None
+    settings: Settings,
+    downloader: ModelDownloader,
+    notices: FallbackNotices | None = None,
+    relocate: Callable[[Settings], str | None] | None = None,
 ) -> Transcriber:
     """The `STT_PROVIDER` transcriber. For `vozata_worker` the worker is probed now (<= 3 s): when
-    it does not answer, speech runs on this PC (`faster_whisper`) and `notices` says so; when it
-    is lost later, `WorkerTranscriber` switches the same way. A refused token is a `ConfigError`."""
+    it does not answer, `relocate` may find it at a new address (phase 47); otherwise speech runs
+    on this PC (`faster_whisper`) and `notices` says so. When the worker is lost later,
+    `WorkerTranscriber` switches the same way. A refused token is a `ConfigError`."""
     if settings.stt_provider != WORKER:
         return _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)(settings, downloader)
     if not settings.worker_url:
@@ -280,22 +288,54 @@ def build_transcriber(
     def local() -> Transcriber:
         return TRANSCRIBERS[LOCAL_SPEECH](settings, downloader)
 
-    client = WorkerClient(settings.worker_url, settings.worker_token)
     try:
-        client.probe()
+        client = _probed_worker(settings.worker_url, settings.worker_token)
     except WorkerUnreachableError as error:
-        client.close()
-        notices.fallback("speech", error.host)
-        return local()
-    except BaseException:
-        client.close()
-        raise
+        moved = relocate(settings) if relocate is not None else None
+        try:
+            client = _probed_worker(moved, settings.worker_token) if moved else None
+        except WorkerUnreachableError:
+            client = None
+        if client is None:
+            notices.fallback("speech", error.host)
+            return local()
     return WorkerTranscriber(client, local, notices)
 
 
-def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
-    """`vozata worker` (phase 44): the worker's API over this PC's models."""
+def _probed_worker(url: str, token: str | None) -> WorkerClient:
+    client = WorkerClient(url, token)
+    try:
+        client.probe()
+    except BaseException:
+        client.close()
+        raise
+    return client
+
+
+def worker_relocator(on_moved: Callable[[str], None]) -> Callable[[Settings], str | None]:
+    """Phase 47: the paired worker (`WORKER_ID`) at another address, found by a discovery
+    broadcast; `on_moved` gets the new URL (the API saves it as `WORKER_URL`)."""
+
+    def relocate(settings: Settings) -> str | None:
+        if not settings.worker_id:
+            return None
+        for worker in discover_workers(settings.worker_discovery_port, lan_addresses()):
+            if worker.id == settings.worker_id and worker.url != settings.worker_url:
+                _log.info("The VozAta worker %s moved to %s", worker.id, worker.url)
+                on_moved(worker.url)
+                return worker.url
+        return None
+
+    return relocate
+
+
+def build_worker_app(
+    settings: Settings, token: str | None, worker_id: str | None = None
+) -> FastAPI:
+    """`vozata worker` (phases 44, 47): the worker's API over this PC's models."""
     from vozata.worker.app import create_worker_app
+    from vozata.worker.discovery import DiscoveryResponder
+    from vozata.worker.local import WorkerIdentity
     from vozata.worker.speech import LoadedModel, SpeechService
 
     def whisper() -> LoadedModel:
@@ -305,8 +345,28 @@ def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
             transcriber, settings.whisper_model if cuda else settings.whisper_cpu_model
         )
 
+    name = settings.worker_name or socket.gethostname()
+    gpu_info = functools.cache(query_gpu)
+
+    def found() -> dict[str, object]:  # what a discovery answer says: nothing secret
+        gpu = gpu_info()
+        return {
+            "id": worker_id,
+            "name": name,
+            "port": settings.worker_port,
+            "version": __version__,
+            "gpu": gpu.name if gpu.available else None,
+        }
+
+    # a loopback worker (no id) cannot be reached from the network: nothing to answer
+    responders = [DiscoveryResponder(settings.worker_discovery_port, found)] if worker_id else []
     return create_worker_app(
-        token, gpu_info=functools.cache(query_gpu), speech=SpeechService(whisper)
+        token,
+        gpu_info=gpu_info,
+        speech=SpeechService(whisper),
+        identity=WorkerIdentity(worker_id, name, settings.worker_port),
+        addresses=lan_addresses,
+        background=responders,
     )
 
 
@@ -587,6 +647,7 @@ def build_session(
     live_models: LiveModelTurn | None = None,
     live_transcription: bool | None = None,
     downloader: ModelDownloader | None = None,
+    worker_moved: Callable[[str], None] = lambda url: None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -602,7 +663,8 @@ def build_session(
     the local GPU (phase 40); with `live_models` its models load only once the previous
     session's abandoned pipeline closed. `live_transcription` (default `LIVE_TRANSCRIPTION`,
     phase 41) is the per-recording option; it is stored in `session.json`. `downloader` (default:
-    the CLI's) fetches the models that are not cached yet (phase 42).
+    the CLI's) fetches the models that are not cached yet (phase 42). A paired worker found at a
+    new address is used and `worker_moved` gets that address (phase 47).
     """
     _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)  # fail before any device opens
     downloader = _downloader(settings, downloader)
@@ -647,7 +709,11 @@ def build_session(
         device_names={channel: device.name for channel, device in devices.items()},
         clock=clock,
         transcriber_factory=(
-            (lambda: build_transcriber(settings, downloader, notices))
+            (
+                lambda: build_transcriber(
+                    settings, downloader, notices, worker_relocator(worker_moved)
+                )
+            )
             if shared is None
             else functools.partial(shared.lease, keep=minutes is None and diarizer_factory is None)
         ),
@@ -876,6 +942,13 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
     queue = ProcessingQueue(gate, publish_processing)
     queue.start()
 
+    def worker_moved(url: str) -> None:
+        """Phase 47: the paired worker answered at a new address; keep it for the next time."""
+        try:
+            settings_file.update({"WORKER_URL": url})
+        except SettingsWriteError:
+            _log.warning("Could not save the worker's new address %s", url)
+
     def job_factory(session_id: str, repair: bool, closed: threading.Event | None) -> ProcessingJob:
         current = settings_file.current
         from vozata.bootstrap_processing import build_processing_job  # imports this module
@@ -892,6 +965,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             gate_usage=usage(current),
             shared=shared,
             downloader=downloader,
+            worker_moved=worker_moved,
         )
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
@@ -913,6 +987,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             live_models=live_models,
             live_transcription=options.live_transcription,
             downloader=downloader,
+            worker_moved=worker_moved,
         )
 
     def llm_reachable() -> bool:
@@ -1026,4 +1101,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         ).run,
         downloads=downloads,
         worker_status=lambda current: worker_status(current.worker_url or "", current.worker_token),
+        discover_workers=lambda current: discover_workers(
+            current.worker_discovery_port, lan_addresses()
+        ),
     )

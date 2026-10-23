@@ -37,6 +37,7 @@ class _Client:
     """A worker client that answers its probe, or not."""
 
     reachable = True
+    alive: set[str] | None = None  # when set, only these URLs answer
     instances: list[_Client] = []
 
     def __init__(self, url: str, token: str | None) -> None:
@@ -44,7 +45,8 @@ class _Client:
         _Client.instances.append(self)
 
     def probe(self) -> None:
-        if not _Client.reachable:
+        alive = _Client.alive
+        if not _Client.reachable if alive is None else self.url not in alive:
             raise WorkerUnreachableError("gpu-pc", "refused")
 
     def close(self) -> None:
@@ -61,7 +63,7 @@ class _Notices:
 
 @pytest.fixture
 def worker(monkeypatch: pytest.MonkeyPatch) -> type[_Client]:
-    _Client.reachable, _Client.instances = True, []
+    _Client.reachable, _Client.alive, _Client.instances = True, None, []
     monkeypatch.setattr(bootstrap, "WorkerClient", _Client)
     monkeypatch.setitem(bootstrap.TRANSCRIBERS, "faster_whisper", _Local)
     return _Client
@@ -188,3 +190,74 @@ def test_the_queue_transcription_falls_back_with_the_notice(
     assert isinstance(transcriber, _Local)
     assert notices.calls == [("speech", "gpu-pc")]
     assert transcriber.transcribe(np.zeros(1, dtype=np.float32), None).language == "pt"
+
+
+MOVED = "http://192.168.0.77:8766"
+
+
+@pytest.mark.parametrize(
+    ("found", "alive", "remote"),
+    [
+        (MOVED, {MOVED}, True),  # found at its new address: used, no notice
+        (MOVED, set(), False),  # found but gone again: fallback
+        (None, set(), False),  # not found: fallback
+    ],
+)
+def test_a_moved_worker_is_found_before_the_fallback(
+    tmp_path: Path, worker: type[_Client], found: str | None, alive: set[str], remote: bool
+) -> None:
+    worker.alive = alive
+    notices = _Notices()
+    asked: list[str | None] = []
+
+    def relocate(settings: Settings) -> str | None:
+        asked.append(settings.worker_id)
+        return found
+
+    transcriber = bootstrap.build_transcriber(
+        _settings(tmp_path, worker_id="4f1c"),
+        object(),  # type: ignore[arg-type]
+        notices,
+        relocate,
+    )
+
+    assert asked == ["4f1c"]
+    assert isinstance(transcriber, WorkerTranscriber) is remote
+    assert notices.calls == ([] if remote else [("speech", "gpu-pc")])
+    assert all(client.closed for client in worker.instances[: 1 if remote else None])
+
+
+@pytest.mark.parametrize(
+    ("answers", "worker_id", "moved"),
+    [
+        ([("4f1c", MOVED)], "4f1c", MOVED),
+        ([("4f1c", URL)], "4f1c", None),  # same address: nothing moved
+        ([("other", MOVED)], "4f1c", None),
+        ([("4f1c", MOVED)], None, None),  # never paired: nothing to look for
+    ],
+)
+def test_the_relocator_looks_for_the_paired_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    answers: list[tuple[str, str]],
+    worker_id: str | None,
+    moved: str | None,
+) -> None:
+    from vozata.worker_client.discovery import FoundWorker
+
+    broadcasts: list[tuple[int, list[str]]] = []
+
+    def discover(port: int, sources: list[str]) -> list[FoundWorker]:
+        broadcasts.append((port, sources))
+        return [FoundWorker(id_, "GPU-PC", url, "0.9.0", None) for id_, url in answers]
+
+    monkeypatch.setattr(bootstrap, "discover_workers", discover)
+    monkeypatch.setattr(bootstrap, "lan_addresses", lambda: ["192.168.0.5"])
+    saved: list[str] = []
+
+    relocate = bootstrap.worker_relocator(saved.append)
+    result = relocate(_settings(tmp_path, worker_id=worker_id))
+
+    assert result == moved
+    assert saved == ([moved] if moved else [])
+    assert broadcasts == ([] if worker_id is None else [(8767, ["192.168.0.5"])])

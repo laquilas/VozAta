@@ -219,6 +219,16 @@ FIELDS: tuple[Field, ...] = (
     Field("WORKER_TOKEN", "worker_token", "string", secret=True, group="worker"),
     Field("WORKER_HOST", "worker_host", "string", group="worker", applies="restart"),
     Field("WORKER_PORT", "worker_port", "integer", group="worker", applies="restart"),
+    # Phase 47
+    Field("WORKER_ID", "worker_id", "string", group="worker"),
+    Field("WORKER_NAME", "worker_name", "string", group="worker", applies="restart"),
+    Field(
+        "WORKER_DISCOVERY_PORT",
+        "worker_discovery_port",
+        "integer",
+        group="worker",
+        applies="restart",
+    ),
     Field("API_HOST", "api_host", "string", group="api", applies="restart"),
     Field("API_PORT", "api_port", "integer", group="api", applies="restart"),
 )

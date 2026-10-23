@@ -15,6 +15,11 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
 
     public IReadOnlyList<SettingEditorViewModel> Editors { get; } = editors;
 
+    /// <summary>Find and pair a worker on the network (phase 47): the Worker group only.</summary>
+    public WorkerPairingViewModel? Pairing { get; init; }
+
+    public bool HasPairing => Pairing is not null;
+
     [ObservableProperty]
     public partial string Title { get; private set; } = id;
 
@@ -54,6 +59,9 @@ public sealed partial class SettingsViewModel(
     public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "api"];
 
     /// <summary>The key each service check sits next to (phase 38).</summary>
+    /// <summary>The keys a worker pairing saves (phase 47).</summary>
+    private static readonly string[] PairedKeys = ["WORKER_URL", "WORKER_TOKEN", "WORKER_ID"];
+
     private static readonly Dictionary<string, string> TestAnchors = new()
     {
         ["OLLAMA_URL"] = ConnectionTargets.Ollama,
@@ -119,7 +127,12 @@ public sealed partial class SettingsViewModel(
                     }
                 }
 
-                var section = new SettingGroupViewModel(group.Key, editors);
+                var section = new SettingGroupViewModel(group.Key, editors)
+                {
+                    Pairing = group.Key == "worker"
+                        ? new WorkerPairingViewModel(client, localization) { Paired = ShowPairedAsync }
+                        : null,
+                };
                 section.RefreshTexts(localization);
                 Groups.Add(section);
             }
@@ -163,6 +176,25 @@ public sealed partial class SettingsViewModel(
             {
                 editor.SetOptions(items, options.Reachable.GetValueOrDefault(source, true));
             }
+        }
+    }
+
+    /// <summary>The engine saved a pairing: show its address, token and id as saved values.</summary>
+    private async Task ShowPairedAsync(PairedWorker paired)
+    {
+        try
+        {
+            var settings = await client.GetSettingsAsync();
+            foreach (var editor in Editors.Where(editor => PairedKeys.Contains(editor.Key)))
+            {
+                editor.Accept(Value(settings.Values, editor.Key));
+            }
+
+            UpdateDirty();
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            Error = ErrorText(error);
         }
     }
 

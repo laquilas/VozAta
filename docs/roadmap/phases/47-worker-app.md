@@ -73,11 +73,11 @@ rewritten around the app; `worker-api.md` (`/pair`, `/local/status`, UDP discove
 
 ## Acceptance criteria
 
-- [ ] On the GPU PC, `VozAta Worker.exe` starts the worker, shows its address, GPU and pairing
+- [x] On the GPU PC, `VozAta Worker.exe` starts the worker, shows its address, GPU and pairing
       code, can start with Windows and add the firewall rules.
-- [ ] On this PC, "Find workers" lists the worker; pairing with the code fills URL and token and
+- [x] On this PC, "Find workers" lists the worker; pairing with the code fills URL and token and
       the Test is ok.
-- [ ] After the worker's address changes, the next recording finds it again without a fallback.
+- [x] After the worker's address changes, the next recording finds it again without a fallback.
 
 ## Tests
 
@@ -95,3 +95,57 @@ mDNS / Bonjour.
 
 > Start phase 47 (`docs/roadmap/phases/47-worker-app.md`) once phase 44 is merged: read its
 > *Read first* files, write `plans/47-worker-app.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/47-worker-app`
+- **Status:** ready for PR
+- **Updated:** 2026-10-22
+- **Next step:** open the PR to `main`; after the merge, start phase 48
+  (`docs/roadmap/phases/48-minutes-so-far.md`).
+
+### Steps
+
+- [x] Implementation plan (`plans/47-worker-app.md`)
+- [x] Worker: identity, pairing codes, `/pair`, `/local/status`
+- [x] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
+- [x] Engine: find a moved worker before the fallback
+- [x] Desktop Config: Find workers and pair
+- [x] The worker app (`VozAta.Worker`)
+- [x] Packaging and docs
+- [x] Full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- The worker app is published into the desktop app's folder (both use `engine\vozata-engine.exe`
+  next to them) instead of a separate `build/worker/`; its working directory is
+  `%APPDATA%\VozAta\worker`, so its `.env` (token, id) is apart from the engine's.
+- `/pair` and `/local/status` sit outside the token guard (a router carries it now); a wrong code
+  is 403 `worker_pairing_refused`, the lockout 423 `worker_pairing_locked`. `WORKER_ID` is made
+  only for a worker on the network, like the token.
+- Discovery sends one broadcast per IPv4 address of this PC (Windows sends a limited broadcast
+  through one interface only) and dedupes answers by worker id. A loopback worker (no id) does not
+  answer discovery.
+- Relocation happens where a transcriber is built (recording start, queue step); a worker lost
+  in the middle of a recording still falls back (phase 44) and is found again at the next start.
+- The worker app has its own test project (`tests/VozAta.Worker.Tests`) and does not share source
+  files with the desktop app (linked files would give the desktop tests two copies of the same
+  types). `ShellViewModelTests.The_banner_over_other_pages_follows_the_elapsed_time_and_the_end`
+  failed once in a full run and passed on four reruns (timing, not related to this phase).
+- The worker app reads `worker.settings.json`, not `appsettings.json`: it is published into the
+  desktop app's folder, which has its own `appsettings.json`.
+- The worker app uses the desktop app's design system (`Themes/*.axaml` linked into the project,
+  user request 2026-10-22): brand band with the logo and a state tag, cards, banners.
+- Manual check (2026-10-22, this PC as both sides): the worker app (Debug) found the repository's
+  Python, started the worker in `%APPDATA%\VozAta\worker` (token and id made there) and showed
+  the pairing code, four LAN addresses, the RTX 3050 and the token. A scratch engine (port 8799)
+  found it with `GET /worker/discover` in 1.6 s; a wrong code got the localized 409, the shown
+  code paired and saved `WORKER_URL` / `WORKER_TOKEN` / `WORKER_ID` (token equal to the
+  worker's); `POST /settings/test/worker` and `/health.worker` were ok. With `WORKER_URL` pointing
+  at a dead address, `build_transcriber` found the worker by its id in 5.2 s and saved the new
+  address. Found and fixed: the state sentence was cut, the log lost its accents (UTF-8). The
+  test folder was removed afterwards. On one PC the worker answers through whichever adapter
+  replies first (a virtual one here); between two PCs only the shared network can carry the
+  answer. Not checked by hand: the firewall rules (administrator prompt), Start with Windows,
+  the desktop Config "Find workers" block (covered by view-model tests), a second PC.

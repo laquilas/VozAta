@@ -1,0 +1,7 @@
+{
+  "Worker": {
+    "ExecutablePath": "engine/vozata-engine.exe",
+    "PythonPath": ".venv/Scripts/python.exe",
+    "WorkingDirectory": "%APPDATA%/VozAta/worker"
+  }
+}

@@ -473,6 +473,8 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "API_PORT",
         "WORKER_HOST",
         "WORKER_PORT",
+        "WORKER_NAME",
+        "WORKER_DISCOVERY_PORT",
         "STT_PROVIDER",
         "WHISPER_MODEL",
         "WHISPER_DEVICE",
@@ -758,3 +760,23 @@ def test_worker_keys_are_read_with_their_defaults() -> None:
 def test_a_worker_port_outside_the_range_is_refused() -> None:
     with pytest.raises(ConfigError):
         load_settings({"WORKER_PORT": "70000"})
+
+
+def test_the_worker_identity_keys_are_read_with_their_defaults() -> None:
+    defaults = load_settings({})
+    settings = load_settings(
+        {"WORKER_ID": "4f1c", "WORKER_NAME": "GPU-PC", "WORKER_DISCOVERY_PORT": "9767"}
+    )
+
+    assert (defaults.worker_id, defaults.worker_name, defaults.worker_discovery_port) == (
+        None,
+        None,
+        8767,
+    )
+    assert (settings.worker_id, settings.worker_name, settings.worker_discovery_port) == (
+        "4f1c",
+        "GPU-PC",
+        9767,
+    )
+    with pytest.raises(ConfigError):
+        load_settings({"WORKER_DISCOVERY_PORT": "0"})

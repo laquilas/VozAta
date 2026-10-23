@@ -336,6 +336,7 @@ def test_build_api_container_wires_real_providers(
     downloader = built[0].pop("downloader")  # phase 42: publishes through the container's tracker
     assert isinstance(downloader, HubDownloader) and downloader._tracker is container.downloads
     assert downloader._offline is False
+    moved = built[0].pop("worker_moved")
     assert built == [
         {
             "language": None,
@@ -353,6 +354,9 @@ def test_build_api_container_wires_real_providers(
     ]
     generator = container.regenerate_minutes._build_generator()
     assert generator._llm is llm
+    monkeypatch.chdir(tmp_path)  # the container's `.env` is relative: never the real one
+    moved("http://192.168.0.77:8766")  # phase 47: a moved worker's address is saved
+    assert container.settings_file.current.worker_url == "http://192.168.0.77:8766"
 
 
 @pytest.mark.parametrize(
@@ -912,6 +916,56 @@ def test_the_worker_app_needs_its_token(monkeypatch: pytest.MonkeyPatch) -> None
     assert client.get("/health").status_code == 401
     body = client.get("/health", headers={"Authorization": "Bearer t0ken"}).json()
     assert (body["gpu"]["available"], body["models"]) == (False, [])
+
+
+@pytest.mark.parametrize(("name", "shown"), [("GPU-PC", "GPU-PC"), (None, "this-host")])
+def test_the_worker_app_knows_its_identity(
+    monkeypatch: pytest.MonkeyPatch, name: str | None, shown: str
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from vozata.api.system_info import GpuInfo
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    monkeypatch.setattr(bootstrap.socket, "gethostname", lambda: "this-host")
+    settings = Settings(worker_name=name, worker_port=9000)
+    app = bootstrap.build_worker_app(settings, "t0ken", "4f1c")
+
+    body = TestClient(app, client=("127.0.0.1", 5)).get("/local/status").json()
+
+    assert (body["id"], body["name"], body["port"]) == ("4f1c", shown, 9000)
+
+
+@pytest.mark.parametrize(("worker_id", "answers"), [("4f1c", True), (None, False)])
+def test_only_a_worker_on_the_network_answers_discovery(
+    monkeypatch: pytest.MonkeyPatch, worker_id: str | None, answers: bool
+) -> None:
+    from fastapi.testclient import TestClient
+
+    import vozata.worker.discovery as discovery
+    from vozata.api.system_info import GpuInfo
+
+    replies: list[dict[str, object]] = []
+
+    class _Responder:
+        def __init__(self, port: int, reply) -> None:  # type: ignore[no-untyped-def]
+            self.port, self.reply = port, reply
+
+        def start(self) -> None:
+            replies.append({**self.reply(), "udp": self.port})
+
+        def stop(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(True, "RTX 3050", 6144))
+    monkeypatch.setattr(discovery, "DiscoveryResponder", _Responder)
+    settings = Settings(worker_name="GPU-PC", worker_discovery_port=9767)
+
+    with TestClient(bootstrap.build_worker_app(settings, "t0ken", worker_id)):
+        pass
+
+    expected = {"udp": 9767, "port": 8766, "id": "4f1c", "name": "GPU-PC", "gpu": "RTX 3050"}
+    assert [{k: r[k] for k in expected} for r in replies] == ([expected] if answers else [])
 
 
 @pytest.mark.parametrize(("device", "listed"), [("cuda", "large-v3"), ("cpu", "small")])

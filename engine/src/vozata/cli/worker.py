@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import secrets
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -20,28 +21,34 @@ def run_worker(
     settings: Settings,
     console: ConsoleObserver,
     localizer: Localizer,
-    build_app: Callable[[Settings, str | None], FastAPI],
+    build_app: Callable[[Settings, str | None, str | None], FastAPI],
     run: Callable[..., Any],
     *,
     env_file: Path,
     check: bool = False,
     new_token: Callable[[], str] = lambda: secrets.token_urlsafe(32),
+    new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
 ) -> int:
-    """Serve until Ctrl+C. A worker reachable from the network always has a token: without
-    `WORKER_TOKEN` one is made, saved to `env_file` and printed once. `check` only prints the
-    version and the address (the packaging smoke test)."""
+    """Serve until Ctrl+C. A worker reachable from the network always has a token and an id
+    (phase 47: other PCs find it by id): without `WORKER_TOKEN` / `WORKER_ID` they are made and
+    saved to `env_file`, the token printed once. `check` only prints the version and the address
+    (the packaging smoke test)."""
     host, port = settings.worker_host, settings.worker_port
     url = f"http://{_bracketed(host)}:{port}"
     if check:
         console.say(localizer.t("cli.worker_check", version=__version__, url=url))
         return 0
-    token = settings.worker_token
-    if token is None and not _loopback(host):
-        token = new_token()
-        _save_token(env_file, token)
-        console.say(localizer.t("cli.worker_token_created", token=token, file=env_file))
+    token, worker_id = settings.worker_token, settings.worker_id
+    if not _loopback(host):
+        if token is None:
+            token = new_token()
+            _save(env_file, "WORKER_TOKEN", token)
+            console.say(localizer.t("cli.worker_token_created", token=token, file=env_file))
+        if worker_id is None:
+            worker_id = new_id()
+            _save(env_file, "WORKER_ID", worker_id)
     console.say(localizer.t("cli.worker_listening", url=url))
-    run(build_app(settings, token), host=host, port=port, log_level="warning")
+    run(build_app(settings, token, worker_id), host=host, port=port, log_level="warning")
     return 0
 
 
@@ -59,8 +66,8 @@ def _bracketed(host: str) -> str:
     return f"[{host}]" if ":" in host and not host.startswith("[") else host
 
 
-def _save_token(env_file: Path, token: str) -> None:
+def _save(env_file: Path, key: str, value: str) -> None:
     text = env_file.read_text(encoding="utf-8") if env_file.exists() else ""
     if text and not text.endswith("\n"):
         text += "\n"
-    env_file.write_text(f"{text}WORKER_TOKEN={token}\n", encoding="utf-8", newline="\n")
+    env_file.write_text(f"{text}{key}={value}\n", encoding="utf-8", newline="\n")

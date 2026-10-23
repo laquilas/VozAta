@@ -13,6 +13,8 @@ from vozata.cli.worker import run_worker
 from vozata.config import Settings
 from vozata.labels import SpeakerLabeler
 
+ids: list[str | None] = []
+
 
 def _worker(
     settings: Settings, env_file: Path, *, check: bool = False
@@ -21,12 +23,14 @@ def _worker(
     localizer = FakeLocalizer()
     console = ConsoleObserver(localizer, SpeakerLabeler(localizer), out)
     runs: list[tuple[str | None, dict[str, Any]]] = []
+    ids.clear()
 
-    def build(settings: Settings, token: str | None) -> object:
-        return ("app", token)
+    def build(settings: Settings, token: str | None, worker_id: str | None) -> object:
+        return ("app", token, worker_id)
 
     def run(application: Any, **options: Any) -> None:
         runs.append((application[1], options))
+        ids.append(application[2])
 
     code = run_worker(
         settings,
@@ -37,17 +41,21 @@ def _worker(
         env_file=env_file,
         check=check,
         new_token=lambda: "generated-token",
+        new_id=lambda: "generated-id",
     )
     return code, out.getvalue(), runs
 
 
-def test_listens_on_the_network_with_the_configured_token(tmp_path: Path) -> None:
-    settings = Settings(worker_host="0.0.0.0", worker_port=8766, worker_token="mine")
+def test_listens_on_the_network_with_the_configured_token_and_id(tmp_path: Path) -> None:
+    settings = Settings(
+        worker_host="0.0.0.0", worker_port=8766, worker_token="mine", worker_id="4f1c"
+    )
 
     code, out, runs = _worker(settings, tmp_path / ".env")
 
     assert code == 0
     assert runs == [("mine", {"host": "0.0.0.0", "port": 8766, "log_level": "warning"})]
+    assert ids == ["4f1c"]
     assert out == "cli.worker_listening(url=http://0.0.0.0:8766)\n"
     assert not (tmp_path / ".env").exists()
 
@@ -64,8 +72,9 @@ def test_a_network_host_without_a_token_gets_a_new_one_saved_to_the_env_file(
     assert code == 0
     assert runs[0][0] == "generated-token"
     assert env_file.read_text(encoding="utf-8") == (
-        "WHISPER_MODEL=large-v3-turbo\nWORKER_TOKEN=generated-token\n"
+        "WHISPER_MODEL=large-v3-turbo\nWORKER_TOKEN=generated-token\nWORKER_ID=generated-id\n"
     )
+    assert ids == ["generated-id"]
     assert f"cli.worker_token_created(file={env_file},token=generated-token)" in out
 
 
@@ -75,6 +84,7 @@ def test_a_loopback_worker_needs_no_token(tmp_path: Path, host: str) -> None:
 
     assert code == 0
     assert runs[0][0] is None
+    assert ids == [None]  # nobody on the network can find a loopback worker
     assert not (tmp_path / ".env").exists()
 
 

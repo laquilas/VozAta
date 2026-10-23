@@ -292,6 +292,36 @@
                 <Border Classes="card" Margin="0,0,0,16">
                   <StackPanel Spacing="12">
                     <TextBlock Text="{Binding Title}" Classes="subtitle" />
+                    <!-- Worker group (phase 47): find a worker on the network and pair by its code -->
+                    <Border IsVisible="{Binding HasPairing}" Margin="0,0,0,8">
+                      <StackPanel DataContext="{Binding Pairing}" x:DataType="vm:WorkerPairingViewModel" Spacing="8">
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                   Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerFindHelp]}" />
+                        <Button HorizontalAlignment="Left" Command="{Binding FindCommand}"
+                                Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerFind]}" />
+                        <TextBlock Text="{Binding Message}" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
+                                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <ItemsControl ItemsSource="{Binding Workers}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FoundWorkerViewModel">
+                              <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                  <TextBlock Text="{Binding Detail}" Classes="tiny secondary" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Width="140" Margin="12,0,8,0" Text="{Binding Code}"
+                                         PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerCode]}"
+                                         AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerCode]}" />
+                                <Button Grid.Column="2" Command="{Binding PairCommand}"
+                                        Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[WorkerPair]}" />
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
                     <ItemsControl ItemsSource="{Binding Editors}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SettingEditorViewModel">

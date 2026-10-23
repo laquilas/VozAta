@@ -788,6 +788,8 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8765` | 06 | never bind to 0.0.0.0 |
 | `OPENAI_STT_URL` / `OPENAI_STT_KEY` / `OPENAI_STT_MODEL` | `https://api.openai.com/v1` / *(empty)* / `whisper-1` | 12 | OpenAI-style `/audio/transcriptions` provider (`STT_PROVIDER=openai_compatible`); the key is secret |
 | `WORKER_URL` / `WORKER_TOKEN` | *(empty)* / *(empty)* | 44 | the VozAta worker this engine sends speech to (`STT_PROVIDER=vozata_worker`); the token is secret |
+| `WORKER_ID` | *(empty)* | 47 | this PC: the paired worker (saved by pairing; a moved worker is found again by it); the worker PC: its own id, made on the first start on the network |
+| `WORKER_NAME` / `WORKER_DISCOVERY_PORT` | *(empty)* = the PC name / `8767` | 47 | the name a worker answers discovery with, and the UDP port of discovery (the same on both PCs); restart |
 | `WORKER_HOST` / `WORKER_PORT` | `0.0.0.0` / `8766` | 44 | on the worker PC only (`vozata worker`): where it listens; a non-loopback host needs `WORKER_TOKEN` (generated on first run); restart |
 | `DIARIZATION_ENABLED` | `false` | 14 | |
 | `DIARIZATION_PROVIDER` | `pyannote` | 14 | |

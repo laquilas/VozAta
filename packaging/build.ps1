@@ -40,6 +40,11 @@ dotnet publish (Join-Path $root "ui/src/VozAta.Desktop") -c Release -r win-x64 -
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 Copy-Item (Join-Path $root "ui/src/VozAta.Desktop/appsettings.Installed.json") (Join-Path $out "ui/appsettings.json") -Force
 
+Write-Host "== Worker app (self-contained, next to the desktop app: both use engine\vozata-engine.exe)"
+dotnet publish (Join-Path $root "ui/src/VozAta.Worker") -c Release -r win-x64 --self-contained `
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o (Join-Path $out "ui")
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish of VozAta.Worker failed" }
+
 Write-Host "== First-run .env"
 & $Python (Join-Path $root "packaging/make_installed_env.py") (Join-Path $root "engine/.env.example") (Join-Path $out "installed.env")
 if ($LASTEXITCODE -ne 0) { throw "make_installed_env.py failed" }

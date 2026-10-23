@@ -1,0 +1,24 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VozAta.Worker.App"
+             RequestedThemeVariant="Default">
+  <!-- The desktop app's design system (tokens, icons, control styles), linked into this project -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://VozAta.Worker/Themes/Tokens.axaml" />
+        <ResourceInclude Source="avares://VozAta.Worker/Themes/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Light" Accent="#E57CD8" />
+        <ColorPaletteResources x:Key="Dark" Accent="#E57CD8" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://VozAta.Worker/Themes/Controls.axaml" />
+  </Application.Styles>
+</Application>

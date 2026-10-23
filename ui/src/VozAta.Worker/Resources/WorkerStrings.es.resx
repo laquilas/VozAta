@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WorkerStart" xml:space="preserve">
+    <value>Iniciar</value>
+  </data>
+  <data name="WorkerStop" xml:space="preserve">
+    <value>Detener</value>
+  </data>
+  <data name="WorkerState_Stopped" xml:space="preserve">
+    <value>Detenido: los otros PC transcriben por su cuenta.</value>
+  </data>
+  <data name="WorkerState_Starting" xml:space="preserve">
+    <value>Iniciando… el primer inicio descarga el modelo de voz.</value>
+  </data>
+  <data name="WorkerState_Running" xml:space="preserve">
+    <value>En marcha: VozAta en otros PC de la red puede usar este PC.</value>
+  </data>
+  <data name="WorkerState_Failed" xml:space="preserve">
+    <value>Se detuvo con un error.</value>
+  </data>
+  <data name="WorkerNotFound" xml:space="preserve">
+    <value>No se encontró el programa del worker: reinstala VozAta (engine\vozata-engine.exe junto a esta app).</value>
+  </data>
+  <data name="WorkerExited" xml:space="preserve">
+    <value>El worker se detuvo. Registro: {0}</value>
+  </data>
+  <data name="WorkerFirewallDone" xml:space="preserve">
+    <value>Permitido en redes privadas: TCP {0} y UDP {1}.</value>
+  </data>
+  <data name="WorkerFirewallFailed" xml:space="preserve">
+    <value>No se añadieron las reglas del firewall (se rechazó o falló la solicitud de administrador).</value>
+  </data>
+  <data name="WorkerNoGpu" xml:space="preserve">
+    <value>Sin GPU NVIDIA: la voz se ejecuta en la CPU (lento).</value>
+  </data>
+  <data name="WorkerNoModel" xml:space="preserve">
+    <value>Aún no cargado (se carga en la primera reunión).</value>
+  </data>
+  <data name="WorkerCodeExpires" xml:space="preserve">
+    <value>Válido durante {0}; luego aparece un código nuevo.</value>
+  </data>
+  <data name="WorkerPairingCode" xml:space="preserve">
+    <value>Código de emparejamiento</value>
+  </data>
+  <data name="WorkerPairingHelp" xml:space="preserve">
+    <value>En el otro PC: VozAta → Config → Worker → Buscar workers, y escribe este código.</value>
+  </data>
+  <data name="WorkerAddresses" xml:space="preserve">
+    <value>Direcciones</value>
+  </data>
+  <data name="WorkerName" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="WorkerGpu" xml:space="preserve">
+    <value>GPU</value>
+  </data>
+  <data name="WorkerModel" xml:space="preserve">
+    <value>Modelo de voz</value>
+  </data>
+  <data name="WorkerToken" xml:space="preserve">
+    <value>Token</value>
+  </data>
+  <data name="WorkerStartWithWindows" xml:space="preserve">
+    <value>Iniciar con Windows</value>
+  </data>
+  <data name="WorkerAllowNetwork" xml:space="preserve">
+    <value>Permitir en la red</value>
+  </data>
+  <data name="WorkerAllowNetworkHelp" xml:space="preserve">
+    <value>Añade reglas de firewall solo para redes privadas (pide permisos de administrador una vez).</value>
+  </data>
+  <data name="WorkerTrayShow" xml:space="preserve">
+    <value>Mostrar VozAta Worker</value>
+  </data>
+  <data name="WorkerTrayExit" xml:space="preserve">
+    <value>Salir (detiene el worker)</value>
+  </data>
+  <data name="WorkerTag_Stopped" xml:space="preserve">
+    <value>Detenido</value>
+  </data>
+  <data name="WorkerTag_Starting" xml:space="preserve">
+    <value>Iniciando</value>
+  </data>
+  <data name="WorkerTag_Running" xml:space="preserve">
+    <value>En marcha</value>
+  </data>
+  <data name="WorkerTag_Failed" xml:space="preserve">
+    <value>Error</value>
+  </data>
+</root>
