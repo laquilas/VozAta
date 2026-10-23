@@ -108,6 +108,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 56 | [Speaker identification downloaded on the PC](phases/56-speakers-on-demand.md) | 14, 45, 51 | done |
 | 57 | [A separate installer for VozAta Worker; version 0.2.1](phases/57-worker-installer.md) | 47, 56 | done |
 | 58 | [GPU support (CUDA) downloaded on the PC](phases/58-cuda-on-demand.md) | 13, 56, 57 | done |
+| 59 | [Voice command status in the menu; request history per meeting](phases/59-voice-status-and-history.md) | 48, 49, 50 | in progress (`feature/59-voice-status-and-history`) |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
@@ -235,6 +236,9 @@ graph LR
   P47 --> P57[57 Worker installer]
   P56 --> P57
   P57 --> P58[58 CUDA on demand]
+  P48 --> P59[59 Voice status + history]
+  P49 --> P59
+  P50 --> P59
 ```
 
 ## Backlog (not scheduled)
