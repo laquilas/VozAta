@@ -287,12 +287,14 @@ class _Engine:
         self.speaker_count = speaker_count
         self.calls: list[str] = []
         self.sessions = 0
+        self.live: list[bool] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         call = f"{request.method} {request.url.path}"
         self.calls.append(call)
         if call == "POST /sessions":
             self.sessions += 1
+            self.live.append(json.loads(request.content)["live_transcription"])
             return _json(201, {"id": f"s{self.sessions}", "status": "recording"})
         if call == "POST /sessions/current/stop":
             return _json(202, {})
@@ -310,11 +312,11 @@ def _step(state: str, step: str) -> dict[str, object]:
     return {"state": state, "percent": 50, "step": step}
 
 
-def _preempt(engine: _Engine, cuda: bool) -> check.StepResult:
+def _preempt(engine: _Engine, expect_pause: bool) -> check.StepResult:
     clock, played = _Clock(), []
     result = check.preempt(
         _client(engine),
-        cuda=cuda,
+        expect_pause=expect_pause,
         during=lambda: played.append(True),
         clock=clock,
         sleep=clock.sleep,
@@ -323,7 +325,7 @@ def _preempt(engine: _Engine, cuda: bool) -> check.StepResult:
     return result
 
 
-def test_with_cuda_a_recording_pauses_the_diarize_step_on_the_worker() -> None:
+def test_a_recording_on_this_gpu_pauses_the_diarize_step_on_the_worker() -> None:
     engine = _Engine(
         [
             _step("running", "transcribe"),
@@ -334,7 +336,7 @@ def test_with_cuda_a_recording_pauses_the_diarize_step_on_the_worker() -> None:
         ]
     )
 
-    result = _preempt(engine, cuda=True)
+    result = _preempt(engine, expect_pause=True)
 
     assert result.ok is True
     assert "paused" in result.detail and "2 speaker" in result.detail
@@ -344,26 +346,28 @@ def test_with_cuda_a_recording_pauses_the_diarize_step_on_the_worker() -> None:
     assert "DELETE /sessions/s2" in engine.calls
 
 
-def test_with_cuda_a_step_that_is_not_paused_fails() -> None:
+def test_a_step_that_a_recording_on_this_gpu_does_not_pause_fails() -> None:
     engine = _Engine([_step("running", "diarize")] * 3 + [None])
 
-    result = _preempt(engine, cuda=True)
+    result = _preempt(engine, expect_pause=True)
 
     assert result.ok is False and "not paused" in result.detail
+    assert "POST /sessions" in engine.calls
 
 
-def test_without_cuda_the_worker_step_keeps_running() -> None:
+def test_a_recording_without_this_gpu_lets_the_worker_step_run() -> None:
     engine = _Engine([_step("running", "diarize"), _step("running", "diarize"), None])
 
-    result = _preempt(engine, cuda=False)
+    result = _preempt(engine, expect_pause=False)
 
     assert result.ok is True and "kept running" in result.detail
+    assert engine.live == [False, True]  # the second recording transcribes live
 
 
-def test_without_cuda_a_paused_step_fails() -> None:
+def test_a_step_paused_by_a_recording_without_this_gpu_fails() -> None:
     engine = _Engine([_step("running", "diarize"), _step("paused", "diarize"), None])
 
-    result = _preempt(engine, cuda=False)
+    result = _preempt(engine, expect_pause=False)
 
     assert result.ok is False and "paused" in result.detail
 
@@ -371,7 +375,7 @@ def test_without_cuda_a_paused_step_fails() -> None:
 def test_a_meeting_without_a_diarize_step_fails() -> None:
     engine = _Engine([_step("running", "transcribe"), None])
 
-    result = _preempt(engine, cuda=True)
+    result = _preempt(engine, expect_pause=True)
 
     assert result.ok is False and "no diarize step" in result.detail
     assert engine.calls.count("POST /sessions") == 1
@@ -380,7 +384,7 @@ def test_a_meeting_without_a_diarize_step_fails() -> None:
 def test_a_meeting_that_never_finishes_fails() -> None:
     engine = _Engine([_step("running", "transcribe")])
 
-    result = _preempt(engine, cuda=True)
+    result = _preempt(engine, expect_pause=True)
 
     assert result.ok is False and "timed out" in result.detail
 
@@ -389,7 +393,9 @@ def test_a_recording_that_cannot_start_fails() -> None:
     clock = _Clock()
     engine = _client(lambda _: _json(503, {"error": {"code": "device_timeout"}}))
 
-    result = check.preempt(engine, cuda=True, during=lambda: None, clock=clock, sleep=clock.sleep)
+    result = check.preempt(
+        engine, expect_pause=True, during=lambda: None, clock=clock, sleep=clock.sleep
+    )
 
     assert result.ok is False and "device_timeout" in result.detail
 
@@ -515,19 +521,27 @@ def test_a_pairing_that_saved_nothing_fails(tmp_path: Path) -> None:
     assert steps == ["discover:True", "pair:True", "health:False"]
 
 
-def test_record_runs_the_pre_emption_with_the_engine_gpu(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("cuda", "local_speech", "ok"),
+    [(True, True, True), (True, False, False), (False, True, False)],
+)
+def test_record_expects_a_pause_only_with_cuda_and_speech_on_this_pc(
+    tmp_path: Path, cuda: bool, local_speech: bool, ok: bool
+) -> None:
     engine = _Engine([_step("running", "diarize"), _step("paused", "diarize"), None])
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/health":
-            return _json(200, {"gpu": {"available": True}})
+            return _json(200, {"gpu": {"available": cuda}})
         return engine(request)
 
-    options = check.Options(worker_url="http://10.0.0.5:8766", token="t", record=True)
+    options = check.Options(
+        worker_url="http://10.0.0.5:8766", token="t", record=True, local_speech=local_speech
+    )
 
     steps = _run(options, _client(handler), tmp_path / ".env", _Worker())
 
-    assert steps[-1] == "pre-emption:True"
+    assert steps[-1] == f"pre-emption:{ok}"  # the fake engine always pauses
 
 
 def test_a_scratch_env_with_a_given_worker(tmp_path: Path) -> None:
@@ -536,3 +550,10 @@ def test_a_scratch_env_with_a_given_worker(tmp_path: Path) -> None:
     )
 
     assert "WORKER_URL=http://10.0.0.5:8766\n" in text and "WORKER_TOKEN=t\n" in text
+
+
+def test_a_scratch_env_with_speech_on_this_pc(tmp_path: Path) -> None:
+    text = check.scratch_env(tmp_path, port=1, discovery_port=2, local_speech=True)
+
+    assert "STT_PROVIDER=faster_whisper\n" in text
+    assert "DIARIZATION_PROVIDER=vozata_worker\n" in text

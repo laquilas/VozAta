@@ -63,16 +63,17 @@ class ScratchEngine:
                 stdout=log,
                 stderr=subprocess.STDOUT,
             )
-        deadline = time.monotonic() + 90
+        deadline = time.monotonic() + 180
         while time.monotonic() < deadline:
             if self._process.poll() is not None:
                 raise RuntimeError(f"the scratch engine exited; see {self._log}")
             try:
-                if httpx.get(f"{self.url}/health", timeout=2).status_code == 200:
+                if httpx.get(f"{self.url}/health", timeout=15).status_code == 200:
                     return self
             except httpx.HTTPError:
                 pass
             time.sleep(0.5)
+        self.__exit__(None, None, None)  # `with` does not call it when `__enter__` raises
         raise RuntimeError(f"the scratch engine did not answer; see {self._log}")
 
     def __exit__(

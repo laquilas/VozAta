@@ -45,6 +45,7 @@ def scratch_env(
     discovery_port: int,
     worker_url: str | None = None,
     worker_token: str | None = None,
+    local_speech: bool = False,
 ) -> str:
     """The client engine's `.env`: everything inside `folder`, every task on the worker (pairing
     adds `WORKER_URL` / `WORKER_TOKEN`, or they are given)."""
@@ -52,7 +53,7 @@ def scratch_env(
         "API_PORT": str(port),
         "OUTPUT_DIR": str(folder / "recordings"),
         "DATABASE_PATH": str(folder / "vozata.db"),
-        "STT_PROVIDER": "vozata_worker",
+        "STT_PROVIDER": "faster_whisper" if local_speech else "vozata_worker",
         "DIARIZATION_PROVIDER": "vozata_worker",
         "TRANSLATION_PROVIDER": "vozata_worker",
         "DIARIZATION_ENABLED": "true",
@@ -220,15 +221,17 @@ def _job_state(worker: httpx.Client, job: str) -> str:
 def preempt(
     engine: httpx.Client,
     *,
-    cuda: bool,
+    expect_pause: bool,
     during: Callable[[], None],
     clock: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
     timeout: float = 900.0,
 ) -> StepResult:
     """Record a meeting (`during` plays speech on this PC's output), stop it, and when the queue's
-    diarize step runs on the worker start a second recording. With CUDA here the step pauses (its
-    fallback would use this GPU, phase 40); without CUDA it keeps running on the worker."""
+    diarize step runs on the worker start a second recording with live transcription. The step
+    pauses (the worker job is cancelled, then redone) only when that recording loads Whisper on
+    this PC's GPU (phase 40's gate): `expect_pause` = CUDA here and speech on this PC. With speech
+    on the worker the recording uses no GPU here and the step keeps running."""
     name = "pre-emption"
     try:
         first = _record(engine, "two-PC check")
@@ -240,8 +243,8 @@ def preempt(
             if meeting.get("status") == "done":
                 return StepResult(name, False, "no diarize step: no system speech was recorded?")
             return StepResult(name, False, "timed out waiting for the diarize step")
-        second = _record(engine, "two-PC check (pre-empts)")
-        paused = _wait(engine, first, _paused_or_done, clock, sleep, clock() + 10.0)
+        second = _record(engine, "two-PC check (pre-empts)", live=True)
+        paused = _wait(engine, first, _paused_or_done, clock, sleep, clock() + 20.0)
         engine.post("/sessions/current/stop", timeout=30)
         finished = _wait(engine, second, _done, clock, sleep, deadline)
         if finished:
@@ -254,22 +257,22 @@ def preempt(
     except httpx.HTTPError as error:
         return StepResult(name, False, f"engine: {error}")
     done = f"then finished: {speakers} speaker(s)"
-    if cuda and not paused:
-        return StepResult(name, False, "diarize step not paused although this PC has CUDA")
-    if not cuda and paused:
-        return StepResult(name, False, "diarize step paused although this PC has no CUDA")
-    if cuda:
-        return StepResult(name, True, f"diarize step paused by the recording (CUDA here), {done}")
-    return StepResult(name, True, f"diarize step kept running on the worker (no CUDA), {done}")
+    if expect_pause and not paused:
+        return StepResult(name, False, "diarize step not paused by a recording on this GPU")
+    if not expect_pause and paused:
+        return StepResult(name, False, "diarize step paused by a recording that uses no GPU here")
+    if expect_pause:
+        return StepResult(name, True, f"diarize step paused by the recording on this GPU, {done}")
+    return StepResult(name, True, f"diarize step kept running on the worker, {done}")
 
 
 class _Refused(Exception):
     pass
 
 
-def _record(engine: httpx.Client, title: str) -> str:
+def _record(engine: httpx.Client, title: str, *, live: bool = False) -> str:
     response = engine.post(
-        "/sessions", json={"live_transcription": False, "title": title}, timeout=60
+        "/sessions", json={"live_transcription": live, "title": title}, timeout=60
     )
     if response.status_code != 201:
         raise _Refused(f"recording refused: {response.status_code} {_error_code(response)}")
@@ -327,6 +330,7 @@ class Options:
     token: str | None = None
     speakers: bool = True
     record: bool = False
+    local_speech: bool = False  # the client transcribes on its own GPU (STT_PROVIDER local)
 
 
 def run_checks(
@@ -381,8 +385,11 @@ def run_checks(
     if not options.record:
         return [*results, StepResult("pre-emption", None, "not asked (--record)")]
     gpu = engine.get("/health", timeout=10).json().get("gpu") or {}
-    cuda = bool(gpu.get("available"))
-    return [*results, preempt(engine, cuda=cuda, during=during, clock=clock, sleep=sleep)]
+    expect_pause = bool(gpu.get("available")) and options.local_speech
+    return [
+        *results,
+        preempt(engine, expect_pause=expect_pause, during=during, clock=clock, sleep=sleep),
+    ]
 
 
 def _on_this_pc(url: str) -> str:
@@ -420,6 +427,11 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - starts pro
     parser.add_argument("--record", action="store_true", help="also check the pre-emption")
     parser.add_argument("--play", type=Path, help="WAV played on the output while recording")
     parser.add_argument("--record-seconds", type=float, default=30.0)
+    parser.add_argument(
+        "--local-speech",
+        action="store_true",
+        help="this PC transcribes on its own GPU: a recording then pre-empts the diarize step",
+    )
     parser.add_argument("--discovery-port", type=int, default=8767)
     parser.add_argument("--folder", type=Path, help="scratch folder (default: a new temp one)")
     args = parser.parse_args(argv)
@@ -436,6 +448,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - starts pro
             discovery_port=args.discovery_port,
             worker_url=args.worker_url,
             worker_token=args.token,
+            local_speech=args.local_speech,
         ),
         encoding="utf-8",
     )
@@ -446,6 +459,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - starts pro
         token=args.token,
         speakers=not args.no_speakers,
         record=args.record,
+        local_speech=args.local_speech,
     )
 
     def worker(url: str, token: str | None) -> httpx.Client:

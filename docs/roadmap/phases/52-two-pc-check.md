@@ -79,9 +79,8 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - **Branch:** `feature/52-two-pc-check`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** run the script on this PC against a scratch worker on 0.0.0.0 (other ports, scratch
-  folder) with `--code auto --record --play <TTS WAV>`, fix what it finds, then write
-  `docs/two-pc-check.md`.
+- **Next step:** write `docs/two-pc-check.md` (prerequisites, the script, the manual UI steps) and
+  link it from `docs/remote-worker.md`.
 
 ### Steps
 
@@ -100,3 +99,9 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
   expects `paused` with CUDA and `running` without it.
 - The step logic has 93 % coverage (`pytest tests/scripts --cov=two_pc_check`); `scripts/` sits
   outside the engine package, so the engine coverage gate does not count it.
+- Correction of the note above, found by the first real run: a recording pre-empts the worker
+  diarize step only when it loads a model on this PC's GPU (`LiveGpuLease`: local live Whisper, its
+  worker fallback, or the local live embedder). With speech on the worker the recording uses no GPU
+  here and the step keeps running. The script's second recording transcribes live, and a pause is
+  expected only with `--local-speech` and CUDA on the client. The scratch engine is now stopped when
+  its start times out, and `/health` gets 15 s (it probes Ollama).
