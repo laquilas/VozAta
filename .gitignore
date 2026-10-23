@@ -54,3 +54,6 @@ build/
 
 # Claude Code agent worktrees
 .claude/
+
+# WER benchmark results (phase 55)
+benchmarks/results/

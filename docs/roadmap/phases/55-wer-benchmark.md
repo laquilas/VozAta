@@ -27,8 +27,9 @@ backlog ("WER benchmark harness").
 - `scripts/wer_benchmark.py`: for each benchmark and each configuration of a grid
   (`--grid CHUNK_SECONDS=4,6,8 CHUNK_MODE=vad,fixed WHISPER_MODEL=large-v3`), runs the offline
   transcription of the engine on the audio (as the mic channel) and reports **WER**, word
-  substitutions / insertions / deletions, real-time factor and the first-word latency, as a
-  Markdown table (stdout and `benchmarks/results/<date>.md`, git-ignored).
+  substitutions / insertions / deletions and the real-time factor, as a Markdown table (stdout
+  and `benchmarks/results/<date>.md`, git-ignored). First-word latency does not exist offline;
+  the live latency is the chunk length plus the transcription time, which the RTF bounds.
 - WER on normalized words: lower case, punctuation removed, numbers as written; Levenshtein
   alignment on words (no new dependency).
 - Pure parts (normalization, alignment, WER, grid parsing, report) unit-tested; the run itself
@@ -36,9 +37,9 @@ backlog ("WER benchmark harness").
 
 ## Acceptance criteria
 
-- [ ] `scripts/wer_benchmark.py --grid CHUNK_SECONDS=4,6 ...` on the TTS meeting prints a table
+- [x] `scripts/wer_benchmark.py --grid CHUNK_SECONDS=4,6 ...` on the TTS meeting prints a table
       with WER and speed per configuration.
-- [ ] The first results are recorded in this file and the defaults are kept or changed from them.
+- [x] The first results are recorded in this file and the defaults are kept or changed from them.
 
 ## Tests
 
@@ -53,3 +54,48 @@ Speaker-attributed WER (cpWER), downloading public corpora, CI runs.
 
 > Start phase 55 (`docs/roadmap/phases/55-wer-benchmark.md`): read its *Read first* files, write
 > `plans/55-wer-benchmark.md`, then implement it task by task.
+
+## First results (2026-10-23, reference machine)
+
+RTX 3050 6 GB, `HF_HUB_OFFLINE=1`, `TRANSCRIPTION_LANGUAGE=pt`, the 62.9 s TTS meeting:
+
+| Configuration | WER | S | I | D | RTF |
+|---|---|---|---|---|---|
+| WHISPER_MODEL=large-v3-turbo CHUNK_MODE=vad CHUNK_SECONDS=4 | 0.0 % | 0 | 0 | 0 | 0.21 |
+| WHISPER_MODEL=large-v3-turbo CHUNK_MODE=vad CHUNK_SECONDS=8 | 0.0 % | 0 | 0 | 0 | 0.21 |
+| WHISPER_MODEL=large-v3 CHUNK_MODE=vad CHUNK_SECONDS=8 | 0.0 % | 0 | 0 | 0 | 0.38 |
+| WHISPER_MODEL=large-v3 CHUNK_MODE=vad CHUNK_SECONDS=4 | 0.0 % | 0 | 0 | 0 | 0.40 |
+| WHISPER_MODEL=large-v3-turbo CHUNK_MODE=fixed CHUNK_SECONDS=8 | 2.1 % | 1 | 1 | 0 | 0.19 |
+| WHISPER_MODEL=large-v3-turbo CHUNK_MODE=fixed CHUNK_SECONDS=4 | 2.1 % | 1 | 1 | 0 | 0.26 |
+| WHISPER_MODEL=large-v3 CHUNK_MODE=fixed CHUNK_SECONDS=8 | 4.3 % | 0 | 4 | 0 | 0.41 |
+| WHISPER_MODEL=large-v3 CHUNK_MODE=fixed CHUNK_SECONDS=4 | 6.4 % | 1 | 5 | 0 | 0.58 |
+
+**Defaults kept**: `CHUNK_MODE=vad` (pause-based chunks, phase 27) has no errors where fixed
+windows cut words (the insertions are words repeated across a window boundary), and
+`WHISPER_MODEL=large-v3-turbo` is as accurate as `large-v3` here at about half the time.
+`CHUNK_SECONDS` does not change VAD chunks (they end at pauses, up to
+`VAD_MAX_CHUNK_SECONDS`). The TTS audio is clean: real recordings are needed to tune further.
+
+## Progress
+
+- **Branch:** `feature/55-wer-benchmark`
+- **Status:** ready for PR
+- **Updated:** 2026-10-23
+- **Next step:** open the PR to `main`. Phase 55 is the last planned phase; the backlog is empty.
+
+### Steps
+
+- [x] Implementation plan (`plans/55-wer-benchmark.md`)
+- [x] Pure parts: normalization, alignment, WER, grid, report
+- [x] Runtime (offline transcription of a WAV) and the TTS reference
+- [x] First benchmark run, defaults kept or changed
+- [x] Docs, full suites, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- The TTS meeting is 62.9 s (9 sentences, Microsoft Maria Desktop, 0.8 s pauses). A first run with
+  the defaults (large-v3, VAD) got WER 0.0 % at RTF 0.44: clean TTS audio, so it mostly measures
+  speed and chunking accidents; real recordings belong in further benchmark folders.
+- Engine checks: ruff (src, tests, scripts) and format clean; the benchmark script has 100 %
+  coverage of its pure parts.

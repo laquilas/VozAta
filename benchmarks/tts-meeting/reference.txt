@@ -1,0 +1,9 @@
+Vamos começar a reunião de planejamento do lançamento da versão beta.
+O instalador já está pronto, mas os testes de recuperação de falhas ainda estão falhando.
+Por isso, proponho adiar o lançamento da beta de sexta-feira para a próxima terça-feira. Todos concordam?
+Ótimo, então está decidido, a beta sai na terça-feira.
+O Carlos vai corrigir os testes de recuperação até segunda-feira.
+A Ana vai atualizar as notas de versão, também até segunda-feira.
+Ainda precisamos decidir se vamos suportar o macOS nesta versão.
+Vamos discutir isso na próxima reunião.
+Obrigada a todos, até a próxima.
