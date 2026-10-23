@@ -1,0 +1,20 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VozAta.Worker.App"
+             RequestedThemeVariant="Default">
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Light" Accent="#E57CD8" />
+        <ColorPaletteResources x:Key="Dark" Accent="#E57CD8" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <Style Selector="TextBlock.label">
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.error">
+      <Setter Property="Foreground" Value="#D13438" />
+    </Style>
+  </Application.Styles>
+</Application>

@@ -101,8 +101,8 @@ mDNS / Bonjour.
 - **Branch:** `feature/47-worker-app`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 5 of `plans/47-worker-app.md` (the worker app `ui/src/VozAta.Worker`: process,
-  `/local/status` window, autostart, firewall, tray; tests).
+- **Next step:** Task 6 of `plans/47-worker-app.md` (publish `VozAta.Worker` next to the desktop
+  app in `build.ps1`, installer shortcut, `docs/remote-worker.md` around the app, contract docs).
 
 ### Steps
 
@@ -111,14 +111,14 @@ mDNS / Bonjour.
 - [x] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
 - [x] Engine: find a moved worker before the fallback
 - [x] Desktop Config: Find workers and pair
-- [ ] The worker app (`VozAta.Worker`)
+- [x] The worker app (`VozAta.Worker`)
 - [ ] Packaging and docs
 - [ ] Full suites, manual check, phase done
 
 ### Decisions and notes
 
 - Commits stay local until the PR (user rule, 2026-10-20).
-- The worker app is published into the desktop app's folder (both use `engineozata-engine.exe`
+- The worker app is published into the desktop app's folder (both use `engine\vozata-engine.exe`
   next to them) instead of a separate `build/worker/`; its working directory is
   `%APPDATA%\VozAta\worker`, so its `.env` (token, id) is apart from the engine's.
 - `/pair` and `/local/status` sit outside the token guard (a router carries it now); a wrong code
@@ -129,3 +129,7 @@ mDNS / Bonjour.
   answer discovery.
 - Relocation happens where a transcriber is built (recording start, queue step); a worker lost
   in the middle of a recording still falls back (phase 44) and is found again at the next start.
+- The worker app has its own test project (`tests/VozAta.Worker.Tests`) and does not share source
+  files with the desktop app (linked files would give the desktop tests two copies of the same
+  types). `ShellViewModelTests.The_banner_over_other_pages_follows_the_elapsed_time_and_the_end`
+  failed once in a full run and passed on four reruns (timing, not related to this phase).

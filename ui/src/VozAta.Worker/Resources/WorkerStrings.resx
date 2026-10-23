@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WorkerStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="WorkerStop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="WorkerState_Stopped" xml:space="preserve">
+    <value>Stopped: other PCs transcribe on their own.</value>
+  </data>
+  <data name="WorkerState_Starting" xml:space="preserve">
+    <value>Starting… the first start downloads the speech model.</value>
+  </data>
+  <data name="WorkerState_Running" xml:space="preserve">
+    <value>Running: VozAta on other PCs of the network can use this PC.</value>
+  </data>
+  <data name="WorkerState_Failed" xml:space="preserve">
+    <value>Stopped with an error.</value>
+  </data>
+  <data name="WorkerNotFound" xml:space="preserve">
+    <value>The worker program was not found: reinstall VozAta (engine\vozata-engine.exe next to this app).</value>
+  </data>
+  <data name="WorkerExited" xml:space="preserve">
+    <value>The worker stopped. Its log: {0}</value>
+  </data>
+  <data name="WorkerFirewallDone" xml:space="preserve">
+    <value>Allowed on private networks: TCP {0} and UDP {1}.</value>
+  </data>
+  <data name="WorkerFirewallFailed" xml:space="preserve">
+    <value>The firewall rules were not added (the administrator prompt was declined or failed).</value>
+  </data>
+  <data name="WorkerNoGpu" xml:space="preserve">
+    <value>No NVIDIA GPU: speech runs on the CPU (slow).</value>
+  </data>
+  <data name="WorkerNoModel" xml:space="preserve">
+    <value>Not loaded yet (it loads on the first meeting).</value>
+  </data>
+  <data name="WorkerCodeExpires" xml:space="preserve">
+    <value>Valid for {0}; then a new code appears.</value>
+  </data>
+  <data name="WorkerPairingCode" xml:space="preserve">
+    <value>Pairing code</value>
+  </data>
+  <data name="WorkerPairingHelp" xml:space="preserve">
+    <value>On the other PC: VozAta → Config → Worker → Find workers, then type this code.</value>
+  </data>
+  <data name="WorkerAddresses" xml:space="preserve">
+    <value>Addresses</value>
+  </data>
+  <data name="WorkerName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="WorkerGpu" xml:space="preserve">
+    <value>GPU</value>
+  </data>
+  <data name="WorkerModel" xml:space="preserve">
+    <value>Speech model</value>
+  </data>
+  <data name="WorkerToken" xml:space="preserve">
+    <value>Token</value>
+  </data>
+  <data name="WorkerStartWithWindows" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="WorkerAllowNetwork" xml:space="preserve">
+    <value>Allow on the network</value>
+  </data>
+  <data name="WorkerAllowNetworkHelp" xml:space="preserve">
+    <value>Adds firewall rules for private networks only (asks for administrator rights once).</value>
+  </data>
+  <data name="WorkerTrayShow" xml:space="preserve">
+    <value>Show VozAta Worker</value>
+  </data>
+  <data name="WorkerTrayExit" xml:space="preserve">
+    <value>Exit (stops the worker)</value>
+  </data>
+</root>
