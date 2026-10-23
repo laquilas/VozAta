@@ -33,10 +33,10 @@ setup again).
 
 ## Acceptance criteria
 
-- [ ] The installers are under ~450 MB and hold no `nvidia` folder.
-- [ ] `vozata-engine.exe cuda install` on the reference machine downloads and extracts the DLLs;
+- [x] The installers are under ~450 MB and hold no `nvidia` folder.
+- [x] `vozata-engine.exe cuda install` on the reference machine downloads and extracts the DLLs;
       the packaged engine then transcribes on the GPU.
-- [ ] Without the runtime the packaged engine transcribes on the CPU without downloading the GPU
+- [x] Without the runtime the packaged engine transcribes on the CPU without downloading the GPU
       model.
 
 ## Tests
@@ -55,12 +55,29 @@ versions.
 > Start phase 58 (`docs/roadmap/phases/58-cuda-on-demand.md`): read its *Read first* files,
 > write `plans/58-cuda-on-demand.md`, then implement it task by task.
 
+## Manual check (2026-10-23, reference machine)
+
+- Engine suite: 2664 passed, coverage 99.41 %; ruff clean. The version goes to **0.3.1** (the
+  0.2.1 installers with CUDA were already handed out).
+- `build.ps1 -Version 0.3.1`: `VozAta-Setup-0.3.1.exe` **174 MB** and
+  `VozAta-Worker-Setup-0.3.1.exe` **171 MB** (were 1,054 / 1,050 MB); the engine folder is 415 MB
+  and holds no `nvidia` folder.
+- `vozata-engine.exe cuda install` (packaged): both wheels from PyPI, SHA-256 checked, 14 DLLs,
+  1,831 MB in `%LOCALAPPDATA%\VozAta\cuda`, 602 s on this connection.
+- The packaged worker (scratch folder, port 8790, `WHISPER_MODEL=large-v3`, offline) transcribed
+  15 s of the TTS meeting on the GPU in 13.5 s including the model load. With the CUDA folder
+  moved aside it went straight to the CPU model (no GPU attempt; 19.3 s with
+  `WHISPER_CPU_MODEL=large-v3`), same text.
+- `install-test.ps1 -Worker` passed, including the removal of stand-in speaker and CUDA runtimes
+  on uninstall (the real ones moved aside and restored).
+- The installers' GPU option needs a person (`__pendent__`).
+
 ## Progress
 
 - **Branch:** `feature/58-cuda-on-demand`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23 18:40
-- **Next step:** docs, full suites, build (foreground), `cuda install` from the packaged engine and a GPU transcription, install test, copy to F:.
+- **Next step:** open the PR and merge it; copy the installers to the pen drive when it is back.
 
 ### Steps
 
@@ -69,4 +86,4 @@ versions.
 - [x] CLI `cuda install | status | remove`
 - [x] Packaging: no CUDA in the build; `gpu.iss` in both installers (its Check function lives in `speakers.iss`: one [Code] section)
 - [x] Docs (INSTALL GPU support, remote-worker, architecture)
-- [ ] Suites; build; GPU check with the downloaded runtime; copy to F:
+- [x] Suites; build; GPU check with the downloaded runtime; copy to F:
