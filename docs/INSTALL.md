@@ -60,9 +60,12 @@ to remove them too.
 ## Building the installer yourself
 
 ```powershell
-python -m pip install -e "engine[cuda,package]"   # engine, CUDA libraries, PyInstaller
+python -m pip install -e "engine[cuda,translation,package]"  # engine, CUDA, translation, PyInstaller
 pwsh packaging/build.ps1 -Version 1.0.0           # needs the .NET 10 SDK and Inno Setup 6
 pwsh packaging/build.ps1 -Version 1.0.0 -CpuOnly  # smaller build without the CUDA libraries
+# the speakers edition (VozAta-Setup-1.0.0-speakers.exe) also bundles pyannote / torch:
+python -m pip install -e "engine[diarization]"    # CUDA torch first, see engine/pyproject.toml
+pwsh packaging/build.ps1 -Version 1.0.0 -Speakers
 ```
 
 The installer lands in `build/installer/`. The GitHub workflow `Release` builds it on every `v*` tag

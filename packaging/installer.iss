@@ -9,6 +9,10 @@
 #ifndef BuildDir
   #define BuildDir "..\build"
 #endif
+; phase 51: "-speakers" for the edition that bundles speaker identification (pyannote / torch)
+#ifndef Edition
+  #define Edition ""
+#endif
 
 [Setup]
 AppId={{6E0B9F4A-2C5D-4E8B-9A1F-3D7C5B2E8A61}
@@ -24,7 +28,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#BuildDir}\installer
-OutputBaseFilename=VozAta-Setup-{#AppVersion}
+OutputBaseFilename=VozAta-Setup-{#AppVersion}{#Edition}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

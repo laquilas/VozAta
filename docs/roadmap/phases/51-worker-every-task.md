@@ -118,9 +118,9 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - **Branch:** `feature/51-worker-every-task`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** finish task 4 (packaging): check the CPU-only build in the scratchpad (`worker
-  --check --json` offers translation, `-m vozata --version` runs), then commit `engine.spec` /
-  `build.ps1` / `installer.iss`.
+- **Next step:** task 7: full engine and UI suites, a `-Speakers -CpuOnly` build in the scratchpad
+  (speakers reported as `missing_hf_token`, not `missing_extra`; `-m vozata.diarization.child`
+  starts), record the manual check, set the phase to done.
 
 ### Steps
 
@@ -128,7 +128,7 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - [x] Worker tasks: `worker_tasks`, speakers need the extra and `HF_TOKEN`, `/local/status.tasks`
 - [x] `worker --check` lists the tasks (`--json` for the build)
 - [x] Frozen engine runs `-m <module>` (packaged child processes)
-- [ ] Packaging: translation in every build, `-Speakers` edition
+- [x] Packaging: translation in every build, `-Speakers` edition
 - [x] Worker app: Tasks card
 - [x] Docs
 - [ ] Full suites, manual check, phase done
@@ -144,3 +144,7 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
   `vozata.frozen.run_module_args`.
 - The worker app shows the Tasks card only when the worker sends `tasks` (an older worker: no card).
   The `.env` named in the HF_TOKEN hint is the one next to `worker.log`.
+- PyInstaller follows the lazy `import torch` of the diarization modules: in an environment with the
+  extra the standard build took torch along (4.4 GB CPU-only). The standard edition now excludes the
+  diarization packages (379 MB CPU-only); the speakers edition collects them whole. `engine_main.py`
+  dispatches `-m` before importing the CLI (no runpy warning, lighter children).
