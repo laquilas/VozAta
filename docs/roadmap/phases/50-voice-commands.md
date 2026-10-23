@@ -96,15 +96,15 @@ Free-form questions after the wake word, speech synthesis, commands that control
 - **Branch:** `feature/50-voice-commands`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 2 of `plans/50-voice-commands.md` (detector, session wiring, dispatch,
-  minutes action, hints, prompt filtering).
+- **Next step:** Task 4 of `plans/50-voice-commands.md` (desktop: client and events, Config voice
+  block, recorder panels, texts, renders).
 
 ### Steps
 
 - [x] Implementation plan (`plans/50-voice-commands.md`)
 - [x] Matcher, command list, settings, `/voice-commands`
-- [ ] Detector, session wiring, dispatch, minutes action, hints, prompt filtering
-- [ ] Voice question over the meeting so far
+- [x] Detector, session wiring, dispatch, minutes action, hints, prompt filtering
+- [x] Voice question over the meeting so far
 - [ ] Desktop: Config block, recorder panels
 - [ ] Docs, full suites, manual check, phase done
 
@@ -113,4 +113,4 @@ Free-form questions after the wake word, speech synthesis, commands that control
 - Commits stay local until the PR; GitHub Actions is disabled, every check runs locally; the user
   asked to go on without stopping (2026-10-22).
 - Detection runs in the sink's `emit` (string comparisons of short texts), no extra thread.
-
+- Tasks 2 and 3 landed in one commit: the dispatcher needs the voice question job.

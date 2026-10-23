@@ -116,6 +116,9 @@ transcript_label = "Transcript:"
 notes_label = "Notes:"
 
 [qa]
+so_far_instructions = "Answer the question in {output_language} from the meeting below, which is still going on. Be short and concrete: decisions, owners and dates when said. If the meeting does not answer it, reply exactly: {not_found}"
+map_instructions = "This is part {part} of {total} of a meeting that is still going on. Write short notes of everything in it that helps answer the question; nothing else."
+notes_label = "NOTES"
 system = "You answer questions about recorded meetings using only the meeting excerpts you are given. Never invent names, dates, numbers or decisions. If the excerpts do not contain the answer, say that it was not found in the meetings."
 instructions = """Answer the question in {output_language}, concisely, using only the excerpts below.
 After each statement, cite the excerpt line it comes from as [session_id@hh:mm:ss], copying the session id and the time exactly as they appear, for example [{example}].

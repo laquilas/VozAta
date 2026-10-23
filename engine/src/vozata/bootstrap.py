@@ -29,6 +29,7 @@ from vozata.api.minutes_job import MinutesJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
+from vozata.api.voice_dispatch import VoiceCommandDispatcher
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
 from vozata.audio.catalog import WasapiCatalog
@@ -39,6 +40,9 @@ from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.portaudio import PortAudioThread
 from vozata.audio.silero import SileroSpeechDetector
 from vozata.audio.vad_chunker import VadChunker
+from vozata.commands.detector import VoiceCommandSink
+from vozata.commands.matcher import CommandMatcher
+from vozata.commands.store import VoiceCommandStore
 from vozata.config import ConfigError, Settings
 from vozata.connection_checks import ConnectionChecks
 from vozata.diarization.models import DIARIZATION_MODEL, EMBEDDING_MODEL
@@ -53,7 +57,9 @@ from vozata.domain import (
     SessionStatus,
     StorageBackend,
     StorageInfo,
+    TranscriptSegment,
     TranslationTarget,
+    VoiceCommand,
 )
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
@@ -97,6 +103,7 @@ from vozata.processing.job import ProcessingJob, StepKind
 from vozata.processing.live_lease import LiveModelTurn
 from vozata.processing.queue import ProcessingQueue, ProcessingState
 from vozata.qa.answerer import MeetingAnswerer
+from vozata.qa.meeting_so_far import MeetingSoFarAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_finisher import SessionFinisher
@@ -533,6 +540,22 @@ def voice_commands_path(settings: Settings, env_file: Path | None = None) -> Pat
     return (env_file or Path(".env")).parent / DEFAULT_VOICE_COMMANDS_FILE
 
 
+def build_command_matcher(
+    settings: Settings, env_file: Path | None = None
+) -> CommandMatcher | None:
+    """The voice commands of `VOICE_COMMANDS_FILE` after `WAKE_WORD` (phase 50); None when off."""
+    if not settings.voice_commands_enabled:
+        return None
+    store = VoiceCommandStore(voice_commands_path(settings, env_file), build_localizer(settings))
+    return CommandMatcher(settings.wake_word, store.read())
+
+
+def command_filter(settings: Settings) -> Callable[[TranscriptSegment], bool] | None:
+    """Phase 50: the segments addressed to VozAta, left out of the minutes and action items."""
+    matcher = build_command_matcher(settings)
+    return None if matcher is None else (lambda segment: matcher.addressed(segment.text))
+
+
 def session_vocabulary(
     settings: Settings, session_terms: Sequence[str], env_file: Path | None = None
 ) -> list[str]:
@@ -556,7 +579,11 @@ def build_minutes_generator(
     template_id = template or settings.minutes_template
     localized = MINUTES_TEMPLATES.get(template_id).localized(settings.app_language)
     return MinutesGenerator(
-        factory(settings), localizer or build_localizer(settings), settings.llm_max_chars, localized
+        factory(settings),
+        localizer or build_localizer(settings),
+        settings.llm_max_chars,
+        localized,
+        exclude=command_filter(settings),
     )
 
 
@@ -565,7 +592,12 @@ def build_action_item_extractor(
 ) -> ActionItemExtractor:
     """Action items in `APP_LANGUAGE` from the `LLM_PROVIDER` model (phase 23)."""
     llm = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", settings.llm_provider)(settings)
-    return ActionItemExtractor(llm, localizer or build_localizer(settings), settings.llm_max_chars)
+    return ActionItemExtractor(
+        llm,
+        localizer or build_localizer(settings),
+        settings.llm_max_chars,
+        exclude=command_filter(settings),
+    )
 
 
 def build_answerer(
@@ -657,6 +689,7 @@ def build_session(
     live_transcription: bool | None = None,
     downloader: ModelDownloader | None = None,
     worker_moved: Callable[[str], None] = lambda url: None,
+    voice_dispatch: Callable[[str, VoiceCommand], None] | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -673,9 +706,12 @@ def build_session(
     session's abandoned pipeline closed. `live_transcription` (default `LIVE_TRANSCRIPTION`,
     phase 41) is the per-recording option; it is stored in `session.json`. `downloader` (default:
     the CLI's) fetches the models that are not cached yet (phase 42). A paired worker found at a
-    new address is used and `worker_moved` gets that address (phase 47).
+    new address is used and `worker_moved` gets that address (phase 47). With `voice_dispatch`
+    and `VOICE_COMMANDS_ENABLED`, commands heard in the microphone go to it (phase 50) and the wake
+    word leads the vocabulary (Whisper hints).
     """
     _provider(TRANSCRIBERS, "STT_PROVIDER", settings.stt_provider)  # fail before any device opens
+    matcher = build_command_matcher(settings, env_file) if voice_dispatch is not None else None
     downloader = _downloader(settings, downloader)
     localizer = build_localizer(settings)
 
@@ -735,13 +771,23 @@ def build_session(
         diarizer_factory=diarizer_factory,
         search_index=build_search_index(settings),
         minutes_template=template,
-        vocabulary=tuple(session_vocabulary(settings, vocabulary, env_file)),
+        vocabulary=tuple(
+            merge_terms(
+                [settings.wake_word] if matcher is not None else [],
+                session_vocabulary(settings, vocabulary, env_file),
+            )
+        ),
         action_items=build_action_item_extractor(settings, localizer)
         if minutes is not None and settings.extract_action_items
         else None,
         embedder_factory=build_embedder_factory(settings, downloader),
         translate_to=translation_target,
         translator_factory=translator_factory,
+        voice_commands=(
+            (lambda sid: VoiceCommandSink(matcher, lambda cmd: voice_dispatch(sid, cmd)))
+            if matcher is not None and voice_dispatch is not None
+            else None
+        ),
         title=title,
         gate=gate,
         gpu_usage=gpu_usage,
@@ -997,6 +1043,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             live_transcription=options.live_transcription,
             downloader=downloader,
             worker_moved=worker_moved,
+            voice_dispatch=voice_dispatch,
         )
 
     def llm_reachable() -> bool:
@@ -1060,6 +1107,32 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
     migration = build_migration_job(settings, manager, broadcaster, localizer)  # started by the app
+    partial_minutes = PartialMinutesJob(
+        minutes_generator, store, labeler, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu
+    )
+
+    def meeting_so_far() -> MeetingSoFarAnswerer:
+        """Phase 50: voice questions, over the whole meeting so far."""
+        free_whisper()
+        current = settings_file.current
+        llm = _provider(LANGUAGE_MODELS, "LLM_PROVIDER", current.llm_provider)(current)
+        local = build_localizer(current)
+        return MeetingSoFarAnswerer(
+            llm,
+            store,
+            build_labeler(current, local),
+            local,
+            current.llm_max_chars,
+            command_filter(current),
+        )
+
+    voice_questions = AskJob(
+        meeting_so_far, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu, origin="voice"
+    )
+    voice_dispatch = VoiceCommandDispatcher(
+        broadcaster, localizer, partial_minutes, voice_questions
+    )
+
     return ApiContainer(
         settings=settings,
         settings_file=settings_file,
@@ -1088,15 +1161,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
         voice_commands_file=lambda: voice_commands_path(settings_file.current, env_file),
         ask=AskJob(answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu),
-        partial_minutes=PartialMinutesJob(
-            minutes_generator,
-            store,
-            labeler,
-            broadcaster,
-            localizer,
-            gate=gate,
-            uses_gpu=llm_on_gpu,
-        ),
+        partial_minutes=partial_minutes,
         extract_action_items=ActionItemsJob(
             store,
             action_item_extractor,

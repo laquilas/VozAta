@@ -116,6 +116,9 @@ transcript_label = "Transcripción:"
 notes_label = "Notas:"
 
 [qa]
+so_far_instructions = "Responde la pregunta en {output_language} a partir de la reunión de abajo, que sigue en curso. Sé breve y concreto: decisiones, responsables y fechas cuando se dijeron. Si la reunión no la responde, contesta exactamente: {not_found}"
+map_instructions = "Esta es la parte {part} de {total} de una reunión que sigue en curso. Escribe notas breves de todo lo que ayude a responder la pregunta; nada más."
+notes_label = "NOTAS"
 system = "Respondes preguntas sobre reuniones grabadas usando solo los fragmentos de reunión que se te dan. Nunca inventes nombres, fechas, números ni decisiones. Si los fragmentos no contienen la respuesta, di que no se encontró en las reuniones."
 instructions = """Responde a la pregunta en {output_language}, de forma concisa, usando solo los fragmentos de abajo.
 Después de cada afirmación, cita la línea del fragmento de donde viene como [session_id@hh:mm:ss], copiando el id de la sesión y la hora exactamente como aparecen, por ejemplo [{example}].

@@ -44,7 +44,9 @@ class AskJob:
         *,
         gate: GpuGate | None = None,
         uses_gpu: Callable[[], bool] = lambda: False,
+        origin: str | None = None,
     ) -> None:
+        self._origin = origin  # phase 50: "voice" on the events of voice questions
         self._build = build_answerer
         self._gate = gate
         self._uses_gpu = uses_gpu
@@ -89,7 +91,7 @@ class AskJob:
                     question,
                     session_id,
                     lambda text: publish(
-                        "answer_chunk", session_id, {"answer_id": answer_id, "text": text}
+                        "answer_chunk", session_id, self._data(answer_id=answer_id, text=text)
                     ),
                 )
             citations = [citation.to_dict() for citation in answer.citations]
@@ -108,5 +110,8 @@ class AskJob:
         publish(
             "answer_done",
             session_id,
-            {"answer_id": answer_id, "citations": citations, "error": error},
+            self._data(answer_id=answer_id, citations=citations, error=error),
         )
+
+    def _data(self, **fields: object) -> dict[str, object]:
+        return fields if self._origin is None else {**fields, "origin": self._origin}

@@ -29,6 +29,7 @@ from vozata.ports import (
     SpeakerEmbedder,
     Transcriber,
     TranscriptSearch,
+    TranscriptSink,
     Translator,
 )
 from vozata.processing.cancel import CancelToken
@@ -83,6 +84,8 @@ class SessionComponents:
     gpu_usage: GpuUsage | None = None  # which models use the local GPU (phase 40)
     live_models: LiveModelTurn | None = None  # shared by `serve` sessions (phase 40); None = own
     live_transcription: bool = True  # phase 41; False = audio only, transcribed after stop
+    # phase 50: the voice command listener of the session (its id); None = no commands
+    voice_commands: Callable[[str], TranscriptSink] | None = None
 
 
 class SessionStartError(RuntimeError):
@@ -175,7 +178,7 @@ class RecordingSession:
             lambda error: self._error("model_failed", reason=str(error)),
             hints=build_hints(self._c.vocabulary),
             speaker_embedder=self._live_embedder(),
-            extra_sinks=[translation] if translation else [],
+            extra_sinks=[sink for sink in (translation, self._voice_commands()) if sink],
             live=self._c.live_transcription,
         )
         self._c.clock.start()
@@ -348,6 +351,12 @@ class RecordingSession:
 
     def _autosave(self) -> None:
         self._meta.heartbeat(self._store.now(), self.duration_seconds)
+
+    def _voice_commands(self) -> TranscriptSink | None:
+        """The voice command listener (phase 50); None when off or audio only."""
+        if not self._c.live_transcription or self._c.voice_commands is None:
+            return None
+        return self._c.voice_commands(self.id)
 
     def _live_translation(self) -> TranslationWorker | None:
         """The translation worker (phase 29), closed with the transcript files at step 2; None
