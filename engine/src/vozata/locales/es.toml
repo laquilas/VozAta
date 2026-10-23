@@ -29,6 +29,7 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+range_beyond_end = "La reunión dura {length}: el tramo debe terminar antes."
 empty_range = "No se dijo nada en ese tramo de la reunión, así que no hay nada que resumir."
 partial_minutes_failed = "No se pudo escribir el acta parcial ({reason}). Comprueba que Ollama está en marcha y el modelo descargado."
 partial_minutes_unavailable = "El acta de parte de una reunión no está disponible en este motor."

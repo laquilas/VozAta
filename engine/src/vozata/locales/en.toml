@@ -29,6 +29,7 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+range_beyond_end = "The meeting lasts {length}: the part must end by then."
 empty_range = "Nothing was said in that part of the meeting, so there is nothing to summarize."
 partial_minutes_failed = "The partial minutes could not be written ({reason}). Check that Ollama is running and the model is pulled."
 partial_minutes_unavailable = "Minutes of part of a meeting are not available in this engine."

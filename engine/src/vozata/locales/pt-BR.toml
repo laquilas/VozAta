@@ -29,6 +29,7 @@ action_items_failed = "Não foi possível extrair os itens de ação ({reason}).
 translation_failed = "A tradução ao vivo parou ({reason}). A transcrição continua."
 
 [errors.api]
+range_beyond_end = "A reunião dura {length}: o trecho precisa terminar até aí."
 empty_range = "Nada foi dito nesse trecho da reunião, então não há o que resumir."
 partial_minutes_failed = "Não foi possível escrever a ata parcial ({reason}). Confira se o Ollama está rodando e o modelo foi baixado."
 partial_minutes_unavailable = "Ata de parte da reunião não está disponível neste motor."

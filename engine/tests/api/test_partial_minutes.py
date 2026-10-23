@@ -130,7 +130,9 @@ def test_a_range_beyond_the_recorded_length_is_refused(
 
     assert response.status_code == status
     if status == 422:
-        assert response.json()["error"]["code"] == "invalid_range"
+        error = response.json()["error"]
+        assert error["code"] == "range_beyond_end"
+        assert "00:15:00" in error["message"]
 
 
 def test_an_empty_range_is_an_error_event(api: Api) -> None:
