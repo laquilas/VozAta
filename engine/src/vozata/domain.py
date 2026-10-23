@@ -337,6 +337,43 @@ class ActionItem:
 
 
 @dataclass(frozen=True)
+class PartialMinutes:
+    """Minutes of part of a meeting (phase 48): what was said so far while recording (`button`,
+    `voice`) or a time range of a recorded meeting (`range`). Kept apart from the final minutes."""
+
+    id: str
+    created_at: str  # ISO 8601 with offset
+    start: float  # seconds since the session start
+    end: float
+    origin: str  # "button" | "voice" | "range"
+    markdown: str
+    template: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "created_at": self.created_at,
+            "start": self.start,
+            "end": self.end,
+            "origin": self.origin,
+            "template": self.template,
+            "markdown": self.markdown,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> PartialMinutes:
+        return cls(
+            id=str(data["id"]),
+            created_at=str(data["created_at"]),
+            start=float(data["start"]),
+            end=float(data["end"]),
+            origin=str(data["origin"]),
+            markdown=str(data["markdown"]),
+            template=optional_text(data.get("template")),
+        )
+
+
+@dataclass(frozen=True)
 class ImportedSession:
     """A meeting ZIP read back (phase 39): a new session, or the audio of a kept one."""
 

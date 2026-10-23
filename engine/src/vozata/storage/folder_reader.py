@@ -6,12 +6,12 @@ from __future__ import annotations
 import json
 import wave
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from vozata.domain import ActionItem, TranscriptSegment, Translation
+from vozata.domain import ActionItem, PartialMinutes, TranscriptSegment, Translation
 from vozata.ports import StoreRepairError
 from vozata.storage.files.layout import SessionPaths
 from vozata.storage.files.repository import FileSessionRepository
@@ -39,6 +39,7 @@ class FolderContent:
     names: dict[str, str]
     minutes: tuple[str, datetime] | None  # markdown and when it was written
     action_items: list[ActionItem]
+    partial_minutes: list[PartialMinutes] = field(default_factory=list)  # phase 48
 
 
 def read_meta(files: FileSessionRepository, session_id: str) -> dict[str, Any]:
@@ -79,6 +80,7 @@ def read_content(files: FileSessionRepository, paths: SessionPaths) -> FolderCon
         names=files.speaker_names(paths.id),
         minutes=minutes,
         action_items=items,
+        partial_minutes=files.read_partial_minutes(paths.id),
     )
 
 
