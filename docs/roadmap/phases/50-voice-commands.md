@@ -96,8 +96,8 @@ Free-form questions after the wake word, speech synthesis, commands that control
 - **Branch:** `feature/50-voice-commands`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 4 of `plans/50-voice-commands.md` (desktop: client and events, Config voice
-  block, recorder panels, texts, renders).
+- **Next step:** Task 5 of `plans/50-voice-commands.md` (manual check with Whisper on spoken
+  commands, docs, PR).
 
 ### Steps
 
@@ -105,7 +105,7 @@ Free-form questions after the wake word, speech synthesis, commands that control
 - [x] Matcher, command list, settings, `/voice-commands`
 - [x] Detector, session wiring, dispatch, minutes action, hints, prompt filtering
 - [x] Voice question over the meeting so far
-- [ ] Desktop: Config block, recorder panels
+- [x] Desktop: Config block, recorder panels
 - [ ] Docs, full suites, manual check, phase done
 
 ### Decisions and notes

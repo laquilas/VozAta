@@ -221,6 +221,32 @@
                  TextWrapping="Wrap" IsVisible="{Binding SystemMeter.NoSignal}" />
     </StackPanel>
 
+    <!-- A question asked by voice (phase 50): its streamed answer beside the live transcript -->
+    <Border DockPanel.Dock="Right" Width="380" Margin="10,10,0,0" Classes="card"
+            IsVisible="{Binding VoiceAnswer.IsOpen}">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+            <Button Content="{Binding L[Copy]}" Command="{Binding VoiceAnswer.CopyCommand}" />
+            <Button Classes="icon" Command="{Binding VoiceAnswer.CloseCommand}"
+                    ToolTip.Tip="{Binding L[Close]}" AutomationProperties.Name="{Binding L[Close]}">
+              <PathIcon Data="{StaticResource Icon.Dismiss}" />
+            </Button>
+          </StackPanel>
+          <TextBlock Text="{Binding L[VoiceAnswerTitle]}" Classes="subtitle" VerticalAlignment="Center" />
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding VoiceAnswer.Question}" Classes="secondary" FontStyle="Italic"
+                   TextWrapping="Wrap" Margin="0,0,0,8" />
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Margin="0,0,0,8"
+                     IsVisible="{Binding VoiceAnswer.IsAnswering}" />
+        <TextBlock DockPanel.Dock="Top" Text="{Binding VoiceAnswer.Error}" Classes="error" TextWrapping="Wrap"
+                   IsVisible="{Binding VoiceAnswer.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <ScrollViewer>
+          <SelectableTextBlock Text="{Binding VoiceAnswer.Text}" TextWrapping="Wrap" />
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
     <!-- Minutes so far (phase 48): beside the live transcript, until closed -->
     <Border DockPanel.Dock="Right" Width="380" Margin="10,10,0,0" Classes="card"
             IsVisible="{Binding MinutesSoFar.IsOpen}">

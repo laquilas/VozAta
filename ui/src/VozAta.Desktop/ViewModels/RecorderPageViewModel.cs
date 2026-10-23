@@ -87,6 +87,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         Partials.CollectionChanged += (_, _) => NotifyTranscriptEmpty();
         session.PropertyChanged += OnSessionChanged;
         MinutesSoFar = new MinutesSoFarViewModel(client, shell, localization, notify);
+        VoiceAnswer = new VoiceAnswerViewModel(shell, localization, notify);
         MinutesSoFar.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(MinutesSoFarViewModel.IsWriting))
@@ -99,6 +100,27 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
 
     /// <summary>Minutes of what was said so far, without stopping (phase 48).</summary>
     public MinutesSoFarViewModel MinutesSoFar { get; }
+
+    /// <summary>The answer to a question asked by voice (phase 50).</summary>
+    public VoiceAnswerViewModel VoiceAnswer { get; }
+
+    /// <summary>A <c>voice_command</c> event of this recording: wait for its minutes or answer.</summary>
+    public void OnVoiceCommand(VoiceCommandEvent command)
+    {
+        if (command.SessionId is not { } sessionId || sessionId != Session.SessionId)
+        {
+            return;
+        }
+
+        if (command.Action == "minutes")
+        {
+            MinutesSoFar.ExpectVoice(sessionId);
+        }
+        else if (command.AnswerId is { } answerId)
+        {
+            VoiceAnswer.Begin(answerId, command.Question);
+        }
+    }
 
     private bool CanWriteMinutesSoFar() =>
         IsRecording && LiveTranscription && Session.SessionId is not null && !MinutesSoFar.IsWriting;

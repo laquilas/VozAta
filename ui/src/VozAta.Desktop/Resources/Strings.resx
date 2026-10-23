@@ -1515,4 +1515,46 @@
   <data name="SettingHelp_VOICE_COMMANDS_FILE" xml:space="preserve">
     <value>Where the phrases below are saved. Empty: voice_commands.json next to the settings.</value>
   </data>
+  <data name="VoiceCommandsHelp" xml:space="preserve">
+    <value>Say the wake word, then a phrase, into your microphone while recording. Minutes so far open beside the transcript; a question shows its answer there.</value>
+  </data>
+  <data name="VoiceCommandPhrase" xml:space="preserve">
+    <value>Phrase, e.g. make the minutes</value>
+  </data>
+  <data name="VoiceCommandAction" xml:space="preserve">
+    <value>What it does</value>
+  </data>
+  <data name="VoiceCommandQuestion" xml:space="preserve">
+    <value>Question asked about the meeting so far</value>
+  </data>
+  <data name="VoiceCommandRemove" xml:space="preserve">
+    <value>Remove this command</value>
+  </data>
+  <data name="VoiceCommandAdd" xml:space="preserve">
+    <value>Add a command</value>
+  </data>
+  <data name="VoiceCommandsRestore" xml:space="preserve">
+    <value>Restore the defaults</value>
+  </data>
+  <data name="VoiceCommandsSave" xml:space="preserve">
+    <value>Save commands</value>
+  </data>
+  <data name="VoiceCommandsSaved" xml:space="preserve">
+    <value>Voice commands saved; they apply from the next recording.</value>
+  </data>
+  <data name="VoiceCommandsDefaultsRestored" xml:space="preserve">
+    <value>Default commands put back; save to keep them.</value>
+  </data>
+  <data name="VoiceActionMinutes" xml:space="preserve">
+    <value>Minutes so far</value>
+  </data>
+  <data name="VoiceActionAsk" xml:space="preserve">
+    <value>Ask a question</value>
+  </data>
+  <data name="VoiceCommandHeard" xml:space="preserve">
+    <value>Heard: "{0}"</value>
+  </data>
+  <data name="VoiceAnswerTitle" xml:space="preserve">
+    <value>VozAta answers</value>
+  </data>
 </root>

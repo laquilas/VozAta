@@ -98,6 +98,11 @@ public sealed class ThemeRenderTests
                 await viewModel.Recorder.MinutesSoFar.OnReadyAsync(new PartialMinutesReadyEvent(recording, "p9", 0, 754, "button"));
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-minutes-so-far-{theme}.png");
                 viewModel.Recorder.MinutesSoFar.CloseCommand.Execute(null);
+                // A question asked by voice (phase 50): its answer beside the live transcript
+                viewModel.Recorder.OnVoiceCommand(new VoiceCommandEvent(recording, "ask", "what was decided", "What was decided so far?", "voice-1"));
+                viewModel.Recorder.VoiceAnswer.OnChunk(new AnswerChunkEvent(recording, "voice-1", "The beta ships on Tuesday; Carlos fixes the recovery tests by Monday."));
+                Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-voice-answer-{theme}.png");
+                viewModel.Recorder.VoiceAnswer.CloseCommand.Execute(null);
                 // Half downloaded: the label sits over the filled and the unfilled part (phase 42)
                 const long mb = 1024 * 1024;
                 viewModel.Downloads.OnProgress(new DownloadProgressEvent(null, "speech", "large-v3-turbo", 720 * mb, 1440 * mb, "running", null));
@@ -113,11 +118,11 @@ public sealed class ThemeRenderTests
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
                 Render<RecorderPage>(viewModel, ShellViewModel.Recorder, $"recorder-recording-collapsed-{theme}.png");
                 viewModel.Shell.ToggleSidebarCommand.Execute(null);
-                return 17;
+                return 18;
             },
             CancellationToken.None);
 
-        Assert.Equal(17, rendered);
+        Assert.Equal(18, rendered);
     }
 
 #if DEBUG

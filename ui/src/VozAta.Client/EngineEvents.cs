@@ -83,6 +83,12 @@ public static class EngineEventParser
                 "language_detected" => new LanguageDetectedEvent(
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
+                "voice_command" => new VoiceCommandEvent(
+                    sessionId,
+                    data.GetProperty("action").GetString() ?? "",
+                    data.GetProperty("phrase").GetString() ?? "",
+                    data.TryGetProperty("question", out var question) ? question.GetString() : null,
+                    data.TryGetProperty("answer_id", out var voiceAnswer) ? voiceAnswer.GetString() : null),
                 "partial_minutes_ready" => new PartialMinutesReadyEvent(
                     sessionId,
                     data.GetProperty("partial_id").GetString() ?? "",

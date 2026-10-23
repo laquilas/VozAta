@@ -1515,4 +1515,46 @@
   <data name="SettingHelp_VOICE_COMMANDS_FILE" xml:space="preserve">
     <value>Onde as frases abaixo são salvas. Vazio: voice_commands.json junto das configurações.</value>
   </data>
+  <data name="VoiceCommandsHelp" xml:space="preserve">
+    <value>Durante a gravação, diga no seu microfone a palavra de ativação e depois a frase. A ata até agora abre ao lado da transcrição; uma pergunta mostra a resposta ali.</value>
+  </data>
+  <data name="VoiceCommandPhrase" xml:space="preserve">
+    <value>Frase, por exemplo gere a ata</value>
+  </data>
+  <data name="VoiceCommandAction" xml:space="preserve">
+    <value>O que faz</value>
+  </data>
+  <data name="VoiceCommandQuestion" xml:space="preserve">
+    <value>Pergunta feita sobre a reunião até agora</value>
+  </data>
+  <data name="VoiceCommandRemove" xml:space="preserve">
+    <value>Remover este comando</value>
+  </data>
+  <data name="VoiceCommandAdd" xml:space="preserve">
+    <value>Adicionar comando</value>
+  </data>
+  <data name="VoiceCommandsRestore" xml:space="preserve">
+    <value>Restaurar o padrão</value>
+  </data>
+  <data name="VoiceCommandsSave" xml:space="preserve">
+    <value>Salvar comandos</value>
+  </data>
+  <data name="VoiceCommandsSaved" xml:space="preserve">
+    <value>Comandos de voz salvos; valem a partir da próxima gravação.</value>
+  </data>
+  <data name="VoiceCommandsDefaultsRestored" xml:space="preserve">
+    <value>Comandos padrão de volta; salve para mantê-los.</value>
+  </data>
+  <data name="VoiceActionMinutes" xml:space="preserve">
+    <value>Ata até agora</value>
+  </data>
+  <data name="VoiceActionAsk" xml:space="preserve">
+    <value>Fazer uma pergunta</value>
+  </data>
+  <data name="VoiceCommandHeard" xml:space="preserve">
+    <value>Ouvi: "{0}"</value>
+  </data>
+  <data name="VoiceAnswerTitle" xml:space="preserve">
+    <value>VozAta responde</value>
+  </data>
 </root>
