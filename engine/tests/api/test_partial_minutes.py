@@ -5,6 +5,8 @@ from __future__ import annotations
 import dataclasses
 import threading
 
+import pytest
+
 from tests.api.conftest import Api
 from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.api.partial_minutes_job import PartialMinutesJob, PartialRequest
@@ -109,6 +111,26 @@ def test_a_range_of_a_finished_meeting(api: Api) -> None:
     assert "only the part of the meeting from 00:02:32 to 00:12:54" in rig.llm.prompts[0][1]
     [(_, data)] = api.broadcaster.of("partial_minutes_ready")
     assert (data["start"], data["end"], data["origin"]) == (152.0, 774.0, "range")
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "status"),
+    [(0, 900, 202), (0, 901, 202), (0, 901.5, 422), (901, None, 422), (100, None, 202)],
+)
+def test_a_range_beyond_the_recorded_length_is_refused(
+    api: Api, start: float, end: float | None, status: int
+) -> None:
+    rig = _Rig(api)
+    session_id = rig.finished()
+    meta = api.store.read_meta(session_id)
+    api.store.write_meta(session_id, {**meta, "duration_seconds": 900.0})
+
+    body = {"start": start} if end is None else {"start": start, "end": end}
+    response = rig.post(session_id, **body)
+
+    assert response.status_code == status
+    if status == 422:
+        assert response.json()["error"]["code"] == "invalid_range"
 
 
 def test_an_empty_range_is_an_error_event(api: Api) -> None:

@@ -47,6 +47,8 @@ def start(
     start_at = body.start or 0.0
     if body.end is not None and body.end <= start_at:
         raise ApiError(422, "invalid_range")
+    if not live and _beyond(meta, start_at, body.end):  # phase 49
+        raise ApiError(422, "invalid_range")
     request = PartialRequest(
         session_id, start_at, body.end, "button" if live else "range", live, body.template
     )
@@ -86,6 +88,18 @@ def delete_partial(session_id: str, partial_id: str, c: Container) -> Response:
     if not delete_partial_minutes(c.store, session_id, partial_id):
         raise ApiError(404, "partial_minutes_not_found", id=partial_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+LENGTH_TOLERANCE = 1.0  # seconds: the UI shows whole seconds of a length with decimals
+
+
+def _beyond(meta: dict[str, object], start: float, end: float | None) -> bool:
+    """The range starts or ends after the recorded length (when it is known)."""
+    length = meta.get("duration_seconds")
+    if not isinstance(length, int | float) or length <= 0:
+        return False
+    limit = float(length) + LENGTH_TOLERANCE
+    return start >= limit or (end is not None and end > limit)
 
 
 def _fields(data: dict[str, object]) -> dict[str, object]:
