@@ -87,4 +87,16 @@
   <data name="WorkerTrayExit" xml:space="preserve">
     <value>Salir (detiene el worker)</value>
   </data>
+  <data name="WorkerTag_Stopped" xml:space="preserve">
+    <value>Detenido</value>
+  </data>
+  <data name="WorkerTag_Starting" xml:space="preserve">
+    <value>Iniciando</value>
+  </data>
+  <data name="WorkerTag_Running" xml:space="preserve">
+    <value>En marcha</value>
+  </data>
+  <data name="WorkerTag_Failed" xml:space="preserve">
+    <value>Error</value>
+  </data>
 </root>

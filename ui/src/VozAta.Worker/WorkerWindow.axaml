@@ -5,63 +5,89 @@
         x:DataType="vm:WorkerAppViewModel"
         Title="VozAta Worker"
         Icon="avares://VozAta.Worker/Assets/vozata.ico"
-        Width="560" SizeToContent="Height" CanResize="False"
+        Width="600" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterScreen">
 
-  <!-- VozAta Worker (phase 47): state, how other PCs reach this one, and the setup steps -->
-  <StackPanel Margin="24" Spacing="16">
-    <DockPanel>
-      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-        <Button Content="{Binding T[WorkerStart]}" Command="{Binding StartCommand}" />
-        <Button Content="{Binding T[WorkerStop]}" Command="{Binding StopCommand}" />
-      </StackPanel>
-      <StackPanel Spacing="2">
-        <TextBlock Text="VozAta Worker" FontSize="20" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding StateText}" />
-      </StackPanel>
-    </DockPanel>
-
-    <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap"
-               IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-    <!-- Pairing: what the user types on the other PC (Config → Worker → Find workers) -->
-    <Border Padding="16" CornerRadius="8" BorderThickness="1" BorderBrush="#40808080"
-            IsVisible="{Binding HasPairingCode}">
-      <StackPanel Spacing="4">
-        <TextBlock Classes="label" Text="{Binding T[WorkerPairingCode]}" />
-        <SelectableTextBlock Text="{Binding PairingCode}" FontSize="36" FontWeight="Bold" LetterSpacing="6" />
-        <TextBlock Classes="label" Text="{Binding CodeExpires}" />
-        <TextBlock Text="{Binding T[WorkerPairingHelp]}" TextWrapping="Wrap" />
-      </StackPanel>
+  <!-- VozAta Worker (phase 47) in the VozAta look: the brand band of the sidebar, then cards -->
+  <DockPanel>
+    <!-- Brand band: logo, name, state tag, Start / Stop -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Brush.Sidebar}" Padding="20,16">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Image Source="avares://VozAta.Worker/Assets/vozata-64.png" Width="32" Height="32" />
+          <StackPanel Spacing="4">
+            <TextBlock Text="VozAta Worker" Classes="title" Foreground="{DynamicResource Brush.SidebarText}" />
+            <Border Classes="tag" Classes.running="{Binding IsRunning}" Classes.live="{Binding IsFailed}"
+                    HorizontalAlignment="Left">
+              <TextBlock Text="{Binding StateTag}" />
+            </Border>
+          </StackPanel>
+        </StackPanel>
+      </DockPanel>
     </Border>
 
-    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding IsRunning}">
-      <TextBlock Classes="label" Text="{Binding T[WorkerAddresses]}" Margin="0,4" />
-      <ItemsControl Grid.Column="1" ItemsSource="{Binding Addresses}" Margin="0,4">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="x:String">
-            <SelectableTextBlock Text="{Binding}" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-      <TextBlock Grid.Row="1" Classes="label" Text="{Binding T[WorkerName]}" Margin="0,4" />
-      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Name}" Margin="0,4" />
-      <TextBlock Grid.Row="2" Classes="label" Text="{Binding T[WorkerGpu]}" Margin="0,4" />
-      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Gpu}" Margin="0,4" />
-      <TextBlock Grid.Row="3" Classes="label" Text="{Binding T[WorkerModel]}" Margin="0,4" />
-      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Model}" Margin="0,4" />
-      <TextBlock Grid.Row="4" Classes="label" Text="{Binding T[WorkerToken]}" Margin="0,4" />
-      <SelectableTextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Token}" TextWrapping="Wrap" Margin="0,4" />
-    </Grid>
+    <StackPanel Margin="20,16,20,20" Spacing="12">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+          <Button Classes="primary" Content="{Binding T[WorkerStart]}" Command="{Binding StartCommand}" />
+          <Button Content="{Binding T[WorkerStop]}" Command="{Binding StopCommand}" />
+        </StackPanel>
+        <TextBlock Text="{Binding StateText}" Classes="secondary" TextWrapping="Wrap" VerticalAlignment="Center" />
+      </DockPanel>
 
-    <Separator />
-    <ToggleSwitch IsChecked="{Binding StartWithWindows}"
-                  OnContent="{Binding T[WorkerStartWithWindows]}" OffContent="{Binding T[WorkerStartWithWindows]}" />
-    <StackPanel Spacing="4">
-      <Button Content="{Binding T[WorkerAllowNetwork]}" Command="{Binding AllowNetworkCommand}" />
-      <TextBlock Classes="label" TextWrapping="Wrap" Text="{Binding T[WorkerAllowNetworkHelp]}" />
+      <Border Classes="banner error" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
+      </Border>
+
+      <!-- Pairing: what the user types on the other PC (Config → Worker → Find workers) -->
+      <Border Classes="card" Background="{DynamicResource Brush.AccentSubtle}" IsVisible="{Binding HasPairingCode}">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="caption secondary" Text="{Binding T[WorkerPairingCode]}" />
+          <SelectableTextBlock Text="{Binding PairingCode}" FontSize="40" FontWeight="Bold" LetterSpacing="8"
+                               Foreground="{DynamicResource Brush.AccentText}" />
+          <TextBlock Classes="small secondary" Text="{Binding CodeExpires}" />
+          <TextBlock Text="{Binding T[WorkerPairingHelp]}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- How other PCs reach this one, and what it runs -->
+      <Border Classes="card" IsVisible="{Binding IsRunning}">
+        <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+          <TextBlock Classes="secondary" Text="{Binding T[WorkerAddresses]}" Margin="0,4" />
+          <ItemsControl Grid.Column="1" ItemsSource="{Binding Addresses}" Margin="0,4">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <SelectableTextBlock Text="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Grid.Row="1" Classes="secondary" Text="{Binding T[WorkerName]}" Margin="0,4" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Name}" Margin="0,4" />
+          <TextBlock Grid.Row="2" Classes="secondary" Text="{Binding T[WorkerGpu]}" Margin="0,4" />
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Gpu}" TextWrapping="Wrap" Margin="0,4" />
+          <TextBlock Grid.Row="3" Classes="secondary" Text="{Binding T[WorkerModel]}" Margin="0,4" />
+          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Model}" TextWrapping="Wrap" Margin="0,4" />
+          <TextBlock Grid.Row="4" Classes="secondary" Text="{Binding T[WorkerToken]}" Margin="0,4" />
+          <SelectableTextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Token}" Classes="small"
+                               TextWrapping="Wrap" Margin="0,4" />
+        </Grid>
+      </Border>
+
+      <!-- Setup on this PC -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <ToggleSwitch IsChecked="{Binding StartWithWindows}"
+                        OnContent="{Binding T[WorkerStartWithWindows]}" OffContent="{Binding T[WorkerStartWithWindows]}" />
+          <StackPanel Spacing="4">
+            <Button Content="{Binding T[WorkerAllowNetwork]}" Command="{Binding AllowNetworkCommand}" />
+            <TextBlock Classes="small secondary" TextWrapping="Wrap" Text="{Binding T[WorkerAllowNetworkHelp]}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="banner info" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+      </Border>
     </StackPanel>
-    <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-               IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
-  </StackPanel>
+  </DockPanel>
 </Window>

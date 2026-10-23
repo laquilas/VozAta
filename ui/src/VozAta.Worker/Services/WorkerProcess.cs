@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace VozAta.Worker.Services;
 
@@ -44,6 +45,8 @@ public sealed class SystemWorkerProcess(WorkerCommand? command) : IWorkerProcess
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8, // the worker writes UTF-8 (pt-BR / es messages)
+            StandardErrorEncoding = Encoding.UTF8,
         };
         start.Environment["PYTHONIOENCODING"] = "utf-8";
         _process = new Process { StartInfo = start, EnableRaisingEvents = true };

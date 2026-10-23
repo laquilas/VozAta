@@ -112,6 +112,7 @@ public sealed class WorkerServicesTests
 
         Assert.Equal(stop, texts["WorkerStop"]);
         Assert.All(Enum.GetValues<WorkerState>(), state => Assert.NotEqual($"WorkerState_{state}", texts[$"WorkerState_{state}"]));
+        Assert.All(Enum.GetValues<WorkerState>(), state => Assert.NotEqual($"WorkerTag_{state}", texts[$"WorkerTag_{state}"]));
         Assert.Equal("Missing", texts["Missing"]);
     }
 

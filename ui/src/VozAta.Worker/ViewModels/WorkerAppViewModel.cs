@@ -50,13 +50,19 @@ public sealed partial class WorkerAppViewModel : ObservableObject
     public ObservableCollection<string> Addresses { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StateText), nameof(IsRunning))]
+    [NotifyPropertyChangedFor(nameof(StateText), nameof(StateTag), nameof(IsRunning), nameof(IsFailed))]
     [NotifyCanExecuteChangedFor(nameof(StartCommand), nameof(StopCommand))]
     public partial WorkerState State { get; private set; }
 
+    /// <summary>What the state means for the other PCs (a sentence).</summary>
     public string StateText => T[$"WorkerState_{State}"];
 
+    /// <summary>The state tag next to the name ("Running").</summary>
+    public string StateTag => T[$"WorkerTag_{State}"];
+
     public bool IsRunning => State == WorkerState.Running;
+
+    public bool IsFailed => State == WorkerState.Failed;
 
     [ObservableProperty]
     public partial string? Name { get; private set; }

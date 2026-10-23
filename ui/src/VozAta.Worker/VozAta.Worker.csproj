@@ -29,5 +29,10 @@
 
   <ItemGroup>
     <AvaloniaResource Include="..\..\..\assets\desktop\windows\vozata.ico" Link="Assets\vozata.ico" />
+    <AvaloniaResource Include="..\..\..\assets\desktop\windows\vozata-64.png" Link="Assets\vozata-64.png" />
+    <!-- The VozAta look (phase 34 design system), linked from the desktop app: one source for both -->
+    <AvaloniaXaml Include="..\VozAta.Desktop\Themes\Tokens.axaml" Link="Themes\Tokens.axaml" />
+    <AvaloniaXaml Include="..\VozAta.Desktop\Themes\Icons.axaml" Link="Themes\Icons.axaml" />
+    <AvaloniaXaml Include="..\VozAta.Desktop\Themes\Controls.axaml" Link="Themes\Controls.axaml" />
   </ItemGroup>
 </Project>

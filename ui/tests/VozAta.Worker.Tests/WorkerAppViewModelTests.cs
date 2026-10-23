@@ -36,6 +36,7 @@ public sealed class WorkerAppViewModelTests
         await app.RefreshAsync();
 
         Assert.True(app.IsRunning);
+        Assert.Equal(_texts["WorkerTag_Running"], app.StateTag);
         Assert.Equal(["http://192.168.0.20:8766", "http://172.26.32.1:8766"], app.Addresses);
         Assert.Equal(("GPU-PC", "0.9.0", "RTX 4070", "large-v3-turbo"), (app.Name, app.Version, app.Gpu, app.Model));
         Assert.Equal(("123456", "t0k"), (app.PairingCode, app.Token));
@@ -84,6 +85,7 @@ public sealed class WorkerAppViewModelTests
         await app.RefreshAsync();
 
         Assert.Equal(WorkerState.Failed, app.State);
+        Assert.True(app.IsFailed);
         Assert.Equal(_texts.Format("WorkerExited", _process.LogPath), app.Error);
         Assert.Empty(app.Addresses);
         Assert.Null(app.PairingCode);
