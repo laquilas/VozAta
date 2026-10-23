@@ -51,6 +51,7 @@ es.SpeakersTask=Descargar la identificación de participantes ahora (unos 3 GB; 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+#include "gpu.iss"
 #include "speakers.iss"
 
 [InstallDelete]

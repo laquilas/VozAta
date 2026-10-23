@@ -60,12 +60,12 @@ versions.
 - **Branch:** `feature/58-cuda-on-demand`
 - **Status:** in progress
 - **Updated:** 2026-10-23 18:40
-- **Next step:** packaging: spec and build.ps1 without CUDA, `packaging/gpu.iss` included by both installers.
+- **Next step:** docs, full suites, build (foreground), `cuda install` from the packaged engine and a GPU transcription, install test, copy to F:.
 
 ### Steps
 
 - [x] Phase start
 - [x] Engine: CUDA runtime download, DLL registration, the CPU shortcut
 - [x] CLI `cuda install | status | remove`
-- [ ] Packaging: no CUDA in the build; `gpu.iss` in both installers
+- [x] Packaging: no CUDA in the build; `gpu.iss` in both installers (its Check function lives in `speakers.iss`: one [Code] section)
 - [ ] Docs; suites; build; GPU check with the downloaded runtime; copy to F:

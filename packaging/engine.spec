@@ -2,35 +2,20 @@
 #
 #   pyinstaller packaging/engine.spec --distpath build/dist --workpath build/work
 #
-# Set CPU_ONLY=1 to leave out the NVIDIA cuBLAS / cuDNN DLLs (~1 GB): the build then always
-# transcribes on the CPU (WHISPER_DEVICE=auto falls back to it).
+# The NVIDIA cuBLAS / cuDNN DLLs (1.8 GB) are not bundled: a PC with an NVIDIA GPU downloads them
+# (phase 58, `vozata-engine cuda install`, an option of the installers); without them the engine
+# transcribes on the CPU.
 #
 # Translation (the `translation` extra, sentencepiece) is in every build. Speaker identification
 # (pyannote.audio, torch, ~3 GB) is not: the PC that needs it downloads it into its speaker
 # runtime (phase 56, `vozata-engine speakers install`); build.ps1 puts uv.exe and the source zip
 # it needs into dist/vozata-engine/speakers.
 
-import os
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
 
 ROOT = Path(SPECPATH).parent  # noqa: F821 (provided by PyInstaller)
-CPU_ONLY = os.environ.get("CPU_ONLY") == "1"
-
-
-def cuda_dlls():
-    """nvidia/<lib>/bin folders of the pip CUDA wheels, kept at the same relative path."""
-    if CPU_ONLY:
-        return []
-    import nvidia
-
-    found = []
-    for library in ("cublas", "cudnn"):
-        folder = Path(nvidia.__path__[0]) / library / "bin"
-        found += [(str(dll), f"nvidia/{library}/bin") for dll in folder.glob("*.dll")]
-    return found
-
 
 # The diarization extra: the analysis follows the lazy `import torch` of the diarization
 # modules, so an environment with the extra would put ~3 GB of it into the build.
@@ -56,7 +41,6 @@ a = Analysis(  # noqa: F821
         collect_dynamic_libs("ctranslate2")
         + collect_dynamic_libs("onnxruntime")
         + collect_dynamic_libs("sentencepiece")
-        + cuda_dlls()
     ),
     datas=(
         collect_data_files("vozata")  # locales, export fonts, minutes templates
