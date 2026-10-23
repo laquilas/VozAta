@@ -105,6 +105,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 53 | [More language model providers](phases/53-llm-providers.md) | 43, 38 | done |
 | 54 | [Suggest recording when a meeting app is in a call](phases/54-meeting-detection.md) | 11, 35 | done |
 | 55 | [WER benchmark](phases/55-wer-benchmark.md) | 27, 40 | done |
+| 56 | [Speaker identification downloaded on the PC](phases/56-speakers-on-demand.md) | 14, 45, 51 | in progress (`feature/56-speakers-on-demand`) |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
@@ -226,6 +227,9 @@ graph LR
   P35 --> P54
   P27 --> P55[55 WER benchmark]
   P40 --> P55
+  P14 --> P56[56 Speakers on demand]
+  P45 --> P56
+  P51 --> P56
 ```
 
 ## Backlog (not scheduled)
