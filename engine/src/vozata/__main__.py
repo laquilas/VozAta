@@ -1,5 +1,5 @@
 """Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex |
-recover [<dir> | --all] | migrate [--dry-run] | transcribe <id>`."""
+recover [<dir> | --all] | migrate [--dry-run] | transcribe <id> | speakers install`."""
 
 from __future__ import annotations
 
@@ -34,9 +34,12 @@ from vozata.cli.record import print_devices, run_record
 from vozata.cli.recover import run_recover
 from vozata.cli.reindex import run_reindex
 from vozata.cli.serve import run_serve
+from vozata.cli.speakers import ACTIONS as SPEAKER_ACTIONS
+from vozata.cli.speakers import run_speakers
 from vozata.cli.transcribe import run_transcribe
 from vozata.cli.worker import run_worker
 from vozata.config import ConfigError, Settings, load_settings
+from vozata.diarization.runtime import runtime_for
 from vozata.domain import ConversationLanguage
 from vozata.ports import Localizer
 
@@ -81,6 +84,9 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     migrate.add_argument("--dry-run", action="store_true", help=t("cli.help.migrate_dry_run"))
     transcribe = commands.add_parser("transcribe", help=t("cli.help.transcribe"))
     transcribe.add_argument("session", help=t("cli.help.transcribe_target"))
+    speakers = commands.add_parser("speakers", help=t("cli.help.speakers"))
+    speakers.add_argument("action", choices=SPEAKER_ACTIONS, help=t("cli.help.speakers_action"))
+    speakers.add_argument("--json", action="store_true", help=t("cli.help.speakers_json"))
     return parser
 
 
@@ -141,6 +147,15 @@ def main(
                 bootstrap.build_diarizer,
                 minutes if args.minutes else None,
                 open_folder,
+            )
+        if args.command == "speakers":
+            return run_speakers(
+                args.action,
+                runtime_for(settings),
+                console,
+                localizer,
+                cuda=lambda: bootstrap.query_gpu().available,
+                json_output=args.json,
             )
         if args.command == "reindex":
             return run_reindex(

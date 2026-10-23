@@ -23,7 +23,7 @@ to build (PyInstaller ran out of memory collecting torch) and to ship.
 ## Scope
 
 - **The speaker runtime**: a separate Python 3.13 environment in
-  `%LOCALAPPDATA%\VozAta\speakers` (`SPEAKERS_RUNTIME_DIR` overrides it) with `torch`,
+  `%LOCALAPPDATA%\VozAta\speakers` (`Settings.speakers_runtime_dir`, from `LOCALAPPDATA`) with `torch`,
   `torchaudio` (the CUDA 12.8 wheels when an NVIDIA GPU is present, else the CPU ones),
   `torchcodec` and `pyannote.audio`. The diarizer and the live embedder already run in child
   processes (phase 14 / 15); in the packaged engine the children now start with the runtime's
@@ -83,13 +83,13 @@ it), other runtimes (translation already ships in the standard build).
 - **Branch:** `feature/56-speakers-on-demand`
 - **Status:** in progress
 - **Updated:** 2026-10-23 16:00
-- **Next step:** `diarization/runtime.py` (layout, readiness, child command) with tests.
+- **Next step:** packaging: `uv` in the `package` extra, `uv.exe` + `vozata.zip` into `dist/vozata-engine/speakers` (build.ps1), drop `-Speakers` / `SPEAKERS` / `Edition`, the installer task.
 
 ### Steps
 
 - [x] Phase start (phase file, plan, README)
-- [ ] Engine: the speaker runtime (layout, readiness, child command and env)
-- [ ] Engine: the installer (uv steps) and `speakers install | status | remove`
+- [x] Engine: the speaker runtime (layout, readiness, child command and env) — `992bb80`
+- [x] Engine: the installer (uv steps) and `speakers install | status | remove`
 - [ ] Packaging: `vozata.zip` + `uv.exe`, the edition removed, the installer task
 - [ ] Worker app: the Download button
 - [ ] Docs; full suites; manual check (packaged build, runtime install, diarization)

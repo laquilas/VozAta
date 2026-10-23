@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 from pathlib import Path
 from typing import Any
 
@@ -338,3 +339,10 @@ def test_worker_check_prints_the_version_and_the_address() -> None:
 
     assert code == 0
     assert "VozAta worker" in out and "http://0.0.0.0:9001" in out
+
+
+def test_speakers_status_as_json_names_the_runtime_folder(tmp_path: Path) -> None:
+    code, out = _main(["speakers", "status", "--json"], env={"LOCALAPPDATA": str(tmp_path)})
+
+    assert code == 0
+    assert json.loads(out)["folder"] == str(tmp_path / "VozAta" / "speakers")
