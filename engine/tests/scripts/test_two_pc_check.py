@@ -189,3 +189,206 @@ def test_a_worker_that_does_not_answer_fails_the_step() -> None:
     result = check.worker_health(_client(handler), speakers=True)
 
     assert result.ok is False and "refused" in result.detail
+
+
+# Translate
+
+
+def test_a_real_translation_comes_back_in_english() -> None:
+    sent: list[dict[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return _json(200, {"text": "Let's postpone the beta release until next Tuesday."})
+
+    result = check.translate(_client(handler, "http://worker"))
+
+    assert result.ok is True and "postpone" in result.detail
+    assert sent == [{"text": check.SENTENCE, "source": "pt", "target": "en"}]
+
+
+@pytest.mark.parametrize(
+    ("response", "detail"),
+    [
+        (_json(503, {"error": {"code": "worker_translation_unavailable"}}), "unavailable"),
+        (_json(200, {"text": ""}), "empty"),
+        (_json(200, {"text": check.SENTENCE}), "untranslated"),
+    ],
+)
+def test_a_translation_that_did_not_happen_fails(response: httpx.Response, detail: str) -> None:
+    result = check.translate(_client(lambda _: response, "http://worker"))
+
+    assert result.ok is False and detail in result.detail
+
+
+# Diarize + cancel
+
+
+class _Jobs:
+    """A worker's /diarize: running until DELETE, then `after_delete` (cancelled by default)."""
+
+    def __init__(self, after_delete: str = "cancelled", accept: int = 202) -> None:
+        self.after_delete = after_delete
+        self.accept = accept
+        self.state = "running"
+        self.calls: list[str] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.calls.append(f"{request.method} {request.url.path}")
+        if request.method == "POST":
+            return _json(self.accept, {"job_id": "j1"} if self.accept == 202 else {})
+        if request.method == "DELETE":
+            self.state = self.after_delete
+            return httpx.Response(204)
+        return _json(200, {"state": self.state, "turns": [], "message": None})
+
+
+def test_a_running_diarization_job_is_cancelled_on_the_worker() -> None:
+    jobs, clock = _Jobs(), _Clock()
+
+    result = check.diarize_cancel(
+        _client(jobs, "http://worker"), b"RIFF", clock=clock, sleep=clock.sleep
+    )
+
+    assert result.ok is True and "cancelled" in result.detail
+    assert jobs.calls[0] == "POST /diarize"
+    assert "DELETE /diarize/j1" in jobs.calls
+
+
+def test_a_job_that_keeps_running_after_the_cancel_fails() -> None:
+    jobs, clock = _Jobs(after_delete="running"), _Clock()
+
+    result = check.diarize_cancel(
+        _client(jobs, "http://worker"), b"RIFF", clock=clock, sleep=clock.sleep
+    )
+
+    assert result.ok is False and "still running" in result.detail
+
+
+def test_a_refused_job_fails_the_step() -> None:
+    clock = _Clock()
+
+    result = check.diarize_cancel(
+        _client(_Jobs(accept=503), "http://worker"), b"RIFF", clock=clock, sleep=clock.sleep
+    )
+
+    assert result.ok is False and "503" in result.detail
+
+
+# Pre-emption
+
+
+class _Engine:
+    """The client engine during the pre-emption step: two recordings and the first meeting's
+    processing, which moves through `script` one GET at a time."""
+
+    def __init__(self, script: list[dict[str, object] | None], speaker_count: int = 2) -> None:
+        self.script = script
+        self.speaker_count = speaker_count
+        self.calls: list[str] = []
+        self.sessions = 0
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        call = f"{request.method} {request.url.path}"
+        self.calls.append(call)
+        if call == "POST /sessions":
+            self.sessions += 1
+            return _json(201, {"id": f"s{self.sessions}", "status": "recording"})
+        if call == "POST /sessions/current/stop":
+            return _json(202, {})
+        if call == "DELETE /sessions/s2":
+            return httpx.Response(204)
+        if call == "GET /sessions/s2":
+            return _json(200, {"id": "s2", "status": "done", "processing": None})
+        processing = self.script.pop(0) if len(self.script) > 1 else self.script[0]
+        status = "done" if processing is None else "finalizing"
+        body = {"id": "s1", "status": status, "processing": processing}
+        return _json(200, {**body, "speaker_count": self.speaker_count})
+
+
+def _step(state: str, step: str) -> dict[str, object]:
+    return {"state": state, "percent": 50, "step": step}
+
+
+def _preempt(engine: _Engine, cuda: bool) -> check.StepResult:
+    clock, played = _Clock(), []
+    result = check.preempt(
+        _client(engine),
+        cuda=cuda,
+        during=lambda: played.append(True),
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    assert played == [True]
+    return result
+
+
+def test_with_cuda_a_recording_pauses_the_diarize_step_on_the_worker() -> None:
+    engine = _Engine(
+        [
+            _step("running", "transcribe"),
+            _step("running", "diarize"),
+            _step("paused", "diarize"),
+            _step("running", "diarize"),
+            None,
+        ]
+    )
+
+    result = _preempt(engine, cuda=True)
+
+    assert result.ok is True
+    assert "paused" in result.detail and "2 speaker" in result.detail
+    assert engine.calls.count("POST /sessions") == 2
+    assert engine.calls.count("POST /sessions/current/stop") == 2
+    assert engine.calls[-1] != "DELETE /sessions/s1"
+    assert "DELETE /sessions/s2" in engine.calls
+
+
+def test_with_cuda_a_step_that_is_not_paused_fails() -> None:
+    engine = _Engine([_step("running", "diarize")] * 3 + [None])
+
+    result = _preempt(engine, cuda=True)
+
+    assert result.ok is False and "not paused" in result.detail
+
+
+def test_without_cuda_the_worker_step_keeps_running() -> None:
+    engine = _Engine([_step("running", "diarize"), _step("running", "diarize"), None])
+
+    result = _preempt(engine, cuda=False)
+
+    assert result.ok is True and "kept running" in result.detail
+
+
+def test_without_cuda_a_paused_step_fails() -> None:
+    engine = _Engine([_step("running", "diarize"), _step("paused", "diarize"), None])
+
+    result = _preempt(engine, cuda=False)
+
+    assert result.ok is False and "paused" in result.detail
+
+
+def test_a_meeting_without_a_diarize_step_fails() -> None:
+    engine = _Engine([_step("running", "transcribe"), None])
+
+    result = _preempt(engine, cuda=True)
+
+    assert result.ok is False and "no diarize step" in result.detail
+    assert engine.calls.count("POST /sessions") == 1
+
+
+def test_a_meeting_that_never_finishes_fails() -> None:
+    engine = _Engine([_step("running", "transcribe")])
+
+    result = _preempt(engine, cuda=True)
+
+    assert result.ok is False and "timed out" in result.detail
+
+
+def test_a_recording_that_cannot_start_fails() -> None:
+    clock = _Clock()
+    engine = _client(lambda _: _json(503, {"error": {"code": "device_timeout"}}))
+
+    result = check.preempt(engine, cuda=True, during=lambda: None, clock=clock, sleep=clock.sleep)
+
+    assert result.ok is False and "device_timeout" in result.detail

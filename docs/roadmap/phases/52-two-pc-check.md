@@ -79,14 +79,14 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - **Branch:** `feature/52-two-pc-check`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** failing tests for `translate`, `diarize_cancel` and `preempt` in
-  `scripts/two_pc_check.py` (MockTransport, fake clock).
+- **Next step:** the runtime part: `scripts/two_pc_runtime.py` (start / stop the scratch client
+  engine, play a WAV) and the command line `main()` of `two_pc_check.py`.
 
 ### Steps
 
 - [x] Implementation plan (`plans/52-two-pc-check.md`)
 - [x] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
-- [ ] Script: translate, diarize + cancel, pre-emption
+- [x] Script: translate, diarize + cancel, pre-emption
 - [ ] Script runtime: scratch engine process, playback, command line
 - [ ] Checklist `docs/two-pc-check.md`
 - [ ] Full suites, one recorded run, phase done
@@ -97,3 +97,5 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - A diarize step that runs on the worker is pre-empted by a recording only when the client PC has
   CUDA (`gpu_gate.speakers_fallback`: its fallback would run pyannote on this GPU); the script
   expects `paused` with CUDA and `running` without it.
+- The step logic has 93 % coverage (`pytest tests/scripts --cov=two_pc_check`); `scripts/` sits
+  outside the engine package, so the engine coverage gate does not count it.

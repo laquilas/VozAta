@@ -17,9 +17,12 @@ import io
 import ipaddress
 import random
 import struct
+import time
 import wave
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
@@ -146,6 +149,162 @@ def worker_health(worker: httpx.Client, *, speakers: bool) -> StepResult:
         f"; missing {', '.join(missing)}" if missing else ""
     )
     return StepResult("health", not missing, detail)
+
+
+SENTENCE = "Vamos adiar o lançamento da versão beta para a próxima terça-feira."
+
+
+def translate(worker: httpx.Client) -> StepResult:
+    """A real opus-mt translation on the worker, Portuguese to English."""
+    body = {"text": SENTENCE, "source": "pt", "target": "en"}
+    try:
+        response = worker.post("/translate", json=body, timeout=900)  # may download the model
+    except httpx.HTTPError as error:
+        return StepResult("translate", False, f"worker: {error}")
+    if response.status_code != 200:
+        return StepResult("translate", False, f"{response.status_code} {_error_code(response)}")
+    text = str(response.json().get("text") or "").strip()
+    if not text:
+        return StepResult("translate", False, "empty translation")
+    if text == SENTENCE:
+        return StepResult("translate", False, "untranslated: the text came back as it was")
+    return StepResult("translate", True, f"pt -> en: {text}")
+
+
+def diarize_cancel(
+    worker: httpx.Client,
+    wav: bytes,
+    *,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+    timeout: float = 5.0,
+) -> StepResult:
+    """Start a diarization job on the worker, cancel it once running: `cancelled` in `timeout`."""
+    name = "diarize + cancel"
+    try:
+        response = worker.post("/diarize", content=wav, timeout=60)
+        if response.status_code != 202:
+            return StepResult(name, False, f"{response.status_code} {_error_code(response)}")
+        job = f"/diarize/{response.json()['job_id']}"
+        if _job_state(worker, job) != "running":
+            return StepResult(name, False, "the job ended before it could be cancelled")
+        worker.delete(job, timeout=10)
+        cancelled_at = clock()
+        while clock() - cancelled_at <= timeout:
+            state = _job_state(worker, job)
+            if state != "running":
+                ok = state == "cancelled"
+                return StepResult(name, ok, f"{state} {clock() - cancelled_at:.1f} s after DELETE")
+            sleep(0.2)
+    except httpx.HTTPError as error:
+        return StepResult(name, False, f"worker: {error}")
+    return StepResult(name, False, f"still running {timeout:.0f} s after DELETE")
+
+
+def _job_state(worker: httpx.Client, job: str) -> str:
+    return str(worker.get(job, timeout=10).json().get("state"))
+
+
+def preempt(
+    engine: httpx.Client,
+    *,
+    cuda: bool,
+    during: Callable[[], None],
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+    timeout: float = 900.0,
+) -> StepResult:
+    """Record a meeting (`during` plays speech on this PC's output), stop it, and when the queue's
+    diarize step runs on the worker start a second recording. With CUDA here the step pauses (its
+    fallback would use this GPU, phase 40); without CUDA it keeps running on the worker."""
+    name = "pre-emption"
+    try:
+        first = _record(engine, "two-PC check")
+        during()
+        engine.post("/sessions/current/stop", timeout=30)
+        deadline = clock() + timeout
+        if not _wait(engine, first, _diarizing, clock, sleep, deadline):
+            meeting = _session(engine, first)
+            if meeting.get("status") == "done":
+                return StepResult(name, False, "no diarize step: no system speech was recorded?")
+            return StepResult(name, False, "timed out waiting for the diarize step")
+        second = _record(engine, "two-PC check (pre-empts)")
+        paused = _wait(engine, first, _paused_or_done, clock, sleep, clock() + 10.0)
+        engine.post("/sessions/current/stop", timeout=30)
+        finished = _wait(engine, second, _done, clock, sleep, deadline)
+        if finished:
+            engine.delete(f"/sessions/{second}", timeout=30)
+        if not _wait(engine, first, _done, clock, sleep, deadline):
+            return StepResult(name, False, "timed out waiting for the meeting to finish")
+        speakers = _session(engine, first).get("speaker_count")
+    except _Refused as error:
+        return StepResult(name, False, str(error))
+    except httpx.HTTPError as error:
+        return StepResult(name, False, f"engine: {error}")
+    done = f"then finished: {speakers} speaker(s)"
+    if cuda and not paused:
+        return StepResult(name, False, "diarize step not paused although this PC has CUDA")
+    if not cuda and paused:
+        return StepResult(name, False, "diarize step paused although this PC has no CUDA")
+    if cuda:
+        return StepResult(name, True, f"diarize step paused by the recording (CUDA here), {done}")
+    return StepResult(name, True, f"diarize step kept running on the worker (no CUDA), {done}")
+
+
+class _Refused(Exception):
+    pass
+
+
+def _record(engine: httpx.Client, title: str) -> str:
+    response = engine.post(
+        "/sessions", json={"live_transcription": False, "title": title}, timeout=60
+    )
+    if response.status_code != 201:
+        raise _Refused(f"recording refused: {response.status_code} {_error_code(response)}")
+    return str(response.json()["id"])
+
+
+def _session(engine: httpx.Client, session_id: str) -> dict[str, Any]:
+    return dict(engine.get(f"/sessions/{session_id}", timeout=30).json())
+
+
+def _processing(meeting: dict[str, Any]) -> dict[str, Any]:
+    return dict(meeting.get("processing") or {})
+
+
+def _diarizing(meeting: dict[str, Any]) -> bool | None:
+    """True while diarize runs, None (stop waiting) once the meeting is done without it."""
+    processing = _processing(meeting)
+    if processing.get("step") == "diarize" and processing.get("state") == "running":
+        return True
+    return None if meeting.get("status") == "done" else False
+
+
+def _paused_or_done(meeting: dict[str, Any]) -> bool | None:
+    if _processing(meeting).get("state") == "paused":
+        return True
+    return None if meeting.get("status") == "done" else False
+
+
+def _done(meeting: dict[str, Any]) -> bool:
+    return meeting.get("status") == "done"
+
+
+def _wait(
+    engine: httpx.Client,
+    session_id: str,
+    condition: Callable[[dict[str, Any]], bool | None],
+    clock: Callable[[], float],
+    sleep: Callable[[float], None],
+    deadline: float,
+) -> bool:
+    """Poll the meeting until `condition` is True (True), None or the deadline (False)."""
+    while clock() <= deadline:
+        verdict = condition(_session(engine, session_id))
+        if verdict is not False:
+            return bool(verdict)
+        sleep(0.5)
+    return False
 
 
 def _loopback(url: str) -> bool:
