@@ -95,3 +95,30 @@ mDNS / Bonjour.
 
 > Start phase 47 (`docs/roadmap/phases/47-worker-app.md`) once phase 44 is merged: read its
 > *Read first* files, write `plans/47-worker-app.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/47-worker-app`
+- **Status:** in progress
+- **Updated:** 2026-10-22
+- **Next step:** Task 1 of `plans/47-worker-app.md` (worker identity, pairing codes, `/pair`,
+  `/local/status`).
+
+### Steps
+
+- [x] Implementation plan (`plans/47-worker-app.md`)
+- [ ] Worker: identity, pairing codes, `/pair`, `/local/status`
+- [ ] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
+- [ ] Engine: find a moved worker before the fallback
+- [ ] Desktop Config: Find workers and pair
+- [ ] The worker app (`VozAta.Worker`)
+- [ ] Packaging and docs
+- [ ] Full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- The worker app is published into the desktop app's folder (both use `engineozata-engine.exe`
+  next to them) instead of a separate `build/worker/`; its working directory is
+  `%APPDATA%\VozAta\worker`, so its `.env` (token, id) is apart from the engine's.
+
