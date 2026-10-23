@@ -49,7 +49,7 @@ engine/
     session.py              RecordingSession
     audio/                  devices.py, capture.py, clock.py, wav_writer.py, chunker.py, mixer.py, levels.py,
                             pcm.py (playable tracks, WAV header, 32)
-    transcription/          cuda.py, faster_whisper.py, openai_compatible.py, retry.py,
+    transcription/          cuda.py, cuda_runtime.py, faster_whisper.py, openai_compatible.py, retry.py,
                             stitcher.py, language_lock.py, worker.py, echo.py
     output/                 sinks.py
     llm/                    ollama.py
@@ -780,7 +780,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `AUDIO_CACHE_MB` | `2048` | 32 | `sqlite`: size limit of `OUTPUT_DIR/cache` (WAVs built from the database for tools that need a file), least recently used first out; 0–1048576; restart |
 | `STT_PROVIDER` | `faster_whisper` | 03 | registry key: `faster_whisper` / `openai_compatible` (12) / `vozata_worker` (44: Whisper on the worker, this PC's when it does not answer) |
 | `WHISPER_MODEL` | `large-v3-turbo` | 03 | GPU model |
-| `WHISPER_DEVICE` | `auto` | 03 | `auto` / `cuda` / `cpu` |
+| `WHISPER_DEVICE` | `auto` | 03 | `auto` / `cuda` / `cpu`; the packaged engine without its downloaded CUDA libraries (58: `%LOCALAPPDATA%\VozAta\cuda`, `Settings.cuda_runtime_dir`, `vozata-engine cuda install`) treats `auto` as `cpu` and never downloads the GPU model |
 | `WHISPER_COMPUTE_TYPE` | `int8_float16` | 03 | CTranslate2 compute type on GPU |
 | `WHISPER_CPU_MODEL` | `small` | 03 | fallback model on CPU |
 | `MIX_MODE` | `mono` | 02 | `mono` / `stereo` |

@@ -13,7 +13,7 @@ import numpy as np
 from vozata.config import Settings
 from vozata.domain import ModelKind, TranscriptionResult, WhisperDevice, Word
 from vozata.ports import ModelDownloader
-from vozata.transcription.cuda import register_cuda_dlls
+from vozata.transcription.cuda import packaged, register_cuda_dlls
 
 _log = logging.getLogger(__name__)
 
@@ -61,8 +61,10 @@ class FasterWhisperTranscriber:
     """Whisper on CUDA (`WHISPER_MODEL`, `WHISPER_COMPUTE_TYPE`) or CPU (`WHISPER_CPU_MODEL`).
 
     `WHISPER_DEVICE=auto` loads the GPU model and runs a 1 s warm-up probe, because missing CUDA
-    DLLs only fail at the first transcription; any failure falls back to the CPU model. Each
-    model is first made local through `downloader` (phase 42), then loaded from its folder.
+    DLLs only fail at the first transcription; any failure falls back to the CPU model. The
+    packaged engine without its downloaded CUDA libraries (phase 58) goes to the CPU at once,
+    without downloading the GPU model first. Each model is first made local through
+    `downloader` (phase 42), then loaded from its folder.
     """
 
     def __init__(
@@ -70,16 +72,19 @@ class FasterWhisperTranscriber:
         settings: Settings,
         downloader: ModelDownloader,
         model_factory: ModelFactory | None = None,
+        cuda_libraries: Callable[[], bool] | None = None,
     ) -> None:
-        register_cuda_dlls()
+        found = (cuda_libraries or (lambda: _cuda_libraries(settings)))()
         factory = model_factory or _whisper_model
-        self.device, self._model = self._load(settings, downloader, factory)
+        self.device, self._model = self._load(settings, downloader, factory, found)
 
     @staticmethod
     def _load(
-        settings: Settings, downloader: ModelDownloader, factory: ModelFactory
+        settings: Settings, downloader: ModelDownloader, factory: ModelFactory, cuda: bool
     ) -> tuple[str, Any]:
-        if settings.whisper_device is not WhisperDevice.CPU:
+        if settings.whisper_device is WhisperDevice.AUTO and not cuda:
+            _log.info("No CUDA libraries; using CPU model %s", settings.whisper_cpu_model)
+        elif settings.whisper_device is not WhisperDevice.CPU:
             try:
                 model = factory(
                     model_folder(settings.whisper_model, downloader),
@@ -135,6 +140,13 @@ class FasterWhisperTranscriber:
         """Release the model (frees VRAM before diarization or the LLM run)."""
         self._model = None
         gc.collect()
+
+
+def _cuda_libraries(settings: Settings) -> bool:
+    """Register the CUDA DLLs; True unless the packaged engine has none (development keeps
+    probing the GPU: a system-wide CUDA can be on PATH)."""
+    found = register_cuda_dlls(extra=[settings.cuda_runtime_dir])
+    return found or not packaged()
 
 
 def _text(value: str | None) -> str | None:

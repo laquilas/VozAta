@@ -47,6 +47,7 @@ en.SpeakersTask=Download speaker identification now (about 3 GB; also later in V
 ptbr.SpeakersTask=Baixar a identificação de participantes agora (cerca de 3 GB; também depois, no VozAta Worker)
 es.SpeakersTask=Descargar la identificación de participantes ahora (unos 3 GB; también después, en VozAta Worker)
 
+#include "gpu.iss"
 #include "speakers.iss"
 
 [Files]

@@ -5,16 +5,15 @@
 
 .EXAMPLE
   pwsh packaging/build.ps1 -Version 1.0.0            # from the repository root
-  pwsh packaging/build.ps1 -Version 1.0.0 -CpuOnly   # without the ~1 GB of CUDA DLLs
 
-  Needs: the engine environment with the `cuda`, `translation` and `package` extras
-  (pip install -e "engine[cuda,translation,package]"), the .NET 10 SDK and, for the installer
-  itself, Inno Setup (`iscc` on PATH); without it the script stops after preparing build/.
-  Speaker identification is not bundled: the installed PC downloads it (phase 56).
+  Needs: the engine environment with the `translation` and `package` extras
+  (pip install -e "engine[translation,package]"), the .NET 10 SDK and, for the installers
+  themselves, Inno Setup (`iscc` on PATH); without it the script stops after preparing build/.
+  Neither speaker identification (phase 56) nor the CUDA libraries (phase 58) are bundled: the
+  installed PC downloads them.
 #>
 param(
     [string] $Version = "0.0.0",
-    [switch] $CpuOnly,
     [string] $Out = "build",
     [string] $Python = "python"
 )
@@ -23,7 +22,6 @@ $root = Split-Path $PSScriptRoot -Parent
 $out = [IO.Path]::GetFullPath([IO.Path]::Combine($root, $Out))  # -Out may be absolute (a scratch folder)
 
 Write-Host "== Engine (PyInstaller)"
-$env:CPU_ONLY = if ($CpuOnly) { "1" } else { "0" }
 & $Python -m PyInstaller (Join-Path $root "packaging/engine.spec") --noconfirm `
     --distpath (Join-Path $out "dist") --workpath (Join-Path $out "work")
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
@@ -39,7 +37,9 @@ Write-Host $check
 $tasks = @{}
 ($check | ConvertFrom-Json).tasks | ForEach-Object { $tasks[$_.name] = $_ }
 if (-not $tasks.translation.available) { throw "the packaged worker does not offer translation" }
-if (Test-Path (Join-Path $out "dist/vozata-engine/_internal/torch")) { throw "torch got into the build" }
+foreach ($heavy in "torch", "nvidia") {  # downloaded on the PC (phases 56, 58), never bundled
+    if (Test-Path (Join-Path $out "dist/vozata-engine/_internal/$heavy")) { throw "$heavy got into the build" }
+}
 
 Write-Host "== Speaker runtime tools (phase 56: uv.exe and the engine source, for speakers install)"
 $speakers = Join-Path $out "dist/vozata-engine/speakers"

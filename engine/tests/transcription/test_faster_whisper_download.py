@@ -132,3 +132,54 @@ def test_a_failed_download_on_cuda_propagates() -> None:
         FasterWhisperTranscriber(
             Settings(whisper_device=WhisperDevice.CUDA), downloader, model_factory=_Factory()
         )
+
+
+def test_auto_without_cuda_libraries_goes_to_the_cpu_without_the_gpu_model() -> None:
+    downloader = FakeModelDownloader(Path("hub"))
+    factory = _Factory()
+
+    transcriber = FasterWhisperTranscriber(
+        Settings(whisper_device=WhisperDevice.AUTO),
+        downloader,
+        model_factory=factory,
+        cuda_libraries=lambda: False,
+    )
+
+    assert transcriber.device == "cpu"
+    assert [call["name"] for call in downloader.calls] == ["small"]
+    assert [device for _, device in factory.loaded] == ["cpu"]
+
+
+def test_cuda_asked_for_explicitly_is_still_tried_without_the_libraries() -> None:
+    factory = _Factory()
+
+    transcriber = FasterWhisperTranscriber(
+        Settings(whisper_device=WhisperDevice.CUDA),
+        FakeModelDownloader(Path("hub")),
+        model_factory=factory,
+        cuda_libraries=lambda: False,
+    )
+
+    assert transcriber.device == "cuda"
+
+
+@pytest.mark.parametrize(
+    ("found", "packaged", "expected"),
+    [(True, True, True), (False, True, False), (False, False, True)],
+)
+def test_only_the_packaged_engine_without_cuda_folders_skips_the_gpu(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, found: bool, packaged: bool, expected: bool
+) -> None:
+    from vozata.transcription import faster_whisper
+
+    seen: list[list[Path]] = []
+
+    def register(site_dirs: object = None, extra: list[Path] = ()) -> bool:  # type: ignore[assignment]
+        seen.append(list(extra))
+        return found
+
+    monkeypatch.setattr(faster_whisper, "register_cuda_dlls", register)
+    monkeypatch.setattr(faster_whisper, "packaged", lambda: packaged)
+
+    assert faster_whisper._cuda_libraries(Settings(cuda_runtime_dir=tmp_path)) is expected
+    assert seen == [[tmp_path]]

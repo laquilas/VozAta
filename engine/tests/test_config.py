@@ -12,7 +12,9 @@ from vozata.domain import AppLanguage, ChunkMode, ConversationLanguage, MixMode,
 
 def test_defaults_when_nothing_is_set() -> None:
     # the speaker runtime folder depends on the home folder (its own tests below)
-    assert replace(load_settings(env={}), speakers_runtime_dir=Path("speakers")) == Settings(
+    assert replace(
+        load_settings(env={}), speakers_runtime_dir=Path("speakers"), cuda_runtime_dir=Path("cuda")
+    ) == Settings(
         chunk_seconds=5.0,
         sample_rate=16000,
         app_language=AppLanguage.EN,
@@ -863,3 +865,9 @@ def test_without_local_app_data_the_speaker_runtime_is_under_home() -> None:
     settings = load_settings(env={})
 
     assert settings.speakers_runtime_dir == Path.home() / ".local" / "share" / "VozAta" / "speakers"
+
+
+def test_the_cuda_runtime_lives_next_to_the_speaker_runtime() -> None:
+    settings = load_settings(env={"LOCALAPPDATA": r"C:\Users\me\AppData\Local"})
+
+    assert settings.cuda_runtime_dir == Path(r"C:\Users\me\AppData\Local") / "VozAta" / "cuda"

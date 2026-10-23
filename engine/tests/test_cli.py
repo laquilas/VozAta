@@ -55,7 +55,7 @@ def test_version_flag_prints_the_version(capsys) -> None:
         cli.main(["--version"], env={})
 
     assert exit_.value.code == 0
-    assert capsys.readouterr().out.strip() == "0.2.1"
+    assert capsys.readouterr().out.strip() == "0.3.1"
 
 
 def test_record_runs_with_the_parsed_options(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -346,3 +346,10 @@ def test_speakers_status_as_json_names_the_runtime_folder(tmp_path: Path) -> Non
 
     assert code == 0
     assert json.loads(out)["folder"] == str(tmp_path / "VozAta" / "speakers")
+
+
+def test_cuda_status_as_json_names_the_runtime_folder(tmp_path: Path) -> None:
+    code, out = _main(["cuda", "status", "--json"], env={"LOCALAPPDATA": str(tmp_path)})
+
+    assert code == 0
+    assert json.loads(out) == {"ready": False, "folder": str(tmp_path / "VozAta" / "cuda")}

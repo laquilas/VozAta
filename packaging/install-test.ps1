@@ -34,16 +34,21 @@ if ($Worker) {
     Check ($LASTEXITCODE -eq 0) "the packaged worker passes --check"
     Check (($check.tasks | Where-Object name -eq "speech").available) "the worker offers speech"
     # a stand-in speaker runtime: the uninstaller removes it when VozAta itself is not installed
+    # (and the CUDA libraries, phase 58)
     $runtime = Join-Path $env:LOCALAPPDATA "VozAta\speakers"
-    Check (-not (Test-Path $runtime)) "no speaker runtime before the test (move a real one aside)"
-    New-Item -ItemType Directory -Force $runtime | Out-Null
-    Set-Content -Path (Join-Path $runtime "ready.json") -Value "{}"
+    $cuda = Join-Path $env:LOCALAPPDATA "VozAta\cuda"
+    foreach ($folder in $runtime, $cuda) {
+        Check (-not (Test-Path $folder)) "no $folder before the test (move a real one aside)"
+        New-Item -ItemType Directory -Force $folder | Out-Null
+        Set-Content -Path (Join-Path $folder "ready.json") -Value "{}"
+    }
     $uninstall = Start-Process "$Dir\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
     Start-Sleep 5  # the uninstaller finishes in a copy of itself
     Check ($uninstall.ExitCode -eq 0) "silent uninstall (exit code $($uninstall.ExitCode))"
     Check (-not (Test-Path "$Dir\VozAta.Worker.exe")) "worker app removed"
     Check (-not (Test-Path $shortcut)) "shortcut removed"
     Check (-not (Test-Path $runtime)) "the speaker runtime removed"
+    Check (-not (Test-Path $cuda)) "the CUDA libraries removed"
     Write-Host "worker install test passed"
     exit 0
 }

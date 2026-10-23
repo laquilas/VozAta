@@ -58,17 +58,24 @@ def test_defaults_to_the_interpreter_site_packages(
     assert len(added) == 2
 
 
-def test_a_frozen_build_looks_inside_its_bundle(
-    site: tuple[Path, list[str]], monkeypatch: pytest.MonkeyPatch
+def test_the_downloaded_runtime_is_registered_too(
+    site: tuple[Path, list[str]], tmp_path: Path
 ) -> None:
+    root, added = site
+
+    found = cuda.register_cuda_dlls([tmp_path / "no-site"], extra=[root])
+
+    assert found is True
+    assert added == [str(root / "nvidia" / name / "bin") for name in ("cublas", "cudnn")]
+
+
+def test_nothing_found_is_false(site: tuple[Path, list[str]], tmp_path: Path) -> None:
+    assert cuda.register_cuda_dlls([tmp_path / "a"], extra=[tmp_path / "b"]) is False
+
+
+def test_packaged_reads_the_frozen_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     import sys
 
-    root, added = site
+    assert cuda.packaged() is False
     monkeypatch.setattr(sys, "frozen", True, raising=False)
-    monkeypatch.setattr(sys, "_MEIPASS", str(root), raising=False)
-    monkeypatch.setattr(cuda.site, "getsitepackages", lambda: [])
-    monkeypatch.setattr(cuda.site, "getusersitepackages", lambda: str(root / "none"))
-
-    cuda.register_cuda_dlls()
-
-    assert added == [str(root / "nvidia" / name / "bin") for name in ("cublas", "cudnn")]
+    assert cuda.packaged() is True

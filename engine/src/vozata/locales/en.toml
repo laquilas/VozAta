@@ -237,6 +237,18 @@ status_missing = "Speaker identification is not installed on this PC (vozata-eng
 development = "In development, speaker identification uses the virtualenv: pip install -e \"engine[diarization]\"."
 removed = "Removed {folder}."
 
+[cli.cuda]
+start = "Downloading GPU support (NVIDIA CUDA libraries, about 1.2 GB) into {folder}."
+step_download = "Downloading {name} ({size} MB)..."
+progress = "  {name}: {percent} %"
+step_extract = "Unpacking {name}..."
+done = "GPU support is installed in {folder}. Restart VozAta and VozAta Worker to use it."
+already_ready = "GPU support is already installed in {folder}."
+failed = "The download stopped ({reason}). Run it again to retry: vozata-engine cuda install"
+status_ready = "GPU support (CUDA) is installed in {folder}."
+status_missing = "GPU support (CUDA) is not installed on this PC: speech recognition runs on the CPU (vozata-engine cuda install)."
+removed = "Removed {folder}."
+
 [cli.devices]
 microphones = "Microphones:"
 loopbacks = "System audio (loopback):"
@@ -250,6 +262,9 @@ worker_json = "with --check: print the version, the address and the tasks as JSO
 speakers = "download, check or remove speaker identification on this PC (pyannote, about 3 GB)"
 speakers_action = "install | status | remove"
 speakers_json = "with status: print it as JSON"
+cuda = "download, check or remove GPU support (the NVIDIA CUDA libraries, about 1.2 GB) on this PC"
+cuda_action = "install | status | remove"
+cuda_json = "with status: print it as JSON"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"
