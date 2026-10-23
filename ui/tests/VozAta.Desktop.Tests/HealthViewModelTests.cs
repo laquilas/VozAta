@@ -66,4 +66,28 @@ public sealed class HealthViewModelTests
 
         Assert.Equal("Fala: large-v3 em auto", health.SpeechText);
     }
+
+    [Fact]
+    public async Task The_worker_line_says_where_the_work_runs()
+    {
+        var health = Create();
+        await health.LoadAsync();
+        Assert.Null(health.WorkerText); // no worker set up
+
+        _client.Health = _client.Health with { Worker = Worker("worker", "local") };
+        await health.LoadAsync();
+        Assert.Equal(("Worker: 192.168.0.30", false), (health.WorkerText, health.IsWorkerOff));
+
+        _client.Health = _client.Health with { Worker = Worker("fallback", "local") };
+        await health.LoadAsync();
+        Assert.Equal(("This PC (worker off)", true), (health.WorkerText, health.IsWorkerOff));
+
+        _client.Health = _client.Health with { Worker = Worker("local", "local") };
+        await health.LoadAsync();
+        Assert.False(health.HasWorkerText); // set up but no task uses it
+    }
+
+    private static WorkerHealth Worker(string speech, string translation) =>
+        new("http://192.168.0.30:8766", speech != "fallback", "0.9.0",
+            new Dictionary<string, string> { ["speech"] = speech, ["speakers"] = "local", ["translation"] = translation });
 }

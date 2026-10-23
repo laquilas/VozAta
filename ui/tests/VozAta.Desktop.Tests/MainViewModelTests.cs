@@ -217,6 +217,18 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task A_worker_fallback_checks_the_health_again()
+    {
+        var viewModel = await ReadyAsync();
+        var checks = _client.Calls.Count(call => call == "health");
+
+        await SendAsync(viewModel, new ErrorEvent(null, "worker_fallback", "The VozAta worker did not answer"));
+        await viewModel.HealthRefresh;
+
+        Assert.Equal(checks + 1, _client.Calls.Count(call => call == "health"));
+    }
+
+    [Fact]
     public async Task The_meetings_page_reloads_on_events_follows_the_language_and_deletes_before_closing()
     {
         var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9)); // today, local time

@@ -57,14 +57,14 @@ Several workers, load balancing, TLS.
 - **Branch:** `feature/46-worker-translation`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 2 of `plans/46-worker-translation.md` (UI: `EngineHealth.Worker`, the Worker
-  group toggles, the sidebar worker line; commit).
+- **Next step:** Task 3 of `plans/46-worker-translation.md` (docs: worker API, contract, guide;
+  manual check; PR).
 
 ### Steps
 
 - [x] Implementation plan (`plans/46-worker-translation.md`)
 - [x] Engine: `/translate` on the worker, `TRANSLATORS["vozata_worker"]` with fallback, `/health` tasks
-- [ ] UI: Worker toggles per task, sidebar worker status
+- [x] UI: Worker toggles per task, sidebar worker status
 - [ ] Docs, full suites, manual check, phase done
 
 ### Decisions and notes

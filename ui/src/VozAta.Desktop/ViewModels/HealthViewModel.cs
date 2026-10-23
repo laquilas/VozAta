@@ -22,6 +22,20 @@ public sealed partial class HealthViewModel(IEngineClient client, ILocalizationS
     [ObservableProperty]
     public partial string? Error { get; private set; }
 
+    /// <summary>
+    /// Where the worker's tasks run (phase 46): "Worker: host", "This PC (worker off)", or null when
+    /// no task uses the worker.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasWorkerText))]
+    public partial string? WorkerText { get; private set; }
+
+    /// <summary>The worker is chosen but does not answer: this PC does the work.</summary>
+    [ObservableProperty]
+    public partial bool IsWorkerOff { get; private set; }
+
+    public bool HasWorkerText => WorkerText is not null;
+
     /// <summary>The engine version (Config → About, phase 38); empty until the first check.</summary>
     [ObservableProperty]
     public partial string EngineVersion { get; private set; } = "";
@@ -54,7 +68,15 @@ public sealed partial class HealthViewModel(IEngineClient client, ILocalizationS
             : localization["GpuNone"];
         SpeechText = localization.Format("SpeechModel", health.Stt.Model, health.Stt.Device);
         MinutesText = localization.Format(health.Llm.Reachable ? "MinutesReachable" : "MinutesUnreachable", health.Llm.Model);
+        var places = health.Worker?.Tasks?.Values ?? [];
+        IsWorkerOff = places.Contains("fallback");
+        WorkerText = IsWorkerOff ? localization["WorkerStatusOff"]
+            : places.Contains("worker") ? localization.Format("WorkerStatusOn", Host(health.Worker!.Url))
+            : null;
     }
+
+    private static string Host(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;
 
     [RelayCommand]
     private Task CheckAgainAsync() => LoadAsync();

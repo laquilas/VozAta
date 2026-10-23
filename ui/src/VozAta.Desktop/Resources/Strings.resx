@@ -1557,4 +1557,25 @@
   <data name="VoiceAnswerTitle" xml:space="preserve">
     <value>VozAta answers</value>
   </data>
+  <data name="WorkerTasksTitle" xml:space="preserve">
+    <value>Use the worker for</value>
+  </data>
+  <data name="WorkerTasksHelp" xml:space="preserve">
+    <value>Each task you tick runs on the worker; if the worker does not answer, this PC does it and a notification says so. Save to apply.</value>
+  </data>
+  <data name="WorkerUseForSpeech" xml:space="preserve">
+    <value>Speech recognition (applies after the engine restarts)</value>
+  </data>
+  <data name="WorkerUseForSpeakers" xml:space="preserve">
+    <value>Speaker identification (needs the Hugging Face token on the worker)</value>
+  </data>
+  <data name="WorkerUseForTranslation" xml:space="preserve">
+    <value>Live translation</value>
+  </data>
+  <data name="WorkerStatusOn" xml:space="preserve">
+    <value>Worker: {0}</value>
+  </data>
+  <data name="WorkerStatusOff" xml:space="preserve">
+    <value>This PC (worker off)</value>
+  </data>
 </root>
