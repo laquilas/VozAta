@@ -100,6 +100,8 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 48 | [Minutes so far and the partial-minutes list](phases/48-minutes-so-far.md) | 40, 41 | done |
 | 49 | [Minutes of a time range](phases/49-minutes-of-a-range.md) | 48 | done |
 | 50 | [Voice commands](phases/50-voice-commands.md) | 48 | done |
+| 51 | [The installed worker ships every task](phases/51-worker-every-task.md) | 45, 46, 47 | todo |
+| 52 | [Two-PC end-to-end check](phases/52-two-pc-check.md) | 51 | todo |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
@@ -127,6 +129,9 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 - **M9 — In-meeting minutes and commands** (48–50): minutes of what was said so far without
   stopping the recording, minutes of a time range of a recorded meeting, and voice commands
   ("VozAta, gere a ata").
+- **M10 — Worker in the field** (51–52): the installed worker offers every task (translation in
+  every build, speakers in the speakers edition) and says why one is missing; a two-PC check
+  (script + checklist) for discovery, pairing, translation, cancel and the app's worker switches.
 
 ## Dependency graph
 
@@ -205,13 +210,22 @@ graph LR
   P41 --> P48
   P48 --> P49[49 Minutes of a range]
   P48 --> P50[50 Voice commands]
+  P45 --> P51[51 Worker ships every task]
+  P46 --> P51
+  P47 --> P51
+  P51 --> P52[52 Two-PC check]
 ```
 
 ## Backlog (not scheduled)
 
-- Additional LLM providers (OpenAI-compatible chat, Anthropic) behind `LanguageModel`.
-- Auto-detect meeting apps (Teams / Zoom / Meet audio sessions) and suggest recording.
-- WER benchmark harness with reference recordings to tune `CHUNK_SECONDS` and models.
+- Additional LLM providers behind `LanguageModel`: an OpenAI-compatible chat provider (LM Studio,
+  vLLM, llama.cpp server, OpenAI) and Anthropic, registered in `bootstrap.py` with their keys in
+  the Config page; the minutes / action items / Ask contract suites run against each.
+- Auto-detect meeting apps (Teams / Zoom / Meet audio sessions through the Windows audio session
+  API) and suggest recording with a notification; never start recording by itself (consent).
+- WER benchmark harness: reference recordings with hand-checked transcripts (the TTS meeting of
+  the reference machine as the first one), a script that reports WER and latency per
+  `CHUNK_SECONDS`, VAD setting and Whisper model, to tune the defaults.
 
 ## Phase file template
 
