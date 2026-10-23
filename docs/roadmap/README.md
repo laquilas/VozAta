@@ -106,7 +106,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 54 | [Suggest recording when a meeting app is in a call](phases/54-meeting-detection.md) | 11, 35 | done |
 | 55 | [WER benchmark](phases/55-wer-benchmark.md) | 27, 40 | done |
 | 56 | [Speaker identification downloaded on the PC](phases/56-speakers-on-demand.md) | 14, 45, 51 | done |
-| 57 | [A separate installer for VozAta Worker; version 0.2.1](phases/57-worker-installer.md) | 47, 56 | in progress (`feature/57-worker-installer`) |
+| 57 | [A separate installer for VozAta Worker; version 0.2.1](phases/57-worker-installer.md) | 47, 56 | done |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 

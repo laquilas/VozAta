@@ -31,10 +31,10 @@ others (VozAta Worker and the engine, without the desktop app). The version goes
 
 ## Acceptance criteria
 
-- [ ] `build.ps1 -Version 0.2.1` makes both installers; the worker one has no `VozAta.Desktop.exe`
+- [x] `build.ps1 -Version 0.2.1` makes both installers; the worker one has no `VozAta.Desktop.exe`
       and the client one no `VozAta.Worker.exe`.
-- [ ] `install-test.ps1 -Worker` passes on the reference machine.
-- [ ] `vozata-engine.exe --version` prints 0.2.1.
+- [x] `install-test.ps1 -Worker` passes on the reference machine.
+- [x] `vozata-engine.exe --version` prints 0.2.1.
 
 ## Tests
 
@@ -49,12 +49,22 @@ A combined "both" installer, a machine-wide install.
 > Start phase 57 (`docs/roadmap/phases/57-worker-installer.md`): read its *Read first* files,
 > write `plans/57-worker-installer.md`, then implement it task by task.
 
+## Manual check (2026-10-23, reference machine)
+
+- `build.ps1 -Version 0.2.1` (~16 min): `VozAta-Setup-0.2.1.exe` 1,054 MB (no `VozAta.Worker.exe`),
+  `VozAta-Worker-Setup-0.2.1.exe` 1,050 MB (no `VozAta.Desktop.exe`); `vozata-engine.exe --version`
+  0.2.1; the apps carry the product version 0.2.1. Both copied to `F:\VozAta`.
+- `install-test.ps1 -Worker` passed (install, `worker --check`, uninstall removes the app, the
+  shortcut and a stand-in speaker runtime; the real runtime was moved aside and restored).
+- Not run here: the client install test (it starts the app and engine on 8765 next to the
+  user's own) and an upgrade over 0.1.0; both are in `__pendent__`.
+
 ## Progress
 
 - **Branch:** `feature/57-worker-installer`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23 18:10
-- **Next step:** build both installers (foreground), `install-test.ps1 -Worker` (move the real speaker runtime aside first), copy both to `F:\VozAta`.
+- **Next step:** open the PR and merge it.
 
 ### Steps
 
@@ -63,4 +73,4 @@ A combined "both" installer, a machine-wide install.
       install-test.ps1 `-Worker`; Release workflow
 - [x] Version 0.2.1 — `db07ba5`
 - [x] Docs (INSTALL, remote-worker, two-pc-check, architecture)
-- [ ] Build both, install test, copy to F:
+- [x] Build both, install test, copy to F:
