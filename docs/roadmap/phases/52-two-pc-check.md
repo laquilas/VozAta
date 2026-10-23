@@ -30,8 +30,8 @@ API parts so the check is repeatable after every worker change.
 | pair | `POST /worker/pair {url, code}` with the code typed from the GPU PC | 200; `WORKER_URL` / `WORKER_TOKEN` saved in the client engine's scratch `.env` |
 | health | `GET /health` on the worker with the token | `capabilities` has speech, translation (and speakers on the speakers edition) |
 | translate | `POST /translate` a known Portuguese sentence → English | non-empty English text, not equal to the input |
-| diarize + cancel | `POST /diarize` a generated two-voice WAV, then `DELETE` after it is `running` | state `cancelled` within 5 s |
-| pre-emption | a client recording session (`POST /sessions`) while the queue's diarize step runs on the worker | the worker job ends `cancelled`, the meeting finishes after Stop |
+| diarize + cancel | `POST /diarize` a generated WAV, then `DELETE` after it is `running` | state `cancelled` within 5 s |
+| pre-emption (`--record`) | a recorded meeting (a speech WAV played on the output); while its queue diarize step runs on the worker, a second recording with live transcription | paused only when that recording uses this PC's GPU (`--local-speech` + CUDA), else kept running; the meeting then finishes with its speakers |
 
 It talks to a **scratch client engine** it starts on a free port with its own `OUTPUT_DIR`,
 `DATABASE_PATH` and `.env` (never the user's), and prints a pass / fail table. The pure parts
@@ -43,22 +43,24 @@ and the UI steps it cannot do: Config → Worker "Find workers" and pairing in t
 "use the worker for …" switches saved and reloaded, the sidebar line "Worker: host" during a
 recording and "This PC (worker off)" after the worker app is closed, the fallback notification.
 
-**Results**: the run of 2026-10-xx is recorded in this file (what passed, what was found and fixed).
+**Results**: each run is recorded in *Decisions and notes* below (what passed, what was found
+and fixed).
 
 ## Design notes
 
 - Only the reference machine is available to the session that builds this phase: it runs the
-  script against a worker on this PC on another port (loopback discovery is skipped by the
-  worker, so the script also accepts `--worker-url` to skip discovery and pairing). The real
-  two-PC run is the user's, following the checklist; its result goes into this file afterwards.
-- The script must not need GPU on the client PC: the client engine uses `STT_PROVIDER=vozata_worker`.
+  script against a worker on this PC on other ports, bound to `0.0.0.0` so it has an id and
+  answers discovery (`--code auto` reads its code from `/local/status`). The real two-PC run is
+  the user's, following the checklist; its result goes into this file afterwards.
+- The script needs no GPU on the client PC: by default the client engine uses
+  `STT_PROVIDER=vozata_worker` (`--local-speech` switches speech to this PC).
 
 ## Acceptance criteria
 
-- [ ] `scripts/two_pc_check.py` runs every API step against a worker and prints a pass / fail
+- [x] `scripts/two_pc_check.py` runs every API step against a worker and prints a pass / fail
       table; its pure parts have unit tests.
-- [ ] `docs/two-pc-check.md` lists the manual UI steps with the expected result of each.
-- [ ] One run recorded here (on one PC at least; two PCs when available).
+- [x] `docs/two-pc-check.md` lists the manual UI steps with the expected result of each.
+- [x] One run recorded here (on one PC at least; two PCs when available).
 
 ## Tests
 
@@ -73,3 +75,47 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 
 > Start phase 52 (`docs/roadmap/phases/52-two-pc-check.md`) once phase 51 is merged: read its
 > *Read first* files, write `plans/52-two-pc-check.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/52-two-pc-check`
+- **Status:** ready for PR
+- **Updated:** 2026-10-23
+- **Next step:** open the PR to `main`. Phase 52 is the last planned phase; the next ones come from
+  the backlog (README) when the user picks them. Still to do by the user: the real two-PC run with
+  `docs/two-pc-check.md`, recorded here.
+
+### Steps
+
+- [x] Implementation plan (`plans/52-two-pc-check.md`)
+- [x] Script core: scratch `.env`, synthetic WAV, results table, discover / pair / health
+- [x] Script: translate, diarize + cancel, pre-emption
+- [x] Script runtime: scratch engine process, playback, command line
+- [x] Checklist `docs/two-pc-check.md`
+- [x] Full suites, one recorded run, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR (user rule, 2026-10-20).
+- A diarize step that runs on the worker is pre-empted by a recording only when the client PC has
+  CUDA (`gpu_gate.speakers_fallback`: its fallback would run pyannote on this GPU); the script
+  expects `paused` with CUDA and `running` without it.
+- The step logic has 93 % coverage (`pytest tests/scripts --cov=two_pc_check`); `scripts/` sits
+  outside the engine package, so the engine coverage gate does not count it.
+- Correction of the note above, found by the first real run: a recording pre-empts the worker
+  diarize step only when it loads a model on this PC's GPU (`LiveGpuLease`: local live Whisper, its
+  worker fallback, or the local live embedder). With speech on the worker the recording uses no GPU
+  here and the step keeps running. The script's second recording transcribes live, and a pause is
+  expected only with `--local-speech` and CUDA on the client. The scratch engine is now stopped when
+  its start times out, and `/health` gets 15 s (it probes Ollama).
+- Run of 2026-10-23, one PC (the reference machine as both sides): a scratch worker (`.venv`,
+  `0.0.0.0:8780`, discovery UDP 8781, `HF_TOKEN` in its process environment, its own folder) and
+  `two_pc_check.py --code auto --record --play <30.6 s two-voice TTS WAV>`. Default mode: discover,
+  pair, health (speech, speakers, translation), translate ("Let's postpone the beta release until
+  next Tuesday."), diarize + cancel (cancelled 0.0 s after DELETE) all passed; pre-emption showed
+  the step was not paused, which led to the correction above. With `--local-speech`: every step
+  passed, pre-emption "diarize step paused by the recording on this GPU, then finished: 3
+  speaker(s)". Found and fixed: the scratch engine was left running when its start timed out, and
+  `/health` needs more than 2 s. Engine 2468 tests (99.5 %), UI 912 + 25, ruff (src, tests, scripts)
+  and dotnet format clean. The scratch worker, client folders and processes were removed. Not
+  checked: two PCs, the manual UI steps of the checklist (they need the user at both PCs).
