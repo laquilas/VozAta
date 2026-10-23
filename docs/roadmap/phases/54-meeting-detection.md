@@ -69,16 +69,16 @@ macOS / Linux.
 - **Branch:** `feature/54-meeting-detection`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 3: `audio/sessions.py` (`WindowsAudioSessions` over pycaw: every active render
-  and capture endpoint, sessions in state Active, process names; COM initialized on the polling
-  thread), the `pycaw` dependency, a smoke run on this PC.
+- **Next step:** task 4: wire the detector in `bootstrap` (Windows monitor, "recording" = a live
+  session, `meeting_detected {app, name}` through the broadcaster), the container field and the API
+  lifespan start / stop; api-contract row.
 
 ### Steps
 
 - [x] Implementation plan (`plans/54-meeting-detection.md`)
 - [x] Keys `MEETING_DETECTION`, `MEETING_APPS`, `MEETING_POLL_SECONDS`
 - [x] Detector (port, debounce, quiet period, recording suppresses)
-- [ ] Windows audio session monitor (pycaw)
+- [x] Windows audio session monitor (pycaw)
 - [ ] Wiring: bootstrap, container, lifespan, `meeting_detected` event
 - [ ] UI: event, suggestion banner, texts
 - [ ] Docs and packaging
@@ -91,3 +91,6 @@ macOS / Linux.
   active session of a known app is the call signal; two polls in a row skip notification sounds.
 - `MEETING_APPS` stays the raw text in `Settings` (the Config page edits it as text); the detector
   splits it.
+- Smoke run of `WindowsAudioSessions` on this PC: 0.12 s per poll; idle it lists only
+  `QuantumServer.exe` (the JBL headset software keeps a session), a WAV played through `SoundPlayer`
+  adds `powershell.exe`, also when called from another thread (COM initialized per thread).
