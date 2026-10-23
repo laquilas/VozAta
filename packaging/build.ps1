@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-  Build the Windows installer: packaged engine + self-contained desktop app + Inno Setup.
+  Build the Windows installers (Inno Setup): VozAta (desktop app + engine) and, since phase 57,
+  VozAta Worker (worker app + engine) for the GPU PC.
 
 .EXAMPLE
   pwsh packaging/build.ps1 -Version 1.0.0            # from the repository root
@@ -51,15 +52,23 @@ if ($LASTEXITCODE -ne 0) { throw "make_source_zip.py failed" }
 & $engine speakers status --json
 if ($LASTEXITCODE -ne 0) { throw "vozata-engine.exe speakers status failed" }
 
+# each app in its own folder, for its own installer (phase 57); a stale build must not leak in
+foreach ($folder in "ui", "worker-ui") {
+    $path = Join-Path $out $folder
+    if (Test-Path $path) { Remove-Item -Recurse -Force $path }
+}
+
 Write-Host "== Desktop app (self-contained)"
 dotnet publish (Join-Path $root "ui/src/VozAta.Desktop") -c Release -r win-x64 --self-contained `
-    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o (Join-Path $out "ui")
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:Version=$Version" `
+    -o (Join-Path $out "ui")
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 Copy-Item (Join-Path $root "ui/src/VozAta.Desktop/appsettings.Installed.json") (Join-Path $out "ui/appsettings.json") -Force
 
-Write-Host "== Worker app (self-contained, next to the desktop app: both use engine\vozata-engine.exe)"
+Write-Host "== Worker app (self-contained; its installer puts the engine next to it, engine\vozata-engine.exe)"
 dotnet publish (Join-Path $root "ui/src/VozAta.Worker") -c Release -r win-x64 --self-contained `
-    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o (Join-Path $out "ui")
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:Version=$Version" `
+    -o (Join-Path $out "worker-ui")
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish of VozAta.Worker failed" }
 
 Write-Host "== First-run .env"
@@ -79,7 +88,9 @@ if (-not $iscc) {
     Write-Warning "Inno Setup (iscc) not found: build/ is ready, the installer was not created."
     exit 0
 }
-Write-Host "== Installer (Inno Setup)"
-& $iscc /Qp "/DAppVersion=$Version" "/DBuildDir=$out" (Join-Path $root "packaging/installer.iss")
-if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+foreach ($script in "installer.iss", "installer-worker.iss") {
+    Write-Host "== Installer (Inno Setup): $script"
+    & $iscc /Qp "/DAppVersion=$Version" "/DBuildDir=$out" (Join-Path $root "packaging/$script")
+    if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $script" }
+}
 Get-ChildItem (Join-Path $out "installer") | ForEach-Object { Write-Host ("{0} ({1:N0} MB)" -f $_.FullName, ($_.Length / 1MB)) }

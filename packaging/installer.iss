@@ -1,8 +1,9 @@
-﻿; VozAta installer (Inno Setup 6 or 7). Built by packaging/build.ps1:
+﻿; VozAta installer (Inno Setup 6 or 7), the meeting app for every PC. Built by packaging/build.ps1:
 ;   iscc /DAppVersion=1.0.0 /DBuildDir=<repo>\build packaging\installer.iss
 ; Per-user install (no administrator rights). The uninstaller removes the program files and keeps
 ; %APPDATA%\VozAta\.env (settings) and Documents\VozAta (recordings). Speaker identification is
-; downloaded on this PC (phase 56): an optional task runs `vozata-engine speakers install`.
+; downloaded on this PC (phase 56). VozAta Worker, for the GPU PC, has its own installer
+; (installer-worker.iss, phase 57).
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -10,6 +11,9 @@
 #ifndef BuildDir
   #define BuildDir "..\build"
 #endif
+#define SpeakersWorkDir "{userappdata}\VozAta"
+; installer-worker.iss
+#define OtherAppId "{2BA26749-AC77-48E5-8189-E8B4F542489D}"
 
 [Setup]
 AppId={{6E0B9F4A-2C5D-4E8B-9A1F-3D7C5B2E8A61}
@@ -40,16 +44,21 @@ Name: "ptbr"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [CustomMessages]
-en.SpeakersTask=Download speaker identification now (about 3 GB; also possible later in VozAta Worker)
-ptbr.SpeakersTask=Baixar a identificação de participantes agora (cerca de 3 GB; também dá depois no VozAta Worker)
-es.SpeakersTask=Descargar la identificación de participantes ahora (unos 3 GB; también se puede después en VozAta Worker)
-en.SpeakersStatus=Downloading speaker identification (see the console window)...
-ptbr.SpeakersStatus=Baixando a identificação de participantes (veja a janela do console)...
-es.SpeakersStatus=Descargando la identificación de participantes (mira la ventana de la consola)...
+en.SpeakersTask=Download speaker identification now (about 3 GB; also later by running this setup again)
+ptbr.SpeakersTask=Baixar a identificação de participantes agora (cerca de 3 GB; também depois, rodando este instalador de novo)
+es.SpeakersTask=Descargar la identificación de participantes ahora (unos 3 GB; también después, ejecutando este instalador otra vez)
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "speakers"; Description: "{cm:SpeakersTask}"; Flags: unchecked
+
+#include "speakers.iss"
+
+[InstallDelete]
+; up to 0.1.0 this installer also carried VozAta Worker (phase 57 split it out)
+Type: files; Name: "{app}\VozAta.Worker.exe"
+Type: files; Name: "{app}\VozAta.Worker.pdb"
+Type: files; Name: "{app}\worker.settings.json"
+Type: files; Name: "{userprograms}\VozAta Worker.lnk"
 
 [Files]
 Source: "{#BuildDir}\ui\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -64,18 +73,6 @@ Name: "{userdocs}\VozAta"; Flags: uninsneveruninstall
 [Icons]
 Name: "{userprograms}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"
 Name: "{userdesktop}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"; Tasks: desktopicon
-; Phase 47: the worker app, for a GPU PC that transcribes for other PCs of the network
-Name: "{userprograms}\VozAta Worker"; Filename: "{app}\VozAta.Worker.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Worker.exe"
-
-[Registry]
-; "Start with Windows" of VozAta Worker writes this value; uninstalling removes it
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "VozAta Worker"; Flags: uninsdeletevalue
-
-[UninstallDelete]
-; the speaker runtime downloaded by `speakers install` (phase 56)
-Type: filesandordirs; Name: "{localappdata}\VozAta\speakers"
 
 [Run]
-; phase 56: in a console, which stays open on a failure so the reason can be read
-Filename: "{cmd}"; Parameters: "/c """"{app}\engine\vozata-engine.exe"" speakers install || pause"""; WorkingDir: "{userappdata}\VozAta"; StatusMsg: "{cm:SpeakersStatus}"; Tasks: speakers; Flags: waituntilterminated
 Filename: "{app}\VozAta.Desktop.exe"; Description: "{cm:LaunchProgram,VozAta}"; Flags: nowait postinstall skipifsilent
