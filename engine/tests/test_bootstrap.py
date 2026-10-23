@@ -336,6 +336,7 @@ def test_build_api_container_wires_real_providers(
     downloader = built[0].pop("downloader")  # phase 42: publishes through the container's tracker
     assert isinstance(downloader, HubDownloader) and downloader._tracker is container.downloads
     assert downloader._offline is False
+    moved = built[0].pop("worker_moved")
     assert built == [
         {
             "language": None,
@@ -353,6 +354,9 @@ def test_build_api_container_wires_real_providers(
     ]
     generator = container.regenerate_minutes._build_generator()
     assert generator._llm is llm
+    monkeypatch.chdir(tmp_path)  # the container's `.env` is relative: never the real one
+    moved("http://192.168.0.77:8766")  # phase 47: a moved worker's address is saved
+    assert container.settings_file.current.worker_url == "http://192.168.0.77:8766"
 
 
 @pytest.mark.parametrize(
