@@ -185,6 +185,8 @@ class Settings:
     # OneDrive roots of this user (`OneDrive*` environment variables, Windows): the database
     # must not live under one while the engine runs.
     onedrive_roots: tuple[Path, ...] = ()
+    # The speaker runtime of the packaged engine (phase 56): `%LOCALAPPDATA%\VozAta\speakers`
+    speakers_runtime_dir: Path = Path("speakers")
 
     @property
     def database_file(self) -> Path:
@@ -315,7 +317,16 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
             if env is None
             else onedrive_roots(env)  # an explicit mapping (tests): no registry
         ),
+        speakers_runtime_dir=speakers_runtime_dir(os.environ if env is None else env),
     )
+
+
+def speakers_runtime_dir(env: Mapping[str, str]) -> Path:
+    """`%LOCALAPPDATA%\\VozAta\\speakers` (phase 56), shared by VozAta and VozAta Worker; under
+    the home folder when `LOCALAPPDATA` is not set (not Windows)."""
+    local = (env.get("LOCALAPPDATA") or "").strip()
+    base = Path(local) if local else Path.home() / ".local" / "share"
+    return base / "VozAta" / "speakers"
 
 
 def onedrive_roots(env: Mapping[str, str], registry: Sequence[Path] = ()) -> tuple[Path, ...]:

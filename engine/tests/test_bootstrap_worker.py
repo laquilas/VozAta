@@ -348,7 +348,7 @@ def test_the_worker_offers_speakers_with_the_extra_and_a_hugging_face_token(
     from vozata.translation import opus_mt
 
     monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
-    monkeypatch.setattr(models, "has_extra", lambda: extra)
+    monkeypatch.setattr(models, "has_extra", lambda runtime=None: extra)
     monkeypatch.setattr(opus_mt, "has_extra", lambda: False)
     app = bootstrap.build_worker_app(Settings(hf_token=token), None)
 

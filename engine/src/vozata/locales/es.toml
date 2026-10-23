@@ -14,6 +14,7 @@ no_word_timestamps = "La API de voz en {host} no devolvió marcas de tiempo por 
 worker_unauthorized = "El worker de VozAta en {host} rechazó el token. Copia el token que se muestra en el PC del worker en {key} (Config → Worker)."
 worker_url_missing = "{key} está vacío. Indica la dirección del worker de VozAta (Config → Worker), por ejemplo http://192.168.0.20:8766."
 missing_hf_token = "{key} no está definido. La identificación de participantes necesita un token de acceso de Hugging Face: crea uno en huggingface.co, acepta los términos del modelo pyannote y define {key} en la configuración."
+speakers_not_installed = "La identificación de participantes no está instalada en este PC. Descárgala con el instalador (tarea \"Descargar identificación de participantes\"), el botón Descargar de VozAta Worker o con: vozata-engine speakers install"
 
 [errors.session]
 audio_unavailable = "El audio de Windows no respondió. Reinicia el servicio Audio de Windows o el PC e inténtalo de nuevo."

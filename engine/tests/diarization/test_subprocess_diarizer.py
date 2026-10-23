@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,7 @@ from vozata.config import ConfigError, Settings
 from vozata.diarization import child
 from vozata.diarization.models import DIARIZATION_MODEL
 from vozata.diarization.pyannote import PyannoteDiarizer, read_wav, turns_from_tracks
+from vozata.diarization.runtime import SpeakerRuntime
 from vozata.diarization.subprocess_diarizer import SubprocessDiarizer, pyannote_from_settings
 from vozata.domain import ModelKind, SpeakerTurn, WhisperDevice
 from vozata.ports import Cancellable, DiarizationError, Diarizer
@@ -211,7 +213,7 @@ def test_diarizer_predownloads_its_pyannote_repo_with_the_token_before_spawning(
     downloader = FakeModelDownloader(log=log)
 
     class _Recorder:
-        def __init__(self, token: str, device: WhisperDevice) -> None:
+        def __init__(self, token: str, device: WhisperDevice, *args: object, **kw: object) -> None:
             log.append(("build", token))
 
     monkeypatch.setattr("vozata.diarization.subprocess_diarizer.SubprocessDiarizer", _Recorder)
@@ -230,11 +232,53 @@ def test_diarizer_predownloads_its_pyannote_repo_with_the_token_before_spawning(
     ]
 
 
+def test_the_packaged_engine_starts_the_child_with_the_speaker_runtime(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "speakers"
+    (root / "venv" / "Scripts").mkdir(parents=True)
+    (root / "venv" / "Scripts" / "python.exe").write_bytes(b"")
+    (root / "ready.json").write_text("{}", encoding="utf-8")
+    runtime = SpeakerRuntime(root, tmp_path / "bundle")
+    fake = _Child(FakeDiarizer([]))
+
+    diarizer = pyannote_from_settings(Settings(hf_token="hf"), FakeModelDownloader(), runtime)
+    diarizer._popen = fake  # type: ignore[attr-defined]
+    diarizer.diarize(tmp_path / "system.wav", None, None)
+
+    [(command, options)] = fake.calls
+    assert command == [str(runtime.python), "-m", "vozata.diarization.child"]
+    assert options["env"]["PYTHONPATH"] == str(tmp_path / "bundle" / "vozata.zip")
+    assert options["env"]["PATH"] == os.environ["PATH"]  # the rest is inherited
+
+
+def test_without_the_runtime_nothing_is_downloaded(tmp_path: Path) -> None:
+    downloader = FakeModelDownloader()
+
+    with pytest.raises(ConfigError) as caught:
+        pyannote_from_settings(
+            Settings(hf_token="hf"), downloader, SpeakerRuntime(tmp_path, tmp_path / "b")
+        )
+
+    assert caught.value.message_key == "speakers_not_installed"
+    assert downloader.calls == []
+
+
+def test_in_development_the_child_inherits_the_environment(tmp_path: Path) -> None:
+    fake = _Child(FakeDiarizer([]))
+    diarizer = SubprocessDiarizer("hf", WhisperDevice.CPU, popen=fake)
+
+    diarizer.diarize(tmp_path / "system.wav", None, None)
+
+    [(_, options)] = fake.calls
+    assert options["env"] is None
+
+
 def test_a_failed_predownload_spawns_no_diarizer(monkeypatch: pytest.MonkeyPatch) -> None:
     built: list[object] = []
     monkeypatch.setattr(
         "vozata.diarization.subprocess_diarizer.SubprocessDiarizer",
-        lambda *args: built.append(args),
+        lambda *args, **kw: built.append(args),
     )
 
     with pytest.raises(OSError, match="network down"):
