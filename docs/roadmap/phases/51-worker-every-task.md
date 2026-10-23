@@ -92,11 +92,11 @@ install the speakers edition of VozAta"). Texts in en / pt-BR / es.
 
 ## Acceptance criteria
 
-- [ ] A build without `-Speakers` runs `worker --check` listing speech and translation as
+- [x] A build without `-Speakers` runs `worker --check` listing speech and translation as
       offered and speakers as "not in this edition".
-- [ ] The frozen engine runs `-m vozata.diarization.child` (speakers can work in an installed build).
-- [ ] A worker with `HF_TOKEN` but without the `diarization` extra no longer offers speakers.
-- [ ] VozAta Worker shows the three tasks and why one is missing.
+- [x] The frozen engine runs `-m vozata.diarization.child` (speakers can work in an installed build).
+- [x] A worker with `HF_TOKEN` but without the `diarization` extra no longer offers speakers.
+- [x] VozAta Worker shows the three tasks and why one is missing.
 
 ## Tests
 
@@ -116,11 +116,10 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 ## Progress
 
 - **Branch:** `feature/51-worker-every-task`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23
-- **Next step:** task 7: full engine and UI suites, a `-Speakers -CpuOnly` build in the scratchpad
-  (speakers reported as `missing_hf_token`, not `missing_extra`; `-m vozata.diarization.child`
-  starts), record the manual check, set the phase to done.
+- **Next step:** open the PR to `main`; after the merge, start phase 52
+  (`docs/roadmap/phases/52-two-pc-check.md`).
 
 ### Steps
 
@@ -131,7 +130,7 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - [x] Packaging: translation in every build, `-Speakers` edition
 - [x] Worker app: Tasks card
 - [x] Docs
-- [ ] Full suites, manual check, phase done
+- [x] Full suites, manual check, phase done
 
 ### Decisions and notes
 
@@ -148,3 +147,18 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
   extra the standard build took torch along (4.4 GB CPU-only). The standard edition now excludes the
   diarization packages (379 MB CPU-only); the speakers edition collects them whole. `engine_main.py`
   dispatches `-m` before importing the CLI (no runpy warning, lighter children).
+- Manual check (2026-10-23, this PC): engine 2425 tests (99.5 % coverage), UI 912 + 25, ruff /
+  dotnet format clean. A `.venv` worker on 127.0.0.1:8777 (scratch folder) listed speech +
+  translation, `/local/status.tasks` gave speakers `missing_hf_token`, and `/translate` pt to en
+  returned "Let's postpone the beta release until next Tuesday." (first call 336 s with the 159 MB
+  opus-mt download, then 0.1 s). CPU-only standard build in the scratchpad: 379 MB, `worker --check
+  --json` speech + translation, speakers `missing_extra`, `-m vozata --version` ok; the frozen
+  worker translated the same sentence in 1.5 s. CPU-only speakers build: 4.5 GB (torch brings its
+  own CUDA libraries); speakers `missing_hf_token` without a token; with `HF_TOKEN` (process
+  environment only) the frozen worker on 127.0.0.1:8779 offered all three tasks, diarized a 30.6 s
+  two-voice TTS WAV into 14 turns of 2 speakers in 55.6 s through `-m vozata.diarization.child`, and
+  a second job was `cancelled` right after `DELETE`. The first speakers build failed on the Windows
+  path limit (torch C++ headers through `collect_all("torch")`): torch, torchaudio and torchcodec
+  now come through the PyInstaller hooks. VozAta Worker (Debug) showed the Tasks card (screenshot in
+  the PR); its test folder `%APPDATA%\VozAta\worker` was removed. Inno Setup is not installed here,
+  so no installer was built. Not checked: a CUDA (non CPU-only) build, a second PC (phase 52).

@@ -55,12 +55,19 @@ SPEAKER_PACKAGES = (
 )
 
 
+# torch* come through PyInstaller's own hooks: collecting them whole adds the C++ headers
+# (torch/include), useless at runtime and past the Windows path limit.
+HOOKED = {"torch", "torchaudio", "torchcodec"}
+
+
 def speakers_parts():
     """(binaries, datas, hiddenimports) of the diarization extra; empty without SPEAKERS."""
     if not SPEAKERS:
         return [], [], []
-    binaries, datas, hidden = [], [], []
+    binaries, datas, hidden = [], [], sorted(HOOKED)
     for package in SPEAKER_PACKAGES:
+        if package in HOOKED:
+            continue
         package_datas, package_binaries, package_hidden = collect_all(package)
         binaries += package_binaries
         datas += package_datas
