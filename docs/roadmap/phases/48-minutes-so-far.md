@@ -109,14 +109,14 @@ minutes; turning a partial into the final minutes.
 - **Branch:** `feature/48-minutes-so-far`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 2 of `plans/48-minutes-so-far.md` (`segments_in_range`, scope line in the
-  prompts, `write_partial_minutes`).
+- **Next step:** Task 3 of `plans/48-minutes-so-far.md` (`PartialMinutesJob`, routes under
+  `/sessions/{id}/partial-minutes`, `partial_minutes_ready`, container wiring).
 
 ### Steps
 
 - [x] Implementation plan (`plans/48-minutes-so-far.md`)
 - [x] Storage of partial minutes (both backends, export / import)
-- [ ] Range filter, scope line, `write_partial_minutes`
+- [x] Range filter, scope line, `write_partial_minutes`
 - [ ] Job, routes, events
 - [ ] Desktop: recorder button and panel, Partial minutes tab
 - [ ] Docs, full suites, manual check, phase done

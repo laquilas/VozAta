@@ -99,6 +99,8 @@ Usa solo hechos de esta parte."""
 reduce_instructions = "Estas son notas de partes consecutivas de una misma reunión realizada en {conversation_language}. Combínalas en el acta de la reunión."
 glossary = "Glosario: estos nombres y términos pueden aparecer en la transcripción, quizá mal reconocidos. Usa exactamente esta ortografía: {terms}"
 meeting_title = "El usuario tituló esta reunión \"{title}\". Usa el título como contexto para el acta, no como algo que se dijo."
+scope_live = "La reunión sigue en curso: esta acta cubre lo dicho hasta {end}. No inventes un desenlace para lo que sigue abierto."
+scope_range = "Esta acta cubre solo el tramo de la reunión de {start} a {end}."
 transcript_label = "Transcripción:"
 notes_label = "Notas:"
 
