@@ -68,4 +68,5 @@ versions.
 - [x] Engine: CUDA runtime download, DLL registration, the CPU shortcut
 - [x] CLI `cuda install | status | remove`
 - [x] Packaging: no CUDA in the build; `gpu.iss` in both installers (its Check function lives in `speakers.iss`: one [Code] section)
-- [ ] Docs; suites; build; GPU check with the downloaded runtime; copy to F:
+- [x] Docs (INSTALL GPU support, remote-worker, architecture)
+- [ ] Suites; build; GPU check with the downloaded runtime; copy to F:

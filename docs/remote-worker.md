@@ -139,4 +139,4 @@ network parts (discovery, pairing, translation, speakers, cancel).
 | **Test** says the token was refused | Pair again, or copy the token shown in VozAta Worker into **Worker token**. |
 | Speaker identification runs on this PC although the worker is on | Look at **Tasks for the other PCs** in VozAta Worker: "Not installed on this PC" needs **Download speaker identification** (then the worker restarts by itself); "Needs a Hugging Face token" needs `HF_TOKEN` in the worker's `.env` and a restart of the worker. |
 | VozAta Worker says the worker stopped | Open `worker.log` (the path is in the message): a model download failed, or the port is used by another program (`WORKER_PORT`). |
-| Transcription is slow on the worker | The GPU PC has no working CUDA and runs on its CPU (`WHISPER_CPU_MODEL`); VozAta Worker and the **Test** message say so. |
+| Transcription is slow on the worker | The GPU PC has no working CUDA and runs on its CPU (`WHISPER_CPU_MODEL`); VozAta Worker and the **Test** message say so. Download the GPU support there (`vozata-engine cuda install`, see [GPU support](INSTALL.md#gpu-support)). |

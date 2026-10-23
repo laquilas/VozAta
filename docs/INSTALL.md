@@ -11,7 +11,7 @@ choose an external speech API in the settings.
 | Windows 10 or 11, 64-bit | the app and the audio capture (WASAPI) | no administrator rights needed |
 | NVIDIA GPU + recent driver (recommended) | fast transcription with Whisper | 6 GB of memory is enough; without an NVIDIA GPU transcription runs on the CPU (slower, smaller model) |
 | [Ollama](https://ollama.com) (optional) | the meeting minutes | after installing it run `ollama pull qwen2.5:7b`; without Ollama you still get transcripts |
-| ~4 GB of free disk | program (~1.5 GB with the CUDA libraries) + speech model (~1.6 GB, downloaded on first use) | recordings use ~10 MB per minute |
+| ~4 GB of free disk | program (~0.6 GB) + speech model (~1.6 GB, downloaded on first use); GPU support +1.8 GB, speaker identification +4.6 GB, both optional | recordings use ~10 MB per minute |
 
 Python and .NET are **not** needed: both are inside the installer.
 
@@ -61,6 +61,17 @@ recording meeting calls", "Meeting apps").
 Windows Settings → Apps → VozAta → Uninstall. Recordings and settings stay; delete the folders above
 to remove them too.
 
+## GPU support
+
+Speech recognition runs much faster on an NVIDIA GPU, through the NVIDIA CUDA libraries (cuBLAS
+and cuDNN, about 1.2 GB to download, 1.8 GB on disk). The installers do not carry them: on a PC
+with an NVIDIA driver, the setup shows **Download GPU support for speech recognition**, ticked;
+untick it to stay on the CPU. A console window shows the download. Later:
+`"%LOCALAPPDATA%\Programs\VozAta\engine\vozata-engine.exe" cuda install` (`cuda status`,
+`cuda remove`), or run the setup again. The files go into `%LOCALAPPDATA%\VozAta\cuda`, are
+checked against the SHA-256 PyPI publishes, are shared by VozAta and VozAta Worker, and are removed
+with the last of them. Without them speech recognition uses the CPU model (`WHISPER_CPU_MODEL`).
+
 ## Speaker identification
 
 Telling the remote participants apart (User 1, User 2, ...) needs pyannote and PyTorch (about
@@ -86,20 +97,20 @@ accepted, as before.
 |---------|------------|
 | "The audio device … did not open within 20 s" | Another app may hold the device, or the Windows audio service is stuck: restart *Windows Audio* (services) or the PC. |
 | The engine does not start | Check that no other program uses port 8765 (`API_PORT` in `%APPDATA%\VozAta\.env`). To see the engine's messages, close VozAta, open a terminal in `%APPDATA%\VozAta` and run `"%LOCALAPPDATA%\Programs\VozAta\engine\vozata-engine.exe" serve`. |
-| Transcription is slow | Without an NVIDIA GPU (or a recent driver) Whisper runs on the CPU. Install the NVIDIA driver, or use a smaller CPU model in the settings. |
+| Transcription is slow | Without an NVIDIA GPU, a recent driver and the [GPU support](#gpu-support) download, Whisper runs on the CPU. Run `vozata-engine cuda status`; install the driver and `cuda install`, or use a smaller CPU model in the settings. |
 | "Minutes: … not reachable (start Ollama)" | Start Ollama and pull the model shown in the status bar. To use Ollama on another PC of your network, see [Using Ollama on another PC](remote-ollama.md); to move speech recognition to a GPU PC, see [Using a VozAta worker on another PC](remote-worker.md). |
 | No sound from the system audio | Pick the output device you actually listen on (headphones vs. speakers) on the Recording tab. |
 
 ## Building the installer yourself
 
 ```powershell
-python -m pip install -e "engine[cuda,translation,package]"  # engine, CUDA, translation, PyInstaller
-pwsh packaging/build.ps1 -Version 1.0.0           # needs the .NET 10 SDK and Inno Setup 6 or 7
-pwsh packaging/build.ps1 -Version 1.0.0 -CpuOnly  # smaller build without the CUDA libraries
+python -m pip install -e "engine[translation,package]"  # engine, translation, PyInstaller, uv
+pwsh packaging/build.ps1 -Version 1.0.0                  # needs the .NET 10 SDK and Inno Setup 6 or 7
 ```
 
-Speaker identification (pyannote and torch, about 3 GB) is not in the installer: the PC that needs
-it downloads it, see [Speaker identification](#speaker-identification).
+Neither the CUDA libraries nor speaker identification are in the installers: the PC that needs
+them downloads them, see [GPU support](#gpu-support) and
+[Speaker identification](#speaker-identification).
 
 Both installers (`VozAta-Setup-<v>.exe` and `VozAta-Worker-Setup-<v>.exe`) land in
 `build/installer/`. The GitHub workflow `Release` builds it on every `v*` tag
