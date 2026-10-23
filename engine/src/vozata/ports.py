@@ -23,6 +23,7 @@ from vozata.domain import (
     ExportDocument,
     ImportedSession,
     ModelKind,
+    PartialMinutes,
     SearchHit,
     SessionStatus,
     SpeakerTurn,
@@ -457,6 +458,14 @@ class SessionRepository(Protocol):
 
     def action_items_lock(self) -> AbstractContextManager[object]:
         """Held around every read-modify-write of action items (extraction, edits, export)."""
+        ...
+
+    def read_partial_minutes(self, session_id: str) -> list[PartialMinutes]:
+        """Minutes of parts of the meeting, oldest first; empty when none (phase 48)."""
+        ...
+
+    def write_partial_minutes(self, session_id: str, items: Sequence[PartialMinutes]) -> None:
+        """Replace the partial minutes atomically."""
         ...
 
     def folder(self, session_id: str) -> Path | None:

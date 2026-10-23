@@ -59,6 +59,8 @@ def write_folder(
         files.write_minutes(session_id, minutes)
     if items := source.read_action_items(session_id):
         files.write_action_items(session_id, items)
+    if partials := source.read_partial_minutes(session_id):
+        files.write_partial_minutes(session_id, partials)
     if audio is not None:
         for channel in Channel:
             pcm = audio.track(session_id, AudioTrack(channel.value))

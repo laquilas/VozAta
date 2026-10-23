@@ -19,7 +19,7 @@ import pytest
 import vozata
 from tests.storage.repository_contract import RAW, STARTED, segment
 from vozata.audio.mixer import MonoMixer
-from vozata.domain import ActionItem, Channel, Translation
+from vozata.domain import ActionItem, Channel, PartialMinutes, Translation
 from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.repository import FileSessionRepository
@@ -79,6 +79,11 @@ class Rig:
         return [self.importer.import_one(session_id) for session_id in self.importer.pending()]
 
 
+PARTIAL = PartialMinutes(
+    "p1", "2026-10-22T10:05:00-03:00", 0.0, 312.5, "button", "# So far\n\n- Ação\n", "general"
+)  # phase 48
+
+
 def write_wav(
     path: Path, seconds: float, step: int = 7, rate: int = RATE, channels: int = 1
 ) -> None:
@@ -127,6 +132,7 @@ def test_a_full_session_is_imported_with_everything_it_holds(rig: Rig) -> None:
     os.utime(minutes, (1_700_000_000, 1_700_000_000))
     items = [ActionItem("a1", "Send the deck", "Ana", "2026-10-20", ("mic-000001",))]
     rig.files.write_action_items(session_id, items)
+    rig.files.write_partial_minutes(session_id, [PARTIAL])
 
     assert rig.import_all() == [None]
 
@@ -149,6 +155,7 @@ def test_a_full_session_is_imported_with_everything_it_holds(rig: Rig) -> None:
     expected = datetime.fromtimestamp(1_700_000_000).astimezone().isoformat(timespec="seconds")
     assert generated == (expected,)
     assert repo.read_action_items(session_id) == items
+    assert repo.read_partial_minutes(session_id) == [PARTIAL]
     paths = rig.files.paths(session_id)
     mic = rig.audio.frames(session_id, Channel.MIC, 0, 10 * RATE)
     assert np.array_equal(mic, wav_samples(paths.wav(Channel.MIC)))

@@ -127,6 +127,21 @@ public interface IEngineClient
     /// <summary><c>GET /migration</c> (phase 33): the import of the old meeting folders.</summary>
     Task<MigrationSummary> GetMigrationAsync(CancellationToken cancellationToken = default);
 
+    /// <summary><c>POST /sessions/{id}/partial-minutes</c> (phase 48): minutes so far (recording) or of a range.</summary>
+    Task<PartialMinutesStarted> StartPartialMinutesAsync(
+        string sessionId, double? fromSeconds = null, double? toSeconds = null, string? templateId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /sessions/{id}/partial-minutes</c> (phase 48).</summary>
+    Task<PartialMinutesList> GetPartialMinutesAsync(string sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /sessions/{id}/partial-minutes/{pid}</c> (phase 48).</summary>
+    Task<PartialMinutesDetail> GetPartialMinutesItemAsync(
+        string sessionId, string partialId, CancellationToken cancellationToken = default);
+
+    /// <summary><c>DELETE /sessions/{id}/partial-minutes/{pid}</c> (phase 48).</summary>
+    Task DeletePartialMinutesAsync(string sessionId, string partialId, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /worker/discover</c> (phase 47): the VozAta workers on the local network.</summary>
     Task<WorkersFound> DiscoverWorkersAsync(CancellationToken cancellationToken = default);
 
@@ -337,6 +352,26 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
 
     public Task<MigrationSummary> GetMigrationAsync(CancellationToken cancellationToken = default) =>
         SendAsync<MigrationSummary>(HttpMethod.Get, "migration", null, cancellationToken);
+
+    public Task<PartialMinutesStarted> StartPartialMinutesAsync(
+        string sessionId, double? fromSeconds = null, double? toSeconds = null, string? templateId = null,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<PartialMinutesStarted>(
+            HttpMethod.Post, $"sessions/{Escape(sessionId)}/partial-minutes", new { start = fromSeconds, end = toSeconds, template = templateId }, cancellationToken);
+
+    public Task<PartialMinutesList> GetPartialMinutesAsync(string sessionId, CancellationToken cancellationToken = default) =>
+        SendAsync<PartialMinutesList>(HttpMethod.Get, $"sessions/{Escape(sessionId)}/partial-minutes", null, cancellationToken);
+
+    public Task<PartialMinutesDetail> GetPartialMinutesItemAsync(
+        string sessionId, string partialId, CancellationToken cancellationToken = default) =>
+        SendAsync<PartialMinutesDetail>(
+            HttpMethod.Get, $"sessions/{Escape(sessionId)}/partial-minutes/{Escape(partialId)}", null, cancellationToken);
+
+    public async Task DeletePartialMinutesAsync(string sessionId, string partialId, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendRawAsync(
+            HttpMethod.Delete, $"sessions/{Escape(sessionId)}/partial-minutes/{Escape(partialId)}", null, cancellationToken);
+    }
 
     public Task<WorkersFound> DiscoverWorkersAsync(CancellationToken cancellationToken = default) =>
         SendAsync<WorkersFound>(HttpMethod.Get, "worker/discover", null, cancellationToken);

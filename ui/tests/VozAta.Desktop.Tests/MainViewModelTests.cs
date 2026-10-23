@@ -197,6 +197,26 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Partial_minutes_reach_the_recorder_and_the_open_meeting()
+    {
+        var viewModel = await ReadyAsync();
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        var sessionId = viewModel.Session.SessionId!;
+        await viewModel.Recorder.WriteMinutesSoFarCommand.ExecuteAsync(null);
+        _client.PartialMinutes[sessionId] = [new PartialMinutesDetail("p1", "t", 0, 60, "button", null, "# Ata\n")];
+
+        await SendAsync(viewModel, new PartialMinutesReadyEvent(sessionId, "p1", 0, 60, "button"));
+        await viewModel.HistoryRefresh;
+
+        Assert.True(viewModel.Recorder.MinutesSoFar.IsOpen);
+        Assert.Contains(_localization["PartialMinutesReady"], viewModel.Notifications);
+
+        await viewModel.Recorder.WriteMinutesSoFarCommand.ExecuteAsync(null);
+        await SendAsync(viewModel, new ErrorEvent(sessionId, "empty_range", "Nothing was said."));
+        Assert.False(viewModel.Recorder.MinutesSoFar.IsWriting);
+    }
+
+    [Fact]
     public async Task The_meetings_page_reloads_on_events_follows_the_language_and_deletes_before_closing()
     {
         var started = new DateTimeOffset(_clock.Now.LocalDateTime.Date.AddHours(9)); // today, local time

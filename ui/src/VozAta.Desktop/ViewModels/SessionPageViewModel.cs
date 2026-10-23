@@ -143,6 +143,12 @@ public sealed partial class SessionPageViewModel(
 
     public ObservableCollection<MarkdownBlock> Blocks { get; } = [];
 
+    private PartialMinutesListViewModel? _partials;
+
+    /// <summary>The "Partial minutes" tab (phase 48).</summary>
+    public PartialMinutesListViewModel Partials =>
+        _partials ??= new PartialMinutesListViewModel(client, shell, localization, Id);
+
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
 
@@ -184,13 +190,16 @@ public sealed partial class SessionPageViewModel(
 
     public const int MinutesTab = 0;
 
-    public const int TranscriptTab = 1;
+    /// <summary>Phase 48: minutes of parts of the meeting.</summary>
+    public const int PartialMinutesTab = 1;
 
-    public const int SpeakersTab = 2;
+    public const int TranscriptTab = 2;
 
-    public const int ActionItemsTab = 3;
+    public const int SpeakersTab = 3;
 
-    public const int AskTab = 4;
+    public const int ActionItemsTab = 4;
+
+    public const int AskTab = 5;
 
     private string? _focusSegmentId;
 
@@ -222,6 +231,7 @@ public sealed partial class SessionPageViewModel(
             await Editor.LoadThresholdAsync(cancellationToken);
             await ShowTranscriptAsync(cancellationToken);
             await LoadMinutesAsync(cancellationToken);
+            await Partials.LoadAsync(cancellationToken: cancellationToken);
             if (!IsLive)
             {
                 await ActionItems.LoadAsync(cancellationToken);

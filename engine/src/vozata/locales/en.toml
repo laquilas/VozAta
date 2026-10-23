@@ -29,6 +29,13 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+empty_range = "Nothing was said in that part of the meeting, so there is nothing to summarize."
+partial_minutes_failed = "The partial minutes could not be written ({reason}). Check that Ollama is running and the model is pulled."
+partial_minutes_unavailable = "Minutes of part of a meeting are not available in this engine."
+partial_minutes_in_progress = "Partial minutes are already being written; wait for them to finish."
+live_transcription_off = "This recording has no live transcription, so there is nothing to summarize until it stops."
+invalid_range = "The end of the part must come after its start."
+partial_minutes_not_found = "No partial minutes \"{id}\" on this meeting."
 worker_pairing_refused = "The VozAta worker refused the code. Type the code shown now in VozAta Worker on the other PC."
 worker_pairing_locked = "Too many wrong codes: pairing with the worker is locked for a minute."
 worker_no_token = "That worker has no token (it listens on its own PC only), so there is nothing to pair."
@@ -99,6 +106,8 @@ Use only facts from this part."""
 reduce_instructions = "These are notes from consecutive parts of one meeting held in {conversation_language}. Combine them into the meeting minutes."
 glossary = "Glossary: these names and terms may appear in the transcript, possibly misheard. Use exactly these spellings: {terms}"
 meeting_title = "The user titled this meeting \"{title}\". Use the title as context for the minutes, not as something that was said."
+scope_live = "The meeting is still in progress: these minutes cover what was said up to {end}. Do not invent an outcome for anything still open."
+scope_range = "These minutes cover only the part of the meeting from {start} to {end}."
 transcript_label = "Transcript:"
 notes_label = "Notes:"
 

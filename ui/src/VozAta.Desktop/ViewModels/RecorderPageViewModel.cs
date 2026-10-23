@@ -57,6 +57,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         RecordingSessionService session,
         Action<string> notify,
         Func<TimeSpan, CancellationToken, Task>? titleDelay = null,
+        IShellService? shell = null,
         CancellationToken cancellation = default)
     {
         _titleDelay = titleDelay ?? Task.Delay;
@@ -85,8 +86,25 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         Segments.CollectionChanged += (_, _) => NotifyTranscriptEmpty();
         Partials.CollectionChanged += (_, _) => NotifyTranscriptEmpty();
         session.PropertyChanged += OnSessionChanged;
+        MinutesSoFar = new MinutesSoFarViewModel(client, shell, localization, notify);
+        MinutesSoFar.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MinutesSoFarViewModel.IsWriting))
+            {
+                WriteMinutesSoFarCommand.NotifyCanExecuteChanged();
+            }
+        };
         RefreshTexts();
     }
+
+    /// <summary>Minutes of what was said so far, without stopping (phase 48).</summary>
+    public MinutesSoFarViewModel MinutesSoFar { get; }
+
+    private bool CanWriteMinutesSoFar() =>
+        IsRecording && LiveTranscription && Session.SessionId is not null && !MinutesSoFar.IsWriting;
+
+    [RelayCommand(CanExecute = nameof(CanWriteMinutesSoFar))]
+    private Task WriteMinutesSoFarAsync() => MinutesSoFar.RequestAsync(Session.SessionId!);
 
     /// <summary>The recording shown on every page (state, elapsed time, title).</summary>
     public RecordingSessionService Session { get; }
@@ -576,6 +594,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
                 StartCommand.NotifyCanExecuteChanged();
                 StopCommand.NotifyCanExecuteChanged();
                 PauseResumeCommand.NotifyCanExecuteChanged();
+                WriteMinutesSoFarCommand.NotifyCanExecuteChanged();
                 break;
             case nameof(RecordingSessionService.Elapsed):
                 OnPropertyChanged(nameof(Elapsed));

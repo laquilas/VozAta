@@ -26,6 +26,7 @@ from vozata.api.ask_job import AskJob
 from vozata.api.container import ApiContainer
 from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
+from vozata.api.partial_minutes_job import PartialMinutesJob
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
 from vozata.api.ws import EventBroadcaster
@@ -1078,6 +1079,15 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
         ask=AskJob(answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu),
+        partial_minutes=PartialMinutesJob(
+            minutes_generator,
+            store,
+            labeler,
+            broadcaster,
+            localizer,
+            gate=gate,
+            uses_gpu=llm_on_gpu,
+        ),
         extract_action_items=ActionItemsJob(
             store,
             action_item_extractor,

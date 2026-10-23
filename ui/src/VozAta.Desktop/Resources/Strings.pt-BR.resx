@@ -1419,4 +1419,46 @@
   <data name="WorkerNoGpu" xml:space="preserve">
     <value>só CPU</value>
   </data>
+  <data name="MinutesSoFar" xml:space="preserve">
+    <value>Ata até agora</value>
+  </data>
+  <data name="MinutesSoFarHint" xml:space="preserve">
+    <value>Gera a ata do que foi falado até agora, sem parar a gravação.</value>
+  </data>
+  <data name="MinutesSoFarWriting" xml:space="preserve">
+    <value>Escrevendo a ata até agora…</value>
+  </data>
+  <data name="MinutesSoFarCaption" xml:space="preserve">
+    <value>Ata até {0}</value>
+  </data>
+  <data name="PartialMinutesReady" xml:space="preserve">
+    <value>A ata parcial está pronta.</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copiar</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copiado.</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Fechar</value>
+  </data>
+  <data name="TabPartialMinutes" xml:space="preserve">
+    <value>Atas parciais</value>
+  </data>
+  <data name="NoPartialMinutes" xml:space="preserve">
+    <value>Nenhuma ata parcial ainda. Durante a gravação, use "Ata até agora" para ter a ata do que foi dito até ali.</value>
+  </data>
+  <data name="PartialOrigin_button" xml:space="preserve">
+    <value>Até agora</value>
+  </data>
+  <data name="PartialOrigin_voice" xml:space="preserve">
+    <value>Comando de voz</value>
+  </data>
+  <data name="PartialOrigin_range" xml:space="preserve">
+    <value>Trecho</value>
+  </data>
+  <data name="DeletePartialMinutes" xml:space="preserve">
+    <value>Excluir</value>
+  </data>
 </root>

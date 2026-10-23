@@ -151,7 +151,15 @@ internal sealed class FakeShell : IShellService
 {
     public List<string> Opened { get; } = [];
 
+    public List<string> Copied { get; } = [];
+
     public void Open(string path) => Opened.Add(path);
+
+    public Task CopyTextAsync(string text)
+    {
+        Copied.Add(text);
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>Records saves; answers with <see cref="Path"/> (null = the user cancelled).</summary>

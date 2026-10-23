@@ -9,7 +9,7 @@
   <DockPanel Margin="16,12,16,16">
     <!-- Timer bar (Toggl style): title, timer, pause, round start / stop -->
     <Border DockPanel.Dock="Top" Classes="timerbar">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
         <TextBox Classes="title-input" Text="{Binding Title}"
                  MaxLength="{x:Static vm:RecorderPageViewModel.MaxTitleLength}"
                  IsEnabled="{Binding CanEditTitle}"
@@ -21,7 +21,16 @@
         </TextBox>
         <TextBlock Grid.Column="1" Classes="timer large" Margin="16,0" VerticalAlignment="Center"
                    Text="{Binding Elapsed}" />
-        <Button Grid.Column="2" Classes="icon" Margin="0,0,8,0" Padding="10"
+        <!-- Minutes so far (phase 48): minutes of what was said until now, without stopping -->
+        <Button Grid.Column="2" Classes="chip" Margin="0,0,8,0" VerticalAlignment="Center"
+                Command="{Binding WriteMinutesSoFarCommand}" IsVisible="{Binding IsRecording}"
+                ToolTip.Tip="{Binding L[MinutesSoFarHint]}" AutomationProperties.Name="{Binding L[MinutesSoFar]}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource Icon.Edit}" />
+            <TextBlock Text="{Binding L[MinutesSoFar]}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3" Classes="icon" Margin="0,0,8,0" Padding="10"
                 Command="{Binding PauseResumeCommand}" IsVisible="{Binding IsRecording}"
                 ToolTip.Tip="{Binding PauseResumeText}" AutomationProperties.Name="{Binding PauseResumeText}">
           <Panel>
@@ -29,7 +38,7 @@
             <PathIcon Data="{StaticResource Icon.Play}" IsVisible="{Binding IsPaused}" />
           </Panel>
         </Button>
-        <Panel Grid.Column="3">
+        <Panel Grid.Column="4">
           <Button Classes="round-start" Command="{Binding StartCommand}" IsVisible="{Binding !IsRecording}"
                   ToolTip.Tip="{Binding L[Start]}"
                   AutomationProperties.Name="{Binding L[Start]}">
@@ -204,9 +213,42 @@
       </StackPanel>
       <TextBlock Text="{Binding L[ModelLoading]}" Classes="hint warning"
                  IsVisible="{Binding IsModelLoading}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding MinutesSoFar.IsWriting}">
+        <ProgressBar IsIndeterminate="True" Width="80" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding L[MinutesSoFarWriting]}" Classes="secondary" />
+      </StackPanel>
       <TextBlock Text="{Binding L[NoSystemSignal]}" Classes="warning"
                  TextWrapping="Wrap" IsVisible="{Binding SystemMeter.NoSignal}" />
     </StackPanel>
+
+    <!-- Minutes so far (phase 48): beside the live transcript, until closed -->
+    <Border DockPanel.Dock="Right" Width="380" Margin="10,10,0,0" Classes="card"
+            IsVisible="{Binding MinutesSoFar.IsOpen}">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+            <Button Content="{Binding L[Copy]}" Command="{Binding MinutesSoFar.CopyCommand}" />
+            <Button Classes="icon" Command="{Binding MinutesSoFar.CloseCommand}"
+                    ToolTip.Tip="{Binding L[Close]}" AutomationProperties.Name="{Binding L[Close]}">
+              <PathIcon Data="{StaticResource Icon.Dismiss}" />
+            </Button>
+          </StackPanel>
+          <TextBlock Text="{Binding MinutesSoFar.Caption}" Classes="subtitle" VerticalAlignment="Center"
+                     TextWrapping="Wrap" />
+        </DockPanel>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding MinutesSoFar.Blocks}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MarkdownBlock">
+                <SelectableTextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,2"
+                                     Classes.h1="{Binding IsHeading1}" Classes.h2="{Binding IsHeading2}"
+                                     Classes.h3="{Binding IsHeading3}" Classes.item="{Binding IsItem}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
 
     <!-- Live transcript -->
     <Border Margin="0,10,0,0" Classes="outline">

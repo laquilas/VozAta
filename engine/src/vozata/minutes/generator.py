@@ -49,7 +49,10 @@ class MinutesGenerator:
         conversation_language: ConversationLanguage,
         vocabulary: Sequence[str] = (),
         title: str | None = None,
+        scope: str | None = None,
     ) -> str:
+        """`scope` (phase 48) says which part of the meeting the segments are, for minutes of
+        part of it."""
         if not segments:
             raise ValueError("Cannot write minutes for an empty transcript")
         lines = [
@@ -57,7 +60,7 @@ class MinutesGenerator:
             for segment in sorted(segments, key=lambda segment: segment.start)
         ]
         try:
-            return self._summarize(lines, conversation_language, tuple(vocabulary), title)
+            return self._summarize(lines, conversation_language, tuple(vocabulary), title, scope)
         finally:
             self._release()
 
@@ -67,17 +70,19 @@ class MinutesGenerator:
         conversation_language: ConversationLanguage,
         glossary: tuple[str, ...],
         title: str | None,
+        scope: str | None,
     ) -> str:
         loc, template, language = self._localizer, self._template, conversation_language
+        context = {"glossary": glossary, "title": title, "scope": scope}
         transcript = "\n".join(lines)
         if len(transcript) <= self._max_chars:
-            return self._ask(minutes_prompt(loc, template, transcript, language, glossary, title))
+            return self._ask(minutes_prompt(loc, template, transcript, language, **context))
         parts = _split(lines, self._max_chars)
         notes = [
-            self._ask(map_prompt(loc, template, part, i, len(parts), language, glossary, title))
+            self._ask(map_prompt(loc, template, part, i, len(parts), language, **context))
             for i, part in enumerate(parts, start=1)
         ]
-        return self._ask(reduce_prompt(loc, template, notes, language, glossary, title))
+        return self._ask(reduce_prompt(loc, template, notes, language, **context))
 
     def cancel(self) -> None:
         """Stop the model's call in flight (another thread); a no-op when it cannot be cancelled."""

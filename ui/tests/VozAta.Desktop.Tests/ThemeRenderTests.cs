@@ -45,7 +45,7 @@ public sealed class ThemeRenderTests
                 viewModel.History.Selected = viewModel.History.Rows[0]; // the recorder closed it: open it again
                 await viewModel.History.DetailLoading;
                 Render<Views.SessionPage>(viewModel, null, $"session-minutes-{theme}.png"); // the meeting page (phase 37)
-                viewModel.History.Detail!.SelectedTab = 1;
+                viewModel.History.Detail!.SelectedTab = SessionPageViewModel.TranscriptTab;
                 await viewModel.History.Detail.PlayLineCommand.ExecuteAsync(viewModel.History.Detail.Lines[1]);
                 Render<Views.SessionPage>(viewModel, null, $"session-transcript-playing-{theme}.png");
                 Assert.NotNull(viewModel.History.Detail.Player);

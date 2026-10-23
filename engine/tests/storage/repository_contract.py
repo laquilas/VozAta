@@ -18,7 +18,14 @@ from pathlib import Path
 import pytest
 
 from tests.fakes import FakeLocalizer
-from vozata.domain import ActionItem, Channel, TranscriptSegment, Translation, Word
+from vozata.domain import (
+    ActionItem,
+    Channel,
+    PartialMinutes,
+    TranscriptSegment,
+    Translation,
+    Word,
+)
 from vozata.labels import SpeakerLabeler
 from vozata.ports import (
     SessionNotFoundError,
@@ -289,6 +296,32 @@ class RepositoryContract:
 
         assert repository.read_action_items(session_id) == []
 
+    # partial minutes (phase 48)
+
+    def test_partial_minutes_round_trip_in_order(self, repository: SessionRepository) -> None:
+        session_id = self._session(repository)
+        first = PartialMinutes(
+            "p1",
+            "2026-10-22T10:05:00-03:00",
+            0.0,
+            312.5,
+            "button",
+            "# So far\n\n- Ação\n",
+            "general",
+        )
+        second = PartialMinutes(
+            "p2", "2026-10-22T11:00:00-03:00", 152.0, 774.0, "range", "# Part\n"
+        )
+        assert repository.read_partial_minutes(session_id) == []
+
+        repository.write_partial_minutes(session_id, [first, second])
+        assert repository.read_partial_minutes(session_id) == [first, second]
+        repository.write_partial_minutes(session_id, [second])
+        assert repository.read_partial_minutes(session_id) == [second]
+        repository.write_partial_minutes(session_id, [])
+
+        assert repository.read_partial_minutes(session_id) == []
+
     # meeting title (phase 35): a metadata field every backend keeps
 
     @pytest.mark.parametrize("title", ["Weekly sync", "Reunião — planejamento 2027", None])
@@ -379,6 +412,20 @@ class RepositoryContract:
         repository.write_minutes(session_id, "# Minutes\n")
         repository.write_speakers(session_id, ["system:1"])
         repository.write_action_items(session_id, [ActionItem("a1", "Send the deck", None, None)])
+        repository.write_partial_minutes(
+            session_id,
+            [
+                PartialMinutes(
+                    "p1",
+                    "2026-10-22T10:05:00-03:00",
+                    0.0,
+                    312.5,
+                    "button",
+                    "# So far\n\n- Ação\n",
+                    "general",
+                )
+            ],
+        )
 
         repository.delete(session_id)
 
@@ -392,6 +439,7 @@ class RepositoryContract:
         assert repository.read_minutes(reused) is None
         assert repository.speaker_count(reused) == 0
         assert repository.read_action_items(reused) == []
+        assert repository.read_partial_minutes(reused) == []
 
     @pytest.mark.parametrize("session_id", ["20991231_000000", "../etc", ""])
     def test_deleting_an_unknown_session_is_not_found(

@@ -1,13 +1,15 @@
-"""Session annotations in `vozata.db`: translations, speakers, minutes and action items."""
+"""Session annotations in `vozata.db`: translations, speakers, minutes, action items and partial
+minutes (phase 48)."""
 
 from __future__ import annotations
 
+import dataclasses
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import AbstractContextManager
 from datetime import datetime
 
-from vozata.domain import ActionItem, Translation
+from vozata.domain import ActionItem, PartialMinutes, Translation
 from vozata.ports import TranslationWriter
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.rows import (
@@ -17,6 +19,9 @@ from vozata.storage.sqlite.rows import (
     row_action_item,
 )
 from vozata.storage.sqlite.writers import SqliteTranslationWriter
+
+# in the order of `PartialMinutes` fields
+_PARTIAL_COLUMNS = "partial_id, created_at, range_start, range_end, origin, markdown, template"
 
 
 class SessionAnnotations:
@@ -135,3 +140,22 @@ class SessionAnnotations:
 
     def action_items_lock(self) -> AbstractContextManager[object]:
         return self._action_items_lock
+
+    def read_partial_minutes(self, session_id: str) -> list[PartialMinutes]:
+        check_id(session_id)
+        rows = self._db.connection().execute(
+            f"SELECT {_PARTIAL_COLUMNS} FROM partial_minutes WHERE session_id = ? ORDER BY row_id",
+            (session_id,),
+        )
+        return [PartialMinutes(*row) for row in rows]
+
+    def write_partial_minutes(self, session_id: str, items: Sequence[PartialMinutes]) -> None:
+        """Replace the partial minutes in one transaction."""
+        check_id(session_id)
+        with self._db.write() as db:
+            db.execute("DELETE FROM partial_minutes WHERE session_id = ?", (session_id,))
+            db.executemany(
+                f"INSERT INTO partial_minutes (session_id, {_PARTIAL_COLUMNS})"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [(session_id, *dataclasses.astuple(item)) for item in items],
+            )

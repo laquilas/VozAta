@@ -29,6 +29,13 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+empty_range = "No se dijo nada en ese tramo de la reunión, así que no hay nada que resumir."
+partial_minutes_failed = "No se pudo escribir el acta parcial ({reason}). Comprueba que Ollama está en marcha y el modelo descargado."
+partial_minutes_unavailable = "El acta de parte de una reunión no está disponible en este motor."
+partial_minutes_in_progress = "Ya se está escribiendo un acta parcial; espera a que termine."
+live_transcription_off = "Esta grabación no tiene transcripción en vivo, así que no hay nada que resumir hasta que se detenga."
+invalid_range = "El final del tramo debe ir después del inicio."
+partial_minutes_not_found = "No hay acta parcial \"{id}\" en esta reunión."
 worker_pairing_refused = "El worker de VozAta rechazó el código. Escribe el código que muestra ahora VozAta Worker en el otro PC."
 worker_pairing_locked = "Demasiados códigos erróneos: el emparejamiento con el worker está bloqueado durante un minuto."
 worker_no_token = "Ese worker no tiene token (solo escucha en su propio PC), así que no hay nada que emparejar."
@@ -99,6 +106,8 @@ Usa solo hechos de esta parte."""
 reduce_instructions = "Estas son notas de partes consecutivas de una misma reunión realizada en {conversation_language}. Combínalas en el acta de la reunión."
 glossary = "Glosario: estos nombres y términos pueden aparecer en la transcripción, quizá mal reconocidos. Usa exactamente esta ortografía: {terms}"
 meeting_title = "El usuario tituló esta reunión \"{title}\". Usa el título como contexto para el acta, no como algo que se dijo."
+scope_live = "La reunión sigue en curso: esta acta cubre lo dicho hasta {end}. No inventes un desenlace para lo que sigue abierto."
+scope_range = "Esta acta cubre solo el tramo de la reunión de {start} a {end}."
 transcript_label = "Transcripción:"
 notes_label = "Notas:"
 
