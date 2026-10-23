@@ -68,11 +68,11 @@ keys, user guide (phrases, mic only, the delay below).
 
 ## Acceptance criteria
 
-- [ ] Saying "VozAta, gere a ata" into the mic while recording writes partial minutes and shows
+- [x] Saying "VozAta, gere a ata" into the mic while recording writes partial minutes and shows
       them; "VozAta, o que foi decidido?" shows the answer in the recorder.
-- [ ] The same phrases played through the speakers do nothing.
-- [ ] The command list, wake word and on/off switch are edited on the Config page.
-- [ ] Command lines do not appear in the minutes.
+- [x] The same phrases played through the speakers do nothing.
+- [x] The command list, wake word and on/off switch are edited on the Config page.
+- [x] Command lines do not appear in the minutes.
 
 ## Tests
 
@@ -94,10 +94,9 @@ Free-form questions after the wake word, speech synthesis, commands that control
 ## Progress
 
 - **Branch:** `feature/50-voice-commands`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-22
-- **Next step:** Task 5 of `plans/50-voice-commands.md` (manual check with Whisper on spoken
-  commands, docs, PR).
+- **Next step:** open the PR to `main`; then phase 45 (`docs/roadmap/phases/45-worker-speakers.md`).
 
 ### Steps
 
@@ -106,7 +105,7 @@ Free-form questions after the wake word, speech synthesis, commands that control
 - [x] Detector, session wiring, dispatch, minutes action, hints, prompt filtering
 - [x] Voice question over the meeting so far
 - [x] Desktop: Config block, recorder panels
-- [ ] Docs, full suites, manual check, phase done
+- [x] Docs, full suites, manual check, phase done
 
 ### Decisions and notes
 
@@ -114,3 +113,12 @@ Free-form questions after the wake word, speech synthesis, commands that control
   asked to go on without stopping (2026-10-22).
 - Detection runs in the sink's `emit` (string comparisons of short texts), no extra thread.
 - Tasks 2 and 3 landed in one commit: the dispatcher needs the voice question job.
+- Manual check (2026-10-22): Portuguese TTS clips transcribed by faster-whisper large-v3 (GPU) with
+  the wake word as a hint, then given to the real `VoiceCommandSink` with the pt-BR defaults:
+  "Voz Ata, Gória Ata" → minutes, "Voz Ata, o que foi decidido?" → ask, "Voz Ata, … Timos Passos"
+  → ask (after the phrase search was widened to the first eight words and the default shortened to
+  "próximos passos"); "a ata vai sair depois da reunião" and a lone "vozata" ran nothing. Whisper
+  splits the wake word ("Voz Ata"), which the matcher accepts. The voice questions, answered by the
+  local Ollama over the meeting recorded in the phase 48 check, were right in 11–14 s. Not checked
+  live: a real microphone during a recording (the detector, dispatcher and jobs are each tested
+  with fakes; the minutes and answer paths with the real LLM).

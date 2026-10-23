@@ -17,8 +17,8 @@
 
 ## Tasks
 
-- [ ] Task 1: matcher, command store, settings, `/voice-commands`; commit `feat(engine): voice command list and matcher`.
-- [ ] Task 2: detector, session wiring, dispatch, minutes action, hints, prompt filtering; commit `feat(engine): act on voice commands while recording`.
-- [ ] Task 3: `MeetingSoFarAnswerer`, voice Ask; commit `feat(engine): answer a voice question over the meeting so far`.
-- [ ] Task 4: desktop (client, Config block, recorder panels), texts, tests, renders; commit `feat(ui): voice commands`.
-- [ ] Task 5: docs, suites, manual check (Whisper on TTS "VozAta, gere a ata" through the real detector), PR, merge.
+- [x] Task 1: matcher, command store, settings, `/voice-commands`; commit `feat(engine): voice command list and matcher`.
+- [x] Task 2: detector, session wiring, dispatch, minutes action, hints, prompt filtering; commit `feat(engine): act on voice commands while recording`.
+- [x] Task 3: `MeetingSoFarAnswerer`, voice Ask; commit `feat(engine): answer a voice question over the meeting so far`.
+- [x] Task 4: desktop (client, Config block, recorder panels), texts, tests, renders; commit `feat(ui): voice commands`.
+- [x] Task 5: docs, suites, manual check (Whisper on TTS "VozAta, gere a ata" through the real detector), PR, merge.
