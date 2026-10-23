@@ -79,9 +79,11 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 ## Progress
 
 - **Branch:** `feature/52-two-pc-check`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23
-- **Next step:** full suites, then the phase is done.
+- **Next step:** open the PR to `main`. Phase 52 is the last planned phase; the next ones come from
+  the backlog (README) when the user picks them. Still to do by the user: the real two-PC run with
+  `docs/two-pc-check.md`, recorded here.
 
 ### Steps
 
@@ -90,7 +92,7 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
 - [x] Script: translate, diarize + cancel, pre-emption
 - [x] Script runtime: scratch engine process, playback, command line
 - [x] Checklist `docs/two-pc-check.md`
-- [ ] Full suites, one recorded run, phase done
+- [x] Full suites, one recorded run, phase done
 
 ### Decisions and notes
 
@@ -106,3 +108,14 @@ Automating the UI steps (UI Automation across two PCs), CI for the script.
   here and the step keeps running. The script's second recording transcribes live, and a pause is
   expected only with `--local-speech` and CUDA on the client. The scratch engine is now stopped when
   its start times out, and `/health` gets 15 s (it probes Ollama).
+- Run of 2026-10-23, one PC (the reference machine as both sides): a scratch worker (`.venv`,
+  `0.0.0.0:8780`, discovery UDP 8781, `HF_TOKEN` in its process environment, its own folder) and
+  `two_pc_check.py --code auto --record --play <30.6 s two-voice TTS WAV>`. Default mode: discover,
+  pair, health (speech, speakers, translation), translate ("Let's postpone the beta release until
+  next Tuesday."), diarize + cancel (cancelled 0.0 s after DELETE) all passed; pre-emption showed
+  the step was not paused, which led to the correction above. With `--local-speech`: every step
+  passed, pre-emption "diarize step paused by the recording on this GPU, then finished: 3
+  speaker(s)". Found and fixed: the scratch engine was left running when its start timed out, and
+  `/health` needs more than 2 s. Engine 2468 tests (99.5 %), UI 912 + 25, ruff (src, tests, scripts)
+  and dotnet format clean. The scratch worker, client folders and processes were removed. Not
+  checked: two PCs, the manual UI steps of the checklist (they need the user at both PCs).
