@@ -65,3 +65,25 @@ Translation (phase 46); diarizing the microphone channel.
 > Start phase 45 (`docs/roadmap/phases/45-worker-speakers.md`) once phases 44 and 47–50 are merged
 > (order chosen by the user): read its
 > *Read first* files, write `plans/45-worker-speakers.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/45-worker-speakers`
+- **Status:** in progress
+- **Updated:** 2026-10-22
+- **Next step:** Task 1 of `plans/45-worker-speakers.md` (tests of the worker speaker services, the
+  engine providers and the gate; commit).
+
+### Steps
+
+- [x] Implementation plan (`plans/45-worker-speakers.md`)
+- [ ] Worker `/diarize` jobs and `/embed`; engine providers with fallback; gate
+- [ ] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- Order chosen by the user: after 47–50; GitHub Actions disabled, checks run locally; the user
+  asked to go on without stopping (2026-10-22).
+- Speakers on the worker need `HF_TOKEN` there; without it the worker answers 503 and does not list
+  `speakers` in its capabilities.
+
