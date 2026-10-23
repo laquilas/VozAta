@@ -34,8 +34,8 @@ for speech / speakers / translation") that set `STT_PROVIDER`, `DIARIZATION_PROV
 
 ## Acceptance criteria
 
-- [ ] Live translation runs on the worker; worker off → local opus-mt and a notification.
-- [ ] The Worker section sets everything up without editing `.env`; the sidebar shows where the work
+- [x] Live translation runs on the worker; worker off → local opus-mt and a notification.
+- [x] The Worker section sets everything up without editing `.env`; the sidebar shows where the work
       runs.
 
 ## Tests
@@ -55,20 +55,27 @@ Several workers, load balancing, TLS.
 ## Progress
 
 - **Branch:** `feature/46-worker-translation`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-22
-- **Next step:** Task 3 of `plans/46-worker-translation.md` (docs: worker API, contract, guide;
-  manual check; PR).
+- **Next step:** open the PR to `main`. Phase 46 is the last planned phase.
 
 ### Steps
 
 - [x] Implementation plan (`plans/46-worker-translation.md`)
 - [x] Engine: `/translate` on the worker, `TRANSLATORS["vozata_worker"]` with fallback, `/health` tasks
 - [x] UI: Worker toggles per task, sidebar worker status
-- [ ] Docs, full suites, manual check, phase done
+- [x] Docs, full suites, manual check, phase done
 
 ### Decisions and notes
 
 - The Worker section reuses the generated Worker settings group (URL, token, Test, pairing from
   phase 47) and adds the per-task toggles; they edit the provider keys and are saved with Save.
+- A worker that answers but does not offer a task (`503 worker_*_unavailable`) is treated like one
+  that does not answer: this PC runs the task with the `worker_fallback` notice (speakers too).
+- Manual check (2026-10-22): `vozata worker` on `127.0.0.1:8777` from this PC's environment, which
+  has no `translation` extra, listed `["speech", "speakers"]`. The engine's `WorkerTranslator`
+  got `503 worker_translation_unavailable`, sent one `translation` fallback notice and translated
+  the next lines locally. Not checked by hand: a real opus-mt translation on a worker (opus-mt
+  itself is phase 29's), and the Config switches and sidebar line in the running app (covered by
+  view-model tests).
 

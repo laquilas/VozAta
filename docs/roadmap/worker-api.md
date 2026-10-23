@@ -65,6 +65,16 @@ sends one clip per request; a slow worker is caught by the live tagger's existin
 A worker that does not answer is replaced by the local pyannote, once, with a `worker_fallback`
 notice for the `speakers` task.
 
+## Translation (phase 46)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/translate` | `{text, source, target}` (`en`, `pt`, `es`) | `{text}`; opus-mt loaded on the first request and kept (CPU); `422 worker_translation_failed` (an unsupported pair), `503 worker_translation_unavailable` when the worker has no `translation` extra (then `/health` does not list `translation`) |
+
+The engine's `WorkerTranslator` sends one request per committed segment from the translation
+thread; a worker that does not answer is replaced by the local opus-mt, once, with a
+`worker_fallback` notice for the `translation` task.
+
 ## Open routes (phase 47)
 
 These two need no token; `/health` and `/transcribe` still do.
@@ -91,6 +101,3 @@ worker; the engine saves it at pairing. When the paired worker does not answer a
 the engine broadcasts once; the same id at another address becomes the new `WORKER_URL` before the
 phase 44 fallback.
 
-## Later phases
-
-- 46: `/translate`.

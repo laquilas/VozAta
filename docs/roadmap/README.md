@@ -95,7 +95,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 43 | [Ollama on another PC](phases/43-remote-ollama.md) | 40 | done |
 | 44 | [Worker: server and remote speech](phases/44-worker-speech.md) | 43 | done |
 | 45 | [Worker: speaker identification](phases/45-worker-speakers.md) | 44 | done |
-| 46 | [Worker: translation and one-switch setup](phases/46-worker-translation.md) | 44, 45 | in progress (`feature/46-worker-translation`) |
+| 46 | [Worker: translation and one-switch setup](phases/46-worker-translation.md) | 44, 45 | done |
 | 47 | [Worker app and automatic discovery](phases/47-worker-app.md) | 44 | done |
 | 48 | [Minutes so far and the partial-minutes list](phases/48-minutes-so-far.md) | 40, 41 | done |
 | 49 | [Minutes of a time range](phases/49-minutes-of-a-range.md) | 48 | done |
