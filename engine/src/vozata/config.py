@@ -134,6 +134,12 @@ class Settings:
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
     llm_max_chars: int = 12000
+    # Other language model providers (phase 53)
+    openai_llm_url: str = "http://localhost:1234/v1"  # LM Studio's default
+    openai_llm_key: str | None = None
+    openai_llm_model: str = ""
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-opus-5-5"
     # Minutes templates (phase 20)
     minutes_template: str = DEFAULT_TEMPLATE
     # LLM VRAM release (phase 25)
@@ -261,6 +267,11 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         llm_provider=raw.get("LLM_PROVIDER", "ollama"),
         ollama_url=_url(raw, "OLLAMA_URL", "http://localhost:11434"),
         ollama_model=raw.get("OLLAMA_MODEL", "qwen2.5:7b"),
+        openai_llm_url=_url(raw, "OPENAI_LLM_URL", "http://localhost:1234/v1"),
+        openai_llm_key=raw.get("OPENAI_LLM_KEY"),
+        openai_llm_model=raw.get("OPENAI_LLM_MODEL", ""),
+        anthropic_api_key=raw.get("ANTHROPIC_API_KEY"),
+        anthropic_model=raw.get("ANTHROPIC_MODEL", "claude-opus-5-5"),
         llm_max_chars=int(_number(raw, "LLM_MAX_CHARS", 12000, minimum=1000, maximum=1_000_000)),
         minutes_template=_template(raw),
         ollama_keep_alive=_duration(raw, "OLLAMA_KEEP_ALIVE", "0"),

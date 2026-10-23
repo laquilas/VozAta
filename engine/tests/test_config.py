@@ -225,6 +225,32 @@ def test_minutes_values_are_parsed() -> None:
     assert settings.ollama_keep_alive == "5m"
 
 
+def test_the_other_language_model_providers_default_and_parse() -> None:
+    defaults = load_settings(env={})
+    settings = load_settings(
+        env={
+            "OPENAI_LLM_URL": "http://localhost:8080/v1/",
+            "OPENAI_LLM_KEY": "sk-x",
+            "OPENAI_LLM_MODEL": "llama-3.1-8b",
+            "ANTHROPIC_API_KEY": "sk-ant-x",
+            "ANTHROPIC_MODEL": "claude-sonnet-5-5",
+        }
+    )
+
+    assert (defaults.openai_llm_url, defaults.openai_llm_key, defaults.openai_llm_model) == (
+        "http://localhost:1234/v1",
+        None,
+        "",
+    )
+    assert (defaults.anthropic_api_key, defaults.anthropic_model) == (None, "claude-opus-5-5")
+    assert settings.openai_llm_url == "http://localhost:8080/v1"
+    assert (settings.openai_llm_key, settings.openai_llm_model) == ("sk-x", "llama-3.1-8b")
+    assert (settings.anthropic_api_key, settings.anthropic_model) == (
+        "sk-ant-x",
+        "claude-sonnet-5-5",
+    )
+
+
 @pytest.mark.parametrize("value", ["0", "-1", "300", "5m", "1h30m", "1.5h", "250ms", "-1m"])
 def test_ollama_keep_alive_accepts_seconds_and_durations(value: str) -> None:
     assert load_settings(env={"OLLAMA_KEEP_ALIVE": value}).ollama_keep_alive == value

@@ -19,7 +19,7 @@ from vozata.api.schemas import (
     WorkerHealth,
 )
 from vozata.config import Settings
-from vozata.net import remote_llm_host
+from vozata.net import llm_model, remote_llm_host
 from vozata.storage.usage import database_size
 from vozata.transcription.openai_compatible import remote_host
 from vozata.worker_client.status import WorkerStatus
@@ -41,7 +41,7 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
         stt=_stt(settings, worker),
         llm=LlmStatus(
             provider=current.llm_provider,
-            model=current.ollama_model,
+            model=llm_model(current),
             reachable=c.llm_reachable(),
             remote=llm_host is not None,
             host=llm_host,

@@ -73,14 +73,13 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - **Branch:** `feature/53-llm-providers`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 1 of `plans/53-llm-providers.md`: failing tests for the new keys, `llm_url`
-  / `llm_model` / `remote_llm_host` per provider and `gpu_usage.llm` for a loopback
-  OpenAI-compatible server.
+- **Next step:** task 2: `tests/llm/contract.py` (the shared `LanguageModel` suite) run against
+  Ollama, then failing tests for `llm/openai_compatible.py`.
 
 ### Steps
 
 - [x] Implementation plan (`plans/53-llm-providers.md`)
-- [ ] Keys, provider-neutral host / model / GPU rules, `/health.llm`
+- [x] Keys, provider-neutral host / model / GPU rules, `/health.llm`
 - [ ] OpenAI-compatible provider and the shared contract suite
 - [ ] Anthropic provider (official SDK)
 - [ ] Config tests for both providers
@@ -94,3 +93,6 @@ Tool use, prompt caching tuning, per-task providers (minutes on one, Ask on anot
 - Anthropic goes through the official `anthropic` SDK (the project's Claude API rule), not raw
   HTTP; defaults from its current guidance: `claude-opus-5-5`, effort `medium`, server-side
   refusal fallbacks on, always streamed.
+- `load_settings` only reads keys declared in `settings_fields.py`, so the five keys live there
+  (group `minutes`). `/health.llm.model` now names the model of the chosen provider
+  (`net.llm_model`).

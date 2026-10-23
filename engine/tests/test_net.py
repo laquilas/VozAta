@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from vozata.config import Settings
-from vozata.net import is_local_url, remote_llm_host, url_host
+from vozata.net import ANTHROPIC_URL, is_local_url, llm_model, llm_url, remote_llm_host, url_host
 
 
 @pytest.mark.parametrize(
@@ -73,3 +73,47 @@ def test_remote_llm_host_is_none_when_the_provider_is_not_ollama() -> None:
     settings = Settings(llm_provider="fake", ollama_url="http://192.168.0.20:11434")
 
     assert remote_llm_host(settings) is None
+
+
+@pytest.mark.parametrize(
+    ("values", "host"),
+    [
+        (
+            {"llm_provider": "openai_compatible", "openai_llm_url": "http://192.168.0.9:1234/v1"},
+            "192.168.0.9",
+        ),
+        ({"llm_provider": "openai_compatible", "openai_llm_url": "http://localhost:1234/v1"}, None),
+        (
+            {"llm_provider": "openai_compatible", "openai_llm_url": "https://api.openai.com/v1"},
+            "api.openai.com",
+        ),
+        ({"llm_provider": "anthropic"}, "api.anthropic.com"),  # always leaves this PC
+    ],
+)
+def test_remote_llm_host_for_every_provider(values: dict[str, str], host: str | None) -> None:
+    assert remote_llm_host(Settings(**values)) == host  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("values", "url", "model"),
+    [
+        ({"ollama_url": "http://o:11434", "ollama_model": "qwen"}, "http://o:11434", "qwen"),
+        (
+            {
+                "llm_provider": "openai_compatible",
+                "openai_llm_url": "http://s/v1",
+                "openai_llm_model": "m",
+            },
+            "http://s/v1",
+            "m",
+        ),
+        ({"llm_provider": "anthropic", "anthropic_model": "claude-x"}, ANTHROPIC_URL, "claude-x"),
+        ({"llm_provider": "fake"}, None, ""),
+    ],
+)
+def test_the_language_model_url_and_model_of_each_provider(
+    values: dict[str, str], url: str | None, model: str
+) -> None:
+    settings = Settings(**values)  # type: ignore[arg-type]
+
+    assert (llm_url(settings), llm_model(settings)) == (url, model)

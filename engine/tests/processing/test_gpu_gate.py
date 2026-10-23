@@ -271,3 +271,19 @@ def test_speakers_on_the_worker_are_not_local_gpu_work_but_their_fallback_is(
         local,
         fallback,
     )
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        # phase 53: LM Studio / llama.cpp on this PC use its GPU like Ollama
+        ({"llm_provider": "openai_compatible", "openai_llm_url": "http://localhost:1234/v1"}, True),
+        (
+            {"llm_provider": "openai_compatible", "openai_llm_url": "http://192.168.0.9:1234/v1"},
+            False,
+        ),
+        ({"llm_provider": "anthropic"}, False),
+    ],
+)
+def test_gpu_usage_llm_of_the_other_providers(values, expected):
+    assert gpu_usage(_settings(**values), cuda=True).llm is expected
