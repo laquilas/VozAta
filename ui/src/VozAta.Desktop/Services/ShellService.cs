@@ -1,8 +1,8 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace VozAta.Desktop.Services;
 
