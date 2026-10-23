@@ -54,3 +54,23 @@ Several ranges at once, a waveform selector, trimming the audio.
 
 > Start phase 49 (`docs/roadmap/phases/49-minutes-of-a-range.md`) once phase 48 is merged: read its
 > *Read first* files, write `plans/49-minutes-of-a-range.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/49-minutes-of-a-range`
+- **Status:** in progress
+- **Updated:** 2026-10-22
+- **Next step:** Task 2 of `plans/49-minutes-of-a-range.md` (`TimeText`, `RangeMinutesViewModel`,
+  views, texts).
+
+### Steps
+
+- [x] Implementation plan (`plans/49-minutes-of-a-range.md`)
+- [x] Engine: refuse a range beyond the recorded length
+- [ ] Desktop: Minutes of a part (From / To, player position, line shortcuts)
+- [ ] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR; GitHub Actions is disabled, every check runs locally.
+
