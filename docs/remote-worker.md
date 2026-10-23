@@ -1,7 +1,7 @@
 # Using a VozAta worker on another PC
 
 Speech recognition (Whisper) is the heaviest work VozAta does during a meeting. If you have a PC on
-the same local network with an NVIDIA GPU, it can run a **VozAta worker** that transcribes for this
+the same local network with an NVIDIA GPU, it can run **VozAta Worker**, which transcribes for this
 computer. This computer then loads no Whisper model and its GPU and memory stay free.
 
 Recording always stays on this computer: the microphone and the system sound are captured here,
@@ -10,68 +10,63 @@ and the recordings are stored here. Only the audio chunks to transcribe travel t
 > **Privacy.** With a worker, the **audio** of your meetings is sent to the other PC, in clear
 > (plain HTTP) on your local network. Use it only on a network you trust.
 
-If the worker does not answer, VozAta transcribes on this computer instead and a notification says
-so ("The VozAta worker at … did not answer: speech recognition runs on this PC."). A recording never
+If the worker does not answer, VozAta first looks for it on the network (its address may have
+changed); if it is not there, VozAta transcribes on this computer and a notification says so
+("The VozAta worker at … did not answer: speech recognition runs on this PC."). A recording never
 stops because of the worker.
 
 The language model (minutes, action items, Ask) can move to another PC too, with Ollama: see
 [Using Ollama on another PC](remote-ollama.md). The same GPU PC can run both.
 
-## On the GPU PC (the worker)
+## On the GPU PC
 
-These steps are for Windows. Run them in PowerShell.
+1. Install VozAta on the GPU PC (the same installer).
+2. Open **VozAta Worker** from the Start menu. It starts the worker and shows:
+   - its state (the first start downloads the speech model, `WHISPER_MODEL`, which takes a while);
+   - the **pairing code** (6 digits, a new one every 5 minutes);
+   - this PC's addresses, its GPU, the loaded model and the token.
+3. Press **Allow on the network** once. It asks for administrator rights and adds two firewall
+   rules for the **Private** network profile only: TCP 8766 (the worker) and UDP 8767 (so other
+   PCs can find it).
+4. Turn on **Start with Windows** if the worker should always be there; it then starts minimized
+   to the tray.
 
-1. Copy or install VozAta on the GPU PC. The worker is the same `vozata-engine.exe` the app uses:
-   after installing, it is in the `engine` folder next to `VozAta.Desktop.exe`.
-2. Start the worker once from that folder:
+Closing the window keeps the worker running in the tray; **Exit** in the tray menu stops it.
 
-   ```powershell
-   .\vozata-engine.exe worker
-   ```
+The worker keeps its own settings in `%APPDATA%\VozAta\worker\.env` (made on the first start):
+`WORKER_TOKEN` and `WORKER_ID` (never share the token), `WORKER_NAME` (the name other PCs see; empty
+is the PC name), `WORKER_HOST` (default `0.0.0.0`, every network of that PC), `WORKER_PORT`
+(8766), `WORKER_DISCOVERY_PORT` (8767) and the Whisper keys (`WHISPER_MODEL`, `WHISPER_DEVICE`,
+`WHISPER_COMPUTE_TYPE`, `WHISPER_CPU_MODEL`). Its output goes to `worker.log` in the same folder.
 
-   The first time, it creates a **token**, saves it in the `.env` of that folder as `WORKER_TOKEN`
-   and prints it once:
-
-   ```text
-   New worker token, saved in .env: 8yQ…Zk. Enter it in VozAta on the other PC (Config → Worker).
-   VozAta worker listening on http://0.0.0.0:8766 (Ctrl+C to stop).
-   ```
-
-   Every request must carry that token; without it the worker answers `401`. The Whisper model
-   (`WHISPER_MODEL`, downloaded the first time) loads on the first request and stays loaded.
-3. Allow inbound connections on the private network profile (PowerShell as administrator):
-
-   ```powershell
-   New-NetFirewallRule -DisplayName "VozAta worker" -Direction Inbound -Protocol TCP -LocalPort 8766 -Profile Private -Action Allow
-   ```
-
-4. Give the PC a fixed address (a DHCP reservation in your router, or a static IP) and note it
-   (`ipconfig`, the IPv4 line), for example `192.168.1.50`.
-5. To start the worker with Windows, create a scheduled task "At log on" that runs
-   `vozata-engine.exe worker` in that folder, or put a shortcut to a small `.cmd` in
-   `shell:startup`.
-
-Settings of the worker PC (its own `.env`): `WORKER_HOST` (default `0.0.0.0`, every network of
-that PC; a loopback address such as `127.0.0.1` needs no token), `WORKER_PORT` (default `8766`),
-`WORKER_TOKEN`, and the Whisper keys `WHISPER_MODEL`, `WHISPER_DEVICE`, `WHISPER_COMPUTE_TYPE`,
-`WHISPER_CPU_MODEL`. `vozata-engine.exe worker --check` prints the version and the address
-without starting anything.
-
-Never expose the worker to the internet (no router port forwarding) and keep the firewall rule on
-the **Private** profile only.
+Never expose the worker to the internet (no router port forwarding).
 
 ## On this computer
 
-1. Open **Config → Worker (another PC)**:
-   - **Worker address**: `http://192.168.1.50:8766`
-   - **Worker token**: the token printed on the GPU PC
-2. Press **Save**, then the **Test** button next to the address. A success message names the
-   worker's version and GPU.
-3. Open **Config → Transcription** and set the speech provider (`STT_PROVIDER`) to
+1. Open **Config → Worker (another PC)** and press **Find workers**. Every VozAta Worker on this
+   PC's networks answers within a couple of seconds, with its address, version and GPU.
+2. Type the code shown in VozAta Worker on the GPU PC next to it and press **Pair**. The address,
+   the token and the worker's id are saved.
+3. Press **Test** next to the address. A success message names the worker's version and GPU.
+4. Open **Config → Transcription** and set the speech provider (`STT_PROVIDER`) to
    `vozata_worker`. Restart the engine when asked.
 
-The settings live in `%APPDATA%\VozAta\.env` as `WORKER_URL`, `WORKER_TOKEN` and `STT_PROVIDER`.
-The **Status** of the app (`GET /health`) shows the worker host as the speech device.
+Five wrong codes lock pairing on the worker for a minute. The settings live in
+`%APPDATA%\VozAta\.env` as `WORKER_URL`, `WORKER_TOKEN`, `WORKER_ID` and `STT_PROVIDER`. The
+**Status** of the app (`GET /health`) shows the worker host as the speech device.
+
+### Without discovery
+
+When the PCs are on different subnets, or the router blocks broadcasts, set the address by hand:
+**Worker address** `http://<GPU PC address>:8766` and **Worker token** (shown in VozAta Worker),
+then **Test**. A worker set this way is not found again when its address changes: give the GPU PC
+a fixed address (a DHCP reservation in your router).
+
+### Command line
+
+The worker is `vozata-engine.exe worker` in the `engine` folder of VozAta (`python -m vozata
+worker` from the sources); `vozata-engine.exe worker --check` prints the version and the address
+without starting anything. The first start prints the token once.
 
 ## VRAM on the GPU PC
 
@@ -90,8 +85,9 @@ so Ollama frees its memory after each job.
 
 | Symptom | What to do |
 |---------|------------|
-| A notification says the worker did not answer, and transcription runs on this PC | The worker is not running, the address is wrong, or the firewall blocks port 8766. Start the worker and press **Test**. |
-| **Test** says the token was refused | Copy `WORKER_TOKEN` from the `.env` of the worker PC into **Worker token**. |
-| **Test** times out | The PCs are on different networks, or the worker PC's network profile is *Public* instead of *Private*. |
-| It worked yesterday and now falls back | The worker PC's address changed; give it a fixed address (step 4). |
-| Transcription is slow on the worker | The worker PC has no working CUDA and runs on its CPU (`WHISPER_CPU_MODEL`); the **Test** message says `CPU`. |
+| **Find workers** lists nothing | VozAta Worker is not open, **Allow on the network** was not done, the GPU PC's network profile is *Public*, or the PCs are on different subnets (set the address by hand). |
+| **Pair** says the code was refused | Type the code shown **now** in VozAta Worker (it changes every 5 minutes). After 5 wrong codes, wait a minute. |
+| A notification says the worker did not answer, and transcription runs on this PC | The worker is not running or cannot be reached. Open VozAta Worker on the GPU PC and press **Test** here. |
+| **Test** says the token was refused | Pair again, or copy the token shown in VozAta Worker into **Worker token**. |
+| VozAta Worker says the worker stopped | Open `worker.log` (the path is in the message): a model download failed, or the port is used by another program (`WORKER_PORT`). |
+| Transcription is slow on the worker | The GPU PC has no working CUDA and runs on its CPU (`WHISPER_CPU_MODEL`); VozAta Worker and the **Test** message say so. |

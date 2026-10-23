@@ -101,8 +101,8 @@ mDNS / Bonjour.
 - **Branch:** `feature/47-worker-app`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 6 of `plans/47-worker-app.md` (publish `VozAta.Worker` next to the desktop
-  app in `build.ps1`, installer shortcut, `docs/remote-worker.md` around the app, contract docs).
+- **Next step:** Task 7 of `plans/47-worker-app.md` (full suites, manual check: worker app on this
+  PC, Find workers, pairing, relocation; phase done, PR).
 
 ### Steps
 
@@ -112,7 +112,7 @@ mDNS / Bonjour.
 - [x] Engine: find a moved worker before the fallback
 - [x] Desktop Config: Find workers and pair
 - [x] The worker app (`VozAta.Worker`)
-- [ ] Packaging and docs
+- [x] Packaging and docs
 - [ ] Full suites, manual check, phase done
 
 ### Decisions and notes
@@ -133,3 +133,5 @@ mDNS / Bonjour.
   files with the desktop app (linked files would give the desktop tests two copies of the same
   types). `ShellViewModelTests.The_banner_over_other_pages_follows_the_elapsed_time_and_the_end`
   failed once in a full run and passed on four reruns (timing, not related to this phase).
+- The worker app reads `worker.settings.json`, not `appsettings.json`: it is published into the
+  desktop app's folder, which has its own `appsettings.json`.

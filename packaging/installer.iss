@@ -54,6 +54,12 @@ Name: "{userdocs}\VozAta"; Flags: uninsneveruninstall
 [Icons]
 Name: "{userprograms}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"
 Name: "{userdesktop}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"; Tasks: desktopicon
+; Phase 47: the worker app, for a GPU PC that transcribes for other PCs of the network
+Name: "{userprograms}\VozAta Worker"; Filename: "{app}\VozAta.Worker.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Worker.exe"
+
+[Registry]
+; "Start with Windows" of VozAta Worker writes this value; uninstalling removes it
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "VozAta Worker"; Flags: uninsdeletevalue
 
 [Run]
 Filename: "{app}\VozAta.Desktop.exe"; Description: "{cm:LaunchProgram,VozAta}"; Flags: nowait postinstall skipifsilent

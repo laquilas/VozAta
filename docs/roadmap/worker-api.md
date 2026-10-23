@@ -47,8 +47,33 @@ different port, its own settings, and a token on every request.
 - The notice is an `error` event with code `worker_fallback` and the localized message
   `errors.worker.fallback` ("The VozAta worker at {host} did not answer: {task} runs on this PC.").
 
+## Open routes (phase 47)
+
+These two need no token; `/health` and `/transcribe` still do.
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/pair` | `{code}` | `{token, id, name}` when `code` is the 6-digit code shown in VozAta Worker (valid 5 minutes, replaced once used); wrong code `403 worker_pairing_refused`; after 5 wrong codes `423 worker_pairing_locked` for 60 s (and a new code); a worker without a token (loopback) `409 worker_no_token` |
+| GET | `/local/status` | — | for VozAta Worker on the same PC only (a non-loopback client gets `403 worker_local_only`): `{version, id, name, port, addresses: [ipv4], token, pairing_code, code_expires_in, gpu: {available, name, vram_total_mb}, models}`; `token`, `pairing_code` and `code_expires_in` are null for a loopback worker |
+
+## Discovery (phase 47, UDP)
+
+- A worker on the network (it has a `WORKER_ID`) listens on UDP `WORKER_DISCOVERY_PORT` (8767).
+- Request (one datagram): `{"vozata": "discover", "v": 1}`; anything else is ignored.
+- Answer, to the sender: `{"vozata": "worker", "v": 1, "id", "name", "port", "version", "gpu"}`
+  (`gpu`: the GPU name or null). No secret.
+- The engine (`worker_client/discovery.py`) broadcasts to `255.255.255.255` from every IPv4
+  address of its PC (Windows sends a limited broadcast through one interface only), collects the
+  answers for 1.5 s and dedupes them by id; the worker URL is `http://<sender address>:<port>`.
+
+## Identity
+
+`WORKER_ID` (a uuid, made with the token on the first start of a worker on the network) names the
+worker; the engine saves it at pairing. When the paired worker does not answer at `WORKER_URL`,
+the engine broadcasts once; the same id at another address becomes the new `WORKER_URL` before the
+phase 44 fallback.
+
 ## Later phases
 
 - 45: `/diarize` (job API) and `/embed` for speaker identification.
 - 46: `/translate`.
-- 47: the worker app (`VozAta Worker.exe`), UDP discovery and pairing (`/pair`, `/local/status`).

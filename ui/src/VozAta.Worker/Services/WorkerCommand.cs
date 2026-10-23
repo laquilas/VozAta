@@ -1,6 +1,6 @@
 namespace VozAta.Worker.Services;
 
-/// <summary>Where the worker program lives (<c>Worker</c> section of appsettings.json).</summary>
+/// <summary>Where the worker program lives (<c>Worker</c> section of worker.settings.json).</summary>
 public sealed class WorkerOptions
 {
     /// <summary>The packaged engine, next to this app once installed.</summary>

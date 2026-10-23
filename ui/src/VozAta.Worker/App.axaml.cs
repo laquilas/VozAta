@@ -27,7 +27,7 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown; // the tray keeps it running
             var options = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true)
+                .AddJsonFile("worker.settings.json", optional: true)
                 .Build()
                 .GetSection("Worker")
                 .Get<WorkerOptions>() ?? new WorkerOptions();
