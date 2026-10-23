@@ -211,6 +211,17 @@ download_kind_speech = "reconhecimento de fala"
 download_kind_speakers = "identificação de falantes"
 download_kind_translation = "tradução"
 
+[cli.worker_task]
+offered = "  {task}: oferecido."
+missing_extra = "  {task}: não incluído nesta instalação do VozAta (veja Edições no guia do worker)."
+missing_hf_token = "  {task}: precisa de um token do Hugging Face (HF_TOKEN no .env deste worker)."
+missing = "  {task}: não oferecido."
+
+[cli.worker_task_name]
+speech = "Reconhecimento de fala"
+speakers = "Identificação de locutores"
+translation = "Tradução"
+
 [cli.devices]
 microphones = "Microfones:"
 loopbacks = "Áudio do sistema (loopback):"
@@ -219,7 +230,8 @@ default = "padrão"
 [cli.help]
 serve = "executa a API HTTP + WebSocket local usada pelo aplicativo desktop"
 worker = "fornece reconhecimento de fala ao motor do VozAta de outro PC da rede local"
-worker_check = "mostra a versão e o endereço e sai (verificação da instalação)"
+worker_check = "mostra a versão, o endereço e as tarefas oferecidas e sai (verificação da instalação)"
+worker_json = "com --check: mostra a versão, o endereço e as tarefas em JSON"
 description = "Transcrição de reuniões quase em tempo real e geração de atas."
 record = "grava o microfone e o áudio do sistema com transcrição ao vivo"
 language = "idioma falado na reunião (padrão: TRANSCRIPTION_LANGUAGE)"

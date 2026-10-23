@@ -118,14 +118,14 @@ Downloading extras on demand; editing `HF_TOKEN` from the worker app; a CPU-only
 - **Branch:** `feature/51-worker-every-task`
 - **Status:** in progress
 - **Updated:** 2026-10-23
-- **Next step:** task 2 of the plan: `run_worker` prints one localized line per task with `--check`,
-  and `--check --json` prints `{version, url, tasks}`.
+- **Next step:** task 3 of the plan: `vozata/frozen.py` `run_module_args` (runs `-m <module>` with
+  runpy when frozen), called from `packaging/engine_main.py`.
 
 ### Steps
 
 - [x] Implementation plan (`plans/51-worker-every-task.md`)
 - [x] Worker tasks: `worker_tasks`, speakers need the extra and `HF_TOKEN`, `/local/status.tasks`
-- [ ] `worker --check` lists the tasks (`--json` for the build)
+- [x] `worker --check` lists the tasks (`--json` for the build)
 - [ ] Frozen engine runs `-m <module>` (packaged child processes)
 - [ ] Packaging: translation in every build, `-Speakers` edition
 - [ ] Worker app: Tasks card

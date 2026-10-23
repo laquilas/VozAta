@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import secrets
 import uuid
 from collections.abc import Callable
@@ -15,6 +16,7 @@ from vozata import __version__
 from vozata.cli.console import ConsoleObserver
 from vozata.config import Settings
 from vozata.ports import Localizer
+from vozata.worker.tasks import WorkerTask
 
 
 def run_worker(
@@ -26,17 +28,19 @@ def run_worker(
     *,
     env_file: Path,
     check: bool = False,
+    json_output: bool = False,
+    tasks: Callable[[Settings], list[WorkerTask]] = lambda _: [],
     new_token: Callable[[], str] = lambda: secrets.token_urlsafe(32),
     new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
 ) -> int:
     """Serve until Ctrl+C. A worker reachable from the network always has a token and an id
     (phase 47: other PCs find it by id): without `WORKER_TOKEN` / `WORKER_ID` they are made and
-    saved to `env_file`, the token printed once. `check` only prints the version and the address
-    (the packaging smoke test)."""
+    saved to `env_file`, the token printed once. `check` only prints the version, the address and
+    the tasks offered (phase 51), as JSON with `json_output` (the packaging smoke test)."""
     host, port = settings.worker_host, settings.worker_port
     url = f"http://{_bracketed(host)}:{port}"
     if check:
-        console.say(localizer.t("cli.worker_check", version=__version__, url=url))
+        _check(console, localizer, url, tasks(settings), json_output)
         return 0
     token, worker_id = settings.worker_token, settings.worker_id
     if not _loopback(host):
@@ -50,6 +54,24 @@ def run_worker(
     console.say(localizer.t("cli.worker_listening", url=url))
     run(build_app(settings, token, worker_id), host=host, port=port, log_level="warning")
     return 0
+
+
+def _check(
+    console: ConsoleObserver,
+    localizer: Localizer,
+    url: str,
+    tasks: list[WorkerTask],
+    json_output: bool,
+) -> None:
+    if json_output:
+        body = {"version": __version__, "url": url, "tasks": [task.to_dict() for task in tasks]}
+        console.say(json.dumps(body))
+        return
+    console.say(localizer.t("cli.worker_check", version=__version__, url=url))
+    for task in tasks:
+        state = "offered" if task.available else task.reason or "missing"
+        name = localizer.t(f"cli.worker_task_name.{task.name}")
+        console.say(localizer.t(f"cli.worker_task.{state}", task=name))
 
 
 def _loopback(host: str) -> bool:

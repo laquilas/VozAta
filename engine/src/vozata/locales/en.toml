@@ -211,6 +211,17 @@ download_kind_speech = "speech recognition"
 download_kind_speakers = "speaker identification"
 download_kind_translation = "translation"
 
+[cli.worker_task]
+offered = "  {task}: offered."
+missing_extra = "  {task}: not included in this VozAta installation (see Editions in the worker guide)."
+missing_hf_token = "  {task}: needs a Hugging Face token (HF_TOKEN in this worker's .env)."
+missing = "  {task}: not offered."
+
+[cli.worker_task_name]
+speech = "Speech recognition"
+speakers = "Speaker identification"
+translation = "Translation"
+
 [cli.devices]
 microphones = "Microphones:"
 loopbacks = "System audio (loopback):"
@@ -219,7 +230,8 @@ default = "default"
 [cli.help]
 serve = "run the local HTTP + WebSocket API used by the desktop app"
 worker = "serve speech recognition to the VozAta engine of another PC of the local network"
-worker_check = "print the version and the address, then exit (installation check)"
+worker_check = "print the version, the address and the tasks offered, then exit (installation check)"
+worker_json = "with --check: print the version, the address and the tasks as JSON"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"
