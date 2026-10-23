@@ -79,9 +79,9 @@ windows cut words (the insertions are words repeated across a window boundary), 
 ## Progress
 
 - **Branch:** `feature/55-wer-benchmark`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-23
-- **Next step:** docs (`docs/benchmark.md`), full suites, then the PR.
+- **Next step:** open the PR to `main`. Phase 55 is the last planned phase; the backlog is empty.
 
 ### Steps
 
@@ -89,7 +89,7 @@ windows cut words (the insertions are words repeated across a window boundary), 
 - [x] Pure parts: normalization, alignment, WER, grid, report
 - [x] Runtime (offline transcription of a WAV) and the TTS reference
 - [x] First benchmark run, defaults kept or changed
-- [ ] Docs, full suites, phase done
+- [x] Docs, full suites, phase done
 
 ### Decisions and notes
 
@@ -97,3 +97,5 @@ windows cut words (the insertions are words repeated across a window boundary), 
 - The TTS meeting is 62.9 s (9 sentences, Microsoft Maria Desktop, 0.8 s pauses). A first run with
   the defaults (large-v3, VAD) got WER 0.0 % at RTF 0.44: clean TTS audio, so it mostly measures
   speed and chunking accidents; real recordings belong in further benchmark folders.
+- Engine checks: ruff (src, tests, scripts) and format clean; the benchmark script has 100 %
+  coverage of its pure parts.
