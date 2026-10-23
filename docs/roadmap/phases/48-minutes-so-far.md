@@ -109,15 +109,15 @@ minutes; turning a partial into the final minutes.
 - **Branch:** `feature/48-minutes-so-far`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 3 of `plans/48-minutes-so-far.md` (`PartialMinutesJob`, routes under
-  `/sessions/{id}/partial-minutes`, `partial_minutes_ready`, container wiring).
+- **Next step:** Task 4 of `plans/48-minutes-so-far.md` (desktop: client and event, recorder
+  Minutes so far button and panel, meeting page Partial minutes tab).
 
 ### Steps
 
 - [x] Implementation plan (`plans/48-minutes-so-far.md`)
 - [x] Storage of partial minutes (both backends, export / import)
 - [x] Range filter, scope line, `write_partial_minutes`
-- [ ] Job, routes, events
+- [x] Job, routes, events
 - [ ] Desktop: recorder button and panel, Partial minutes tab
 - [ ] Docs, full suites, manual check, phase done
 
@@ -127,4 +127,5 @@ minutes; turning a partial into the final minutes.
 - Live segments are stored as they are committed, so minutes so far read the stored transcript
   like a regeneration does (no access to the live pipeline); the conversation language is the one
   in the metadata (`auto` until it is detected).
-
+- The scope line uses the engine's localizer (the app language at start), like the other job
+  messages; the minutes text follows `APP_LANGUAGE` as now.

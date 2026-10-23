@@ -29,6 +29,13 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+empty_range = "No se dijo nada en ese tramo de la reunión, así que no hay nada que resumir."
+partial_minutes_failed = "No se pudo escribir el acta parcial ({reason}). Comprueba que Ollama está en marcha y el modelo descargado."
+partial_minutes_unavailable = "El acta de parte de una reunión no está disponible en este motor."
+partial_minutes_in_progress = "Ya se está escribiendo un acta parcial; espera a que termine."
+live_transcription_off = "Esta grabación no tiene transcripción en vivo, así que no hay nada que resumir hasta que se detenga."
+invalid_range = "El final del tramo debe ir después del inicio."
+partial_minutes_not_found = "No hay acta parcial \"{id}\" en esta reunión."
 worker_pairing_refused = "El worker de VozAta rechazó el código. Escribe el código que muestra ahora VozAta Worker en el otro PC."
 worker_pairing_locked = "Demasiados códigos erróneos: el emparejamiento con el worker está bloqueado durante un minuto."
 worker_no_token = "Ese worker no tiene token (solo escucha en su propio PC), así que no hay nada que emparejar."

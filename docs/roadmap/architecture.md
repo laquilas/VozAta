@@ -207,6 +207,8 @@ class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessio
     def speaker_ids(self, session_id: str) -> list[str]: ...  # (39) every speaker, named or not, in order
     def read_minutes(self, session_id: str) -> str | None: ...; write_minutes(session_id, markdown); has_minutes(session_id)
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
+    def read_partial_minutes(session_id) -> list[PartialMinutes]  # phase 48, oldest first
+    def write_partial_minutes(session_id, items) -> None          # replaces them all
     def folder(self, session_id: str) -> Path | None: ...  # the session folder (files); sqlite: None (32)
     def files(self, session_id: str) -> list[str] | None: ...  # idem
     def list_range(self, start: datetime, end: datetime) -> list[str]: ...  # (36) started in [start, end), newest first
@@ -558,7 +560,8 @@ variables can miss a personal OneDrive next to a business one) and
   transaction; a database with a newer version than the engine knows is refused
   (`DatabaseVersionError`). `001_schema.sql`: tables; `002_search.sql`: the FTS table and its
   triggers; `003_audio.sql`: `audio_chunks`; `004_migration.sql`: `sessions.imported_at`, an
-  index on `imported_from`, `migration_errors` (phase 33). New files use `auto_vacuum=INCREMENTAL`; a file
+  index on `imported_from`, `migration_errors` (phase 33); `005_partial_minutes.sql`:
+  `partial_minutes` (phase 48, deleted with the session). New files use `auto_vacuum=INCREMENTAL`; a file
   created before phase 32 is converted once on open (one `VACUUM`). `Database.reclaim()` runs
   `incremental_vacuum` (after audio is deleted, in the background).
 - **No session folder** (phase 32): `create` skips ids taken by a row or by an existing folder
@@ -651,6 +654,7 @@ else goes through the storage ports (§5):
 | `transcript.edited.jsonl` | 21 | full copy of the best transcript with user edits |
 | `transcript.translated.jsonl` | 29 | live translations, append-only: `{"segment_id", "language", "text"}` per line (created with the first one; the last line of a segment wins); merged into `GET /sessions/{id}/transcript` as `translation` by `segment_id` |
 | `action_items.json` | 23 | extracted items + export results |
+| `partial_minutes.json` | 48 | minutes of parts of the meeting (`{schema_version, items: [{id, created_at, start, end, origin, template, markdown}]}`); absent when none |
 
 `OUTPUT_DIR/index.db` — SQLite FTS5 search index of the file backend (22): table `segments(session_id, segment_id,
 start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`

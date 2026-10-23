@@ -237,6 +237,37 @@ class SearchResults(BaseModel):
     hits: list[SearchHitModel]
 
 
+class PartialMinutesRequest(BaseModel):
+    """Phase 48: seconds since the meeting start; `end` None is up to the transcript's end."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start: float | None = Field(default=None, ge=0)
+    end: float | None = Field(default=None, gt=0)
+    template: str | None = None
+
+
+class PartialMinutesStarted(BaseModel):
+    partial_id: str
+
+
+class PartialMinutesSummary(BaseModel):
+    id: str
+    created_at: str
+    start: float
+    end: float
+    origin: str
+    template: str | None = None
+
+
+class PartialMinutesList(BaseModel):
+    items: list[PartialMinutesSummary]
+
+
+class PartialMinutesDetail(PartialMinutesSummary):
+    markdown: str
+
+
 class RegenerateMinutes(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

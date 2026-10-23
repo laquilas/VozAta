@@ -29,6 +29,13 @@ action_items_failed = "Não foi possível extrair os itens de ação ({reason}).
 translation_failed = "A tradução ao vivo parou ({reason}). A transcrição continua."
 
 [errors.api]
+empty_range = "Nada foi dito nesse trecho da reunião, então não há o que resumir."
+partial_minutes_failed = "Não foi possível escrever a ata parcial ({reason}). Confira se o Ollama está rodando e o modelo foi baixado."
+partial_minutes_unavailable = "Ata de parte da reunião não está disponível neste motor."
+partial_minutes_in_progress = "Uma ata parcial já está sendo escrita; espere ela terminar."
+live_transcription_off = "Esta gravação não tem transcrição ao vivo, então não há o que resumir até ela parar."
+invalid_range = "O fim do trecho precisa vir depois do início."
+partial_minutes_not_found = "Não há ata parcial \"{id}\" nesta reunião."
 worker_pairing_refused = "O worker do VozAta recusou o código. Digite o código mostrado agora no VozAta Worker do outro PC."
 worker_pairing_locked = "Códigos errados demais: o pareamento com o worker ficou bloqueado por um minuto."
 worker_no_token = "Esse worker não tem token (ele só escuta no próprio PC), então não há o que parear."
