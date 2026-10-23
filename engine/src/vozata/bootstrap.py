@@ -10,6 +10,7 @@ import dataclasses
 import functools
 import logging
 import os
+import socket
 import threading
 from collections.abc import Callable, Collection, Mapping, Sequence
 from contextlib import AbstractContextManager
@@ -293,9 +294,12 @@ def build_transcriber(
     return WorkerTranscriber(client, local, notices)
 
 
-def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
-    """`vozata worker` (phase 44): the worker's API over this PC's models."""
+def build_worker_app(
+    settings: Settings, token: str | None, worker_id: str | None = None
+) -> FastAPI:
+    """`vozata worker` (phases 44, 47): the worker's API over this PC's models."""
     from vozata.worker.app import create_worker_app
+    from vozata.worker.local import WorkerIdentity, lan_addresses
     from vozata.worker.speech import LoadedModel, SpeechService
 
     def whisper() -> LoadedModel:
@@ -305,8 +309,13 @@ def build_worker_app(settings: Settings, token: str | None) -> FastAPI:
             transcriber, settings.whisper_model if cuda else settings.whisper_cpu_model
         )
 
+    name = settings.worker_name or socket.gethostname()
     return create_worker_app(
-        token, gpu_info=functools.cache(query_gpu), speech=SpeechService(whisper)
+        token,
+        gpu_info=functools.cache(query_gpu),
+        speech=SpeechService(whisper),
+        identity=WorkerIdentity(worker_id, name, settings.worker_port),
+        addresses=lan_addresses,
     )
 
 

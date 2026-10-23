@@ -101,13 +101,13 @@ mDNS / Bonjour.
 - **Branch:** `feature/47-worker-app`
 - **Status:** in progress
 - **Updated:** 2026-10-22
-- **Next step:** Task 1 of `plans/47-worker-app.md` (worker identity, pairing codes, `/pair`,
-  `/local/status`).
+- **Next step:** Task 2 of `plans/47-worker-app.md` (UDP discovery: worker responder, engine
+  client, `/worker/discover`, `/worker/pair`).
 
 ### Steps
 
 - [x] Implementation plan (`plans/47-worker-app.md`)
-- [ ] Worker: identity, pairing codes, `/pair`, `/local/status`
+- [x] Worker: identity, pairing codes, `/pair`, `/local/status`
 - [ ] UDP discovery: worker responder, engine client, `/worker/discover`, `/worker/pair`
 - [ ] Engine: find a moved worker before the fallback
 - [ ] Desktop Config: Find workers and pair
@@ -121,4 +121,6 @@ mDNS / Bonjour.
 - The worker app is published into the desktop app's folder (both use `engineozata-engine.exe`
   next to them) instead of a separate `build/worker/`; its working directory is
   `%APPDATA%\VozAta\worker`, so its `.env` (token, id) is apart from the engine's.
-
+- `/pair` and `/local/status` sit outside the token guard (a router carries it now); a wrong code
+  is 403 `worker_pairing_refused`, the lockout 423 `worker_pairing_locked`. `WORKER_ID` is made
+  only for a worker on the network, like the token.

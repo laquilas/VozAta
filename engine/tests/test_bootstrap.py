@@ -914,6 +914,24 @@ def test_the_worker_app_needs_its_token(monkeypatch: pytest.MonkeyPatch) -> None
     assert (body["gpu"]["available"], body["models"]) == (False, [])
 
 
+@pytest.mark.parametrize(("name", "shown"), [("GPU-PC", "GPU-PC"), (None, "this-host")])
+def test_the_worker_app_knows_its_identity(
+    monkeypatch: pytest.MonkeyPatch, name: str | None, shown: str
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from vozata.api.system_info import GpuInfo
+
+    monkeypatch.setattr(bootstrap, "query_gpu", lambda: GpuInfo(False))
+    monkeypatch.setattr(bootstrap.socket, "gethostname", lambda: "this-host")
+    settings = Settings(worker_name=name, worker_port=9000)
+    app = bootstrap.build_worker_app(settings, "t0ken", "4f1c")
+
+    body = TestClient(app, client=("127.0.0.1", 5)).get("/local/status").json()
+
+    assert (body["id"], body["name"], body["port"]) == ("4f1c", shown, 9000)
+
+
 @pytest.mark.parametrize(("device", "listed"), [("cuda", "large-v3"), ("cpu", "small")])
 def test_the_worker_lists_the_whisper_model_it_loaded(
     monkeypatch: pytest.MonkeyPatch, device: str, listed: str

@@ -1374,4 +1374,22 @@
   <data name="SettingHelp_WORKER_PORT" xml:space="preserve">
     <value>Solo en el PC del worker: el puerto en el que escucha el worker (8766 por defecto).</value>
   </data>
+  <data name="Setting_WORKER_ID" xml:space="preserve">
+    <value>Id del worker emparejado</value>
+  </data>
+  <data name="SettingHelp_WORKER_ID" xml:space="preserve">
+    <value>Lo rellena el emparejamiento: permite a VozAta volver a encontrar el worker cuando cambia su dirección. En el PC del worker, es su propio id (creado en el primer inicio).</value>
+  </data>
+  <data name="Setting_WORKER_NAME" xml:space="preserve">
+    <value>Nombre del worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_NAME" xml:space="preserve">
+    <value>Solo en el PC del worker: el nombre que ven los otros PC al buscar workers. Vacío: el nombre del PC.</value>
+  </data>
+  <data name="Setting_WORKER_DISCOVERY_PORT" xml:space="preserve">
+    <value>Puerto de descubrimiento del worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_DISCOVERY_PORT" xml:space="preserve">
+    <value>El puerto UDP usado para encontrar workers en la red (8767 por defecto). Debe ser el mismo en los dos PC.</value>
+  </data>
 </root>

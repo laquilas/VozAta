@@ -1374,4 +1374,22 @@
   <data name="SettingHelp_WORKER_PORT" xml:space="preserve">
     <value>Só no PC do worker: a porta em que o worker escuta (padrão 8766).</value>
   </data>
+  <data name="Setting_WORKER_ID" xml:space="preserve">
+    <value>Id do worker pareado</value>
+  </data>
+  <data name="SettingHelp_WORKER_ID" xml:space="preserve">
+    <value>Preenchido pelo pareamento: permite ao VozAta reencontrar o worker quando o endereço dele muda. No PC do worker, é o id dele (criado na primeira execução).</value>
+  </data>
+  <data name="Setting_WORKER_NAME" xml:space="preserve">
+    <value>Nome do worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_NAME" xml:space="preserve">
+    <value>Só no PC do worker: o nome que os outros PCs veem ao procurar workers. Vazio: o nome do PC.</value>
+  </data>
+  <data name="Setting_WORKER_DISCOVERY_PORT" xml:space="preserve">
+    <value>Porta de descoberta do worker</value>
+  </data>
+  <data name="SettingHelp_WORKER_DISCOVERY_PORT" xml:space="preserve">
+    <value>A porta UDP usada para encontrar workers na rede (padrão 8767). Deve ser a mesma nos dois PCs.</value>
+  </data>
 </root>

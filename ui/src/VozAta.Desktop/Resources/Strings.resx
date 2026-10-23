@@ -1374,4 +1374,22 @@
   <data name="SettingHelp_WORKER_PORT" xml:space="preserve">
     <value>On the worker PC only: the port the worker listens on (default 8766).</value>
   </data>
+  <data name="Setting_WORKER_ID" xml:space="preserve">
+    <value>Paired worker id</value>
+  </data>
+  <data name="SettingHelp_WORKER_ID" xml:space="preserve">
+    <value>Set by pairing: lets VozAta find the worker again when its address changes. On the worker PC, its own id (made on the first start).</value>
+  </data>
+  <data name="Setting_WORKER_NAME" xml:space="preserve">
+    <value>Worker name</value>
+  </data>
+  <data name="SettingHelp_WORKER_NAME" xml:space="preserve">
+    <value>On the worker PC only: the name other PCs see when they look for workers. Empty: the PC name.</value>
+  </data>
+  <data name="Setting_WORKER_DISCOVERY_PORT" xml:space="preserve">
+    <value>Worker discovery port</value>
+  </data>
+  <data name="SettingHelp_WORKER_DISCOVERY_PORT" xml:space="preserve">
+    <value>The UDP port used to find workers on the network (default 8767). It must be the same on both PCs.</value>
+  </data>
 </root>

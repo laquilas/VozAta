@@ -154,6 +154,10 @@ class Settings:
     worker_token: str | None = None
     worker_host: str = "0.0.0.0"
     worker_port: int = 8766
+    # phase 47: the worker's identity (found on the network, paired by a code) and discovery port
+    worker_id: str | None = None
+    worker_name: str | None = None  # None: the host name
+    worker_discovery_port: int = 8767
     # Storage (phase 31)
     storage_backend: StorageBackend = StorageBackend.SQLITE
     database_path: Path | None = None  # None: `OUTPUT_DIR/vozata.db`
@@ -265,6 +269,11 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         worker_token=raw.get("WORKER_TOKEN"),
         worker_host=raw.get("WORKER_HOST", "0.0.0.0"),
         worker_port=_integer(raw, "WORKER_PORT", 8766, minimum=1, maximum=65535),
+        worker_id=raw.get("WORKER_ID"),
+        worker_name=raw.get("WORKER_NAME"),
+        worker_discovery_port=_integer(
+            raw, "WORKER_DISCOVERY_PORT", 8767, minimum=1, maximum=65535
+        ),
         storage_backend=_choice(raw, "STORAGE_BACKEND", StorageBackend, StorageBackend.SQLITE),
         database_path=Path(raw["DATABASE_PATH"]) if "DATABASE_PATH" in raw else None,
         audio_cache_mb=_integer(raw, "AUDIO_CACHE_MB", 2048, minimum=0, maximum=1_048_576),
