@@ -13,6 +13,6 @@
 
 ## Tasks
 
-- [ ] Task 1: engine length check, tests; commit `feat(api): refuse a range beyond the recorded length`.
-- [ ] Task 2: `TimeText`, `RangeMinutesViewModel`, page wiring, views, RESX, tests; commit `feat(ui): minutes of a part of a recorded meeting`.
-- [ ] Task 3: docs, full suites, manual check, phase done, PR.
+- [x] Task 1: engine length check, tests; commit `feat(api): refuse a range beyond the recorded length`.
+- [x] Task 2: `TimeText`, `RangeMinutesViewModel`, page wiring, views, RESX, tests; commit `feat(ui): minutes of a part of a recorded meeting`.
+- [x] Task 3: docs, full suites, manual check, phase done, PR.
