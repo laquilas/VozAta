@@ -36,9 +36,9 @@ a finished meeting.
 
 ## Acceptance criteria
 
-- [ ] On a finished meeting, minutes of 00:02:32–00:12:54 cover only that part and appear in the
+- [x] On a finished meeting, minutes of 00:02:32–00:12:54 cover only that part and appear in the
       Partial minutes list with the range.
-- [ ] Invalid times are refused with a clear message, in the UI and in the API.
+- [x] Invalid times are refused with a clear message, in the UI and in the API.
 
 ## Tests
 
@@ -54,3 +54,29 @@ Several ranges at once, a waveform selector, trimming the audio.
 
 > Start phase 49 (`docs/roadmap/phases/49-minutes-of-a-range.md`) once phase 48 is merged: read its
 > *Read first* files, write `plans/49-minutes-of-a-range.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/49-minutes-of-a-range`
+- **Status:** ready for PR
+- **Updated:** 2026-10-22
+- **Next step:** open the PR to `main`; then phase 50 (`docs/roadmap/phases/50-voice-commands.md`).
+
+### Steps
+
+- [x] Implementation plan (`plans/49-minutes-of-a-range.md`)
+- [x] Engine: refuse a range beyond the recorded length
+- [x] Desktop: Minutes of a part (From / To, player position, line shortcuts)
+- [x] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR; GitHub Actions is disabled, every check runs locally.
+- The line shortcut is a small ⋯ button with a menu on each transcript line (the selectable text
+  keeps its own copy menu), not a right-click.
+- Manual check (2026-10-22): on the meeting recorded in the phase 48 check (68 s, local Ollama),
+  `POST .../partial-minutes {start: 14, end: 41}` wrote minutes of that part only in 22 s (origin
+  `range`, 14–41): the beta moved to Tuesday, no Carlos task and no macOS question (said outside
+  the part). A part after the end answered 422 with the end-before-start message, so it got its own
+  code `range_beyond_end` naming the length. The desktop bar and panel were checked in the headless
+  renders (`session-partial-minutes-*.png`, `recorder-minutes-so-far-*.png`, light and dark).

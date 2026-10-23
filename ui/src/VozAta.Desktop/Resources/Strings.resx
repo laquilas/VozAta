@@ -1461,4 +1461,37 @@
   <data name="DeletePartialMinutes" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="RangeTitle" xml:space="preserve">
+    <value>Minutes of a part</value>
+  </data>
+  <data name="RangeFrom" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="RangeTo" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="RangeUsePlayer" xml:space="preserve">
+    <value>Use the player position</value>
+  </data>
+  <data name="RangeGenerate" xml:space="preserve">
+    <value>Write minutes of this part</value>
+  </data>
+  <data name="RangeHint" xml:space="preserve">
+    <value>Times as hh:mm:ss or mm:ss. In the Transcript tab, the … button of a line starts or ends the part there.</value>
+  </data>
+  <data name="RangeInvalidTime" xml:space="preserve">
+    <value>Type the times as hh:mm:ss or mm:ss (minutes and seconds below 60).</value>
+  </data>
+  <data name="RangeEndBeforeStart" xml:space="preserve">
+    <value>The end must come after the start.</value>
+  </data>
+  <data name="RangeBeyondEnd" xml:space="preserve">
+    <value>The meeting lasts {0}: end the part by then.</value>
+  </data>
+  <data name="RangeStartHere" xml:space="preserve">
+    <value>Start the part here</value>
+  </data>
+  <data name="RangeEndHere" xml:space="preserve">
+    <value>End the part here</value>
+  </data>
 </root>

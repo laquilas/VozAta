@@ -40,6 +40,9 @@ public sealed record TranscriptLine(string Timestamp, string Label, string Text,
     /// <summary>Where the segment starts in the recording, in seconds (session page, phase 37).</summary>
     public double Start { get; init; }
 
+    /// <summary>Where the segment ends, in seconds (phase 49: "End here").</summary>
+    public double End { get; init; }
+
     /// <summary>The line the in-app player is playing (highlighted, followed by the scroll).</summary>
     public bool IsCurrent { get; init; }
 

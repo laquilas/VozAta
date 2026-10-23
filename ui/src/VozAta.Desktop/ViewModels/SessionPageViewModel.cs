@@ -145,6 +145,38 @@ public sealed partial class SessionPageViewModel(
 
     private PartialMinutesListViewModel? _partials;
 
+    private RangeMinutesViewModel? _range;
+
+    /// <summary>"Minutes of a part" of this recorded meeting (phase 49).</summary>
+    public RangeMinutesViewModel Range => _range ??= new RangeMinutesViewModel(
+        client, localization, Id, summary.DurationSeconds ?? 0, () => Player?.Position, () => RegenerateTemplate?.Id);
+
+    /// <summary>A transcript line's "Start here" (phase 49): the part starts there.</summary>
+    [RelayCommand]
+    private void RangeStartHere(TranscriptLine line)
+    {
+        Range.StartAt(line);
+        SelectedTab = PartialMinutesTab;
+    }
+
+    /// <summary>A transcript line's "End here" (phase 49): the part ends after it.</summary>
+    [RelayCommand]
+    private void RangeEndHere(TranscriptLine line)
+    {
+        Range.EndAt(line);
+        SelectedTab = PartialMinutesTab;
+    }
+
+    /// <summary>A <c>partial_minutes_ready</c> event: the list shows it; the part asked here opens its tab.</summary>
+    public async Task OnPartialMinutesReadyAsync(PartialMinutesReadyEvent ready)
+    {
+        await Partials.OnReadyAsync(ready);
+        if (_range?.OnReady(ready) == true)
+        {
+            SelectedTab = PartialMinutesTab;
+        }
+    }
+
     /// <summary>The "Partial minutes" tab (phase 48).</summary>
     public PartialMinutesListViewModel Partials =>
         _partials ??= new PartialMinutesListViewModel(client, shell, localization, Id);
@@ -295,6 +327,7 @@ public sealed partial class SessionPageViewModel(
     public void OnError(string? sessionId, string code, string message)
     {
         _actionItems?.OnError(sessionId, message);
+        _range?.OnError(sessionId, code, message);
         if (sessionId != Id)
         {
             return;
@@ -491,6 +524,7 @@ public sealed partial class SessionPageViewModel(
             {
                 SegmentId = segment.SegmentId,
                 Start = segment.Start,
+                End = segment.End,
                 LowConfidenceParts = Editor.Highlight(segment),
             });
         }
@@ -636,6 +670,7 @@ public sealed partial class SessionPageViewModel(
         }
 
         Player = Players(Id, _audio);
+        _range?.PlayerChanged();
         if (Player is null)
         {
             return;

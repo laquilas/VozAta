@@ -1461,4 +1461,37 @@
   <data name="DeletePartialMinutes" xml:space="preserve">
     <value>Eliminar</value>
   </data>
+  <data name="RangeTitle" xml:space="preserve">
+    <value>Acta de un tramo</value>
+  </data>
+  <data name="RangeFrom" xml:space="preserve">
+    <value>Desde</value>
+  </data>
+  <data name="RangeTo" xml:space="preserve">
+    <value>Hasta</value>
+  </data>
+  <data name="RangeUsePlayer" xml:space="preserve">
+    <value>Usar la posición del reproductor</value>
+  </data>
+  <data name="RangeGenerate" xml:space="preserve">
+    <value>Escribir el acta del tramo</value>
+  </data>
+  <data name="RangeHint" xml:space="preserve">
+    <value>Horas en hh:mm:ss o mm:ss. En la pestaña Transcripción, el botón … de una línea empieza o termina el tramo ahí.</value>
+  </data>
+  <data name="RangeInvalidTime" xml:space="preserve">
+    <value>Escribe las horas como hh:mm:ss o mm:ss (minutos y segundos por debajo de 60).</value>
+  </data>
+  <data name="RangeEndBeforeStart" xml:space="preserve">
+    <value>El final debe ir después del inicio.</value>
+  </data>
+  <data name="RangeBeyondEnd" xml:space="preserve">
+    <value>La reunión dura {0}: termina el tramo antes.</value>
+  </data>
+  <data name="RangeStartHere" xml:space="preserve">
+    <value>Empezar el tramo aquí</value>
+  </data>
+  <data name="RangeEndHere" xml:space="preserve">
+    <value>Terminar el tramo aquí</value>
+  </data>
 </root>

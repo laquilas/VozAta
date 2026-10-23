@@ -53,8 +53,8 @@ public sealed class SessionPageViewModelTests : IDisposable
         await detail.LoadAsync();
 
         Assert.Equal(
-            [new TranscriptLine("00:00:02", "Me", "Good morning.", "mic") { SegmentId = "mic-000001", Start = 2.4 },
-             new TranscriptLine("00:01:05", "Others", "Hi.", "system") { SegmentId = "system-000001", Start = 65 }],
+            [new TranscriptLine("00:00:02", "Me", "Good morning.", "mic") { SegmentId = "mic-000001", Start = 2.4, End = 4 },
+             new TranscriptLine("00:01:05", "Others", "Hi.", "system") { SegmentId = "system-000001", Start = 65, End = 66 }],
             detail.Lines);
         Assert.True(detail.HasMinutes);
         Assert.Equal(
@@ -126,7 +126,7 @@ public sealed class SessionPageViewModelTests : IDisposable
         Assert.Equal("Others", detail.Lines[^1].Label);
         await detail.OnSpeakersRelabeledAsync(Id);
 
-        Assert.Equal([new TranscriptLine("00:01:05", "User 1", "Hi.", "system") { SegmentId = "system-000001", Start = 65 }], detail.Lines);
+        Assert.Equal([new TranscriptLine("00:01:05", "User 1", "Hi.", "system") { SegmentId = "system-000001", Start = 65, End = 66 }], detail.Lines);
         Assert.Null(detail.Error);
     }
 
