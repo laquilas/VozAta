@@ -90,3 +90,27 @@ Free-form questions after the wake word, speech synthesis, commands that control
 
 > Start phase 50 (`docs/roadmap/phases/50-voice-commands.md`) once phase 48 is merged: read its
 > *Read first* files, write `plans/50-voice-commands.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/50-voice-commands`
+- **Status:** in progress
+- **Updated:** 2026-10-22
+- **Next step:** Task 1 of `plans/50-voice-commands.md` (matcher, command store, settings,
+  `/voice-commands`).
+
+### Steps
+
+- [x] Implementation plan (`plans/50-voice-commands.md`)
+- [ ] Matcher, command list, settings, `/voice-commands`
+- [ ] Detector, session wiring, dispatch, minutes action, hints, prompt filtering
+- [ ] Voice question over the meeting so far
+- [ ] Desktop: Config block, recorder panels
+- [ ] Docs, full suites, manual check, phase done
+
+### Decisions and notes
+
+- Commits stay local until the PR; GitHub Actions is disabled, every check runs locally; the user
+  asked to go on without stopping (2026-10-22).
+- Detection runs in the sink's `emit` (string comparisons of short texts), no extra thread.
+
