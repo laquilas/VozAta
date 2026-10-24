@@ -209,6 +209,8 @@ class SessionRepository(Protocol):    # SqliteSessionRepository (31), FileSessio
     def read_action_items(...) / write_action_items(...) / action_items_lock() -> context manager
     def read_partial_minutes(session_id) -> list[PartialMinutes]  # phase 48, oldest first
     def write_partial_minutes(session_id, items) -> None          # replaces them all
+    def read_requests(session_id) -> list[RequestEntry]           # phase 59, oldest first
+    def write_requests(session_id, items) -> None                 # replaces them all
     def folder(self, session_id: str) -> Path | None: ...  # the session folder (files); sqlite: None (32)
     def files(self, session_id: str) -> list[str] | None: ...  # idem
     def list_range(self, start: datetime, end: datetime) -> list[str]: ...  # (36) started in [start, end), newest first
@@ -561,7 +563,8 @@ variables can miss a personal OneDrive next to a business one) and
   (`DatabaseVersionError`). `001_schema.sql`: tables; `002_search.sql`: the FTS table and its
   triggers; `003_audio.sql`: `audio_chunks`; `004_migration.sql`: `sessions.imported_at`, an
   index on `imported_from`, `migration_errors` (phase 33); `005_partial_minutes.sql`:
-  `partial_minutes` (phase 48, deleted with the session). New files use `auto_vacuum=INCREMENTAL`; a file
+  `partial_minutes` (phase 48, deleted with the session); `006_requests.sql`: `requests` (phase 59, the
+  request history, deleted with the session). New files use `auto_vacuum=INCREMENTAL`; a file
   created before phase 32 is converted once on open (one `VACUUM`). `Database.reclaim()` runs
   `incremental_vacuum` (after audio is deleted, in the background).
 - **No session folder** (phase 32): `create` skips ids taken by a row or by an existing folder
@@ -655,6 +658,7 @@ else goes through the storage ports (§5):
 | `transcript.translated.jsonl` | 29 | live translations, append-only: `{"segment_id", "language", "text"}` per line (created with the first one; the last line of a segment wins); merged into `GET /sessions/{id}/transcript` as `translation` by `segment_id` |
 | `action_items.json` | 23 | extracted items + export results |
 | `partial_minutes.json` | 48 | minutes of parts of the meeting (`{schema_version, items: [{id, created_at, start, end, origin, template, markdown}]}`); absent when none |
+| `requests.json` | 59 | the request history (`{schema_version, items: [RequestEntry]}`); absent when nothing was asked |
 
 `OUTPUT_DIR/index.db` — SQLite FTS5 search index of the file backend (22): table `segments(session_id, segment_id,
 start, speaker_id, text)` (only `text` indexed), tokenizer `unicode61 remove_diacritics 2`
@@ -970,6 +974,28 @@ only validator.
   session id takes the previous one in the bracket (or the only session of the context); a time
   maps to the last context segment whose displayed time is at or before it. Malformed times,
   sessions not in the context and duplicates are dropped → `{session_id, segment_id, start}`.
+
+## 13a. Request history and voice status (phase 59)
+
+- `RequestEntry` (`domain.py`) is one request made on a meeting; `api/request_log.py`
+  (`RequestLog`) keeps them with the meeting (`read_requests` / `write_requests`, both backends,
+  carried by folder exports, the migration and bundles) and publishes `request_updated` on every
+  change; storage failures are logged, never raised into the request.
+- Who writes: the voice dispatcher (`recognized`, then `running` before the job starts, `failed`
+  `voice_command_busy`, `ignored` `voice_command_repeated` for a repeat the detector reports within
+  its cooldown); the routes `POST /sessions/{id}/partial-minutes`, `POST /ask` (with a
+  `session_id`), `POST /sessions/{id}/minutes` and `POST /sessions/{id}/action-items` (`running`,
+  or `ignored` with the refusal code). Who finishes: `PartialMinutesJob` (by `request_id`),
+  `AskJob` (by `result_id` = the answer id), the queued `MinutesJob` / `ActionItemsJob`
+  (`finish_pending`: the latest unfinished entry of their kind).
+- The detector passes `at`, the session second the wake word was said; voice minutes cover
+  `[0, at)`, so the command itself and what came after are not summarized.
+- Desktop: `VoiceStatusViewModel` (sidebar, while recording) follows the `voice` entries of the
+  meeting being recorded: gray idle, green recognized (held 1.5 s), yellow running or a repeat,
+  green done for 5 s ("Ata pronta (até mm:ss)", clickable: opens the result on the Recorder), red
+  failed for 8 s; a chime (`ISoundPlayer`, winmm `PlaySound` of an in-memory WAV) on recognized,
+  switchable (`ui.json` `voice_command_sound`). `RequestHistoryViewModel` is the meeting page's
+  History tab and the Recorder's list of the recording.
 
 ## 14. Live translation provider (phase 29)
 
