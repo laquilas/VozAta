@@ -8,6 +8,7 @@ from tests.api.conftest import RecordingBroadcaster
 from tests.fakes import FakeLanguageModel, FakeLocalizer, minutes_template
 from vozata.api.ask_job import AskJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
+from vozata.api.request_log import RequestLog
 from vozata.api.voice_dispatch import VoiceCommandDispatcher
 from vozata.domain import Channel, TranscriptSegment, VoiceCommand
 from vozata.labels import SpeakerLabeler
@@ -60,7 +61,14 @@ def test_minutes_by_voice_are_partial_minutes_so_far(tmp_path: Path) -> None:
     assert rig.broadcaster.of("voice_command") == [
         (
             rig.session_id,
-            {"phrase": "gere a ata", "action": "minutes", "question": None, "answer_id": None},
+            {
+                "phrase": "gere a ata",
+                "action": "minutes",
+                "question": None,
+                "answer_id": None,
+                "request_id": None,
+                "at": None,
+            },
         )
     ]
     [(_, ready)] = rig.broadcaster.of("partial_minutes_ready")
@@ -111,3 +119,138 @@ def test_a_command_with_nothing_to_run_is_only_announced(tmp_path: Path) -> None
 
     assert len(rig.broadcaster.of("voice_command")) == 1
     assert rig.broadcaster.of("error") == []
+
+
+def _logged(rig: _Rig) -> RequestLog:
+    log = RequestLog(rig.store, rig.broadcaster, new_id=lambda: "r1")
+    rig.minutes = PartialMinutesJob(
+        lambda template: MinutesGenerator(rig.llm, FakeLocalizer(), 12000, minutes_template()),
+        rig.store,
+        SpeakerLabeler(FakeLocalizer()),
+        rig.broadcaster,
+        FakeLocalizer(),
+        requests=log,
+    )
+    rig.dispatch = VoiceCommandDispatcher(
+        rig.broadcaster,
+        FakeLocalizer(),
+        rig.minutes,
+        rig.questions,
+        new_id=lambda: "1",
+        requests=log,
+    )
+    return log
+
+
+def test_minutes_by_voice_end_at_the_command_and_finish_their_request(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    _logged(rig)
+    sink = rig.store.open_transcript(rig.session_id, SpeakerLabeler(FakeLocalizer()))
+    sink.emit(
+        TranscriptSegment("mic-000002", Channel.MIC, "mic", 20, 22, "VozAta, gere a ata.", ())
+    )
+    sink.close()
+
+    rig.dispatch(rig.session_id, MINUTES, 20.0)
+    assert rig.minutes.wait(5)
+
+    [item] = rig.store.read_partial_minutes(rig.session_id)
+    assert item.end == 20.0  # up to the second "VozAta" was said: the command is left out
+    [(_, command)] = rig.broadcaster.of("voice_command")
+    assert (command["request_id"], command["at"]) == ("r1", 20.0)
+    statuses = [data["request"]["status"] for _, data in rig.broadcaster.of("request_updated")]
+    assert statuses == ["recognized", "running", "done"]
+    [entry] = rig.store.read_requests(rig.session_id)
+    assert (entry.kind, entry.source, entry.text, entry.at, entry.result_id) == (
+        "minutes_so_far",
+        "voice",
+        "gere a ata",
+        20.0,
+        item.id,
+    )
+
+
+def test_a_question_by_voice_is_in_the_history_with_its_answer(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    _logged(rig)
+    rig.questions = AskJob(
+        lambda: MeetingSoFarAnswerer(
+            rig.llm, rig.store, SpeakerLabeler(FakeLocalizer()), FakeLocalizer(), 12000
+        ),
+        rig.broadcaster,
+        FakeLocalizer(),
+        origin="voice",
+        requests=rig.dispatch._requests,
+    )
+    rig.dispatch = VoiceCommandDispatcher(
+        rig.broadcaster,
+        FakeLocalizer(),
+        rig.minutes,
+        rig.questions,
+        new_id=lambda: "1",
+        requests=rig.dispatch._requests,
+    )
+    rig.llm.replies = ["Beta na terça."]
+
+    rig.dispatch(rig.session_id, DECIDED, 30.0)
+    assert rig.questions.wait(5)
+
+    [entry] = rig.store.read_requests(rig.session_id)
+    assert (entry.kind, entry.text, entry.result_id, entry.status) == (
+        "ask",
+        "O que foi decidido?",
+        "voice-1",
+        "done",
+    )
+
+
+def test_a_busy_job_fails_the_request(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    log = RequestLog(rig.store, rig.broadcaster)
+
+    class _Busy:
+        def start(self, answer_id: str, question: str, session_id: str | None) -> bool:
+            return False
+
+    VoiceCommandDispatcher(rig.broadcaster, FakeLocalizer(), None, _Busy(), requests=log)(
+        rig.session_id, DECIDED, 3.0
+    )
+
+    [entry] = rig.store.read_requests(rig.session_id)
+    assert (entry.status, entry.message) == ("failed", "voice_command_busy")
+
+
+def test_a_command_with_nothing_to_run_fails_its_request(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    log = RequestLog(rig.store, rig.broadcaster)
+
+    VoiceCommandDispatcher(rig.broadcaster, FakeLocalizer(), None, None, requests=log)(
+        rig.session_id, MINUTES
+    )
+
+    [entry] = rig.store.read_requests(rig.session_id)
+    assert (entry.status, entry.message) == ("failed", "voice_command_unavailable")
+
+
+def test_a_repeat_is_an_ignored_request(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    log = _logged(rig)
+
+    rig.dispatch.repeated(rig.session_id, MINUTES, 25.0)
+
+    [entry] = log._store.read_requests(rig.session_id)
+    assert (entry.kind, entry.status, entry.message, entry.at) == (
+        "minutes_so_far",
+        "ignored",
+        "voice_command_repeated",
+        25.0,
+    )
+    assert rig.broadcaster.of("voice_command") == []
+
+
+def test_without_a_log_a_repeat_does_nothing(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+
+    rig.dispatch.repeated(rig.session_id, MINUTES, 25.0)
+
+    assert rig.broadcaster.published == []

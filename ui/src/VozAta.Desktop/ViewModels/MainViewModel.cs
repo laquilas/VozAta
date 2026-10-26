@@ -46,7 +46,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IPathPicker? paths = null,
         Func<IAudioPlayer>? players = null,
         Uri? engineUri = null,
-        IProcessingMarkers? markers = null)
+        IProcessingMarkers? markers = null,
+        ISoundPlayer? sound = null,
+        Func<TimeSpan, CancellationToken, Task>? voiceDelay = null)
     {
         markers ??= new ProcessingMarkers();
         _client = client;
@@ -69,6 +71,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Appearance = new AppearanceViewModel(preferences, theme, localization);
         Recovery = new RecoveryViewModel(client, localization, Notify);
         Meeting = new MeetingSuggestionViewModel(localization, Recorder.StartCommand);
+        VoiceStatus = new VoiceStatusViewModel(localization, Session, preferences, sound, voiceDelay);
+        VoiceStatus.Opened += OnVoiceResultOpened;
         Meetings = new MeetingsPageViewModel(client, History, localization, clock, dialogs, shell, saver, templates, markers: markers);
         History.Players = players is null ? null : (id, tracks) => new PlayerBarViewModel(
             players(), dispatcher, track => AudioUri(engineUri, id, track), tracks, localization);
@@ -134,6 +138,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>The suggestion to record a meeting app's call (phase 54).</summary>
     public MeetingSuggestionViewModel Meeting { get; }
+
+    /// <summary>The sidebar's voice command status while recording (phase 59).</summary>
+    public VoiceStatusViewModel VoiceStatus { get; }
 
     /// <summary>The import of the old meeting folders (phase 33): banner, counts and errors.</summary>
     public MigrationViewModel Migration { get; }
@@ -387,6 +394,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>A session appeared or finished: the history reloads.</summary>
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs args)
     {
+        if (args.PropertyName == nameof(RecordingSessionService.SessionId) && Session.SessionId is { } recorded)
+        {
+            HistoryRefresh = Recorder.Requests.FollowAsync(recorded); // phase 59: its request history
+        }
+
         if (args.PropertyName != nameof(RecordingSessionService.State))
         {
             return;
@@ -450,6 +462,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Recorder.VoiceAnswer.OnDone(done);
                 History.Ask.OnAnswerDone(done);
                 History.Detail?.Ask.OnAnswerDone(done);
+                break;
+            case RequestUpdatedEvent request:
+                VoiceStatus.OnRequest(request);
+                History.Detail?.Requests.OnRequest(request); // the meeting page's Histórico tab
+                Recorder.Requests.OnRequest(request);
                 break;
             case MeetingDetectedEvent detected:
                 if (Session.IsIdle)
@@ -527,6 +544,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         HandledEvents++;
     }
 
+    /// <summary>The sidebar's "Ata pronta" / "Resposta pronta" was clicked (phase 59): show it on the Recorder.</summary>
+    private void OnVoiceResultOpened(RequestEntry request)
+    {
+        Shell.NavigateCommand.Execute(ShellViewModel.Recorder);
+        if (request.Kind == "ask")
+        {
+            Recorder.VoiceAnswer.Reopen();
+        }
+        else
+        {
+            Recorder.MinutesSoFar.Reopen();
+        }
+    }
+
     /// <summary>A <c>speakers_relabeled</c> event: show the final speakers in the live lines and the open detail.</summary>
     private async Task OnSpeakersRelabeledAsync(string? sessionId)
     {
@@ -555,6 +586,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Config.RefreshTexts();
         Tray.RefreshTexts();
         Meeting.RefreshTexts();
+        VoiceStatus.RefreshTexts();
+        Recorder.Requests.RefreshTexts();
         Shell.RefreshTexts();
         Processing.RefreshTexts();
         Migration.RefreshTexts();

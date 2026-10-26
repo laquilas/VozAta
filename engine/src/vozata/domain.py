@@ -374,6 +374,54 @@ class PartialMinutes:
 
 
 @dataclass(frozen=True)
+class RequestEntry:
+    """One request made on a meeting (phase 59): a voice command, or minutes so far / of a range /
+    again, action items or a question asked from the app; what became of it. The meeting's
+    request history."""
+
+    id: str
+    created_at: str  # ISO 8601 with offset
+    at: float | None  # seconds since the session start when asked while recording, else None
+    kind: str  # "minutes_so_far" | "range_minutes" | "minutes" | "action_items" | "ask"
+    source: str  # "voice" | "button" | "range" | "app"
+    text: str  # the phrase heard, the question, or ""
+    status: str  # "recognized" | "running" | "done" | "failed" | "ignored"
+    result_id: str | None = None  # the partial minutes id or the answer id
+    message: str | None = None  # an error code (failed / ignored)
+    finished_at: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "created_at": self.created_at,
+            "at": self.at,
+            "kind": self.kind,
+            "source": self.source,
+            "text": self.text,
+            "status": self.status,
+            "result_id": self.result_id,
+            "message": self.message,
+            "finished_at": self.finished_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> RequestEntry:
+        at = data.get("at")
+        return cls(
+            id=str(data["id"]),
+            created_at=str(data["created_at"]),
+            at=None if at is None else float(at),
+            kind=str(data["kind"]),
+            source=str(data["source"]),
+            text=str(data.get("text") or ""),
+            status=str(data["status"]),
+            result_id=optional_text(data.get("result_id")),
+            message=optional_text(data.get("message")),
+            finished_at=optional_text(data.get("finished_at")),
+        )
+
+
+@dataclass(frozen=True)
 class VoiceCommand:
     """A phrase said after the wake word while recording (phase 50) and what it does: `minutes`
     (minutes so far) or `ask` (`question` over the meeting so far)."""

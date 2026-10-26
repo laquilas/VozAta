@@ -9,6 +9,7 @@ from typing import Protocol
 
 from vozata.api.migration_job import MigrationJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
+from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager
 from vozata.api.system_info import GpuInfo
 from vozata.api.ws import EventBroadcaster
@@ -86,6 +87,8 @@ class ApiContainer:
     ask: AskRunner | None = None  # `POST /ask` (24); None: 503 ask_unavailable
     # Minutes of part of a meeting (48); None: 503 partial_minutes_unavailable
     partial_minutes: PartialMinutesJob | None = None
+    # The request history of each meeting (59); None: requests are not recorded
+    requests: RequestLog | None = None
     # Action items (23): background extraction (then `action_items_ready`; None: 503), the
     # configured export targets, and an exporter per target (None when not configured).
     extract_action_items: Callable[[str], bool] | None = None  # False: already queued (40)

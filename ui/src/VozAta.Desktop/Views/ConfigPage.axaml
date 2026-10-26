@@ -325,6 +325,9 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <!-- Phase 59: the sidebar's voice status can also sound (this PC only, ui.json) -->
+                        <CheckBox IsChecked="{Binding $parent[Window].((vm:MainViewModel)DataContext).VoiceStatus.IsSoundOn}"
+                                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandSound]}" />
                         <WrapPanel ItemSpacing="8" LineSpacing="6">
                           <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandAdd]}" Command="{Binding AddCommand}" />
                           <Button Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[VoiceCommandsRestore]}" Command="{Binding RestoreDefaultsCommand}" />

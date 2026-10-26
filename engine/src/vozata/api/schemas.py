@@ -290,6 +290,25 @@ class PartialMinutesDetail(PartialMinutesSummary):
     markdown: str
 
 
+class RequestEntryOut(BaseModel):
+    """Phase 59: one request of a meeting's history (`RequestEntry`)."""
+
+    id: str
+    created_at: str
+    at: float | None
+    kind: str
+    source: str
+    text: str
+    status: str
+    result_id: str | None = None
+    message: str | None = None
+    finished_at: str | None = None
+
+
+class RequestList(BaseModel):
+    items: list[RequestEntryOut]
+
+
 class RegenerateMinutes(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

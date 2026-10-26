@@ -68,6 +68,10 @@ class SessionPaths:
     def partial_minutes_json(self) -> Path:
         return self.root / "partial_minutes.json"  # phase 48
 
+    @property
+    def requests_json(self) -> Path:
+        return self.root / "requests.json"  # phase 59
+
 
 def write_atomic(target: Path, text: str) -> None:
     """Write `text` to a temp file in the same folder, then `os.replace` it onto `target`."""

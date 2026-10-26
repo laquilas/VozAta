@@ -31,6 +31,8 @@ translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripc
 
 [errors.api]
 voice_command_busy = "Ya se está atendiendo un comando de voz; inténtalo de nuevo en un momento."
+voice_command_repeated = "Ya lo estoy haciendo: el mismo comando de voz se dijo otra vez en pocos segundos."
+voice_command_unavailable = "Este comando de voz no puede ejecutarse en este motor."
 invalid_voice_commands = "La lista de comandos de voz no se puede guardar: {reason}."
 voice_commands_failed = "No se pudo leer ni guardar la lista de comandos de voz ({reason})."
 range_beyond_end = "La reunión dura {length}: el tramo debe terminar antes."

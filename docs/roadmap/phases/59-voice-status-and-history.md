@@ -1,0 +1,97 @@
+# Phase 59 — Voice command status in the menu; request history per meeting
+
+## Goal
+
+During a recording, a status icon with a line of text in the sidebar says what happened to a voice
+command: **gray** idle, **green** recognized / done, **yellow** processing, **red** failed
+("Gerar a ata" → "Gerando a ata…" → "Ata pronta (até 12:34)" for 5 s → gray; the same for voice
+questions). Today only a short toast says "Ouvi: …", so people repeat the command, and a repeat
+within the 15 s cooldown is dropped silently. Also:
+
+- the minutes asked for by voice cover the meeting up to the second of the request;
+- a repeat within the cooldown shows "Já estou gerando a ata";
+- a short sound when a command is recognized (a Config switch);
+- clicking the green result opens it on the Recorder page;
+- a **request history** per meeting: voice commands and requests for minutes so far, minutes of a
+  range, minutes again, action items and questions, with time and outcome.
+
+## Depends on
+
+48, 49, 50
+
+## Read first
+
+- `engine/CLAUDE.md`, `ui/CLAUDE.md`
+- `commands/detector.py`, `api/voice_dispatch.py`, `api/partial_minutes_job.py`,
+  `minutes/partial_minutes.py`, `storage/partial_minutes.py`, `storage/sqlite/annotations.py`
+- `ui/.../ViewModels/MainViewModel.cs` (`Handle`), `ProcessingIndicatorViewModel.cs`,
+  `PartialMinutesViewModels.cs`, `Views/ShellView.axaml`, `Views/SessionPage.axaml`
+- `plans/59-voice-status-and-history.md` (the approved plan)
+
+## Scope
+
+See the plan. Engine: `RequestEntry` + storage on both backends + `RequestLog` publishing
+`request_updated`, hooks in the voice dispatcher, partial minutes, ask, minutes again and action
+items, `GET /sessions/{id}/requests`; the detector passes the command second and reports repeats.
+UI: `VoiceStatusViewModel` in the sidebar, the sound, the Histórico tab and the Recorder list.
+
+## Acceptance criteria
+
+- [x] While recording, "VozAta, gere a ata" turns the sidebar icon green "Gerar a ata", then
+      yellow "Gerando a ata…", then green "Ata pronta (até mm:ss)" for 5 s, then gray.
+- [x] A voice question goes green → yellow "Respondendo…" → green "Resposta pronta" → gray.
+- [x] A failure is red with its reason; a repeat within 15 s shows yellow "Já estou gerando a ata".
+- [x] The voice minutes end at the second the command was said and show in Atas parciais.
+- [x] A short sound plays on a recognized command, unless switched off in Config.
+- [x] Clicking the green result opens it on the Recorder page.
+- [x] The meeting page has a Histórico tab with every request of that meeting.
+
+## Tests
+
+`RequestLog` and its storage on both backends, the hooks, the detector second and repeats, the
+routes; the UI state machine with a fake clock, the routing, the history list, the sound switch.
+
+## Out of scope
+
+A global history across meetings; spoken (text-to-speech) answers.
+
+## Kickoff prompt
+
+> Start phase 59 (`docs/roadmap/phases/59-voice-status-and-history.md`): read its *Read first*
+> files and `plans/59-voice-status-and-history.md`, then implement it task by task.
+
+## Progress
+
+- **Branch:** `feature/59-voice-status-and-history`
+- **Status:** done
+- **Updated:** 2026-10-26 09:20
+- **Next step:** none (PR to `main`).
+
+### Steps
+
+- [x] Phase start (phase file, plan, README)
+- [x] Engine: `RequestEntry` + storage (files, SQLite migration, bundle)
+- [x] Engine: `RequestLog`, `request_updated`, `GET /sessions/{id}/requests`
+- [x] Engine: hooks (partial minutes, ask, minutes again, action items; voice in the next step)
+- [x] Engine: detector command second + repeats; voice minutes end at the command
+- [x] UI client: `RequestEntry`, `RequestUpdatedEvent`, `GetRequestsAsync`
+- [x] UI: `VoiceStatusViewModel` + sidebar + sound + Config switch
+- [x] UI: Histórico tab + Recorder list
+- [x] Docs (api-contract, architecture)
+- [x] Suites; manual check; PR
+
+### Decisions and notes
+
+- Commits stay local until the PR; GitHub Actions is disabled, every check runs locally.
+- Manual check (2026-10-26): the Intel microphone would not open (`device_timeout`, the known
+  WASAPI wedge of this PC; no USB microphone attached), so a scratch launcher replaced only
+  `WasapiSource` with a source playing a 74 s Portuguese TTS meeting (Microsoft Maria) in real
+  time; everything else was the real engine on port 8775 (scratch database, faster-whisper
+  large-v3 on the GPU, local Ollama `qwen2.5:7b`). Results: "VozAta, gere a ata" at 57.8 s became
+  a `minutes_so_far` / `voice` entry, `done`, whose partial minutes cover 0–57.8 s (they end at the
+  command, not at the last segment); the same command said again 5 s later became an `ignored`
+  entry with `voice_command_repeated`; "VozAta, o que foi decidido?" became an `ask` entry, `done`,
+  answered correctly (the beta moved from Friday to the next Tuesday). `GET .../requests` and the
+  `request_updated` events matched. The minutes took 2 min because Ollama loaded beside Whisper.
+- Not checked by hand: the desktop sidebar icon, the chime, the click-through and the Histórico tab
+  in the running app (covered by the view-model tests with a fake clock and the history tests).

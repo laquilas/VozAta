@@ -158,6 +158,7 @@ class FolderImporter:
                 self._repo.write_minutes(session_id, *data.minutes)
             self._repo.write_action_items(session_id, data.action_items)
             self._repo.write_partial_minutes(session_id, data.partial_minutes)
+            self._repo.write_requests(session_id, data.requests)
             self._import_audio(paths)
             self._mark_imported(db, paths)
 

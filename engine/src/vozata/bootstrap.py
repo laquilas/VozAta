@@ -28,9 +28,10 @@ from vozata.api.container import ApiContainer
 from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
+from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
-from vozata.api.voice_dispatch import VoiceCommandDispatcher
+from vozata.api.voice_dispatch import VoiceCommandDispatcher, VoiceDispatch
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.capture import WasapiSource
 from vozata.audio.catalog import WasapiCatalog
@@ -62,7 +63,6 @@ from vozata.domain import (
     StorageInfo,
     TranscriptSegment,
     TranslationTarget,
-    VoiceCommand,
 )
 from vozata.export.docx import DocxExporter
 from vozata.export.markdown import MarkdownExporter
@@ -827,7 +827,7 @@ def build_session(
     live_transcription: bool | None = None,
     downloader: ModelDownloader | None = None,
     worker_moved: Callable[[str], None] = lambda url: None,
-    voice_dispatch: Callable[[str, VoiceCommand], None] | None = None,
+    voice_dispatch: VoiceDispatch | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -922,7 +922,13 @@ def build_session(
         translate_to=translation_target,
         translator_factory=translator_factory,
         voice_commands=(
-            (lambda sid: VoiceCommandSink(matcher, lambda cmd: voice_dispatch(sid, cmd)))
+            (
+                lambda sid: VoiceCommandSink(
+                    matcher,
+                    lambda cmd, at: voice_dispatch(sid, cmd, at),
+                    on_repeat=lambda cmd, at: voice_dispatch.repeated(sid, cmd, at),
+                )
+            )
             if matcher is not None and voice_dispatch is not None
             else None
         ),
@@ -1268,8 +1274,16 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         target=search_index.ensure, args=(store,), name="search-index", daemon=True
     ).start()  # sessions recorded before phase 22 become searchable
     migration = build_migration_job(settings, manager, broadcaster, localizer)  # started by the app
+    requests = RequestLog(store, broadcaster)  # phase 59: each meeting's request history
     partial_minutes = PartialMinutesJob(
-        minutes_generator, store, labeler, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu
+        minutes_generator,
+        store,
+        labeler,
+        broadcaster,
+        localizer,
+        gate=gate,
+        uses_gpu=llm_on_gpu,
+        requests=requests,
     )
 
     def meeting_so_far() -> MeetingSoFarAnswerer:
@@ -1288,10 +1302,16 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         )
 
     voice_questions = AskJob(
-        meeting_so_far, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu, origin="voice"
+        meeting_so_far,
+        broadcaster,
+        localizer,
+        gate=gate,
+        uses_gpu=llm_on_gpu,
+        origin="voice",
+        requests=requests,
     )
     voice_dispatch = VoiceCommandDispatcher(
-        broadcaster, localizer, partial_minutes, voice_questions
+        broadcaster, localizer, partial_minutes, voice_questions, requests=requests
     )
 
     return ApiContainer(
@@ -1317,6 +1337,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             queue=queue,
             uses_gpu=llm_on_gpu,
             index=index,
+            requests=requests,
         ),
         release_models=shared.release if shared is not None else lambda: None,
         stop_processing=queue.stop,
@@ -1324,8 +1345,11 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         search_index=search_index,
         vocabulary_file=lambda: vocabulary_path(settings_file.current, env_file),
         voice_commands_file=lambda: voice_commands_path(settings_file.current, env_file),
-        ask=AskJob(answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu),
+        ask=AskJob(
+            answerer, broadcaster, localizer, gate=gate, uses_gpu=llm_on_gpu, requests=requests
+        ),
         partial_minutes=partial_minutes,
+        requests=requests,
         extract_action_items=ActionItemsJob(
             store,
             action_item_extractor,
@@ -1335,6 +1359,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             queue=queue,
             uses_gpu=llm_on_gpu,
             index=index,
+            requests=requests,
         ),
         task_targets=lambda: task_targets(settings_file.current),
         task_exporter=lambda target: build_task_exporter(settings_file.current, target),

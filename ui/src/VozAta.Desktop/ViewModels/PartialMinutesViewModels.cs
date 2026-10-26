@@ -17,7 +17,8 @@ public sealed partial class MinutesSoFarViewModel(
     : ObservableObject
 {
     /// <summary>Errors that end a partial minutes request of the engine.</summary>
-    private static readonly HashSet<string> FailureCodes = ["empty_range", "partial_minutes_failed", "llm_unreachable"];
+    private static readonly HashSet<string> FailureCodes =
+        ["empty_range", "partial_minutes_failed", "llm_unreachable", "voice_command_busy"];
 
     private string? _sessionId;
     private string _markdown = "";
@@ -108,6 +109,9 @@ public sealed partial class MinutesSoFarViewModel(
 
     [RelayCommand]
     private void Close() => IsOpen = false;
+
+    /// <summary>The sidebar's "Ata pronta" was clicked (phase 59): show the last minutes again.</summary>
+    public void Reopen() => IsOpen = _markdown.Length > 0;
 }
 
 /// <summary>One row of the meeting page's "Partial minutes" tab.</summary>

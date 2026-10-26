@@ -91,7 +91,14 @@ public static class EngineEventParser
                     data.GetProperty("action").GetString() ?? "",
                     data.GetProperty("phrase").GetString() ?? "",
                     data.TryGetProperty("question", out var question) ? question.GetString() : null,
-                    data.TryGetProperty("answer_id", out var voiceAnswer) ? voiceAnswer.GetString() : null),
+                    data.TryGetProperty("answer_id", out var voiceAnswer) ? voiceAnswer.GetString() : null,
+                    data.TryGetProperty("request_id", out var voiceRequest) ? voiceRequest.GetString() : null,
+                    data.TryGetProperty("at", out var voiceAt) && voiceAt.ValueKind == JsonValueKind.Number
+                        ? voiceAt.GetDouble()
+                        : null),
+                "request_updated" => new RequestUpdatedEvent(
+                    sessionId,
+                    data.GetProperty("request").Deserialize<RequestEntry>(EngineJson.Options) ?? throw new JsonException()),
                 "partial_minutes_ready" => new PartialMinutesReadyEvent(
                     sessionId,
                     data.GetProperty("partial_id").GetString() ?? "",

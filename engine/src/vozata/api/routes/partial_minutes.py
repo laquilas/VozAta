@@ -11,6 +11,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
 from vozata.api.partial_minutes_job import PartialRequest
+from vozata.api.request_log import record, refused
 from vozata.api.routes.templates import check_template
 from vozata.api.schemas import (
     PartialMinutesDetail,
@@ -51,11 +52,15 @@ def start(
         raise ApiError(422, "invalid_range")
     if not live and (length := _beyond(meta, start_at, body.end)) is not None:  # phase 49
         raise ApiError(422, "range_beyond_end", length=format_timestamp(math.ceil(length)))
+    origin = "button" if live else "range"
+    kind = "minutes_so_far" if live else "range_minutes"
+    request_id = record(c.requests, session_id, kind, origin)  # phase 59
     request = PartialRequest(
-        session_id, start_at, body.end, "button" if live else "range", live, body.template
+        session_id, start_at, body.end, origin, live, body.template, request_id
     )
     partial_id = c.partial_minutes.start(request)
     if partial_id is None:
+        refused(c.requests, session_id, request_id, "partial_minutes_in_progress")
         raise ApiError(409, "partial_minutes_in_progress")
     return PartialMinutesStarted(partial_id=partial_id)
 

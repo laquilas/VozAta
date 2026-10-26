@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from vozata.domain import ActionItem, PartialMinutes, TranscriptSegment, Translation
+from vozata.domain import ActionItem, PartialMinutes, RequestEntry, TranscriptSegment, Translation
 from vozata.ports import StoreRepairError
 from vozata.storage.files.layout import SessionPaths
 from vozata.storage.files.repository import FileSessionRepository
@@ -40,6 +40,7 @@ class FolderContent:
     minutes: tuple[str, datetime] | None  # markdown and when it was written
     action_items: list[ActionItem]
     partial_minutes: list[PartialMinutes] = field(default_factory=list)  # phase 48
+    requests: list[RequestEntry] = field(default_factory=list)  # phase 59
 
 
 def read_meta(files: FileSessionRepository, session_id: str) -> dict[str, Any]:
@@ -81,6 +82,7 @@ def read_content(files: FileSessionRepository, paths: SessionPaths) -> FolderCon
         minutes=minutes,
         action_items=items,
         partial_minutes=files.read_partial_minutes(paths.id),
+        requests=files.read_requests(paths.id),
     )
 
 

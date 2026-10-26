@@ -12,7 +12,7 @@ import pytest
 from tests.fakes import FakeLocalizer
 from tests.storage.repository_contract import RAW, segment
 from tests.storage.test_migration import RATE, Rig
-from vozata.domain import ActionItem, AudioTrack, Channel, PartialMinutes, Translation
+from vozata.domain import ActionItem, AudioTrack, Channel, PartialMinutes, RequestEntry, Translation
 from vozata.labels import SpeakerLabeler
 from vozata.storage.folder_writer import write_folder
 
@@ -34,6 +34,9 @@ def target(tmp_path: Path) -> Iterator[Rig]:
 PARTIAL = PartialMinutes(
     "p1", "2026-10-22T10:05:00-03:00", 0.0, 312.5, "button", "# So far\n\n- Ação\n", "general"
 )  # phase 48
+REQUEST = RequestEntry(
+    "r1", "2026-10-22T10:05:00-03:00", 312.5, "minutes_so_far", "voice", "gere a ata", "done", "p1"
+)  # phase 59
 
 
 def _labeler() -> SpeakerLabeler:
@@ -54,6 +57,7 @@ def _full_session(rig: Rig) -> str:
     items = [ActionItem("a1", "Send the deck", "Ana", "2026-10-20", ("mic-000001",))]
     rig.files.write_action_items(session_id, items)
     rig.files.write_partial_minutes(session_id, [PARTIAL])
+    rig.files.write_requests(session_id, [REQUEST])
     assert rig.import_all() == [None]
     return session_id
 
@@ -76,6 +80,7 @@ def test_a_written_folder_imports_back_into_the_same_session(source: Rig, target
     assert copy.read_minutes(session_id) == "# Minutes\n\n- Decided\n"
     assert copy.read_action_items(session_id) == repo.read_action_items(session_id)
     assert copy.read_partial_minutes(session_id) == [PARTIAL]
+    assert copy.read_requests(session_id) == [REQUEST]
     for channel in Channel:
         length = source.audio.length(session_id, channel)
         assert length == round(2.5 * RATE)

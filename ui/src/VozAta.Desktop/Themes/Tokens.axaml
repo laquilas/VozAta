@@ -42,6 +42,11 @@
       <SolidColorBrush x:Key="Brush.SuccessText" Color="#1B6B21" />
       <SolidColorBrush x:Key="Brush.Info" Color="#1E88E5" />
       <SolidColorBrush x:Key="Brush.InfoSurface" Color="#E8F1FC" />
+      <!-- Voice command status on the sidebar (phase 59): the sidebar is dark in both themes -->
+      <SolidColorBrush x:Key="Brush.VoiceIdle" Color="#A797B3" />
+      <SolidColorBrush x:Key="Brush.VoiceOk" Color="#66BB6A" />
+      <SolidColorBrush x:Key="Brush.VoiceBusy" Color="#F5B041" />
+      <SolidColorBrush x:Key="Brush.VoiceFailed" Color="#EF5350" />
       <!-- Transcript speakers and level meters -->
       <SolidColorBrush x:Key="Brush.ChannelMic" Color="#2E7D32" />
       <SolidColorBrush x:Key="Brush.ChannelSystem" Color="#1565C0" />
@@ -86,6 +91,11 @@
       <SolidColorBrush x:Key="Brush.SuccessText" Color="#86D08A" />
       <SolidColorBrush x:Key="Brush.Info" Color="#64B5F6" />
       <SolidColorBrush x:Key="Brush.InfoSurface" Color="#162A40" />
+      <!-- Voice command status on the sidebar (phase 59): the sidebar is dark in both themes -->
+      <SolidColorBrush x:Key="Brush.VoiceIdle" Color="#A797B3" />
+      <SolidColorBrush x:Key="Brush.VoiceOk" Color="#66BB6A" />
+      <SolidColorBrush x:Key="Brush.VoiceBusy" Color="#F5B041" />
+      <SolidColorBrush x:Key="Brush.VoiceFailed" Color="#EF5350" />
       <SolidColorBrush x:Key="Brush.ChannelMic" Color="#86D08A" />
       <SolidColorBrush x:Key="Brush.ChannelSystem" Color="#90CAF9" />
       <SolidColorBrush x:Key="Brush.ChannelOther" Color="#D9A3E3" />

@@ -13,6 +13,7 @@ import logging
 from collections.abc import Callable
 from typing import Protocol
 
+from vozata.api.request_log import RequestLog
 from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
 from vozata.ports import Localizer, SessionRepository
@@ -73,7 +74,12 @@ class QueuedModelJob:
         queue: ProcessingQueue,
         uses_gpu: Callable[[], bool] = lambda: False,
         index: Callable[[str], None] = lambda session_id: None,
+        requests: RequestLog | None = None,
+        request_kind: str = "",
     ) -> None:
+        self._requests = requests  # phase 59: each attempt's outcome finishes the request
+        self._request_kind = frozenset({request_kind})
+        self._last_error: dict[str, str] = {}
         self._store = store
         self._labeler = labeler
         self._broadcaster = broadcaster
@@ -96,6 +102,7 @@ class QueuedModelJob:
 
         def model(token: CancelToken, progress: Callable[[float], None]) -> None:
             written[0] = attempt(token)
+            self._finish(session_id, written[0])
 
         def reindex(token: CancelToken, progress: Callable[[float], None]) -> None:
             if not written[0]:
@@ -116,4 +123,14 @@ class QueuedModelJob:
         )
 
     def _error(self, session_id: str, code: str, message: str) -> None:
+        self._last_error[session_id] = code
         self._broadcaster.publish("error", session_id, {"code": code, "message": message})
+
+    def _finish(self, session_id: str, written: bool) -> None:
+        code = self._last_error.pop(session_id, None)
+        if self._requests is None:
+            return
+        status = "done" if written else "failed"
+        self._requests.finish_pending(
+            session_id, self._request_kind, status, message=None if written else code
+        )

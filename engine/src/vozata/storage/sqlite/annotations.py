@@ -1,5 +1,5 @@
-"""Session annotations in `vozata.db`: translations, speakers, minutes, action items and partial
-minutes (phase 48)."""
+"""Session annotations in `vozata.db`: translations, speakers, minutes, action items, partial
+minutes (phase 48) and the request history (phase 59)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from contextlib import AbstractContextManager
 from datetime import datetime
 
-from vozata.domain import ActionItem, PartialMinutes, Translation
+from vozata.domain import ActionItem, PartialMinutes, RequestEntry, Translation
 from vozata.ports import TranslationWriter
 from vozata.storage.sqlite.db import Database
 from vozata.storage.sqlite.rows import (
@@ -22,6 +22,10 @@ from vozata.storage.sqlite.writers import SqliteTranslationWriter
 
 # in the order of `PartialMinutes` fields
 _PARTIAL_COLUMNS = "partial_id, created_at, range_start, range_end, origin, markdown, template"
+# in the order of `RequestEntry` fields
+_REQUEST_COLUMNS = (
+    "request_id, created_at, at, kind, source, text, status, result_id, message, finished_at"
+)
 
 
 class SessionAnnotations:
@@ -157,5 +161,24 @@ class SessionAnnotations:
             db.executemany(
                 f"INSERT INTO partial_minutes (session_id, {_PARTIAL_COLUMNS})"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [(session_id, *dataclasses.astuple(item)) for item in items],
+            )
+
+    def read_requests(self, session_id: str) -> list[RequestEntry]:
+        check_id(session_id)
+        rows = self._db.connection().execute(
+            f"SELECT {_REQUEST_COLUMNS} FROM requests WHERE session_id = ? ORDER BY row_id",
+            (session_id,),
+        )
+        return [RequestEntry(*row) for row in rows]
+
+    def write_requests(self, session_id: str, items: Sequence[RequestEntry]) -> None:
+        """Replace the request history in one transaction."""
+        check_id(session_id)
+        with self._db.write() as db:
+            db.execute("DELETE FROM requests WHERE session_id = ?", (session_id,))
+            db.executemany(
+                f"INSERT INTO requests (session_id, {_REQUEST_COLUMNS})"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [(session_id, *dataclasses.astuple(item)) for item in items],
             )

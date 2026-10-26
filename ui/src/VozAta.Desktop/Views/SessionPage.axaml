@@ -344,6 +344,10 @@
         <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabAsk]}">
           <views:AskView DataContext="{Binding Ask}" Margin="8" />
         </TabItem>
+        <!-- Every request made on this meeting (phase 59): voice commands, minutes, action items, questions -->
+        <TabItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[TabRequests]}">
+          <views:RequestHistoryView DataContext="{Binding Requests}" Margin="8" />
+        </TabItem>
       </TabControl>
     </DockPanel>
   </DockPanel>

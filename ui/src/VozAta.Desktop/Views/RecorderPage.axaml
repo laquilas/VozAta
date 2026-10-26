@@ -221,6 +221,12 @@
                  TextWrapping="Wrap" IsVisible="{Binding SystemMeter.NoSignal}" />
     </StackPanel>
 
+    <!-- The requests of this recording (phase 59): voice commands and the rest, newest first -->
+    <Expander DockPanel.Dock="Bottom" Margin="0,10,0,0" IsVisible="{Binding Requests.HasRows}"
+              Header="{Binding L[RecorderRequests]}">
+      <views:RequestHistoryView DataContext="{Binding Requests}" MaxHeight="180" />
+    </Expander>
+
     <!-- A question asked by voice (phase 50): its streamed answer beside the live transcript -->
     <Border DockPanel.Dock="Right" Width="380" Margin="10,10,0,0" Classes="card"
             IsVisible="{Binding VoiceAnswer.IsOpen}">

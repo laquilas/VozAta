@@ -6,6 +6,7 @@ import logging
 from collections.abc import Callable
 
 from vozata.api.model_job import Cancels, QueuedModelJob
+from vozata.api.request_log import RequestLog
 from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.generator import MinutesGenerator
@@ -42,9 +43,18 @@ class MinutesJob(QueuedModelJob):
         queue: ProcessingQueue,
         uses_gpu: Callable[[], bool] = lambda: False,
         index: Callable[[str], None] = lambda session_id: None,
+        requests: RequestLog | None = None,
     ) -> None:
         super().__init__(
-            store, labeler, broadcaster, localizer, queue=queue, uses_gpu=uses_gpu, index=index
+            store,
+            labeler,
+            broadcaster,
+            localizer,
+            queue=queue,
+            uses_gpu=uses_gpu,
+            index=index,
+            requests=requests,
+            request_kind="minutes",
         )
         self._build_generator = build_generator
 

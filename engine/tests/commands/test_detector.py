@@ -26,10 +26,26 @@ class _Clock:
         return self.now
 
 
+HEARD: list[tuple[VoiceCommand, float]] = []
+REPEATED: list[tuple[VoiceCommand, float]] = []
+
+
 def _sink() -> tuple[VoiceCommandSink, list[VoiceCommand], _Clock]:
     heard: list[VoiceCommand] = []
+    HEARD.clear()
+    REPEATED.clear()
     clock = _Clock()
-    sink = VoiceCommandSink(CommandMatcher("VozAta", [MINUTES, DECIDED]), heard.append, clock)
+
+    def on_command(command: VoiceCommand, at: float) -> None:
+        heard.append(command)
+        HEARD.append((command, at))
+
+    sink = VoiceCommandSink(
+        CommandMatcher("VozAta", [MINUTES, DECIDED]),
+        on_command,
+        clock,
+        on_repeat=lambda command, at: REPEATED.append((command, at)),
+    )
     return sink, heard, clock
 
 
@@ -39,6 +55,7 @@ def test_a_command_into_the_microphone_runs() -> None:
     sink.emit(_segment(10, "Ok. VozAta, gere a ata."))
 
     assert heard == [MINUTES]
+    assert HEARD == [(MINUTES, 10)]  # phase 59: the second of the command
 
 
 def test_the_system_audio_never_runs_a_command() -> None:
@@ -57,6 +74,7 @@ def test_a_wake_word_alone_waits_for_the_next_microphone_segment() -> None:
     sink.emit(_segment(16, "O que foi decidido?"))
 
     assert heard == [DECIDED]
+    assert HEARD == [(DECIDED, 10)]  # when the wake word was said
 
 
 def test_the_command_must_follow_soon() -> None:
@@ -98,10 +116,11 @@ def test_the_same_action_runs_once_per_cooldown() -> None:
     sink.emit(_segment(40, "VozAta, gere a ata."))
 
     assert heard == [MINUTES, DECIDED, MINUTES]
+    assert REPEATED == [(MINUTES, 15)]  # phase 59: the repeat is reported
 
 
 def test_a_failing_command_never_stops_the_transcript(caplog: pytest.LogCaptureFixture) -> None:
-    def broken(command: VoiceCommand) -> None:
+    def broken(command: VoiceCommand, at: float) -> None:
         raise RuntimeError("boom")
 
     sink = VoiceCommandSink(CommandMatcher("VozAta", [MINUTES]), broken)

@@ -10,6 +10,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 
+from vozata.api.request_log import RequestLog
 from vozata.api.ws import EventBroadcaster
 from vozata.labels import SpeakerLabeler
 from vozata.minutes.partial_minutes import write_partial_minutes
@@ -28,6 +29,7 @@ class PartialRequest:
     origin: str  # "button" | "voice" | "range"
     live: bool  # the meeting is being recorded: "what was said so far"
     template: str | None = None
+    request_id: str | None = None  # its entry in the meeting's request history (phase 59)
 
 
 class PartialMinutesJob:
@@ -51,7 +53,9 @@ class PartialMinutesJob:
         gate: GpuGate | None = None,
         uses_gpu: Callable[[], bool] = lambda: False,
         new_id: Callable[[], str] = lambda: uuid.uuid4().hex[:12],
+        requests: RequestLog | None = None,
     ) -> None:
+        self._requests = requests
         self._build = build_generator
         self._store = store
         self._labeler = labeler
@@ -112,19 +116,20 @@ class PartialMinutesJob:
                     new_id=lambda: partial_id,
                 )
         except EmptyTranscriptError:
-            self._error(session_id, "empty_range", t("errors.api.empty_range"))
+            self._error(request, "empty_range", t("errors.api.empty_range"))
         except LlmUnreachableError as error:
             _log.warning("Partial minutes of %s failed: %s", session_id, error)
             message = t("errors.llm_unreachable.minutes", host=error.host)
-            self._error(session_id, "llm_unreachable", message)
+            self._error(request, "llm_unreachable", message)
         except LanguageModelError as error:
             _log.warning("Partial minutes of %s failed: %s", session_id, error)
             message = t("errors.api.partial_minutes_failed", reason=error)
-            self._error(session_id, "partial_minutes_failed", message)
+            self._error(request, "partial_minutes_failed", message)
         except Exception:
             _log.exception("Partial minutes of %s failed", session_id)
-            self._error(session_id, "partial_minutes_failed", t("errors.api.internal_error"))
+            self._error(request, "partial_minutes_failed", t("errors.api.internal_error"))
         else:
+            self._finish(request, "done", result_id=item.id)
             self._broadcaster.publish(
                 "partial_minutes_ready",
                 session_id,
@@ -139,5 +144,23 @@ class PartialMinutesJob:
             with self._lock:
                 self._busy = False
 
-    def _error(self, session_id: str, code: str, message: str) -> None:
-        self._broadcaster.publish("error", session_id, {"code": code, "message": message})
+    def _error(self, request: PartialRequest, code: str, message: str) -> None:
+        self._finish(request, "failed", message=code)
+        self._broadcaster.publish("error", request.session_id, {"code": code, "message": message})
+
+    def _finish(
+        self,
+        request: PartialRequest,
+        status: str,
+        *,
+        result_id: str | None = None,
+        message: str | None = None,
+    ) -> None:
+        if self._requests is not None and request.request_id is not None:
+            self._requests.update(
+                request.session_id,
+                request.request_id,
+                status,
+                result_id=result_id,
+                message=message,
+            )
