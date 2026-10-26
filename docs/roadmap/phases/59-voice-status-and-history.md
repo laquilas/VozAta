@@ -37,14 +37,14 @@ UI: `VoiceStatusViewModel` in the sidebar, the sound, the Histórico tab and the
 
 ## Acceptance criteria
 
-- [ ] While recording, "VozAta, gere a ata" turns the sidebar icon green "Gerar a ata", then
+- [x] While recording, "VozAta, gere a ata" turns the sidebar icon green "Gerar a ata", then
       yellow "Gerando a ata…", then green "Ata pronta (até mm:ss)" for 5 s, then gray.
-- [ ] A voice question goes green → yellow "Respondendo…" → green "Resposta pronta" → gray.
-- [ ] A failure is red with its reason; a repeat within 15 s shows yellow "Já estou gerando a ata".
-- [ ] The voice minutes end at the second the command was said and show in Atas parciais.
-- [ ] A short sound plays on a recognized command, unless switched off in Config.
-- [ ] Clicking the green result opens it on the Recorder page.
-- [ ] The meeting page has a Histórico tab with every request of that meeting.
+- [x] A voice question goes green → yellow "Respondendo…" → green "Resposta pronta" → gray.
+- [x] A failure is red with its reason; a repeat within 15 s shows yellow "Já estou gerando a ata".
+- [x] The voice minutes end at the second the command was said and show in Atas parciais.
+- [x] A short sound plays on a recognized command, unless switched off in Config.
+- [x] Clicking the green result opens it on the Recorder page.
+- [x] The meeting page has a Histórico tab with every request of that meeting.
 
 ## Tests
 
@@ -63,9 +63,9 @@ A global history across meetings; spoken (text-to-speech) answers.
 ## Progress
 
 - **Branch:** `feature/59-voice-status-and-history`
-- **Status:** in progress
-- **Updated:** 2026-10-23 19:40
-- **Next step:** manual check: scratch engine on port 8775 + Debug app, a TTS "VozAta, gere a ata" through the speakers; then PR.
+- **Status:** done
+- **Updated:** 2026-10-26 09:20
+- **Next step:** none (PR to `main`).
 
 ### Steps
 
@@ -78,4 +78,20 @@ A global history across meetings; spoken (text-to-speech) answers.
 - [x] UI: `VoiceStatusViewModel` + sidebar + sound + Config switch
 - [x] UI: Histórico tab + Recorder list
 - [x] Docs (api-contract, architecture)
-- [ ] Suites; manual check; PR
+- [x] Suites; manual check; PR
+
+### Decisions and notes
+
+- Commits stay local until the PR; GitHub Actions is disabled, every check runs locally.
+- Manual check (2026-10-26): the Intel microphone would not open (`device_timeout`, the known
+  WASAPI wedge of this PC; no USB microphone attached), so a scratch launcher replaced only
+  `WasapiSource` with a source playing a 74 s Portuguese TTS meeting (Microsoft Maria) in real
+  time; everything else was the real engine on port 8775 (scratch database, faster-whisper
+  large-v3 on the GPU, local Ollama `qwen2.5:7b`). Results: "VozAta, gere a ata" at 57.8 s became
+  a `minutes_so_far` / `voice` entry, `done`, whose partial minutes cover 0–57.8 s (they end at the
+  command, not at the last segment); the same command said again 5 s later became an `ignored`
+  entry with `voice_command_repeated`; "VozAta, o que foi decidido?" became an `ask` entry, `done`,
+  answered correctly (the beta moved from Friday to the next Tuesday). `GET .../requests` and the
+  `request_updated` events matched. The minutes took 2 min because Ollama loaded beside Whisper.
+- Not checked by hand: the desktop sidebar icon, the chime, the click-through and the Histórico tab
+  in the running app (covered by the view-model tests with a fake clock and the history tests).
