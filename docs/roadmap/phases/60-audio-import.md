@@ -86,12 +86,12 @@ original compressed file; splitting a stereo file into mic and system.
 - **Branch:** `feature/60-audio-import`
 - **Status:** in progress
 - **Updated:** 2026-10-29 10:00
-- **Next step:** engine: `AudioDecoder` port + `PyAvDecoder` with tests.
+- **Next step:** engine: `FileAudioStore.import_pcm`, then `storage/audio_import.py` (`AudioFileImporter`) tested on both backends with a fake decoder.
 
 ### Steps
 
 - [x] Phase start (phase file, plan, README)
-- [ ] Engine: `AudioDecoder` port + `PyAvDecoder`
+- [x] Engine: `AudioDecoder` port + `PyAvDecoder`
 - [ ] Engine: `import_pcm` on the file store + `AudioFileImporter` (both backends)
 - [ ] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
 - [ ] Docs (api-contract, architecture)

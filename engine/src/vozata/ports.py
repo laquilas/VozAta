@@ -6,7 +6,7 @@ needs them.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager
 from datetime import datetime
 from pathlib import Path
@@ -536,6 +536,29 @@ class AudioStore(Protocol):
 
     def discard(self, session_id: str) -> None:
         """Remove the audio of a session that is kept: its transcript and minutes stay (39)."""
+        ...
+
+
+class AudioDecodeError(RuntimeError):
+    """A file holds no audio that can be decoded (phase 60); the message says why."""
+
+
+@runtime_checkable
+class AudioDecoder(Protocol):
+    """Reads an audio (or video) file recorded elsewhere (phase 60)."""
+
+    def blocks(self, path: Path) -> Iterator[bytes]:
+        """The file's first audio stream as mono little-endian 16-bit PCM at the engine's sample
+        rate, a block at a time; raises `AudioDecodeError`."""
+        ...
+
+
+@runtime_checkable
+class PcmImport(Protocol):
+    """A store that takes a whole channel at once (phase 33 folders, phase 60 audio files)."""
+
+    def import_pcm(self, session_id: str, channel: Channel, blocks: Iterable[bytes]) -> int:
+        """Replace the channel's audio with `blocks` of mono 16-bit PCM; returns the samples."""
         ...
 
 
