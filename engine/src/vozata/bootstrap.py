@@ -37,6 +37,7 @@ from vozata.audio.capture import WasapiSource
 from vozata.audio.catalog import WasapiCatalog
 from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.clock import SessionClock
+from vozata.audio.decode import PyAvDecoder
 from vozata.audio.devices import DeviceInfo, default_input, default_loopback, find_device
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.portaudio import PortAudioThread
@@ -119,6 +120,7 @@ from vozata.session_title import stored_title
 from vozata.settings_file import SettingsFile, SettingsWriteError
 from vozata.settings_options import SettingsOptions
 from vozata.storage.audio_cache import WavCache
+from vozata.storage.audio_import import AudioFileImporter, ImportableAudio
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.bundle_import import FileBundleImporter
 from vozata.storage.files.folder import open_session_folder as open_files_folder
@@ -607,6 +609,27 @@ def build_bundle_importer(settings: Settings) -> BundleImporter:
     if not isinstance(repository, FileSessionRepository) or not isinstance(audio, FileAudioStore):
         raise TypeError(f"no meeting import for {type(repository).__name__}")
     return FileBundleImporter(repository, audio, MIXERS[settings.mix_mode]())
+
+
+def build_audio_importer(
+    settings_file: SettingsFile,
+    repository: SessionRepository,
+    audio: SessionAudio,
+    env_file: Path | None = None,
+) -> AudioFileImporter | None:
+    """Audio files recorded elsewhere (phase 60) into the configured storage backend, with the
+    current settings and glossary of a new recording; None when the store cannot take them."""
+    if not isinstance(audio, ImportableAudio):
+        return None
+    settings = settings_file.current
+    return AudioFileImporter(
+        repository,
+        audio,
+        PyAvDecoder(settings.sample_rate),
+        lambda: settings_file.current,
+        MIXERS[settings.mix_mode](),
+        vocabulary=lambda: session_vocabulary(settings_file.current, (), env_file),
+    )
 
 
 def build_migration_job(
@@ -1368,6 +1391,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         audio_cache=audio.cache if isinstance(audio, SqliteAudioStore) else None,
         migration=migration,
         bundle_importer=build_bundle_importer(settings),
+        audio_importer=build_audio_importer(settings_file, store, audio, env_file),
         setting_options=options.collect,
         connection_check=ConnectionChecks(
             (DIARIZATION_MODEL, EMBEDDING_MODEL),

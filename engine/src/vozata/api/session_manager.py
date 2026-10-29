@@ -323,6 +323,14 @@ class SessionManager:
             if not self._queue.contains(session_id):
                 self._queue.enqueue(self._job_factory(session_id, True, None))
 
+    def process_imported(self, session_id: str) -> None:
+        """Queue the job of a meeting imported from an audio file (phase 60): like the job after
+        Stop, without a repair step or a pipeline to wait for. A meeting already queued is left
+        as is."""
+        with self._lock:
+            if not self._queue.contains(session_id):
+                self._queue.enqueue(self._job_factory(session_id, False, None))
+
     def resume_pending(self) -> list[str]:
         """Queue the meetings a restart (or a crash after Stop) left unfinished; return their ids.
 

@@ -13,7 +13,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path, PurePath
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from vozata.config import Settings
 from vozata.domain import Channel
@@ -32,6 +32,7 @@ from vozata.session_title import MAX_TITLE_LENGTH, normalize_title
 _log = logging.getLogger(__name__)
 
 
+@runtime_checkable
 class ImportableAudio(SessionAudio, PcmImport, RecoverableStore, Protocol):
     """Both audio stores: a channel written at once, then the other padded to its length."""
 

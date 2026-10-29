@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import wave
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,7 @@ from vozata.config import Settings
 from vozata.domain import Channel, StorageBackend, StorageInfo
 from vozata.labels import SpeakerLabeler
 from vozata.processing.job import run_job_inline
+from vozata.settings_file import SettingsFile
 from vozata.storage.audio_cache import WavCache
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.bundle_import import FileBundleImporter
@@ -241,6 +243,36 @@ def test_a_store_without_a_meeting_import_is_an_error(
 
     with pytest.raises(TypeError):
         bootstrap.build_bundle_importer(_settings(tmp_path))
+
+
+@pytest.mark.parametrize("backend", list(StorageBackend))
+def test_the_audio_import_writes_into_the_storage_backend(
+    tmp_path: Path, backend: StorageBackend
+) -> None:
+    settings = _settings(tmp_path, storage_backend=backend)
+    settings_file = SettingsFile(tmp_path / ".env", settings, environ={})
+    store, audio = bootstrap.build_store(settings), bootstrap.build_audio_store(settings)
+    importer = bootstrap.build_audio_importer(settings_file, store, audio, tmp_path / ".env")
+    (tmp_path / "vocabulary.txt").write_text("Kubernetes\n", encoding="utf-8")
+    wav = tmp_path / "call.wav"
+    with wave.open(str(wav), "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(16000)
+        out.writeframes(np.full(16000, 1000, np.int16).tobytes())
+
+    assert importer is not None
+    session_id = importer.import_file(wav, "call.wav", None)
+
+    assert audio.length(session_id, Channel.SYSTEM) == 16000
+    assert store.read_meta(session_id)["vocabulary"] == ["Kubernetes"]
+    bootstrap.close_databases()
+
+
+def test_a_store_without_whole_channel_writes_has_no_audio_import(tmp_path: Path) -> None:
+    settings_file = SettingsFile(tmp_path / ".env", _settings(tmp_path), environ={})
+
+    assert bootstrap.build_audio_importer(settings_file, object(), object()) is None  # type: ignore[arg-type]
 
 
 class _Manager:

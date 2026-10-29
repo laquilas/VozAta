@@ -32,6 +32,7 @@ from vozata.ports import (
 )
 from vozata.settings_file import SettingsFile
 from vozata.settings_options import OptionLists
+from vozata.storage.audio_import import AudioFileImporter
 from vozata.worker_client.discovery import FoundWorker
 from vozata.worker_client.pairing import PairedWorker, pair_with_worker
 from vozata.worker_client.status import WorkerStatus
@@ -108,6 +109,8 @@ class ApiContainer:
     meeting_detector: BackgroundJob | None = None
     # Meeting ZIPs (39): `POST /sessions/import`; None: 503 import_unavailable.
     bundle_importer: BundleImporter | None = None
+    # Audio files recorded elsewhere (60): `POST /sessions/import-audio`; None: 503.
+    audio_importer: AudioFileImporter | None = None
     # Config page (38): `GET /settings/options` lists and `POST /settings/test/{target}` checks.
     setting_options: Callable[[], OptionLists] = lambda: OptionLists({}, {})
     connection_check: Callable[[CheckTarget, Settings], CheckResult] = lambda target, settings: (

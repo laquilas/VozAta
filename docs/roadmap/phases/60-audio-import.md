@@ -86,14 +86,14 @@ original compressed file; splitting a stereo file into mic and system.
 - **Branch:** `feature/60-audio-import`
 - **Status:** in progress
 - **Updated:** 2026-10-29 10:00
-- **Next step:** engine: `SessionManager.process_imported`, then `api/routes/audio_import.py` (`POST /sessions/import-audio`), container + bootstrap wiring, locale keys.
+- **Next step:** docs: `POST /sessions/import-audio` in `api-contract.md`; `AudioDecoder` / `PcmImport` ports and the `source` / `imported_file` meta fields in `architecture.md`.
 
 ### Steps
 
 - [x] Phase start (phase file, plan, README)
 - [x] Engine: `AudioDecoder` port + `PyAvDecoder`
 - [x] Engine: `import_pcm` on the file store + `AudioFileImporter` (both backends)
-- [ ] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
+- [x] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
 - [ ] Docs (api-contract, architecture)
 - [ ] UI client: `ImportAudioAsync`
 - [ ] UI: picker + Meetings page "Import audio" + strings
@@ -105,4 +105,5 @@ original compressed file; splitting a stereo file into mic and system.
   detected), not always `auto`; the vocabulary is the glossary of a new recording.
 - `AudioDecoder.duration` (the container's estimate) only names the session id; the stored
   length is the decoded frame count.
+- `api/uploads.save_body` is the raw-body-with-cap helper shared with phase 39's import.
 - Requested by the user on 2026-10-29; they chose "pick the file, then process" (no dialog).
