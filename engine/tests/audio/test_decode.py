@@ -109,3 +109,16 @@ def test_an_empty_wav_yields_nothing(tmp_path: Path) -> None:
     path = _wav(tmp_path / "a.wav", 0, RATE, 1)
 
     assert _samples(PyAvDecoder(RATE), path).size == 0
+
+
+def test_the_duration_is_what_the_file_announces(tmp_path: Path) -> None:
+    path = _wav(tmp_path / "a.wav", 2.5, 44100, 2)
+
+    assert PyAvDecoder(RATE).duration(path) == pytest.approx(2.5, abs=0.01)
+
+
+def test_the_duration_of_a_file_that_is_not_audio_is_unknown(tmp_path: Path) -> None:
+    path = tmp_path / "notes.txt"
+    path.write_text("hello", encoding="utf-8")
+
+    assert PyAvDecoder(RATE).duration(path) is None

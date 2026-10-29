@@ -22,6 +22,14 @@ class PyAvDecoder:
     def __init__(self, sample_rate: int) -> None:
         self._rate = sample_rate
 
+    def duration(self, path: Path) -> float | None:
+        try:
+            with av.open(str(path)) as container:
+                micros = container.duration  # in `av.time_base` units (microseconds)
+        except (av.FFmpegError, OSError):
+            return None
+        return None if micros is None else micros / av.time_base
+
     def blocks(self, path: Path) -> Iterator[bytes]:
         try:
             container = av.open(str(path))

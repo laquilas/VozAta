@@ -86,13 +86,13 @@ original compressed file; splitting a stereo file into mic and system.
 - **Branch:** `feature/60-audio-import`
 - **Status:** in progress
 - **Updated:** 2026-10-29 10:00
-- **Next step:** engine: `FileAudioStore.import_pcm`, then `storage/audio_import.py` (`AudioFileImporter`) tested on both backends with a fake decoder.
+- **Next step:** engine: `SessionManager.process_imported`, then `api/routes/audio_import.py` (`POST /sessions/import-audio`), container + bootstrap wiring, locale keys.
 
 ### Steps
 
 - [x] Phase start (phase file, plan, README)
 - [x] Engine: `AudioDecoder` port + `PyAvDecoder`
-- [ ] Engine: `import_pcm` on the file store + `AudioFileImporter` (both backends)
+- [x] Engine: `import_pcm` on the file store + `AudioFileImporter` (both backends)
 - [ ] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
 - [ ] Docs (api-contract, architecture)
 - [ ] UI client: `ImportAudioAsync`
@@ -101,4 +101,8 @@ original compressed file; splitting a stereo file into mic and system.
 
 ### Decisions and notes
 
+- The importer uses the language of `TRANSCRIPTION_LANGUAGE` like a recording (`auto` is
+  detected), not always `auto`; the vocabulary is the glossary of a new recording.
+- `AudioDecoder.duration` (the container's estimate) only names the session id; the stored
+  length is the decoded frame count.
 - Requested by the user on 2026-10-29; they chose "pick the file, then process" (no dialog).

@@ -547,6 +547,10 @@ class AudioDecodeError(RuntimeError):
 class AudioDecoder(Protocol):
     """Reads an audio (or video) file recorded elsewhere (phase 60)."""
 
+    def duration(self, path: Path) -> float | None:
+        """The length the file announces in seconds (an estimate); None when unknown."""
+        ...
+
     def blocks(self, path: Path) -> Iterator[bytes]:
         """The file's first audio stream as mono little-endian 16-bit PCM at the engine's sample
         rate, a block at a time; raises `AudioDecodeError`."""
