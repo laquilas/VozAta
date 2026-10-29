@@ -86,7 +86,7 @@ original compressed file; splitting a stereo file into mic and system.
 - **Branch:** `feature/60-audio-import`
 - **Status:** in progress
 - **Updated:** 2026-10-29 10:00
-- **Next step:** UI: `IFileSaver.OpenFileAsync` (several extensions, name + modified time), `MeetingsPageViewModel.ImportAudioCommand`, the Meetings page button and the strings in en / pt-BR / es.
+- **Next step:** manual check: a scratch engine (`DATABASE_PATH` on a copy) importing a real mp3 / m4a through `POST /sessions/import-audio` until `done`, then the desktop button.
 
 ### Steps
 
@@ -96,7 +96,7 @@ original compressed file; splitting a stereo file into mic and system.
 - [x] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
 - [x] Docs (api-contract, architecture)
 - [x] UI client: `ImportAudioAsync`
-- [ ] UI: picker + Meetings page "Import audio" + strings
+- [x] UI: picker + Meetings page "Import audio" + strings
 - [ ] Full suites, manual check
 
 ### Decisions and notes
@@ -106,4 +106,6 @@ original compressed file; splitting a stereo file into mic and system.
 - `AudioDecoder.duration` (the container's estimate) only names the session id; the stored
   length is the decoded frame count.
 - `api/uploads.save_body` is the raw-body-with-cap helper shared with phase 39's import.
+- `IFileSaver.OpenFileAsync` returns the picked file's name and modified time (`OpenedFile`); the
+  upload shares the app's `HttpClient` 5-minute timeout, enough for a local upload and decode.
 - Requested by the user on 2026-10-29; they chose "pick the file, then process" (no dialog).

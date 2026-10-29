@@ -230,6 +230,7 @@ public sealed partial class MeetingsPageViewModel
     /// <summary>An import is running (the button waits for it).</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ImportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportAudioCommand))]
     public partial bool IsImporting { get; private set; }
 
     /// <summary>
@@ -259,6 +260,53 @@ public sealed partial class MeetingsPageViewModel
             var summary = await ImportedSummaryAsync(result.Id);
             var name = summary is null ? result.Id : NewRow(summary).DisplayTitle;
             Message = _localization.Format(result.AudioRestored ? "MeetingAudioRestored" : "MeetingImported", name);
+            if (summary is not null)
+            {
+                History.Show(summary);
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException or IOException or UnauthorizedAccessException)
+        {
+            Error = ErrorText(error);
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
+
+    /// <summary>What the audio import picker offers (phase 60): every format FFmpeg reads that people record meetings in.</summary>
+    internal static readonly IReadOnlyList<string> AudioExtensions =
+        ["wav", "mp3", "m4a", "aac", "ogg", "opus", "flac", "wma", "webm", "mp4", "mkv", "mov"];
+
+    /// <summary>
+    /// Read an audio or video file the user picks as a new meeting (phase 60). The engine queues its
+    /// processing; the list is reloaded and the meeting opened, its progress follows as for a stopped
+    /// recording.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanImport))]
+    private async Task ImportAudioAsync()
+    {
+        Error = Message = null;
+        IsImporting = true;
+        try
+        {
+            var file = await _saver.OpenFileAsync(
+                _localization["MeetingImportAudioTitle"], _localization["FileTypeAudio"], AudioExtensions);
+            if (file is null)
+            {
+                return;
+            }
+
+            ImportedAudio result;
+            await using (file)
+            {
+                result = await _client.ImportAudioAsync(file.Content, file.Name, file.Modified);
+            }
+
+            await LoadAsync();
+            var summary = await ImportedSummaryAsync(result.Id);
+            Message = _localization.Format("MeetingAudioImported", summary is null ? result.Id : NewRow(summary).DisplayTitle);
             if (summary is not null)
             {
                 History.Show(summary);

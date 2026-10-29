@@ -238,6 +238,9 @@
           <Button Command="{Binding ImportCommand}"
                   Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingImport]}"
                   AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingImport]}" />
+          <Button Command="{Binding ImportAudioCommand}"
+                  Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingImportAudio]}"
+                  AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[MeetingImportAudio]}" />
           <Button Classes="icon" Command="{Binding RefreshCommand}"
                   ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}"
                   AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[HistoryRefresh]}">
