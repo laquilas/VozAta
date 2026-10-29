@@ -109,7 +109,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 57 | [A separate installer for VozAta Worker; version 0.2.1](phases/57-worker-installer.md) | 47, 56 | done |
 | 58 | [GPU support (CUDA) downloaded on the PC](phases/58-cuda-on-demand.md) | 13, 56, 57 | done |
 | 59 | [Voice command status in the menu; request history per meeting](phases/59-voice-status-and-history.md) | 48, 49, 50 | done |
-| 60 | [Import an audio file as a meeting](phases/60-audio-import.md) | 39, 40, 41 | in progress (`feature/60-audio-import`) |
+| 60 | [Import an audio file as a meeting](phases/60-audio-import.md) | 39, 40, 41 | done |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 

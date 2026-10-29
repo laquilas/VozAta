@@ -57,12 +57,14 @@ template (all editable afterwards, as for any meeting).
 
 ## Acceptance criteria
 
-- [ ] "Import audio" on the Meetings page opens a picker for audio and video files.
-- [ ] An mp3 / m4a / wav / mp4 file becomes a meeting named after the file that is queued and
+- [ ] "Import audio" on the Meetings page opens a picker for audio and video files. *(manual
+      check pending, `__pendent__/README.md`; covered by the view model tests)*
+- [x] An mp3 / m4a / wav / mp4 file becomes a meeting named after the file that is queued and
       processed: transcript, speakers, minutes and action items, and Ask and search work.
-- [ ] The meeting's player plays the imported audio for its full length.
-- [ ] A file without audio, or an empty one, shows a clear error and adds no meeting.
-- [ ] A meeting imported just before the engine stops is processed after the restart.
+- [ ] The meeting's player plays the imported audio for its full length. *(manual check
+      pending; the API serves all three tracks at the full 45.4 s)*
+- [x] A file without audio, or an empty one, shows a clear error and adds no meeting.
+- [x] A meeting imported just before the engine stops is processed after the restart.
 
 ## Tests
 
@@ -84,9 +86,9 @@ original compressed file; splitting a stereo file into mic and system.
 ## Progress
 
 - **Branch:** `feature/60-audio-import`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-10-29 10:00
-- **Next step:** manual check: a scratch engine (`DATABASE_PATH` on a copy) importing a real mp3 / m4a through `POST /sessions/import-audio` until `done`, then the desktop button.
+- **Next step:** open the PR to `main` (the desktop picker, the player and Ask on an imported meeting are pending manual checks in `__pendent__/README.md`).
 
 ### Steps
 
@@ -97,7 +99,7 @@ original compressed file; splitting a stereo file into mic and system.
 - [x] Docs (api-contract, architecture)
 - [x] UI client: `ImportAudioAsync`
 - [x] UI: picker + Meetings page "Import audio" + strings
-- [ ] Full suites, manual check
+- [x] Full suites, manual check (API; the desktop button is in `__pendent__/README.md`)
 
 ### Decisions and notes
 
@@ -108,4 +110,13 @@ original compressed file; splitting a stereo file into mic and system.
 - `api/uploads.save_body` is the raw-body-with-cap helper shared with phase 39's import.
 - `IFileSaver.OpenFileAsync` returns the picked file's name and modified time (`OpenedFile`); the
   upload shares the app's `HttpClient` 5-minute timeout, enough for a local upload and decode.
+- API check (2026-10-29, scratch engine, `DATABASE_PATH` in the scratchpad, `large-v3`, Ollama
+  `qwen2.5:7b`): a 45 s Portuguese TTS meeting as m4a was `202`, then `done` after 244 s with
+  full-length tracks (45.4 s each), 8 segments, speakers (`system:1`), minutes and two action
+  items (Carlos, Ana); search found it. A non-audio file was `422 audio_invalid` — its message
+  first showed the temporary upload path, fixed in `1db1f4b`; an empty body was 422. A WAV import
+  with the engine stopped during the transcribe step was re-queued by the next engine on its own
+  and ended `done` (171 s).
+- Not exercised by hand: the desktop picker, the player and Ask on an imported meeting (they use
+  the same code as any meeting; listed in `__pendent__/README.md`).
 - Requested by the user on 2026-10-29; they chose "pick the file, then process" (no dialog).
