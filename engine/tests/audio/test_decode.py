@@ -91,6 +91,16 @@ def test_a_file_that_is_not_audio_raises(tmp_path: Path) -> None:
         list(PyAvDecoder(RATE).blocks(path))
 
 
+def test_the_error_gives_ffmpegs_reason_without_the_files_path(tmp_path: Path) -> None:
+    path = tmp_path / "upload.mp3"
+    path.write_text("not audio at all", encoding="utf-8")
+
+    with pytest.raises(AudioDecodeError) as raised:
+        list(PyAvDecoder(RATE).blocks(path))
+
+    assert str(raised.value) == "Invalid data found when processing input"
+
+
 def test_a_file_without_an_audio_stream_raises(tmp_path: Path) -> None:
     path = tmp_path / "video.mkv"
     with av.open(str(path), "w") as container:
@@ -101,7 +111,7 @@ def test_a_file_without_an_audio_stream_raises(tmp_path: Path) -> None:
         for packet in [*stream.encode(frame), *stream.encode(None)]:
             container.mux(packet)
 
-    with pytest.raises(AudioDecodeError):
+    with pytest.raises(AudioDecodeError, match="^no audio stream$"):
         list(PyAvDecoder(RATE).blocks(path))
 
 

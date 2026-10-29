@@ -34,10 +34,10 @@ class PyAvDecoder:
         try:
             container = av.open(str(path))
         except (av.FFmpegError, OSError) as error:
-            raise AudioDecodeError(str(error)) from error
+            raise AudioDecodeError(_reason(error)) from error
         with container:
             if not container.streams.audio:
-                raise AudioDecodeError(f"{path.name} has no audio stream")
+                raise AudioDecodeError("no audio stream")
             stream = container.streams.audio[0]
             resampler = av.AudioResampler(format="s16", layout="mono", rate=self._rate)
             try:
@@ -45,7 +45,12 @@ class PyAvDecoder:
                     yield from _pcm(resampler.resample(frame))
                 yield from _pcm(resampler.resample(None))  # what the resampler still holds
             except av.FFmpegError as error:
-                raise AudioDecodeError(str(error)) from error
+                raise AudioDecodeError(_reason(error)) from error
+
+
+def _reason(error: Exception) -> str:
+    """FFmpeg's reason without the file's path: the path is the engine's temporary upload."""
+    return getattr(error, "strerror", None) or type(error).__name__
 
 
 def _pcm(frames: list[av.AudioFrame]) -> Iterator[bytes]:
