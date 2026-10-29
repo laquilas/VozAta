@@ -240,6 +240,11 @@ class AudioCache(Protocol):           # (32) WavCache, OUTPUT_DIR/cache: GET /he
 class SessionAudio(AudioStore, AudioReader, AudioTracks, Protocol): ...  # what RecordingSession gets
 class BundleImporter(Protocol):       # (39) SqliteBundleImporter (FolderImporter), FileBundleImporter (moves into OUTPUT_DIR)
     def import_folder(self, folder: Path) -> ImportedSession: ...  # mode imported | audio_restored; BundleError, SessionExistsError
+class AudioDecoder(Protocol):         # (60) PyAvDecoder (audio/decode.py): any format FFmpeg reads, via PyAV
+    def duration(self, path: Path) -> float | None: ...  # the container's estimate; names the session id
+    def blocks(self, path: Path) -> Iterator[bytes]: ...  # first audio stream, mono int16 at SAMPLE_RATE; AudioDecodeError
+class PcmImport(Protocol):            # a whole channel at once: SqliteAudioStore (33), FileAudioStore (60)
+    def import_pcm(self, session_id: str, channel: Channel, blocks: Iterable[bytes]) -> int: ...  # samples written
 class RecoverableStore(Protocol):     # crash recovery (17); run in order: [audio, repository] (sqlite: audio only)
     def repair(self, session_id: str) -> float | None: ...  # recorded seconds if it holds audio; StoreRepairError
 ```
@@ -333,6 +338,15 @@ transcript files, echo filter, interim text, live speakers or translation are bu
 loaded and the GPU gate is never held. At Stop the WAVs are finalized on the caller's thread, so
 `closed` is set before `stop_capture()` returns; the job's `transcribe` step then transcribes the
 whole recording (the raw transcript is empty, so every channel starts at 0).
+
+**Imported audio file** (phase 60, `POST /sessions/import-audio`): `AudioFileImporter`
+(`storage/audio_import.py`) creates a session, decodes the file with the `AudioDecoder` into the
+**system** track (`import_pcm`; speaker identification runs on that track only), pads the mic track
+with silence (`repair`) and writes the mix. `session.json` is written last, through `SessionMeta`,
+as a capture that just ended (`finalizing`, `capture_ended_at`, `live_transcription: false`); a
+failed import discards the session. `SessionManager.process_imported` then queues the same job as
+after an audio-only Stop (no repair, nothing to wait for), and a restart re-queues it like any
+`finalizing` meeting (`resume_pending`).
 
 **PortAudio thread**: WASAPI binds PortAudio's host state to the thread that initialized it (COM);
 streams opened from another thread fail with "Unanticipated host error" (-9999). `bootstrap.py`
@@ -735,6 +749,9 @@ regeneration.
 `live_transcription` (41) is whether the recording was transcribed live (`false`: audio only,
 transcribed after Stop by the processing queue); written at start, always, from the `POST /sessions`
 option or `LIVE_TRANSCRIPTION`.
+`source` / `imported_file` (60) are written only for a meeting imported from an audio file:
+`"imported_audio"` and the user's file name; such a meeting has `devices: {}`, its `title` is the
+file name without its extension and `started_at` is the file's time minus its length.
 `echo_dropped` (18) is the number of mic segments the echo filter dropped, written at stop once
 the transcript is final (stop step 1); it is absent while recording and when `ECHO_DEDUPE_ENABLED` is
 off.

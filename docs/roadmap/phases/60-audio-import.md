@@ -86,7 +86,7 @@ original compressed file; splitting a stereo file into mic and system.
 - **Branch:** `feature/60-audio-import`
 - **Status:** in progress
 - **Updated:** 2026-10-29 10:00
-- **Next step:** docs: `POST /sessions/import-audio` in `api-contract.md`; `AudioDecoder` / `PcmImport` ports and the `source` / `imported_file` meta fields in `architecture.md`.
+- **Next step:** UI client: `IEngineClient.ImportAudioAsync(stream, fileName, modifiedAt)` → `POST sessions/import-audio`, `ImportedAudio(Id)`, tests in `EngineClientTests`.
 
 ### Steps
 
@@ -94,7 +94,7 @@ original compressed file; splitting a stereo file into mic and system.
 - [x] Engine: `AudioDecoder` port + `PyAvDecoder`
 - [x] Engine: `import_pcm` on the file store + `AudioFileImporter` (both backends)
 - [x] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
-- [ ] Docs (api-contract, architecture)
+- [x] Docs (api-contract, architecture)
 - [ ] UI client: `ImportAudioAsync`
 - [ ] UI: picker + Meetings page "Import audio" + strings
 - [ ] Full suites, manual check
