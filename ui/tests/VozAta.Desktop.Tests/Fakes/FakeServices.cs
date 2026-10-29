@@ -213,4 +213,18 @@ internal sealed class FakeFileSaver : IFileSaver
         Opens.Add((title, typeName, extension));
         return Task.FromResult<Stream?>(OpenContent is null ? null : new MemoryStream(OpenContent));
     }
+
+    /// <summary>The file the user picks with <see cref="OpenFileAsync"/>; null = the user cancelled.</summary>
+    public (byte[] Content, string Name, DateTimeOffset? Modified)? OpenFile { get; set; } =
+        ("ID3"u8.ToArray(), "Weekly sync.mp3", new DateTimeOffset(2026, 10, 20, 15, 30, 0, TimeSpan.FromHours(-3)));
+
+    public List<(string Title, string TypeName, IReadOnlyList<string> Extensions)> FileOpens { get; } = [];
+
+    public Task<OpenedFile?> OpenFileAsync(string title, string typeName, IReadOnlyList<string> extensions)
+    {
+        FileOpens.Add((title, typeName, extensions));
+        return Task.FromResult(OpenFile is { } file
+            ? new OpenedFile(new MemoryStream(file.Content), file.Name, file.Modified)
+            : null);
+    }
 }

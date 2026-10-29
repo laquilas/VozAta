@@ -21,7 +21,7 @@ import pytest
 
 from vozata.audio.mixer import MonoMixer
 from vozata.domain import AudioTrack, Channel
-from vozata.ports import AudioTrackWriter, PcmTrack, SessionAudio
+from vozata.ports import AudioTrackWriter, PcmImport, PcmTrack, RecoverableStore, SessionAudio
 
 RATE = 16000
 
@@ -149,3 +149,18 @@ class AudioStoreContract:
         audio.discard(session_id)
 
         assert audio.track(session_id, AudioTrack.MIC) is None
+
+    def test_import_pcm_replaces_a_channel_and_repair_pads_the_other(
+        self, audio: SessionAudio, session_id: str
+    ) -> None:
+        assert isinstance(audio, PcmImport) and isinstance(audio, RecoverableStore)
+        _record(audio, session_id, {Channel.SYSTEM: [([0.9] * 3, 0.0)]})
+        pcm = np.arange(1, RATE + 5, dtype="<i2")
+        blocks = [pcm[:7].tobytes(), pcm[7:].tobytes()]
+
+        assert audio.import_pcm(session_id, Channel.SYSTEM, blocks) == len(pcm)
+        assert audio.repair(session_id) == round(len(pcm) / RATE, 3)
+
+        assert audio.frames(session_id, Channel.SYSTEM, 0, len(pcm)).tolist() == pcm.tolist()
+        assert audio.length(session_id, Channel.MIC) == len(pcm)
+        assert not audio.frames(session_id, Channel.MIC, 0, len(pcm)).any()

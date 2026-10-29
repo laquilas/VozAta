@@ -495,6 +495,12 @@ class CacheCleared(BaseModel):
     freed_bytes: int
 
 
+class AudioImported(BaseModel):
+    """Phase 60: `POST /sessions/import-audio`; the meeting is queued for processing."""
+
+    id: str
+
+
 class BundleImported(BaseModel):
     """Phase 39: `POST /sessions/import` (`mode`: imported | audio_restored)."""
 

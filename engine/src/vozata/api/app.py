@@ -29,6 +29,7 @@ from vozata.api.routes import (
     vocabulary,
 )
 from vozata.api.routes import ask as ask_routes
+from vozata.api.routes import audio_import as audio_import_routes
 from vozata.api.routes import bundle as bundle_routes
 from vozata.api.routes import migration as migration_routes
 from vozata.api.routes import partial_minutes as partial_minutes_routes
@@ -81,6 +82,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     app.include_router(settings_tools.router, responses=ERROR_RESPONSES)  # phase 38
     app.include_router(migration_routes.router, responses=ERROR_RESPONSES)  # phase 33
     app.include_router(bundle_routes.router, responses=ERROR_RESPONSES)  # phase 39
+    app.include_router(audio_import_routes.router, responses=ERROR_RESPONSES)  # phase 60
     app.include_router(worker_routes.router, responses=ERROR_RESPONSES)  # phase 47
     app.include_router(partial_minutes_routes.router, responses=ERROR_RESPONSES)  # phase 48
     app.include_router(requests_routes.router, responses=ERROR_RESPONSES)  # phase 59

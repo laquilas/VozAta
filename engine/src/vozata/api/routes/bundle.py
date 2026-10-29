@@ -17,6 +17,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
 from vozata.api.schemas import BundleImported
+from vozata.api.uploads import save_body
 from vozata.domain import ImportedSession
 from vozata.export.bundle import MEDIA_TYPE, zip_folder
 from vozata.ports import BundleImporter
@@ -75,18 +76,10 @@ async def import_bundle(request: Request, c: Container) -> dict[str, str]:
     if importer is None:
         raise ApiError(503, "import_unavailable")
     limit = bundle_import.MAX_BUNDLE_BYTES
-    if int(request.headers.get("content-length") or 0) > limit:
-        raise _too_large(limit)
     work = Path(tempfile.mkdtemp(prefix="vozata-import-"))
     try:
         archive = work / "bundle.zip"
-        received = 0
-        with archive.open("wb") as file:
-            async for chunk in request.stream():
-                received += len(chunk)
-                if received > limit:
-                    raise _too_large(limit)
-                file.write(chunk)
+        await save_body(request, archive, limit, lambda: _too_large(limit))
         result = await run_in_threadpool(_import, c, importer, archive, work / "unpacked", limit)
     finally:
         shutil.rmtree(work, ignore_errors=True)

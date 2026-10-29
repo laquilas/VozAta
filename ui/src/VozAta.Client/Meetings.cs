@@ -11,6 +11,9 @@ public sealed record ImportedSession(string Id, string Mode)
     public bool AudioRestored => Mode == "audio_restored";
 }
 
+/// <summary>An audio file read as a new meeting (phase 60); its processing follows as <c>processing</c> events.</summary>
+public sealed record ImportedAudio(string Id);
+
 /// <summary>One local day: its meetings, newest first, and their total duration.</summary>
 public sealed record SessionDay(DateOnly Date, double TotalSeconds, IReadOnlyList<SessionSummary> Items);
 

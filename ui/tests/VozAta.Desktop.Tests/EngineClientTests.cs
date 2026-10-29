@@ -621,6 +621,58 @@ public sealed class EngineClientTests
     }
 
     [Fact]
+    public async Task An_audio_file_is_posted_with_its_name_and_time()
+    {
+        string? contentType = null;
+        var handler = new FakeHttpHandler(request =>
+        {
+            contentType = request.Content?.Headers.ContentType?.MediaType;
+            return new HttpResponseMessage(HttpStatusCode.Accepted)
+            {
+                Content = new StringContent("""{"id": "20261020_152958"}""", System.Text.Encoding.UTF8, "application/json"),
+            };
+        });
+        using var audio = new MemoryStream("ID3"u8.ToArray());
+        var modified = new DateTimeOffset(2026, 10, 20, 15, 30, 0, TimeSpan.FromHours(-3));
+
+        var result = await new EngineClient(handler.Client()).ImportAudioAsync(audio, "Sprint review #3.mp3", modified);
+
+        var (method, path, body) = handler.Requests.Single();
+        Assert.Equal((HttpMethod.Post, "ID3"), (method, body));
+        Assert.Equal(
+            "/sessions/import-audio?name=Sprint%20review%20%233.mp3&recorded_at=2026-10-20T15%3A30%3A00-03%3A00",
+            path);
+        Assert.Equal("application/octet-stream", contentType);
+        Assert.Equal(new ImportedAudio("20261020_152958"), result);
+    }
+
+    [Fact]
+    public async Task An_audio_file_without_a_time_sends_only_its_name()
+    {
+        var handler = FakeHttpHandler.Json("""{"id": "x"}""", HttpStatusCode.Accepted);
+        using var audio = new MemoryStream([1]);
+
+        await new EngineClient(handler.Client()).ImportAudioAsync(audio, "a.wav", null);
+
+        Assert.Equal("/sessions/import-audio?name=a.wav", handler.Requests.Single().Path);
+    }
+
+    [Fact]
+    public async Task A_refused_audio_file_raises_the_engine_error()
+    {
+        var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.UnprocessableEntity)
+        {
+            Content = new StringContent("{\"error\":{\"code\":\"audio_invalid\",\"message\":\"No audio.\"}}"),
+        });
+        using var audio = new MemoryStream([1]);
+
+        var error = await Assert.ThrowsAsync<EngineApiException>(
+            () => new EngineClient(handler.Client()).ImportAudioAsync(audio, "a.txt", null));
+
+        Assert.Equal(("audio_invalid", "No audio."), (error.Code, error.Message));
+    }
+
+    [Fact]
     public async Task Missing_audio_raises_the_engine_error()
     {
         var handler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)

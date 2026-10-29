@@ -7,6 +7,7 @@ for the WAVs.
 from __future__ import annotations
 
 import wave
+from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,19 @@ class FileAudioStore:
 
     def open_writer(self, session_id: str, channel: Channel) -> AudioTrackWriter:
         return AlignedWavWriter(self._wav(session_id, channel), self._rate)
+
+    def import_pcm(self, session_id: str, channel: Channel, blocks: Iterable[bytes]) -> int:
+        """Rewrite the channel's WAV with `blocks` of mono 16-bit PCM (phase 60); returns the
+        number of samples."""
+        frames = 0
+        with wave.open(str(self._wav(session_id, channel)), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(self._rate)
+            for block in blocks:
+                wav.writeframes(block)
+                frames += len(block) // 2
+        return frames
 
     def write_mix(self, session_id: str, mixer: AudioMixer) -> None:
         mixer.mix(self, session_id, self._store.paths(session_id).mixed_wav)

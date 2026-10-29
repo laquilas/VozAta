@@ -18,6 +18,18 @@ public interface IFileSaver
 
     /// <summary>The chosen file of one type, open for reading; null when the user cancelled.</summary>
     Task<Stream?> OpenAsync(string title, string typeName, string extension);
+
+    /// <summary>
+    /// The chosen file of any of <paramref name="extensions"/>, open for reading, with its name and
+    /// last-modified time (phase 60); null when the user cancelled.
+    /// </summary>
+    Task<OpenedFile?> OpenFileAsync(string title, string typeName, IReadOnlyList<string> extensions);
+}
+
+/// <summary>A file the user picked: its content, its name (no folder) and when it was last modified.</summary>
+public sealed record OpenedFile(Stream Content, string Name, DateTimeOffset? Modified) : IAsyncDisposable
+{
+    public ValueTask DisposeAsync() => Content.DisposeAsync();
 }
 
 [ExcludeFromCodeCoverage(Justification = "Avalonia's save dialog; tests use a fake.")]
@@ -99,5 +111,28 @@ public sealed class AvaloniaFileSaver(IClassicDesktopStyleApplicationLifetime de
             FileTypeFilter = [new FilePickerFileType(typeName) { Patterns = [$"*.{extension}"] }],
         });
         return files.Count == 0 ? null : await files[0].OpenReadAsync();
+    }
+
+    public async Task<OpenedFile?> OpenFileAsync(string title, string typeName, IReadOnlyList<string> extensions)
+    {
+        if (desktop.MainWindow?.StorageProvider is not { } storage)
+        {
+            return null;
+        }
+
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(typeName) { Patterns = [.. extensions.Select(e => $"*.{e}")] }],
+        });
+        if (files.Count == 0)
+        {
+            return null;
+        }
+
+        var file = files[0];
+        var properties = await file.GetBasicPropertiesAsync();
+        return new OpenedFile(await file.OpenReadAsync(), file.Name, properties.DateModified);
     }
 }

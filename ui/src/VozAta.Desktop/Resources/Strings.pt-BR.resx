@@ -1266,6 +1266,18 @@
   <data name="MeetingImported" xml:space="preserve">
     <value>Reunião importada: {0}.</value>
   </data>
+  <data name="MeetingImportAudio" xml:space="preserve">
+    <value>Importar áudio</value>
+  </data>
+  <data name="MeetingImportAudioTitle" xml:space="preserve">
+    <value>Importar um arquivo de áudio ou vídeo</value>
+  </data>
+  <data name="FileTypeAudio" xml:space="preserve">
+    <value>Arquivos de áudio e vídeo</value>
+  </data>
+  <data name="MeetingAudioImported" xml:space="preserve">
+    <value>Áudio importado: {0}. Ele é transcrito em segundo plano.</value>
+  </data>
   <data name="MeetingAudioRestored" xml:space="preserve">
     <value>Áudio restaurado: {0}.</value>
   </data>

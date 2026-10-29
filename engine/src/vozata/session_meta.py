@@ -134,6 +134,19 @@ class SessionMeta:
         with self._lock:
             self._merge = True
 
+    def imported(self, at: datetime, duration_seconds: float, file_name: str) -> None:
+        """An audio file recorded elsewhere became this meeting (phase 60): saved as a capture
+        that just ended, so the processing queue (and a restarted engine) takes it."""
+        self._update(
+            status=SessionStatus.FINALIZING.value,
+            duration_seconds=round(duration_seconds, 3),
+            capture_ended_at=at.isoformat(timespec="seconds"),
+            source="imported_audio",
+            imported_file=file_name,
+        )
+        with self._lock:
+            self._merge = True
+
     def echo_dropped(self, count: int) -> None:
         """Mic segments the echo filter dropped (phase 18), written once the transcript is final."""
         self._update(echo_dropped=count)

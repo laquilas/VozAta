@@ -763,6 +763,68 @@ public sealed class MeetingsPageViewModelTests
         Assert.Null(page.History.Detail);
     }
 
+    [Fact]
+    public async Task Importing_an_audio_file_sends_it_and_opens_the_new_meeting()
+    {
+        var meeting = Add(NoonClock.Local(2026, 10, 20, 15), 60, "Weekly sync");
+        _client.Details[meeting.Id] = Detail(meeting.Id, "Weekly sync");
+        _client.ImportAudioResult = new ImportedAudio(meeting.Id);
+        var page = Create();
+
+        await page.ImportAudioCommand.ExecuteAsync(null);
+        await page.History.DetailLoading;
+
+        var open = _saver.FileOpens.Single();
+        Assert.Equal(("Import an audio or video file", "Audio and video files"), (open.Title, open.TypeName));
+        Assert.Contains("mp3", open.Extensions);
+        Assert.Contains("m4a", open.Extensions);
+        Assert.Contains("mp4", open.Extensions);
+        var sent = _client.ImportedAudio.Single();
+        Assert.Equal("ID3"u8.ToArray(), sent.Bytes);
+        Assert.Equal(("Weekly sync.mp3", _saver.OpenFile!.Value.Modified), (sent.FileName, sent.RecordedAt));
+        Assert.Equal("Audio imported: Weekly sync. It is transcribed in the background.", page.Message);
+        Assert.Equal(meeting.Id, page.History.Detail?.Id);
+        Assert.False(page.IsImporting);
+    }
+
+    [Fact]
+    public async Task A_cancelled_audio_import_does_nothing()
+    {
+        _saver.OpenFile = null;
+        var page = Create();
+
+        await page.ImportAudioCommand.ExecuteAsync(null);
+
+        Assert.Empty(_client.ImportedAudio);
+        Assert.Null(page.Message);
+        Assert.False(page.IsImporting);
+    }
+
+    [Fact]
+    public async Task A_refused_audio_file_shows_the_engine_message()
+    {
+        _client.ImportAudioError = new EngineApiException(HttpStatusCode.UnprocessableEntity, "audio_invalid", "No audio.");
+        var page = Create();
+
+        await page.ImportAudioCommand.ExecuteAsync(null);
+
+        Assert.Equal("No audio.", page.Error);
+        Assert.Null(page.Message);
+        Assert.False(page.IsImporting);
+    }
+
+    [Fact]
+    public async Task An_imported_audio_file_that_cannot_be_read_back_names_its_id()
+    {
+        _client.ImportAudioResult = new ImportedAudio("20261020_152958");
+        var page = Create();
+
+        await page.ImportAudioCommand.ExecuteAsync(null);
+
+        Assert.Equal("Audio imported: 20261020_152958. It is transcribed in the background.", page.Message);
+        Assert.Null(page.History.Detail);
+    }
+
     private static SessionDetail Detail(string id, string title) =>
         new(id, "done", NoonClock.Local(2026, 10, 14, 9), null, 60, "en", false, null, null)
         {
