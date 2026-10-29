@@ -82,6 +82,14 @@ public interface IEngineClient
     /// <summary><c>POST /sessions/import</c> (phase 39): read a meeting ZIP back (a new meeting, or the audio of a kept one).</summary>
     Task<ImportedSession> ImportBundleAsync(Stream bundle, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// <c>POST /sessions/import-audio</c> (phase 60): an audio or video file recorded elsewhere becomes a
+    /// meeting named after <paramref name="fileName"/>, ending at <paramref name="recordedAt"/> (or now),
+    /// queued for processing like a stopped recording.
+    /// </summary>
+    Task<ImportedAudio> ImportAudioAsync(
+        Stream audio, string fileName, DateTimeOffset? recordedAt, CancellationToken cancellationToken = default);
+
     /// <summary><c>GET /search</c> (phase 22): best matches first across every transcript.</summary>
     Task<SearchResults> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
 
@@ -348,6 +356,22 @@ public sealed class EngineClient(HttpClient http) : IEngineClient
         using var response = await SendRawAsync(HttpMethod.Post, "sessions/import", content, cancellationToken);
         var value = await response.Content.ReadFromJsonAsync<ImportedSession>(EngineJson.Options, cancellationToken);
         return value ?? throw new JsonException("Empty response from sessions/import");
+    }
+
+    public async Task<ImportedAudio> ImportAudioAsync(
+        Stream audio, string fileName, DateTimeOffset? recordedAt, CancellationToken cancellationToken = default)
+    {
+        var content = new StreamContent(audio);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        var path = $"sessions/import-audio?name={Escape(fileName)}";
+        if (recordedAt is { } time)
+        {
+            path += $"&recorded_at={Escape(time.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture))}";
+        }
+
+        using var response = await SendRawAsync(HttpMethod.Post, path, content, cancellationToken);
+        var value = await response.Content.ReadFromJsonAsync<ImportedAudio>(EngineJson.Options, cancellationToken);
+        return value ?? throw new JsonException("Empty response from sessions/import-audio");
     }
 
     public Task<SettingsUpdateResult> UpdateSettingsAsync(

@@ -279,6 +279,22 @@ internal sealed partial class FakeEngineClient : IEngineClient
         return ImportError is null ? ImportResult : throw ImportError;
     }
 
+    /// <summary>Every imported audio file: its bytes, name and time, in order (phase 60).</summary>
+    public List<(byte[] Bytes, string FileName, DateTimeOffset? RecordedAt)> ImportedAudio { get; } = [];
+
+    public ImportedAudio ImportAudioResult { get; set; } = new("20261020_152958");
+
+    public Exception? ImportAudioError { get; set; }
+
+    public async Task<ImportedAudio> ImportAudioAsync(
+        Stream audio, string fileName, DateTimeOffset? recordedAt, CancellationToken cancellationToken = default)
+    {
+        using var copy = new MemoryStream();
+        await audio.CopyToAsync(copy, cancellationToken);
+        ImportedAudio.Add((copy.ToArray(), fileName, recordedAt));
+        return ImportAudioError is null ? ImportAudioResult : throw ImportAudioError;
+    }
+
     /// <summary>The template of each regeneration, in the same order as <see cref="Regenerated"/>.</summary>
     public List<string?> RegeneratedTemplates { get; } = [];
 

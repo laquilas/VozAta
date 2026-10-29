@@ -86,7 +86,7 @@ original compressed file; splitting a stereo file into mic and system.
 - **Branch:** `feature/60-audio-import`
 - **Status:** in progress
 - **Updated:** 2026-10-29 10:00
-- **Next step:** UI client: `IEngineClient.ImportAudioAsync(stream, fileName, modifiedAt)` → `POST sessions/import-audio`, `ImportedAudio(Id)`, tests in `EngineClientTests`.
+- **Next step:** UI: `IFileSaver.OpenFileAsync` (several extensions, name + modified time), `MeetingsPageViewModel.ImportAudioCommand`, the Meetings page button and the strings in en / pt-BR / es.
 
 ### Steps
 
@@ -95,7 +95,7 @@ original compressed file; splitting a stereo file into mic and system.
 - [x] Engine: `import_pcm` on the file store + `AudioFileImporter` (both backends)
 - [x] Engine: `process_imported` + `POST /sessions/import-audio` + wiring + locales
 - [x] Docs (api-contract, architecture)
-- [ ] UI client: `ImportAudioAsync`
+- [x] UI client: `ImportAudioAsync`
 - [ ] UI: picker + Meetings page "Import audio" + strings
 - [ ] Full suites, manual check
 
