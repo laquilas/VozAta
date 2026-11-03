@@ -53,13 +53,15 @@ Requested by the user on 2026-11-03.
 
 ## Acceptance criteria
 
-- [ ] A language change applies to the next transcribed chunk and to `session.json`.
-- [ ] A term added mid-recording is a hint from the next chunk on.
-- [ ] Translation turned on / off mid-recording starts / stops translating.
-- [ ] Live transcription turned on mid-recording shows live lines; after Stop the earlier audio
-      is transcribed; no duplicates.
-- [ ] Template and minutes flag changes are used by the Stop job.
-- [ ] en / pt-BR / es parity; coverage ≥ 80 %.
+- [x] A language change applies to the next transcribed chunk and to `session.json`.
+- [x] A term added mid-recording is a hint from the next chunk on.
+- [x] Translation turned on / off mid-recording starts / stops translating.
+- [x] Live transcription turned on mid-recording shows live lines; the earlier audio is
+      transcribed at once from the recorder's files (better than after Stop), in order; no
+      duplicates. Turned off, the rest is transcribed after Stop.
+- [x] Template and minutes flag changes are used by the Stop job. *(template: read from
+      `session.json` at job time; the minutes flag is phase 64's)*
+- [x] en / pt-BR / es parity; coverage ≥ 80 %.
 
 ## Tests
 
@@ -78,9 +80,9 @@ Changing devices during a recording.
 ## Progress
 
 - **Branch:** `feature/63-live-options` (stacked on `feature/62-engine-gate`, PR #80)
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-11-03 19:02
-- **Next step:** docs (api-contract PATCH fields and session_updated, architecture), acceptance criteria, full suites, PR (base `feature/62-engine-gate`)
+- **Next step:** open the PR (base `feature/62-engine-gate`); then phase 64.
 
 ### Steps
 
@@ -91,7 +93,8 @@ Changing devices during a recording.
 - [x] Engine: translation on / off / changed during the recording
 - [x] Engine: live transcription off and on during the recording
 - [x] UI: chips editable while recording, debounced `PATCH`, `session_updated`
-- [ ] Docs, full suites, PR
+- [x] Docs, full suites
+- [ ] PR
 
 ### Decisions and notes
 
@@ -104,3 +107,10 @@ Changing devices during a recording.
   duplicate. This needs the recorder (phase 61); an engine-only recording answers
   `409 live_transcription_needs_recorder`. Turned **off**, the live part drains (queued windows
   are transcribed) and the rest is transcribed after Stop from the resume point.
+- `live_transcription_off` already names a phase 48 error: translation without live
+  transcription is `409 translation_needs_live_transcription`; no provider is
+  `409 translation_unavailable`.
+- Live speakers (phase 15) and voice commands (phase 50) are decided at Start: turning live
+  transcription on later does not add them.
+- In the app the devices chips stay locked while recording (`CanEditDevices`); live
+  transcription changed while recording is not remembered as the next default.
