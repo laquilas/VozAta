@@ -65,9 +65,15 @@ class ByName:
         return Path(options["name"])
 
 
-def make(device: WhisperDevice, factory: Factory) -> FasterWhisperTranscriber:
+def make(
+    device: WhisperDevice, factory: Factory, cuda_devices: int = 1
+) -> FasterWhisperTranscriber:
     return FasterWhisperTranscriber(
-        Settings(whisper_device=device), ByName(), model_factory=factory
+        Settings(whisper_device=device),
+        ByName(),
+        model_factory=factory,
+        cuda_libraries=lambda: True,
+        cuda_devices=lambda: cuda_devices,
     )
 
 
@@ -96,6 +102,25 @@ def test_auto_falls_back_to_the_cpu_model(caplog: pytest.LogCaptureFixture) -> N
     assert (model.size, model.device, model.compute_type) == ("small", "cpu", "int8")
     assert transcriber.device == "cpu"
     assert "cublas64_12.dll" in caplog.text
+
+
+def test_auto_without_a_cuda_device_loads_only_the_cpu_model(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level("INFO")
+    factory = Factory()
+
+    transcriber = make(WhisperDevice.AUTO, factory, cuda_devices=0)
+
+    assert transcriber.device == "cpu"
+    assert [(model.size, model.device) for model in factory.models] == [("small", "cpu")]
+    assert "No CUDA device" in caplog.text
+
+
+def test_explicit_cuda_ignores_the_device_count() -> None:
+    factory = Factory()
+
+    assert make(WhisperDevice.CUDA, factory, cuda_devices=0).device == "cuda"
 
 
 def test_explicit_cuda_does_not_fall_back() -> None:

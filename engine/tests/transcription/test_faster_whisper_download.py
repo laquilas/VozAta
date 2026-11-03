@@ -90,7 +90,11 @@ def test_whisper_cpu_fallback_downloads_its_own_repo() -> None:
     factory = _Factory(cuda_fails=True)
 
     transcriber = FasterWhisperTranscriber(
-        Settings(whisper_device=WhisperDevice.AUTO), downloader, model_factory=factory
+        Settings(whisper_device=WhisperDevice.AUTO),
+        downloader,
+        model_factory=factory,
+        cuda_libraries=lambda: True,
+        cuda_devices=lambda: 1,
     )
 
     assert transcriber.device == "cpu"
@@ -148,6 +152,37 @@ def test_auto_without_cuda_libraries_goes_to_the_cpu_without_the_gpu_model() -> 
     assert transcriber.device == "cpu"
     assert [call["name"] for call in downloader.calls] == ["small"]
     assert [device for _, device in factory.loaded] == ["cpu"]
+
+
+def test_auto_without_a_cuda_device_never_downloads_the_gpu_model() -> None:
+    downloader = FakeModelDownloader(Path("hub"))
+    factory = _Factory()
+
+    transcriber = FasterWhisperTranscriber(
+        Settings(whisper_device=WhisperDevice.AUTO),
+        downloader,
+        model_factory=factory,
+        cuda_libraries=lambda: True,
+        cuda_devices=lambda: 0,
+    )
+
+    assert transcriber.device == "cpu"
+    assert [call["name"] for call in downloader.calls] == ["small"]
+
+
+@pytest.mark.parametrize(
+    ("count", "expected"), [(lambda: 2, 2), (lambda: (_ for _ in ()).throw(RuntimeError()), 0)]
+)
+def test_the_cuda_device_count_never_raises(
+    monkeypatch: pytest.MonkeyPatch, count: object, expected: int
+) -> None:
+    import ctranslate2
+
+    from vozata.transcription import faster_whisper
+
+    monkeypatch.setattr(ctranslate2, "get_cuda_device_count", count)
+
+    assert faster_whisper._cuda_device_count() == expected
 
 
 def test_cuda_asked_for_explicitly_is_still_tried_without_the_libraries() -> None:
