@@ -82,6 +82,19 @@ internal sealed class FakeDialogs : IDialogService
         Buttons.Add((confirm, cancel));
         return Task.FromResult(Answers is { Count: > 0 } ? Answers.Dequeue() : Answer);
     }
+
+    /// <summary>The index <see cref="ChooseAsync"/> returns.</summary>
+    public int Choice { get; set; }
+
+    public List<IReadOnlyList<string>> Choices { get; } = [];
+
+    public Task<int> ChooseAsync(string title, string message, IReadOnlyList<string> choices)
+    {
+        Asked.Add(title);
+        Messages.Add(message);
+        Choices.Add(choices);
+        return Task.FromResult(Choice);
+    }
 }
 
 /// <summary>A clock the test moves by hand.</summary>

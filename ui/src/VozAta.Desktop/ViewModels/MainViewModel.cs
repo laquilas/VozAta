@@ -345,7 +345,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         // Every question comes before anything is stopped: cancelling at any point changes nothing.
         var recording = Session.IsRecording;
-        if (recording && !await _dialogs.ConfirmAsync(
+        if (recording && Recorder.IsViaRecorder)
+        {
+            // Phase 62: the recorder records without the window; the engine keeps following it.
+            var choice = await _dialogs.ChooseAsync(
+                _localization["ConfirmCloseTitle"],
+                _localization["Close_KeepRecordingMessage"],
+                [_localization["Close_KeepRecording"], _localization["Close_StopAndClose"], _localization["Close_Cancel"]]);
+            if (choice == 0)
+            {
+                KeepsRecording = true;
+                return true;
+            }
+
+            if (choice != 1)
+            {
+                return false;
+            }
+        }
+        else if (recording && !await _dialogs.ConfirmAsync(
             _localization["ConfirmCloseTitle"], _localization["ConfirmCloseMessage"], _localization["ConfirmCloseYes"], _localization["ConfirmCloseNo"]))
         {
             return false;
@@ -375,10 +393,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _preferences.Save(_preferences.Load() with { WindowWidth = WindowWidth, WindowHeight = WindowHeight });
         await Meetings.CommitPendingAsync(); // a delete still offering "Undo" goes ahead
-        await Task.WhenAny(Recorder.Idle, Task.Delay(maxWait));
+        if (!KeepsRecording)
+        {
+            await Task.WhenAny(Recorder.Idle, Task.Delay(maxWait));
+        }
+
         await _stop.CancelAsync();
-        _process.StopIfStarted();
+        if (!KeepsRecording)
+        {
+            _process.StopIfStarted(); // kept: it follows the recording, the next app start finds it
+        }
     }
+
+    /// <summary>The window closes while the recorder goes on recording (phase 62).</summary>
+    public bool KeepsRecording { get; private set; }
 
     public void Dispose()
     {

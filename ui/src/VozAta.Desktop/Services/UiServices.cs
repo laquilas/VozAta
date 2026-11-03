@@ -19,4 +19,7 @@ public sealed class AvaloniaUiDispatcher : IUiDispatcher
 public interface IDialogService
 {
     Task<bool> ConfirmAsync(string title, string message, string confirm, string cancel);
+
+    /// <summary>One of <paramref name="choices"/> (the first is the default); -1 when the window was closed.</summary>
+    Task<int> ChooseAsync(string title, string message, IReadOnlyList<string> choices);
 }

@@ -1398,6 +1398,15 @@
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="Close_KeepRecording" xml:space="preserve">
+    <value>Keep recording in the background</value>
+  </data>
+  <data name="Close_StopAndClose" xml:space="preserve">
+    <value>Stop and close</value>
+  </data>
+  <data name="Close_KeepRecordingMessage" xml:space="preserve">
+    <value>VozAta is recording. It can keep recording with the window closed: open VozAta again to see it and stop it.</value>
+  </data>
   <data name="DownloadKindSpeech" xml:space="preserve">
     <value>speech</value>
   </data>

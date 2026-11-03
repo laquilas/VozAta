@@ -1398,6 +1398,15 @@
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancelar</value>
   </data>
+  <data name="Close_KeepRecording" xml:space="preserve">
+    <value>Continuar gravando em segundo plano</value>
+  </data>
+  <data name="Close_StopAndClose" xml:space="preserve">
+    <value>Parar e fechar</value>
+  </data>
+  <data name="Close_KeepRecordingMessage" xml:space="preserve">
+    <value>O VozAta está gravando. Ele pode continuar gravando com a janela fechada: abra o VozAta de novo para ver e parar a gravação.</value>
+  </data>
   <data name="DownloadKindSpeech" xml:space="preserve">
     <value>de fala</value>
   </data>
