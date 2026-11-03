@@ -96,20 +96,23 @@ FastAPI, faster-whisper, PyAV or httpx)
 
 ## Acceptance criteria
 
-- [ ] `vozata-recorder` answers `/health` within 2 s of launch; an import-budget test keeps
-      heavy modules out.
+- [x] `vozata-recorder` answers `/health` within 2 s of launch; an import-budget test keeps
+      heavy modules out. *(0.4 s to import in tests; the packaged `--version` takes 0.2 s warm)*
 - [ ] Start records at once while the engine is still starting; the sentences said before the
-      engine attached appear in the transcript.
+      engine attached appear in the transcript. *(manual: `__pendent__/README.md`; covered by
+      `tests/test_attached_session.py` and the app tests)*
 - [ ] Killing the engine during a recording: the recording continues; the restarted engine
       reattaches and the audio of the outage is stored and transcribed.
 - [ ] Killing the app during a recording: the recorder keeps recording.
 - [ ] Killing the recorder and starting it again: the recording continues in a new segment with
       a gap; the meeting has both parts.
-- [ ] A forced write error opens a new segment and loses no sample.
-- [ ] After Stop, `live/<id>/` is deleted only once the store matches the manifest.
-- [ ] A recording stopped while the engine was down is imported and queued at the next start.
-- [ ] `RECORDER_ENABLED=false` and the CLI `record` keep today's behavior.
-- [ ] Contract docs updated; en / pt-BR / es parity; coverage ≥ 80 %.
+- [x] A forced write error opens a new segment and loses no sample. *(tests: write, flush
+      and fsync failures, the size guard)*
+- [x] After Stop, `live/<id>/` is deleted only once the store matches the manifest.
+- [x] A recording stopped while the engine was down is imported and queued at the next start.
+      *(replayed audio only and queued: `tests/api/test_recorder_link.py`)*
+- [x] `RECORDER_ENABLED=false` and the CLI `record` keep today's behavior.
+- [x] Contract docs updated; en / pt-BR / es parity; coverage ≥ 80 % (recorder package 92 %).
 
 ## Tests
 
@@ -131,9 +134,10 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 ## Progress
 
 - **Branch:** `feature/61-recorder-process`
-- **Status:** in progress
-- **Updated:** 2026-11-03 18:05
-- **Next step:** docs: architecture §2/§5/§6/§8/§9 and a new "Recorder process" section; api-contract "Recorder HTTP API" table, `POST /sessions` forwarding, `/health.recorder`, `capture_source`/`recorder_id`; then the manual check (after the user stops their recording)
+- **Status:** ready for PR
+- **Updated:** 2026-11-03 18:07
+- **Next step:** open the PR; then phase 62 (stacked on this branch). The manual check with the
+  microphone waits until the user stops the recording they were making (listed in `__pendent__`).
 
 ### Steps
 
@@ -153,7 +157,9 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] CLI guard, bootstrap wiring, health, packaging
 - [x] UI client, SSE events, recorder process, fakes
 - [x] UI view models and views, strings
-- [ ] Docs (architecture, api-contract), full suites, manual check, PR
+- [x] Docs (architecture §9 / §8 / new §18, api-contract), full suites
+- [ ] Manual check with the microphone (after the user's recording): `__pendent__/README.md`
+- [ ] PR
 
 ### Decisions and notes
 

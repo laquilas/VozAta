@@ -28,10 +28,10 @@ own rows. Changing a row requires updating both sides.
 
 | Method | Path | Phase | Request | Response |
 |--------|------|-------|---------|----------|
-| GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable, remote, host}, storage: {backend: "sqlite"\|"files", database, warning, size_bytes, audio_cache_bytes}}`; `llm` (43): `remote` is true when the provider is `ollama` and `OLLAMA_URL` is not loopback (an Ollama on another PC; transcripts leave this machine), `host` is that server's host name (null when local); `storage` (31): `database` is the absolute path of `vozata.db` (null for `files`), `warning` a localized message when it is in a OneDrive-synced folder, else null; `size_bytes` (32, 38): the database plus its `-wal` / `-shm` files (null for `files`); `audio_cache_bytes` (32, 38): the WAVs built from the database in `OUTPUT_DIR/cache/` (0 for `files`, which has no cache); `worker` (44): `{url, reachable, version, tasks}` of the VozAta worker of `WORKER_URL` (asked with the current settings, 3 s), null when `WORKER_URL` is empty; `tasks` (46): `{speech, speakers, translation}`, each `worker`, `local` (another provider is chosen) or `fallback` (the worker is chosen but does not answer, so this PC runs it; speech uses the start-up settings); with `STT_PROVIDER=vozata_worker`, `stt.device` is the worker host and `stt.model` the model it has loaded (empty when none or when it is off) |
+| GET | `/health` | 06 | — | `{engine: "ok", version, gpu: {available, name, vram_total_mb}, stt: {provider, model, device}, llm: {provider, model, reachable, remote, host}, storage: {backend: "sqlite"\|"files", database, warning, size_bytes, audio_cache_bytes}}`; `llm` (43): `remote` is true when the provider is `ollama` and `OLLAMA_URL` is not loopback (an Ollama on another PC; transcripts leave this machine), `host` is that server's host name (null when local); `storage` (31): `database` is the absolute path of `vozata.db` (null for `files`), `warning` a localized message when it is in a OneDrive-synced folder, else null; `size_bytes` (32, 38): the database plus its `-wal` / `-shm` files (null for `files`); `audio_cache_bytes` (32, 38): the WAVs built from the database in `OUTPUT_DIR/cache/` (0 for `files`, which has no cache); `worker` (44): `{url, reachable, version, tasks}` of the VozAta worker of `WORKER_URL` (asked with the current settings, 3 s), null when `WORKER_URL` is empty; `tasks` (46): `{speech, speakers, translation}`, each `worker`, `local` (another provider is chosen) or `fallback` (the worker is chosen but does not answer, so this PC runs it; speech uses the start-up settings); with `STT_PROVIDER=vozata_worker`, `stt.device` is the worker host and `stt.model` the model it has loaded (empty when none or when it is off); `recorder` (61): `{reachable, port, recording_id}` of the recorder process (`recording_id` = what it records now, null when idle), null with `RECORDER_ENABLED=false` |
 | GET | `/favicon.ico` | — | — | the VozAta logo (`image/x-icon`, package data copied from `assets/web/favicon.ico`); not in the OpenAPI schema |
 | GET | `/devices` | 06 | — | `{inputs: [Device], loopbacks: [Device], default_input_id, default_loopback_id}`; `Device = {id, name, sample_rate, channels}` |
-| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es", title?: str, live_transcription?: bool}` | `201 SessionSummary`; `live_transcription` (41): transcribe while recording (omitted = `LIVE_TRANSCRIPTION`), stored as `session.json.live_transcription`; `title` (35): the meeting title, trimmed (whitespace runs, new lines too, become one space), at most 200 characters (`422 title_too_long`), blank = untitled, stored as `session.json.title`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none) |
+| POST | `/sessions` | 06 | `{mic_device_id?, system_device_id?, language?: "en"\|"pt"\|"es"\|"auto", template?, vocabulary?: [str], translate_to?: "off"\|"en"\|"pt"\|"es", title?: str, live_transcription?: bool}` | `201 SessionSummary`; `live_transcription` (41): transcribe while recording (omitted = `LIVE_TRANSCRIPTION`), stored as `session.json.live_transcription`; `title` (35): the meeting title, trimmed (whitespace runs, new lines too, become one space), at most 200 characters (`422 title_too_long`), blank = untitled, stored as `session.json.title`; `template` (20): minutes template id, stored in `session.json` (default `MINUTES_TEMPLATE`), `422 unknown_template`; `vocabulary` (19): this meeting's terms, put before the glossary in `session.json.vocabulary`; `translate_to` (29): live translation language of this session (omitted = `TRANSLATE_TO`, `off` = none). Phase 61: when the recorder process answers, the engine opens no device: it asks the recorder to start the recording (the body's options travel with it) and attaches at once (`404 device_not_found`, `409 session_already_active`, `503 recorder_failed` from the recorder's errors); when it does not answer, the engine records itself as before |
 | POST | `/sessions/current/pause` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/resume` | 06 | — | `SessionSummary` |
 | POST | `/sessions/current/stop` | 06 | — | `202 SessionSummary` (finalization continues in background; watch `status` events) |
@@ -78,6 +78,36 @@ own rows. Changing a row requires updating both sides.
 | PUT | `/sessions/{id}/action-items` | 23 | `{items: [{id, description, owner?, due?}]}` (other keys ignored) | `{items, targets}` as saved: trimmed, blank owner/due = null; exported items are left unchanged; `422 unknown_action_item`, `422 empty_action_item` |
 | POST | `/sessions/{id}/action-items/export` | 23 | `{target: "azure_devops"\|"github", item_ids: [str]}` (at least one) | `{created: [{item_id, url}], failed: [{item_id, error}]}`; `error` is localized; already exported or unknown items fail (never exported twice); `422 unknown_task_target` when the target is not configured |
 | POST | `/ask` | 24 | `{question, session_id?}` (no id = all sessions; `question` 1–2000 chars, not blank) | `202 {answer_id}`; answer streamed via `answer_chunk` / `answer_done`; `404 session_not_found`, `409 answer_in_progress` (one question at a time), `422 invalid_request`, `503 ask_unavailable`. With the language model on the local GPU (40) the answer pre-empts the processing queue's running GPU step (redone after the answer) |
+
+`POST /sessions/current/pause`, `/resume` and `/stop` of a meeting that follows a recorder
+recording (phase 61) go to the recorder (`503 recorder_failed` when it does not answer); the
+engine applies the change once the recording's `recording.json` shows it. A rename of such a
+meeting is also saved in the recording's options.
+
+### Recorder HTTP API (phase 61)
+
+The recorder process (`python -m vozata.recorder`, `vozata-recorder.exe`) listens on
+`http://127.0.0.1:{RECORDER_PORT}` (8769), loopback only, one process per port. JSON in
+`snake_case`, errors in the engine's envelope with English messages (the desktop app shows them
+as they are). `RecordingSummary = {id, status: "recording"|"paused"|"stopped", started_at,
+duration_seconds, devices: {mic: {id, name}, system: {id, name}}, incarnation, segments: {mic: n,
+system: n}, options}`; `options` is opaque to the recorder (the engine reads `language`,
+`template`, `vocabulary`, `translate_to`, `title`, `live_transcription` when it attaches).
+
+| Method | Path | Request | Response |
+|--------|------|---------|----------|
+| GET | `/health` | — | `{recorder: "ok", version, pid, started_at, recording: RecordingSummary \| null}` |
+| GET | `/devices` | — | as the engine's `GET /devices` (a fresh PortAudio thread per listing) |
+| POST | `/recordings` | `{mic_device_id?, system_device_id?, options?: object}` | `201 RecordingSummary`; `409 recording_already_active`, `404 device_not_found`, `422 invalid_device` / `invalid_options`, `503 audio_unavailable` / `device_failed` / `device_timeout` |
+| GET | `/recordings/current` | — | `RecordingSummary`; `404 no_active_recording` |
+| PATCH | `/recordings/current` | `{options: object}` (merged) | `RecordingSummary` |
+| POST | `/recordings/current/pause` · `/resume` · `/stop` | — | `RecordingSummary`; stop returns once every sample is on disk (fsynced, headers patched, `stopped`) |
+| GET | `/recordings` | — | `{items: [RecordingSummary + stop_reason]}`: every recording under `OUTPUT_DIR/live/` |
+| GET | `/recordings/{id}` | — | its `recording.json`; `404 recording_not_found` |
+| POST | `/recordings/{id}/resume` | — | continue a recording whose recorder died: a gap, then new segment files; `409 recording_already_active` / `recording_stopped` |
+| DELETE | `/recordings/{id}` | — | `204`; `409 recording_active` |
+| GET | `/events` | — | Server-Sent Events: `status` (a `RecordingSummary`, `{id: null, status: "idle"}` when idle; on connect, on every change and every 1 s while recording), `level` (`{channel, rms_db}`, ~10 Hz per channel), `error` (`{code, message}`: `write_failed`, `disk_backlog`, `manifest_write_failed`); a `: keep-alive` comment every 15 s |
+| POST | `/shutdown` | — | `202`; `409 recording_active` |
 
 ### Shapes
 
