@@ -48,6 +48,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private readonly IRecorderClient? _recorder; // the recorder process (phase 61); null = engine only
     private bool _viaRecorder; // the recording on screen is the recorder's (its events drive the state)
     private string? _recorderRecordingId; // what the recorder records now, from its status events
+    private string? _transcriptRestored; // the recording whose earlier lines were read (phase 62)
+    private bool _adopted; // the page took over a recording it did not start (phase 62)
 
     /// <param name="titleDelay">Waits out the title debounce (tests pass a controllable one).</param>
     public RecorderPageViewModel(
@@ -771,6 +773,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             _sentTitle = OptionText(recording, "title");
             Session.Title = _sentTitle;
             Title = _sentTitle ?? "";
+            ApplyRecordingOptions(recording); // phase 62: the chips show this meeting's options
+            TranscriptRestore = RestoreTranscriptAsync(recording.Id!);
         }
 
         if (!(IsPaused && recording.Status == "paused"))
@@ -779,6 +783,87 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         }
 
         SetState(recording.Status == "paused" ? RecordingState.Paused : RecordingState.Recording);
+    }
+
+    /// <summary>The last restore of an adopted recording's transcript (tests await it).</summary>
+    public Task TranscriptRestore { get; private set; } = Task.CompletedTask;
+
+    /// <summary>The options a recording was started with: language, template, translation, terms, mode.</summary>
+    private void ApplyRecordingOptions(RecordingSummary recording)
+    {
+        if (ConversationLanguages.FirstOrDefault(o => o.Value == OptionText(recording, "language")) is { } language)
+        {
+            SelectedLanguage = language;
+        }
+
+        if (Templates.Find(OptionText(recording, "template")) is { } template)
+        {
+            SelectedTemplate = template;
+        }
+
+        SelectedTranslation = TranslationLanguages.FirstOrDefault(
+            o => o.Value == (OptionText(recording, "translate_to") ?? _defaultTranslation)) ?? SelectedTranslation;
+        if (recording.Options?.TryGetValue("vocabulary", out var terms) == true && terms.ValueKind == JsonValueKind.Array)
+        {
+            SessionTerms = string.Join(", ", terms.EnumerateArray()
+                .Where(term => term.ValueKind == JsonValueKind.String).Select(term => term.GetString()));
+        }
+
+        if (OptionFlag(recording, "live_transcription") is { } live)
+        {
+            SetLiveTranscription(live);
+        }
+    }
+
+    /// <summary>
+    /// The lines said before the page followed the recording (the app was closed or restarted): read
+    /// from the engine once it is connected; the live lines that came meanwhile are kept.
+    /// </summary>
+    private async Task RestoreTranscriptAsync(string sessionId)
+    {
+        if (!IsEngineConnected)
+        {
+            return; // tried again when the engine connects
+        }
+
+        try
+        {
+            var transcript = await _client.GetTranscriptAsync(sessionId, _cancellation);
+            if (Session.SessionId != sessionId)
+            {
+                return;
+            }
+
+            var live = Segments.ToList();
+            var liveIds = _lineOfSegment.Keys.ToHashSet();
+            Segments.Clear();
+            _lineOfSegment.Clear();
+            foreach (var segment in transcript.Segments.Where(segment => !liveIds.Contains(segment.SegmentId)))
+            {
+                AddLine(segment);
+            }
+
+            foreach (var line in live)
+            {
+                Segments.Add(line);
+            }
+
+            _liveSessionId = sessionId;
+            _transcriptRestored = sessionId;
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            // not attached yet (404) or gone: the live lines still come
+        }
+    }
+
+    partial void OnIsEngineConnectedChanged(bool value)
+    {
+        if (value && IsRecording && Session.SessionId is { } sessionId && _transcriptRestored != sessionId
+            && (_viaRecorder || _adopted))
+        {
+            TranscriptRestore = RestoreTranscriptAsync(sessionId);
+        }
     }
 
     private static string? OptionText(RecordingSummary recording, string key) =>
@@ -951,7 +1036,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             if (_recordingLive is null)
             {
                 _recordingLive = true; // started elsewhere: live until its session.json says otherwise
+                _adopted = true;
                 RecordingModeLookup = ReadRecordingModeAsync(sessionId);
+                TranscriptRestore = RestoreTranscriptAsync(sessionId); // phase 62: its lines so far
             }
         }
 
@@ -1001,6 +1088,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         if (state == RecordingState.Idle)
         {
             _viaRecorder = false;
+            _adopted = false;
+            _transcriptRestored = null;
             _recordingLive = null;
             IsModelLoading = false;
             Partials.Clear();
