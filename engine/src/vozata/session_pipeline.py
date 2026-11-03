@@ -24,6 +24,7 @@ from vozata.ports import (
 )
 from vozata.session_live import LiveTranscription
 from vozata.transcription.language_lock import LanguageLock
+from vozata.transcription.stitcher import SegmentIds
 
 _log = logging.getLogger(__name__)
 
@@ -79,6 +80,19 @@ class CapturePipeline:
         self._observer = observer
         self._accepting = False
         self._live: LiveTranscription | None = None
+        # phase 63: what turning live transcription on again during the recording needs
+        self._rebuild = (
+            open_transcript,
+            settings,
+            transcriber_factory,
+            language,
+            chunker_factory or fixed_windows(settings),
+            on_load_failed,
+        )
+        self._hints = hints
+        self._external: dict[Channel, Chunker] = {}  # chunkers fed by a separate source (63)
+        self._external_lock = threading.Lock()
+        self._draining: list[threading.Thread] = []  # live parts turned off, still finishing
         chunks: queue.Queue[AudioChunk] = queue.Queue()
         new_chunker = (chunker_factory or fixed_windows(settings)) if live else None
         self._tracks = {
@@ -123,6 +137,111 @@ class CapturePipeline:
     def accept(self) -> None:
         self._accepting = True
 
+    @property
+    def live(self) -> bool:
+        """Live transcription runs (phase 63: it can be turned off during the recording)."""
+        return self._live is not None
+
+    def add_sink(self, sink: TranscriptSink) -> None:
+        """Send the committed segments to `sink` too from now on (e.g. a translation worker)."""
+        if self._live is None:
+            raise RuntimeError("The pipeline records audio only")
+        self._live.sinks.add(sink)
+
+    def remove_sink(self, sink: TranscriptSink) -> None:
+        if self._live is not None:
+            self._live.sinks.remove(sink)
+
+    def set_hints(self, hints: str | None) -> None:
+        """The meeting terms changed (phase 63): every later transcription uses them."""
+        self._hints = hints
+        if self._live is not None:
+            self._live.set_hints(hints)
+
+    def disable_live(self, on_done: Callable[[], None]) -> None:
+        """Turn live transcription off during the recording (phase 63); returns at once.
+
+        The chunkers emit their last window and are dropped; on a thread, the worker transcribes
+        what is queued, the transcript files (and the sinks: translation, voice commands) close,
+        the transcriber closes and `on_done()` runs. Audio keeps being written.
+        """
+        live = self._live
+        if live is None:
+            on_done()
+            return
+        for track in self._tracks.values():
+            with track.lock:
+                if track.chunker is not None:
+                    track.chunker.flush()
+                    track.chunker = None
+        with self._external_lock:
+            for chunker in self._external.values():
+                chunker.flush()
+            self._external = {}
+        self._live = None
+
+        def drain() -> None:
+            for part, what in (
+                (live.worker.stop, "Draining the live transcription"),
+                (live.sink.close, "Closing the transcript"),
+                (live.close_transcriber, "Releasing the transcriber"),
+            ):
+                try:
+                    part()
+                except Exception:
+                    _log.exception("%s failed", what)
+            on_done()
+
+        thread = threading.Thread(target=drain, name="live-off", daemon=True)
+        self._draining.append(thread)
+        thread.start()
+
+    def enable_live(
+        self, ids: SegmentIds, channels: Iterable[Channel] | None = None
+    ) -> dict[Channel, Callable[[np.ndarray, float], None]]:
+        """Turn live transcription on during the recording (phase 63).
+
+        New chunkers and a new live transcription (segment ids continue with `ids`) are fed by
+        the returned callbacks, not by the capture: the caller replays the recording from the
+        transcript's resume point into them, then follows it, so the transcript stays in order.
+        """
+        if self._live is not None:
+            raise RuntimeError("Live transcription already runs")
+        open_transcript, settings, transcriber_factory, language, new_chunker, failed = (
+            self._rebuild
+        )
+        chunks: queue.Queue[AudioChunk] = queue.Queue()
+        wanted = list(channels or self._tracks)
+        with self._external_lock:
+            self._external = {
+                channel: new_chunker(channel, self._queue(chunks)) for channel in wanted
+            }
+        self._live = LiveTranscription(
+            chunks,
+            wanted,
+            open_transcript(),
+            settings,
+            transcriber_factory,
+            language,
+            self._observer,
+            failed,
+            self._uncut_audio,
+            hints=self._hints,
+            ids=ids,
+        )
+        self._live.start()
+
+        def feeder(channel: Channel) -> Callable[[np.ndarray, float], None]:
+            def feed(samples: np.ndarray, at: float) -> None:
+                with self._external_lock:
+                    chunker = self._external.get(channel)
+                    if chunker is not None:
+                        chunker.feed(samples, at)
+
+            return feed
+
+        return {channel: feeder(channel) for channel in wanted}
+
     def start_transcription(self) -> None:
         """Load the transcriber on the worker thread, then transcribe the queued chunks."""
         if self._live is None:
@@ -158,7 +277,11 @@ class CapturePipeline:
         """The chunker's audio not emitted yet (interim text); taken under the track lock."""
         track = self._tracks[channel]
         with track.lock:
-            return track.chunker.buffered() if track.chunker else None
+            if track.chunker is not None:
+                return track.chunker.buffered()
+        with self._external_lock:
+            external = self._external.get(channel)
+            return external.buffered() if external is not None else None
 
     def set_paused(self, paused: bool) -> None:
         """Paused: WAVs get silence, chunkers drop audio (their partial window is emitted)."""
@@ -167,6 +290,9 @@ class CapturePipeline:
                 track.writer.paused = paused
                 if track.chunker is not None:
                     track.chunker.paused = paused
+        with self._external_lock:
+            for chunker in self._external.values():
+                chunker.paused = paused
 
     def stop_capture(self) -> None:
         """Ignore further samples and emit every chunker's last partial window."""
@@ -176,6 +302,10 @@ class CapturePipeline:
                 if track.chunker is not None:
                     track.chunker.paused = False
                     track.chunker.flush()
+        with self._external_lock:
+            for chunker in self._external.values():
+                chunker.paused = False
+                chunker.flush()
 
     def drain(self) -> None:
         """Transcribe everything queued, flush the stitchers and close the transcript files.
@@ -205,6 +335,8 @@ class CapturePipeline:
             ]
 
         def close() -> None:
+            for thread in self._draining:  # a live part turned off during the recording (63)
+                thread.join()
             for part, what in parts:
                 try:
                     part()

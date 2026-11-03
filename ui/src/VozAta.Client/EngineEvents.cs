@@ -58,6 +58,10 @@ public sealed record DownloadProgressEvent(
 /// <summary>An event type this client does not know yet (added by a later phase).</summary>
 public sealed record UnknownEvent(string? SessionId, string Type) : EngineEvent(SessionId);
 
+/// <summary>Options of a meeting changed during its recording (phase 63): only the keys that changed.</summary>
+public sealed record SessionUpdatedEvent(string? SessionId, IReadOnlyDictionary<string, JsonElement> Changes)
+    : EngineEvent(SessionId);
+
 /// <summary>Not sent by the engine: the stream reports (re)connections and drops.</summary>
 public sealed record ConnectionChangedEvent(bool Connected) : EngineEvent((string?)null);
 
@@ -86,6 +90,9 @@ public static class EngineEventParser
                 "language_detected" => new LanguageDetectedEvent(
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
+                "session_updated" => new SessionUpdatedEvent(
+                    sessionId,
+                    data.Deserialize<Dictionary<string, JsonElement>>(EngineJson.Options) ?? throw new JsonException()),
                 "voice_command" => new VoiceCommandEvent(
                     sessionId,
                     data.GetProperty("action").GetString() ?? "",

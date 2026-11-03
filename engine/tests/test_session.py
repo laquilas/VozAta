@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import threading
+import time
 import wave
 from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
@@ -44,7 +45,7 @@ from vozata.ports import (
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import run_job_inline
 from vozata.processing.live_lease import LiveModelTurn
-from vozata.session import RecordingSession, SessionComponents, SessionStartError
+from vozata.session import RecordingSession, SessionChanges, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.layout import SessionPaths
@@ -1097,3 +1098,233 @@ def test_audio_only_stop_sets_closed_at_once_and_the_job_transcribes_from_zero(
     assert all(segment.start < 0.5 for segment in segments)  # fed from 0.0
     assert rig.log.entries.count("transcriber.load") == 1  # the offline model only
     assert rig.session.status is SessionStatus.DONE
+
+
+def _wait_for(condition: Callable[[], bool], timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, "timed out"
+        time.sleep(0.01)
+
+
+def test_language_and_terms_change_during_the_recording(tmp_path: Path) -> None:
+    """Phase 63: from the next window on, and saved in session.json."""
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 4, vocabulary=("Avalonia",))
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 1)
+
+    changed = rig.session.apply(
+        SessionChanges(language=ConversationLanguage.PT, vocabulary=("VozAta",), template="daily")
+    )
+    rig.mic.push(_voice(1.0), 1.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 2)
+
+    first, second = rig.transcriber.calls[0], rig.transcriber.calls[-1]
+    assert (first[1], first[2]) == ("en", "Avalonia")
+    assert (second[1], second[2]) == ("pt", "VozAta")  # without vocabulary_for: the terms alone
+    meta = rig.store.read_meta(rig.session.id)
+    assert (meta["language"], meta["language_source"]) == ("pt", "selected")
+    assert (meta["vocabulary"], meta["template"]) == (["VozAta"], "daily")
+    assert changed == {"language": "pt", "vocabulary": ["VozAta"], "template": "daily"}
+
+
+def test_auto_detects_again_and_title_and_minutes_flag_are_saved(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+
+    changed = rig.session.apply(
+        SessionChanges(
+            language=ConversationLanguage.AUTO,
+            title_set=True,
+            title="Daily",
+            generate_minutes=False,
+        )
+    )
+
+    meta = rig.store.read_meta(rig.session.id)
+    assert meta["language"] is None and meta["language_source"] == "auto"
+    assert (meta["title"], meta["generate_minutes"]) == ("Daily", False)
+    assert changed == {"language": "auto", "title": "Daily", "generate_minutes": False}
+
+
+def test_nothing_to_change_changes_nothing(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+
+    assert rig.session.apply(SessionChanges()) == {}
+
+
+def _with_translators(rig: _Rig, translator: FakeTranslator) -> None:
+    import dataclasses
+
+    rig.session._c = dataclasses.replace(  # type: ignore[misc]
+        rig.session._c, translators=lambda target: (target, lambda: translator)
+    )
+
+
+def test_translation_turned_on_and_off_during_the_recording(tmp_path: Path) -> None:
+    """Phase 63: segments after the change are translated; turned off, no more."""
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 6)
+    translator = FakeTranslator()
+    _with_translators(rig, translator)
+    rig.session.start()
+
+    rig.session.apply(SessionChanges(translate_to="pt"))
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(translator.calls) >= 1)
+    rig.session.apply(SessionChanges(translate_to="off"))
+    _wait_for(lambda: translator.closed)
+    rig.mic.push(_voice(1.0), 1.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 2)
+
+    assert translator.calls[0][2] == "pt"
+    assert len(translator.calls) == 1
+    assert rig.store.read_meta(rig.session.id)["translate_to"] == "off"
+
+
+def test_translation_moves_to_another_language(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 4)
+    translator = FakeTranslator()
+    _with_translators(rig, translator)
+    rig.session.start()
+
+    rig.session.apply(SessionChanges(translate_to="pt"))
+    rig.session.apply(SessionChanges(translate_to="pt"))  # the same: nothing happens
+    rig.session.apply(SessionChanges(translate_to="es"))
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: any(call[2] == "es" for call in translator.calls))
+
+    assert {call[2] for call in translator.calls} == {"es"}
+    assert rig.store.read_meta(rig.session.id)["translate_to"] == "es"
+
+
+def test_translation_needs_live_transcription_and_a_provider(tmp_path: Path) -> None:
+    from vozata.session import SessionOptionError
+
+    audio_only = _Rig(tmp_path / "a", live_transcription=False)
+    audio_only.session.start()
+    with pytest.raises(SessionOptionError) as off:
+        audio_only.session.apply(SessionChanges(translate_to="pt"))
+    no_provider = _Rig(tmp_path / "b")
+    no_provider.session.start()
+    with pytest.raises(SessionOptionError) as missing:
+        no_provider.session.apply(SessionChanges(translate_to="pt"))
+
+    assert off.value.code == "translation_needs_live_transcription"
+    assert missing.value.code == "translation_unavailable"
+
+
+def _recorder_files(folder: Path, seconds: float) -> None:
+    """A stopped recording of the recorder process with `seconds` of voice on both channels."""
+    from vozata.recorder.durable_track import DurableTrack
+    from vozata.recorder.manifest import STOPPED, Manifest, write_manifest
+
+    folder.mkdir(parents=True)
+    manifest = Manifest(id="rec", started_at="2026-10-15T20:23:58-03:00", sample_rate=RATE)
+    lock = threading.RLock()
+    for channel in (Channel.MIC, Channel.SYSTEM):
+        track = DurableTrack(folder, channel, RATE, manifest.segments(channel), lock, lambda: None)
+        track.write(_voice(seconds), 0.0)
+        track.close()
+    manifest.status = STOPPED
+    write_manifest(folder, manifest)
+
+
+def _with_recorder(rig: _Rig, folder: Path) -> None:
+    import dataclasses
+
+    rig.session._c = dataclasses.replace(rig.session._c, recorder_folder=folder)  # type: ignore[misc]
+
+
+def test_live_transcription_off_drains_and_releases_the_model(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 4)
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 1)
+
+    rig.session.apply(SessionChanges(live_transcription=False))
+    _wait_for(lambda: "transcriber.close" in rig.log.entries)
+    calls = len(rig.transcriber.calls)
+    rig.mic.push(_voice(1.0), 1.0)  # recorded, not transcribed live
+
+    assert rig.store.read_meta(rig.session.id)["live_transcription"] is False
+    assert len(rig.transcriber.calls) == calls
+    assert len(rig.store.load_raw_transcript(rig.session.id)) >= 1
+    rig.session.apply(SessionChanges(live_transcription=False))  # already off: nothing
+
+
+def test_live_transcription_on_replays_the_recording_from_where_the_transcript_ends(
+    tmp_path: Path,
+) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 12, live_transcription=False)
+    _recorder_files(tmp_path / "live" / "rec", 3.0)
+    _with_recorder(rig, tmp_path / "live" / "rec")
+    rig.session.start()
+    rig.mic.push(_voice(3.0), 0.0)
+
+    rig.session.apply(SessionChanges(live_transcription=True))
+    _wait_for(lambda: len(rig.transcriber.calls) >= 6)  # 3 s of both channels, from the start
+    rig.session.apply(SessionChanges(live_transcription=True))  # already on: nothing
+    rig.clock.time = 3.0
+    rig.session.stop_capture().wait(10)
+
+    segments = rig.store.load_raw_transcript(rig.session.id)
+    assert rig.store.read_meta(rig.session.id)["live_transcription"] is True
+    for channel in (Channel.MIC, Channel.SYSTEM):
+        starts = [segment.start for segment in segments if segment.channel is channel]
+        assert starts == sorted(starts)  # in order, from the start of the recording
+    assert min(segment.start for segment in segments) < 1.0
+    ids = [segment.segment_id for segment in segments]
+    assert len(ids) == len(set(ids))
+
+
+def test_live_transcription_on_again_continues_the_ids_and_skips_what_was_said(
+    tmp_path: Path,
+) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 12)
+    _recorder_files(tmp_path / "live" / "rec", 3.0)
+    _with_recorder(rig, tmp_path / "live" / "rec")
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(rig.store.load_raw_transcript(rig.session.id)) >= 1)
+    rig.session.apply(SessionChanges(live_transcription=False))
+    _wait_for(lambda: "transcriber.close" in rig.log.entries)
+    first = rig.store.load_raw_transcript(rig.session.id)
+
+    rig.session.apply(SessionChanges(live_transcription=True))
+    _wait_for(lambda: len(rig.store.load_raw_transcript(rig.session.id)) > len(first))
+    rig.session.stop_capture().wait(10)
+
+    later = rig.store.load_raw_transcript(rig.session.id)[len(first) :]
+    for channel in {segment.channel for segment in first}:
+        said = max(segment.end for segment in first if segment.channel is channel)
+        again = [segment.start for segment in later if segment.channel is channel]
+        assert all(start >= said - 0.01 for start in again)  # nothing said is transcribed twice
+    ids = [segment.segment_id for segment in rig.store.load_raw_transcript(rig.session.id)]
+    assert len(ids) == len(set(ids))
+
+
+def test_live_transcription_off_also_ends_the_translation(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    translator = FakeTranslator()
+    _with_translators(rig, translator)
+    rig.session.start()
+    rig.session.apply(SessionChanges(translate_to="pt"))
+
+    rig.session.apply(SessionChanges(live_transcription=False))
+    _wait_for(lambda: "transcriber.close" in rig.log.entries or rig.session._pipeline.live is False)
+
+    assert rig.store.read_meta(rig.session.id)["translate_to"] == "off"
+
+
+def test_live_transcription_on_needs_the_recorder(tmp_path: Path) -> None:
+    from vozata.session import SessionOptionError
+
+    rig = _Rig(tmp_path, live_transcription=False)
+    rig.session.start()
+
+    with pytest.raises(SessionOptionError) as error:
+        rig.session.apply(SessionChanges(live_transcription=True))
+
+    assert error.value.code == "live_transcription_needs_recorder"

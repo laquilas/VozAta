@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -105,6 +106,31 @@ class SessionMeta:
     def set_title(self, title: str | None) -> None:
         """Rename the meeting (normalized title; None clears it), also while recording."""
         self._update(title=title)
+
+    def change_language(self, language: ConversationLanguage) -> None:
+        """Phase 63: a fixed language is stored as selected; `auto` clears it until detected."""
+        if language is ConversationLanguage.AUTO:
+            self._update(language=None, language_source="auto")
+        else:
+            self._update(language=language.value, language_source="selected")
+
+    def set_vocabulary(self, terms: Sequence[str]) -> None:
+        self._update(vocabulary=list(terms))
+
+    def set_translate_to(self, target: str) -> None:
+        """Phase 63: the live translation language (`off` = none)."""
+        self._update(translate_to=target)
+
+    def set_live_transcription(self, live: bool) -> None:
+        """Phase 63: live transcription turned on or off during the recording."""
+        self._update(live_transcription=live)
+
+    def set_template(self, template: str) -> None:
+        self._update(template=template)
+
+    def set_generate_minutes(self, generate: bool) -> None:
+        """Phase 63 / 64: whether this meeting's minutes are written when it is processed."""
+        self._update(generate_minutes=generate)
 
     def set_capture_source(self, source: str, recorder_id: str) -> None:
         """Recorded by the recorder process (phase 61): its recording id, kept with the meeting."""

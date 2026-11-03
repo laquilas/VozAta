@@ -62,8 +62,8 @@ class FakeLink:
     def stop(self) -> None:
         self._control("stop")
 
-    def mirror_title(self, title: str | None) -> None:
-        self.calls.append(("title", title))
+    def mirror_options(self, options: dict[str, Any]) -> None:
+        self.calls.append(("options", options))
 
     def linked_sessions(self) -> set[str]:
         return self.linked
@@ -166,8 +166,8 @@ def test_controls_of_a_followed_recording_go_to_the_recorder(
     api.client.patch(f"/sessions/{session_id}", json={"title": "Renamed"})
 
     assert (stopped.status_code, stopped.json()["status"]) == (202, "finalizing")
-    assert [name for name, _ in link.calls[1:]] == ["pause", "resume", "stop", "title"]
-    assert link.calls[-1] == ("title", "Renamed")
+    assert [name for name, _ in link.calls[1:]] == ["pause", "resume", "stop", "options"]
+    assert link.calls[-1] == ("options", {"title": "Renamed"})
     link.follows = False
 
 
