@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:28
-- **Next step:** engine side: ports (`LiveRecordings`, `RecorderControl`), `audio/tail_source.py` (`TailingFileSource`) and `audio/recorder_clock.py`, with tests
+- **Updated:** 2026-11-03 17:31
+- **Next step:** attach: `build_session(attach=)` with `TailingFileSource` + `RecorderClock`, the session started on the recording's `started_at`, `recorder_id` in `session.json`
 
 ### Steps
 
@@ -143,11 +143,14 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] `recorder/durable_track.py` (no-loss writer)
 - [x] `recorder/recording.py`
 - [x] Recorder HTTP API (`http.py`, `app.py`, `lock.py`, `__main__.py`), config keys
-- [ ] Engine ports, `TailingFileSource`, `RecorderClock`
-- [ ] `create(session_id=)`, append writers, segment ids continue
-- [ ] Attach / reattach, follower, recovery exclusions
-- [ ] `ingest` step, `LiveRecordingImporter`, watcher, health
-- [ ] CLI guard, bootstrap wiring, packaging
+- [x] Engine `TailingFileSource` and `RecorderClock`
+- [ ] Attach: `build_session(attach=)`, the session started on the recording's `started_at`,
+      `capture_source` / `recorder_id` in `session.json`
+- [ ] `RecorderLink` (watcher): attach live recordings, follow pause / resume / stop, replay
+      stopped ones audio-only, rebuild after an engine restart; `engine.json` marker; recovery
+      exclusions; `POST /sessions` and the controls forwarded to the recorder
+- [ ] `ingest` step: stored frames checked against the manifest, then `live/<id>/` deleted
+- [ ] CLI guard, bootstrap wiring, health, packaging
 - [ ] UI client, SSE events, recorder process, fakes
 - [ ] UI view models and views, strings
 - [ ] Docs (architecture, api-contract), full suites, manual check, PR
@@ -158,3 +161,19 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
   recording with the main checkout's engine; tests run with `PYTHONPATH=<worktree>/engine/src`.
 - The user wants extra segment files **only on failure** and no audio loss in any case
   (2026-11-03): one continuous WAV per channel normally.
+- `RECORDER_PORT` defaults to **8769**: 8766 / 8767 are the worker's (phase 44 / 47), and a
+  worker can run on the same PC.
+- No `SessionRepository.create(session_id=)`: both backends name a session after its start time,
+  as the recorder does, so a session created on the recording's `started_at` gets the same id;
+  `session.json.recorder_id` links them anyway (a collision gets `_2`).
+- One engine action covers every case: **attach** = replay the recording's files from frame 0
+  through the usual pipeline, then follow it. A recording stopped while the engine was down is
+  attached audio-only (replayed at disk speed) and transcribed from 0 by the queue, like an
+  audio-only meeting (phase 41); no separate importer.
+- Engine restart during a recording: the engine's partial session is discarded and rebuilt from
+  the recorder's files (they hold every sample until the verified ingest); title and options
+  are carried over. Simpler than appending to stored audio and continuing segment ids.
+- The engine never writes `recording.json` (the recorder rewrites it from memory): it keeps its
+  link in `live/<id>/engine.json`.
+- The writer flushes to the OS every 0.1 s step (a killed process loses at most that) and fsyncs
+  every `RECORDER_FSYNC_SECONDS` (a power cut loses at most that).
