@@ -70,3 +70,28 @@ Options edited during the recording (63); the minutes marker (64).
 
 > Execute phase 62 of the roadmap (`docs/roadmap/phases/62-engine-gate.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/62-engine-gate` (stacked on `feature/61-recorder-process`, PR #79)
+- **Status:** in progress
+- **Updated:** 2026-11-03 20:30
+- **Next step:** engine `GET /sessions/current` with tests
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [ ] Engine: `GET /sessions/current`
+- [ ] UI: `EngineGateViewModel`, `RetryConnectionAsync`, data reloaded on reconnect, one automatic
+      engine respawn, the event loop even after a failed start
+- [ ] UI: the gate panel on the engine pages; Restart engine disabled while recording
+- [ ] UI: reattach: transcript and options of a recording restored
+- [ ] UI: close while recording: keep recording in background / stop and close / cancel
+- [ ] Docs, full suites, PR
+
+### Decisions and notes
+
+- Built in the phase 61 worktree (`E:\VozAta-work\wt61`), branch stacked on phase 61.
+- The "dead recorder" card is not needed: the recorder continues a recording whose heartbeat is
+  under 2 minutes old when it starts again (the app starts it), and closes older ones as
+  `recorder_died` for the engine to import (phase 61). Nothing waits for the user.
