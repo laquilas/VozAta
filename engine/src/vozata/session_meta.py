@@ -106,6 +106,10 @@ class SessionMeta:
         """Rename the meeting (normalized title; None clears it), also while recording."""
         self._update(title=title)
 
+    def set_capture_source(self, source: str, recorder_id: str) -> None:
+        """Recorded by the recorder process (phase 61): its recording id, kept with the meeting."""
+        self._update(capture_source=source, recorder_id=recorder_id)
+
     def set_status(self, status: SessionStatus) -> None:
         self._update(status=status.value)
 

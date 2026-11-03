@@ -37,6 +37,7 @@ MINUTES_WEIGHT = 30.0
 ACTION_ITEMS_WEIGHT = 10.0
 INDEX_WEIGHT = 1.0
 REPAIR_WEIGHT = 1.0
+INGEST_WEIGHT = 0.5
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class JobParts:
     minutes: bool  # minutes are generated
     action_items: bool  # action items follow the minutes
     repair: Callable[[], None] | None = None  # crash recovery only (phase 17)
+    ingest: Callable[[], None] | None = None  # recorded by the recorder process (phase 61)
 
 
 _WEIGHTS = {
@@ -116,6 +118,9 @@ def session_job(
     if parts.repair is not None:
         repair = parts.repair
         steps.append(Step(StepKind.REPAIR, REPAIR_WEIGHT, False, lambda token, p: repair()))
+    if parts.ingest is not None:
+        ingest = parts.ingest
+        steps.append(Step(StepKind.INGEST, INGEST_WEIGHT, False, lambda token, p: ingest()))
     # with the worker, the step is gated too: a fallback to this PC must not race a recording
     speech = usage.speech or usage.speech_fallback
     steps.append(Step(StepKind.TRANSCRIBE, weight, speech, transcribe))

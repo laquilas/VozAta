@@ -9,6 +9,7 @@ from typing import Protocol
 
 from vozata.api.migration_job import MigrationJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
+from vozata.api.recorder_link import RecorderLink
 from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager
 from vozata.api.system_info import GpuInfo
@@ -123,3 +124,6 @@ class ApiContainer:
     # Phase 47: the workers that answer a broadcast, and pairing by the code shown on the worker
     discover_workers: Callable[[Settings], list[FoundWorker]] = lambda settings: []
     pair_worker: Callable[[str, str], PairedWorker] = pair_with_worker
+    # The recorder process (61): attaches its recordings, gets Start / Pause / Stop; None: the
+    # engine records itself (`RECORDER_ENABLED=false`).
+    recorder_link: RecorderLink | None = None

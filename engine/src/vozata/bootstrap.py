@@ -28,6 +28,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
+from vozata.api.recorder_link import RecorderLink
 from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
@@ -38,10 +39,12 @@ from vozata.audio.catalog import WasapiCatalog
 from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.clock import SessionClock
 from vozata.audio.decode import PyAvDecoder
-from vozata.audio.devices import DeviceInfo, default_input, default_loopback, find_device
+from vozata.audio.devices import resolve_devices
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.portaudio import PortAudioThread
+from vozata.audio.recorder_clock import RecorderClock
 from vozata.audio.silero import SileroSpeechDetector
+from vozata.audio.tail_source import TailingFileSource
 from vozata.audio.vad_chunker import VadChunker
 from vozata.commands.detector import VoiceCommandSink
 from vozata.commands.matcher import CommandMatcher
@@ -80,7 +83,7 @@ from vozata.meeting.detector import MeetingDetector
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
-from vozata.minutes.template_repository import bundled_templates
+from vozata.minutes.template_repository import UnknownTemplateError, bundled_templates
 from vozata.models.cli_progress import cli_downloader
 from vozata.models.download import HubDownloader
 from vozata.models.tracker import DownloadTracker
@@ -88,6 +91,7 @@ from vozata.net import remote_llm_host
 from vozata.ports import (
     AudioMixer,
     AudioSessionMonitor,
+    AudioSource,
     BundleImporter,
     Chunker,
     Diarizer,
@@ -114,6 +118,8 @@ from vozata.processing.queue import ProcessingQueue, ProcessingState
 from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.meeting_so_far import MeetingSoFarAnswerer
 from vozata.qa.retriever import Retriever
+from vozata.recorder.attach import RecordingAttach
+from vozata.recorder_client import HttpRecorderClient
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_finisher import SessionFinisher
 from vozata.session_title import stored_title
@@ -851,8 +857,13 @@ def build_session(
     downloader: ModelDownloader | None = None,
     worker_moved: Callable[[str], None] = lambda url: None,
     voice_dispatch: VoiceDispatch | None = None,
+    attach: RecordingAttach | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
+
+    With `attach` (phase 61) the session opens no device: it follows that recording of the
+    recorder process from its files (from the first frame), on the recording's timeline, and is
+    created on the recording's start time (so it gets the recording's id).
 
     Devices default to the WASAPI default microphone and the default output's loopback. Every
     PortAudio call runs on one `PortAudioThread`, closed by the session when capture ends. With a
@@ -894,25 +905,15 @@ def build_session(
     translation_target, translator_factory = build_translator_factory(
         settings, translate_to, downloader, notices
     )
-    try:
-        audio = PortAudioThread()
-    except TimeoutError:
-        message = localizer.t("errors.session.audio_unavailable")
-        raise SessionStartError("audio_unavailable", message) from None
-    try:
-        devices = _devices(audio, mic_device, system_device)
-    except BaseException:
-        audio.close()
-        raise
-    clock = SessionClock()
+    if attach is not None:
+        sources, device_names, clock, release = _attached_capture(settings, attach)
+    else:
+        sources, device_names, clock, release = _device_capture(
+            settings, localizer, mic_device, system_device
+        )
     components = SessionComponents(
-        sources={
-            channel: WasapiSource(
-                device, clock, settings.sample_rate, pa=audio.pa, call_audio=audio.call
-            )
-            for channel, device in devices.items()
-        },
-        device_names={channel: device.name for channel, device in devices.items()},
+        sources=sources,
+        device_names=device_names,
         clock=clock,
         transcriber_factory=(
             (
@@ -927,7 +928,7 @@ def build_session(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        release=audio.close,
+        release=release,
         chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
         diarizer_factory=diarizer_factory,
         search_index=build_search_index(settings),
@@ -962,6 +963,8 @@ def build_session(
         live_transcription=settings.live_transcription
         if live_transcription is None
         else live_transcription,
+        started_at=attach.started_at if attach is not None else None,
+        recorder_id=attach.recording_id if attach is not None else None,
     )
     session = RecordingSession(
         settings,
@@ -972,6 +975,45 @@ def build_session(
         language or settings.transcription_language,
     )
     return session
+
+
+Capture = tuple[Mapping[Channel, AudioSource], dict[Channel, str], Any, Callable[[], None]]
+
+
+def _device_capture(
+    settings: Settings,
+    localizer: Localizer,
+    mic_device: int | None,
+    system_device: int | None,
+) -> Capture:
+    """The session opens the devices itself, on one `PortAudioThread` (closed by `release`)."""
+    try:
+        audio = PortAudioThread()
+    except TimeoutError:
+        message = localizer.t("errors.session.audio_unavailable")
+        raise SessionStartError("audio_unavailable", message) from None
+    try:
+        devices = resolve_devices(audio.call, audio.pa, mic_device, system_device)
+    except BaseException:
+        audio.close()
+        raise
+    clock = SessionClock()
+    sources = {
+        channel: WasapiSource(
+            device, clock, settings.sample_rate, pa=audio.pa, call_audio=audio.call
+        )
+        for channel, device in devices.items()
+    }
+    return sources, {c: d.name for c, d in devices.items()}, clock, audio.close
+
+
+def _attached_capture(settings: Settings, attach: RecordingAttach) -> Capture:
+    """The recorder process captures; the session follows its files (phase 61)."""
+    sources = {
+        channel: TailingFileSource(attach.folder, channel, settings.sample_rate)
+        for channel in (Channel.MIC, Channel.SYSTEM)
+    }
+    return sources, dict(attach.device_names), RecorderClock(attach.started_at), lambda: None
 
 
 class _CaptureOver:
@@ -1094,19 +1136,6 @@ def build_recovery(
 def cli_stale_after(settings: Settings) -> float:
     """How old a heartbeat must be before the CLI treats a session as interrupted (phase 17)."""
     return 2 * settings.autosave_seconds + 5
-
-
-def _devices(
-    audio: PortAudioThread, mic_device: int | None, system_device: int | None
-) -> dict[Channel, DeviceInfo]:
-    pa = audio.pa
-    mic = audio.call(
-        lambda: default_input(pa) if mic_device is None else find_device(mic_device, pa)
-    )
-    system = audio.call(
-        lambda: default_loopback(pa) if system_device is None else find_device(system_device, pa)
-    )
-    return {Channel.MIC: mic, Channel.SYSTEM: system}
 
 
 def hf_hub_cache() -> Path:
@@ -1234,6 +1263,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             downloader=downloader,
             worker_moved=worker_moved,
             voice_dispatch=voice_dispatch,
+            attach=options.attach,
         )
 
     def llm_reachable() -> bool:
@@ -1257,6 +1287,18 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         recovery=recovery,
         queue=queue,
         job_factory=job_factory,
+    )
+    recorder_link = (
+        RecorderLink(
+            settings.output_dir,
+            manager,
+            store,
+            HttpRecorderClient(settings.recorder_port),
+            check_template=_known_template,
+            cleanup=lambda session_id: _ingest(settings, store, audio, session_id),
+        )
+        if settings.recorder_enabled
+        else None
     )
 
     def free_whisper() -> None:
@@ -1403,4 +1445,21 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         discover_workers=lambda current: discover_workers(
             current.worker_discovery_port, lan_addresses()
         ),
+        recorder_link=recorder_link,
     )
+
+
+def _ingest(
+    settings: Settings, store: SessionRepository, audio: SessionAudio, session_id: str
+) -> bool:
+    from vozata.bootstrap_processing import ingest_recording  # imports this module
+
+    return ingest_recording(settings, store, audio, session_id)
+
+
+def _known_template(template: str) -> bool:
+    try:
+        MINUTES_TEMPLATES.get(template)
+    except UnknownTemplateError:
+        return False
+    return True

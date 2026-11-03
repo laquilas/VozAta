@@ -30,6 +30,7 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+recorder_failed = "The recorder did not do it ({reason}). The recording is safe on disk."
 voice_command_busy = "Voice commands are being processed already; try again in a moment."
 voice_command_repeated = "Already on it: the same voice command was said again within a few seconds."
 voice_command_unavailable = "This voice command cannot run in this engine."
@@ -166,6 +167,7 @@ unreachable = "{target} could not be reached ({reason})."
 invalid_reply = "{target} returned an unexpected reply."
 
 [cli]
+recorder_active = "The VozAta recorder is recording right now. Stop that recording first (in the app), then run record again."
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
 worker_listening = "VozAta worker listening on {url} (Ctrl+C to stop)."
 worker_token_created = "New worker token, saved in {file}: {token}. Enter it in VozAta on the other PC (Config → Worker)."

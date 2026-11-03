@@ -285,6 +285,7 @@ class Api:
         recovery: Any = None,
         migration: Any = None,
         jobs: Any = None,
+        recorder_link: Any = None,
     ) -> None:
         from fastapi.testclient import TestClient
 
@@ -341,6 +342,7 @@ class Api:
             vocabulary_file=lambda: self.vocabulary_file,
             migration=migration(self) if migration is not None else None,  # phase 33
             downloads=self.downloads,
+            recorder_link=recorder_link(self) if recorder_link is not None else None,  # 61
         )
         self.app = create_app(container)
         self.client = TestClient(self.app, raise_server_exceptions=False)

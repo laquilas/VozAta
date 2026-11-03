@@ -87,6 +87,18 @@
   <data name="EngineDisconnected" xml:space="preserve">
     <value>Motor desconectado, reconectando…</value>
   </data>
+  <data name="RecorderConnected" xml:space="preserve">
+    <value>Gravador pronto</value>
+  </data>
+  <data name="RecorderDisconnected" xml:space="preserve">
+    <value>Gravador não responde</value>
+  </data>
+  <data name="RecorderStartFailed" xml:space="preserve">
+    <value>O gravador não iniciou. O motor grava sozinho assim que estiver pronto.</value>
+  </data>
+  <data name="RecorderProblem" xml:space="preserve">
+    <value>Gravador: {0}. O áudio é mantido.</value>
+  </data>
   <data name="EngineStartFailed" xml:space="preserve">
     <value>Não foi possível iniciar o motor. Verifique Engine:PythonPath e Engine:WorkingDirectory no appsettings.json.</value>
   </data>
@@ -326,6 +338,36 @@
   </data>
   <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
     <value>Com que frequência o arquivo da sessão é salvo durante a gravação (1 a 300 s). Após uma falha, a sessão interrompida é encontrada e pode ser recuperada na próxima inicialização.</value>
+  </data>
+  <data name="Setting_RECORDER_ENABLED" xml:space="preserve">
+    <value>Gravador separado</value>
+  </data>
+  <data name="SettingHelp_RECORDER_ENABLED" xml:space="preserve">
+    <value>Grava em um pequeno processo separado, que começa na hora e continua gravando quando o motor ou o app falham. Desligado: o motor grava sozinho, como antes.</value>
+  </data>
+  <data name="Setting_RECORDER_PORT" xml:space="preserve">
+    <value>Porta do gravador</value>
+  </data>
+  <data name="SettingHelp_RECORDER_PORT" xml:space="preserve">
+    <value>Porta da API local do gravador (1024 a 65535).</value>
+  </data>
+  <data name="Setting_RECORDER_FSYNC_SECONDS" xml:space="preserve">
+    <value>Intervalo de gravação em disco (segundos)</value>
+  </data>
+  <data name="SettingHelp_RECORDER_FSYNC_SECONDS" xml:space="preserve">
+    <value>Com que frequência os arquivos da gravação são forçados para o disco (0,5 a 30 s): no máximo esse tanto de áudio se perde numa queda de energia.</value>
+  </data>
+  <data name="Setting_RECORDER_MAX_SEGMENT_MB" xml:space="preserve">
+    <value>Maior arquivo de gravação (MB)</value>
+  </data>
+  <data name="SettingHelp_RECORDER_MAX_SEGMENT_MB" xml:space="preserve">
+    <value>Uma reunião mais longa continua em um novo arquivo (100 a 3900 MB); os arquivos são unidos quando a reunião é armazenada.</value>
+  </data>
+  <data name="Setting_RECORDER_BUFFER_WARN_SECONDS" xml:space="preserve">
+    <value>Aviso de atraso do disco (segundos)</value>
+  </data>
+  <data name="SettingHelp_RECORDER_BUFFER_WARN_SECONDS" xml:space="preserve">
+    <value>Avisa quando esse tanto de áudio espera na memória porque o disco não o aceita (5 a 3600 s). O áudio é mantido até ser gravado.</value>
   </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Taxa de amostragem (Hz)</value>

@@ -39,6 +39,15 @@
                          TextWrapping="Wrap" IsVisible="{Binding Shell.IsExpanded}" />
             </Grid>
           </Border>
+          <!-- The recorder process (phase 61): records even while the engine starts or is down -->
+          <Border Padding="12,0,12,6" IsVisible="{Binding HasRecorder}">
+            <Grid ColumnDefinitions="Auto,*">
+              <Ellipse Classes="state-dot small" VerticalAlignment="Top" Margin="0,5,0,0"
+                       Classes.connected="{Binding IsRecorderConnected}" Classes.down="{Binding !IsRecorderConnected}" />
+              <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{Binding RecorderText}" Classes="muted"
+                         TextWrapping="Wrap" IsVisible="{Binding Shell.IsExpanded}" />
+            </Grid>
+          </Border>
           <!-- Where the worker's tasks run (phase 46) -->
           <Border Padding="12,0,12,6" IsVisible="{Binding Health.HasWorkerText}" ToolTip.Tip="{Binding Health.WorkerText}">
             <Grid ColumnDefinitions="Auto,*">

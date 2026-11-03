@@ -25,7 +25,7 @@ class WavRepairError(ValueError):
 
 
 @dataclass(frozen=True)
-class _Layout:
+class WavLayout:
     data_offset: int  # first byte of the samples
     block_align: int  # bytes per frame (all channels)
 
@@ -41,17 +41,17 @@ def repair_wav(path: Path, sample_rate: int) -> int:
         _write_empty(path, sample_rate)
         return 0
     with path.open("r+b") as file:
-        layout = _read_layout(file, path)
-        frames = _frames(file, layout)
-        _write_sizes(file, layout, frames)
+        layout = read_layout(file, path)
+        frames = frames_on_disk(file, layout)
+        write_sizes(file, layout, frames)
     return frames
 
 
 def pad_wav(path: Path, frames: int) -> None:
     """Append silence until the (repaired) WAV holds `frames` frames; never shortens it."""
     with path.open("r+b") as file:
-        layout = _read_layout(file, path)
-        current = _frames(file, layout)
+        layout = read_layout(file, path)
+        current = frames_on_disk(file, layout)
         if current >= frames:
             return
         file.seek(layout.data_offset + current * layout.block_align)
@@ -61,7 +61,7 @@ def pad_wav(path: Path, frames: int) -> None:
             size = min(block, missing)
             file.write(bytes(size))
             missing -= size
-        _write_sizes(file, layout, frames)
+        write_sizes(file, layout, frames)
 
 
 def wav_frames(path: Path) -> int:
@@ -78,12 +78,17 @@ def _write_empty(path: Path, sample_rate: int) -> None:
         wav.writeframes(b"")
 
 
-def _frames(file: BinaryIO, layout: _Layout) -> int:
+def frames_on_disk(file: BinaryIO, layout: WavLayout) -> int:
+    """Whole frames after the header, from the file size (a trailing partial frame is ignored)."""
     size = file.seek(0, os.SEEK_END)
     return max(0, size - layout.data_offset) // layout.block_align
 
 
-def _write_sizes(file: BinaryIO, layout: _Layout, frames: int) -> None:
+def write_sizes(file: BinaryIO, layout: WavLayout, frames: int) -> None:
+    """Patch the RIFF and `data` sizes for `frames` frames, then flush and fsync the file.
+
+    The file position is left after the `data` size: callers that append seek to the end first.
+    """
     data_size = frames * layout.block_align
     file.seek(4)
     file.write(_SIZE.pack(layout.data_offset - _CHUNK_HEADER + data_size))
@@ -93,7 +98,8 @@ def _write_sizes(file: BinaryIO, layout: _Layout, frames: int) -> None:
     os.fsync(file.fileno())
 
 
-def _read_layout(file: BinaryIO, path: Path) -> _Layout:
+def read_layout(file: BinaryIO, path: Path) -> WavLayout:
+    """Where the samples start and the bytes per frame; `WavRepairError` when not a PCM WAV."""
     file.seek(0)
     head = file.read(_RIFF_HEADER)
     if len(head) < _RIFF_HEADER or head[:4] != b"RIFF" or head[8:12] != b"WAVE":
@@ -107,7 +113,7 @@ def _read_layout(file: BinaryIO, path: Path) -> _Layout:
         if chunk_id == b"data":
             if block_align == 0:
                 raise WavRepairError(f"{path.name} has no fmt chunk before its data")
-            return _Layout(file.tell(), block_align)
+            return WavLayout(file.tell(), block_align)
         body = file.read(chunk_size + (chunk_size & 1))
         if chunk_id == b"fmt ":
             block_align = _block_align(body, path)

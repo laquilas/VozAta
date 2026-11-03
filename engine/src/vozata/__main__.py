@@ -9,10 +9,17 @@ import os
 # huggingface_hub reads it once, at its first import: set it before anything imports the hub.
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")  # the xet download protocol hangs here
 
+import sys
+
+if __name__ == "__main__" and sys.argv[1:2] == ["recorder"]:
+    # The recorder (phase 61) must answer within a second: dispatch before the heavy imports.
+    from vozata.recorder.__main__ import main as recorder_main
+
+    sys.exit(recorder_main(sys.argv[2:]))
+
 import argparse
 import functools
 import logging
-import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, TextIO

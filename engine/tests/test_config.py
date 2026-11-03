@@ -540,7 +540,37 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "STORAGE_BACKEND",
         "DATABASE_PATH",
         "AUDIO_CACHE_MB",
+        "RECORDER_ENABLED",
+        "RECORDER_PORT",
+        "RECORDER_FSYNC_SECONDS",
+        "RECORDER_MAX_SEGMENT_MB",
+        "RECORDER_BUFFER_WARN_SECONDS",
     }
+
+
+def test_recorder_keys_have_defaults_and_bounds() -> None:
+    settings = load_settings(env={})
+    assert (settings.recorder_enabled, settings.recorder_port) == (True, 8769)
+    assert (settings.recorder_fsync_seconds, settings.recorder_max_segment_mb) == (2.0, 2000)
+    assert settings.recorder_buffer_warn_seconds == 30.0
+
+    custom = load_settings(env={"RECORDER_ENABLED": "false", "RECORDER_PORT": "9000"})
+    assert (custom.recorder_enabled, custom.recorder_port) == (False, 9000)
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("RECORDER_PORT", "80"),
+        ("RECORDER_FSYNC_SECONDS", "0.1"),
+        ("RECORDER_MAX_SEGMENT_MB", "5000"),
+    ],
+)
+def test_invalid_recorder_values_raise(key: str, value: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_settings(env={key: value})
+
+    assert caught.value.key == key
 
 
 def test_external_stt_defaults_values_and_secret_mask() -> None:

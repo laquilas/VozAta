@@ -17,6 +17,7 @@ from vozata.config import Settings
 from vozata.domain import ConversationLanguage, SessionStatus, TranscriptSegment
 from vozata.minutes.session_minutes import stored_vocabulary
 from vozata.ports import (
+    AudioReader,
     FallbackNotices,
     ModelDownloader,
     RecoverableStore,
@@ -28,6 +29,7 @@ from vozata.ports import (
 )
 from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuUsage
+from vozata.processing.ingest_check import check_ingest
 from vozata.processing.job import AbortJob, ProcessingJob, StepKind
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.session_finisher import SessionFinisher
@@ -108,6 +110,9 @@ def build_processing_job(
         repair=functools.partial(_repair, settings, store, audio, observer, session_id)
         if repair
         else None,
+        ingest=functools.partial(ingest_recording, settings, store, audio, session_id)
+        if meta.get("recorder_id")
+        else None,
     )
     weight = transcribe_weight(store, session_id, duration)
     return session_job(
@@ -166,6 +171,19 @@ def _detected(store: SessionRepository, session_id: str, language: ConversationL
     store.write_meta(
         session_id, {**meta, "language": language.value, "language_source": "detected"}
     )
+
+
+def ingest_recording(
+    settings: Settings, store: SessionRepository, audio: AudioReader, session_id: str
+) -> bool:
+    """Remove the recorder's files of a meeting once the store holds every frame (phase 61)."""
+
+    def save_mismatch(missing: dict[str, int]) -> None:
+        stored = store.read_meta(session_id)
+        store.write_meta(session_id, {**stored, "recorder_ingest_missing": missing})
+
+    meta = store.read_meta(session_id)
+    return check_ingest(settings.output_dir, audio, session_id, meta, save_mismatch)
 
 
 def _repair(

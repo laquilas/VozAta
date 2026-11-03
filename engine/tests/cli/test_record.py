@@ -210,3 +210,51 @@ def test_a_remote_speech_api_is_announced_before_recording() -> None:
     )  # fmt: skip
 
     assert out.getvalue().splitlines()[0] == "cli.remote_stt(host=api.openai.com)"
+
+
+def test_record_refuses_while_the_recorder_records(tmp_path: Path, monkeypatch: Any) -> None:
+    from vozata.cli import record as record_module
+    from vozata.recorder.lock import write_lock
+    from vozata.recorder.manifest import live_dir
+
+    settings = Settings(output_dir=tmp_path)
+    write_lock(live_dir(tmp_path), 8769, "2026-11-03T10:00:00-03:00")
+    answers = {"recording": {"id": "20261103_100000", "status": "recording"}}
+    monkeypatch.setattr(record_module.HttpRecorderClient, "health", lambda self: answers)
+    out = io.StringIO()
+    localizer = FakeLocalizer()
+    session = _FakeSession()
+
+    code = run_record(
+        settings,
+        ConsoleObserver(localizer, SpeakerLabeler(localizer), out),
+        localizer,
+        _Builder(session),
+        language=None,
+        mic_device=None,
+        system_device=None,
+        stdin=io.StringIO(""),
+        wait=_interrupt,
+    )
+
+    assert code == 1
+    assert "cli.recorder_active" in out.getvalue()
+    assert session.calls == []
+
+
+def test_a_stale_lock_or_an_idle_recorder_does_not_block_record(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    from vozata.cli import record as record_module
+    from vozata.cli.record import recorder_recording
+    from vozata.recorder.lock import write_lock
+    from vozata.recorder.manifest import live_dir
+
+    settings = Settings(output_dir=tmp_path)
+    assert recorder_recording(settings) is None  # no lock
+    write_lock(live_dir(tmp_path), 8769, "2026-11-03T10:00:00-03:00")
+    monkeypatch.setattr(record_module.HttpRecorderClient, "health", lambda self: None)
+    assert recorder_recording(settings) is None  # nobody answers
+    idle = {"recording": {"id": "x", "status": "stopped"}}
+    monkeypatch.setattr(record_module.HttpRecorderClient, "health", lambda self: idle)
+    assert recorder_recording(settings) is None

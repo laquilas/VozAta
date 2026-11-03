@@ -736,6 +736,10 @@ is active, until capture ends; with it, `duration_seconds` is the length so far.
 `capture_ended_at` (40) is when capture stopped, written by `stop_capture()` with the recorded
 length: a `finalizing` session that has it only waits for its processing job (absent: the
 session was cut short while recording).
+`capture_source: "recorder"` and `recorder_id` (61): the meeting follows that recording of the
+recorder process (its files stay in `OUTPUT_DIR/live/<recorder_id>/` until the `ingest` step);
+`recorder_ingest_missing` (`{channel: frames}`) is set when the store held fewer frames than the
+recording, whose files were then kept.
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
 written at stop (after a crash: the length of the repaired WAVs); `ended_at` is later, after
 finalization. `language` / `language_source` are written only when known: at start for a fixed language
@@ -834,7 +838,12 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `MIN_SPEAKERS` / `MAX_SPEAKERS` | *(empty)* | 14 | hints, 1–20 each, `MIN_SPEAKERS` ≤ `MAX_SPEAKERS` |
 | `LIVE_DIARIZATION_ENABLED` | `false` | 15 | live `User N` labels while recording (needs the `diarization` extra and `HF_TOKEN`; uses `DIARIZATION_PROVIDER` / `DIARIZATION_DEVICE`) |
 | `SPEAKER_SIMILARITY_THRESHOLD` | `0.7` | 15 | cosine similarity for live clustering |
-| `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat interval while a session is active (1–300 s) |
+| `AUTOSAVE_SECONDS` | `10` | 17 | `session.json` heartbeat interval while a session is active (1–300 s); also the recorder's `recording.json` heartbeat (61) |
+| `RECORDER_ENABLED` | `true` | 61 | the recorder process records; `false`: the engine records in its own process, as before |
+| `RECORDER_PORT` | `8769` | 61 | port of the recorder's local API (1024–65535; 8766 / 8767 are the worker's) |
+| `RECORDER_FSYNC_SECONDS` | `2` | 61 | seconds between two fsyncs of the recording files (0.5–30): what a power cut can lose |
+| `RECORDER_MAX_SEGMENT_MB` | `2000` | 61 | largest recording file (100–3900 MB, below the WAV 4 GB limit); a longer meeting goes on in a new file |
+| `RECORDER_BUFFER_WARN_SECONDS` | `30` | 61 | an `error disk_backlog` event when this much audio waits in memory for the disk (5–3600 s) |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
 | `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
 | `ECHO_HOLD_SECONDS` | *(empty)* = `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment (1–60 s); mic lines are delayed by it |
@@ -1179,3 +1188,63 @@ sequenceDiagram
     end
     D-->>F: snapshot folder
 ```
+
+## 18. Recorder process (phase 61)
+
+Capture lives in a small process of its own, so a recording starts within a second of launching
+the app (the engine needs about a minute to answer) and survives an engine or an app crash.
+
+```mermaid
+graph LR
+  UI[Desktop app] -->|Start / Pause / Stop, SSE events| R[vozata-recorder]
+  R -->|WASAPI| D[Mic + loopback]
+  R -->|DurableTrack| L["OUTPUT_DIR/live/&lt;id&gt;/ recording.json, mic.wav, system.wav"]
+  E[Engine RecorderLink] -->|reads| L
+  E -->|TailingFileSource| P[CapturePipeline: store, chunkers, live transcription]
+  P --> Q[Processing job: ingest, transcribe, mix, ...]
+  Q -->|every frame stored| X[live/&lt;id&gt;/ removed]
+```
+
+- **Process.** `vozata.recorder` imports only numpy, soxr, pyaudiowpatch, python-dotenv, the
+  standard library and the light `vozata` modules (`domain`, `audio.capture`, `audio.devices`,
+  `audio.portaudio`, `audio.levels`, `audio.wav_writer`, `heartbeat`, `storage.wav_repair`); a
+  test keeps the engine's modules out (0.4 s to import, 0.2 s for the packaged `--version`). The
+  app starts it detached before the engine and never stops it; an exclusive bind of
+  `RECORDER_PORT` makes it single-instance (a second start exits 0). It reads `OUTPUT_DIR`,
+  `SAMPLE_RATE`, `AUTOSAVE_SECONDS` and the `RECORDER_*` keys from the engine's `.env`, so both see
+  the same `live/` folder. `live/recorder.lock` (`{pid, port, started_at}`) tells the CLI a
+  recorder runs.
+- **Files.** One continuous `mic.wav` and `system.wav` per recording, on one frame timeline
+  (blocks aligned like `AlignedWavWriter`: gaps and pauses are silence). A new segment
+  (`mic-0002.wav`...) is opened only on a failure: a write / flush / fsync error (`write_error`),
+  the size guard (`size_limit`, no gap) or a recorder restart (`recorder_restart`, the lost time
+  is a `gap`). `recording.json` (atomic replace, retried while OneDrive locks it) lists, per
+  channel, each segment's `file`, `start_frame`, durable `frames`, `closed` and `reason`, plus
+  `gaps`, `pauses`, `options`, `incarnation`, `last_heartbeat_at`, `duration_seconds`, `status`
+  and `stop_reason`.
+- **No loss.** `DurableTrack.write` only appends PCM to a memory buffer (never dropped). Its writer
+  thread appends it to the open segment and flushes to the OS every 0.1 s (a killed process loses
+  at most that), and every `RECORDER_FSYNC_SECONDS` patches the header, fsyncs and records the
+  durable frame count. Bytes leave memory only once fsynced: after a failure the segment is closed
+  at its last durable frame and everything after it is written again into the next segment from
+  that frame, with a growing retry delay; nothing is lost and nothing is counted twice. Readers
+  (`SegmentReader`) trust the file size, not the header.
+- **Recorder crash.** At start the recorder continues an active recording whose heartbeat is under
+  2 minutes old (`Recording.resume`: open segments repaired from their size and closed, a gap,
+  new segments); older active recordings are closed as `recorder_died` for the engine.
+- **Engine.** `RecorderLink` (`api/recorder_link.py`) looks at `live/` every second. A recording no
+  session follows, with the slot free, gets a session built with `build_session(attach=)`: no
+  device, `TailingFileSource`s over the files from frame 0 and `RecorderClock` (the recording's
+  timeline), created on the recording's `started_at` so it gets the same id. The usual pipeline
+  then stores and transcribes everything, the backlog first. The manifest is the truth for pause,
+  resume and stop; a stopped recording the engine never saw is replayed audio only and
+  transcribed from 0 by the queue. `live/<id>/engine.json` links the recording to its meeting
+  (the engine never writes `recording.json`). A meeting a dead engine was following is discarded
+  and rebuilt from the files, keeping its title, and is never offered for recovery.
+- **Ingest.** The job of a recorder meeting starts with a hidden `ingest` step: the folder is
+  removed only when, channel by channel, the store holds at least the recording's frames and
+  `engine.json` names this meeting; otherwise it is kept (`recorder_ingest_missing`).
+- **App.** Start / Pause / Stop / title go to the recorder when it answers; its `status` events
+  drive the state and elapsed time and its `level` events the meters; the engine's events of the
+  same id add the transcript. A recording that went on while the app was closed is adopted when
+  the app starts. Without a recorder the engine records as before.

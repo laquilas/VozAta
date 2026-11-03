@@ -14,6 +14,9 @@ from vozata.cli.console import ConsoleObserver
 from vozata.config import Settings
 from vozata.domain import ConversationLanguage, SessionStatus
 from vozata.ports import Localizer, SessionObserver
+from vozata.recorder.lock import read_lock
+from vozata.recorder.manifest import live_dir
+from vozata.recorder_client import HttpRecorderClient
 from vozata.session import SessionStartError
 from vozata.transcription.openai_compatible import remote_host
 
@@ -88,6 +91,9 @@ def run_record(
     wait: Callable[[], None] = _wait_until_interrupted,
 ) -> int:
     t = localizer.t
+    if recorder_recording(settings) is not None:  # phase 61: never two captures of one device
+        console.say(t("cli.recorder_active"))
+        return 1
     try:
         session = build(
             settings, console, language=language, mic_device=mic_device, system_device=system_device
@@ -111,6 +117,16 @@ def run_record(
         signal.signal(signal.SIGINT, previous)
     console.say(t("cli.saved", folder=session.folder or session.id))
     return 0
+
+
+def recorder_recording(settings: Settings) -> str | None:
+    """The id of the recording the recorder process is making now, or None."""
+    lock = read_lock(live_dir(settings.output_dir))
+    if lock is None:
+        return None
+    answer = HttpRecorderClient(lock.port).health()
+    recording = (answer or {}).get("recording") or {}
+    return recording.get("id") if recording.get("status") in ("recording", "paused") else None
 
 
 def print_devices(

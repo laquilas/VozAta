@@ -30,6 +30,7 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+recorder_failed = "El grabador no pudo hacerlo ({reason}). La grabación está a salvo en el disco."
 voice_command_busy = "Ya se está atendiendo un comando de voz; inténtalo de nuevo en un momento."
 voice_command_repeated = "Ya lo estoy haciendo: el mismo comando de voz se dijo otra vez en pocos segundos."
 voice_command_unavailable = "Este comando de voz no puede ejecutarse en este motor."
@@ -166,6 +167,7 @@ unreachable = "No se pudo contactar con {target} ({reason})."
 invalid_reply = "{target} devolvió una respuesta inesperada."
 
 [cli]
+recorder_active = "El grabador de VozAta está grabando ahora. Detén esa grabación primero (en la app) y vuelve a ejecutar record."
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
 worker_listening = "Worker de VozAta escuchando en {url} (Ctrl+C para detener)."
 worker_token_created = "Nuevo token del worker, guardado en {file}: {token}. Indícalo en el VozAta del otro PC (Config → Worker)."

@@ -46,6 +46,8 @@ def create_app(container: ApiContainer) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         container.broadcaster.bind(asyncio.get_running_loop())
         container.manager.resume_pending()  # phase 40: unfinished meetings, before the import
+        if container.recorder_link is not None:
+            container.recorder_link.start()  # phase 61: follow the recorder's recordings
         if container.migration is not None:
             container.migration.start()  # phase 33: after `bind`, so its events reach clients
         if container.meeting_detector is not None:
@@ -53,6 +55,8 @@ def create_app(container: ApiContainer) -> FastAPI:
         yield
         if container.meeting_detector is not None:
             await asyncio.to_thread(container.meeting_detector.stop)
+        if container.recorder_link is not None:
+            await asyncio.to_thread(container.recorder_link.close)
         await asyncio.to_thread(container.stop_processing)  # 40: e.g. ends a diarizer child
         container.release_models()
 
@@ -104,7 +108,7 @@ def create_app(container: ApiContainer) -> FastAPI:
                 await websocket.send_json(
                     {"type": "download_progress", "session_id": None, "data": data}
                 )
-            interrupted = await asyncio.to_thread(container.manager.interrupted_sessions)
+            interrupted = await asyncio.to_thread(_interrupted, container)
             if interrupted:  # phase 17: offer to recover sessions a crash cut short
                 data = {"session_ids": interrupted}
                 await websocket.send_json(
@@ -133,3 +137,13 @@ async def _until_disconnected(websocket: WebSocket) -> None:
     with contextlib.suppress(WebSocketDisconnect):
         while True:
             await websocket.receive_text()
+
+
+def _interrupted(container: ApiContainer) -> list[str]:
+    """Sessions to offer for recovery; never one a recorder recording rebuilds (phase 61)."""
+    interrupted = container.manager.interrupted_sessions()
+    link = container.recorder_link
+    if link is None or not interrupted:
+        return interrupted
+    linked = link.linked_sessions()
+    return [session_id for session_id in interrupted if session_id not in linked]

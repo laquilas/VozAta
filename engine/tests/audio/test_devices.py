@@ -12,7 +12,9 @@ from vozata.audio.devices import (
     find_device,
     list_input_devices,
     list_loopback_devices,
+    resolve_devices,
 )
+from vozata.domain import Channel
 
 WASAPI = 2
 
@@ -99,3 +101,37 @@ def test_find_device_with_an_unknown_id_raises_lookup_error() -> None:
 def test_device_without_input_channels_is_rejected() -> None:
     with pytest.raises(LookupError):
         find_device(1, FakePyAudio())
+
+
+def _direct(function: Any) -> Any:
+    return function()
+
+
+def test_resolve_devices_uses_the_defaults_when_no_id_is_chosen() -> None:
+    devices = resolve_devices(_direct, FakePyAudio(), None, None)
+
+    assert devices[Channel.MIC].name == "Headset mic"
+    assert devices[Channel.SYSTEM].name == "Speakers [Loopback]"
+
+
+def test_resolve_devices_uses_the_chosen_ids() -> None:
+    devices = resolve_devices(_direct, FakePyAudio(), 4, 3)
+
+    assert (devices[Channel.MIC].id, devices[Channel.SYSTEM].id) == (4, 3)
+
+
+def test_resolve_devices_runs_every_lookup_through_call() -> None:
+    calls: list[object] = []
+
+    def call(function: Any) -> Any:
+        calls.append(function)
+        return function()
+
+    resolve_devices(call, FakePyAudio(), None, 3)
+
+    assert len(calls) == 2
+
+
+def test_resolve_devices_reports_a_missing_device() -> None:
+    with pytest.raises(LookupError):
+        resolve_devices(_direct, FakePyAudio(), 99, None)

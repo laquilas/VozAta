@@ -82,6 +82,14 @@ class PairedWorkerOut(BaseModel):
     url: str
 
 
+class RecorderHealth(BaseModel):
+    """The recorder process (phase 61): does it answer, and what does it record."""
+
+    reachable: bool
+    port: int
+    recording_id: str | None = None
+
+
 class Health(BaseModel):
     engine: Literal["ok"] = "ok"
     version: str
@@ -90,6 +98,7 @@ class Health(BaseModel):
     llm: LlmStatus
     storage: StorageStatus
     worker: WorkerHealth | None = None
+    recorder: RecorderHealth | None = None  # phase 61; None: RECORDER_ENABLED=false
 
 
 class Device(BaseModel):

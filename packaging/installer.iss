@@ -64,6 +64,8 @@ Type: files; Name: "{userprograms}\VozAta Worker.lnk"
 [Files]
 Source: "{#BuildDir}\ui\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "{#BuildDir}\dist\vozata-engine\*"; DestDir: "{app}\engine"; Flags: recursesubdirs createallsubdirs ignoreversion
+; phase 61: the recorder process, started by the app before the engine
+Source: "{#BuildDir}\dist\vozata-recorder\*"; DestDir: "{app}\recorder"; Flags: recursesubdirs createallsubdirs ignoreversion
 ; first run only: the engine's settings live with the user and survive upgrades and uninstalls
 Source: "{#BuildDir}\installed.env"; DestDir: "{userappdata}\VozAta"; DestName: ".env"; Flags: onlyifdoesntexist uninsneveruninstall
 
@@ -74,6 +76,10 @@ Name: "{userdocs}\VozAta"; Flags: uninsneveruninstall
 [Icons]
 Name: "{userprograms}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"
 Name: "{userdesktop}\VozAta"; Filename: "{app}\VozAta.Desktop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VozAta.Desktop.exe"; Tasks: desktopicon
+
+[UninstallRun]
+; phase 61: stop the recorder when it is idle (it refuses while recording: the files stay safe)
+Filename: "{app}\recorder\vozata-recorder.exe"; Parameters: "--stop"; Flags: runhidden; RunOnceId: "StopRecorder"
 
 [Run]
 Filename: "{app}\VozAta.Desktop.exe"; Description: "{cm:LaunchProgram,VozAta}"; Flags: nowait postinstall skipifsilent

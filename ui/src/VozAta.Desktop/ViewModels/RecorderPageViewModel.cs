@@ -45,6 +45,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private readonly Func<TimeSpan, CancellationToken, Task> _titleDelay;
     private CancellationTokenSource? _titleTyping; // the pending debounced title update
     private string? _sentTitle; // the title the engine has for the live session
+    private readonly IRecorderClient? _recorder; // the recorder process (phase 61); null = engine only
+    private bool _viaRecorder; // the recording on screen is the recorder's (its events drive the state)
+    private string? _recorderRecordingId; // what the recorder records now, from its status events
 
     /// <param name="titleDelay">Waits out the title debounce (tests pass a controllable one).</param>
     public RecorderPageViewModel(
@@ -58,10 +61,12 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         Action<string> notify,
         Func<TimeSpan, CancellationToken, Task>? titleDelay = null,
         IShellService? shell = null,
+        IRecorderClient? recorder = null,
         CancellationToken cancellation = default)
     {
         _titleDelay = titleDelay ?? Task.Delay;
         _client = client;
+        _recorder = recorder;
         _preferences = preferences;
         _liveTranscription = preferences.Load().LiveTranscription ?? true;
         _localization = localization;
@@ -240,10 +245,21 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty]
     public partial string? DetectedLanguage { get; private set; }
 
-    /// <summary>The engine is connected (set by the window); Start needs it.</summary>
+    /// <summary>The engine is connected (set by the window); Start needs it or the recorder.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial bool IsEngineConnected { get; set; }
+
+    /// <summary>
+    /// The recorder process answers (phase 61): Start records at once, even while the engine is still
+    /// starting or has failed; the engine attaches to the recording when it is up.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    public partial bool IsRecorderConnected { get; set; }
+
+    /// <summary>The recording on screen is made by the recorder process.</summary>
+    public bool IsViaRecorder => _viaRecorder;
 
     public RecordingState State => Session.State;
 
@@ -358,7 +374,11 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         switch (engineEvent)
         {
             case StatusEvent status:
-                OnStatus(status);
+                if (!IsRecorderSession(status.SessionId))
+                {
+                    OnStatus(status);
+                }
+
                 return true;
             case SegmentEvent { Segment: var segment } segmentEvent:
                 _liveSessionId = segmentEvent.SessionId ?? _liveSessionId;
@@ -371,6 +391,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             case PartialEvent partial:
                 OnPartial(partial);
                 return true;
+            case LevelEvent when _viaRecorder:
+                return true; // the recorder's levels are live; the engine's may be a replay
             case LevelEvent { Channel: "mic" } level:
                 MicMeter.OnLevel(level.RmsDb);
                 return true;
@@ -438,7 +460,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         _titleTyping?.Cancel();
     }
 
-    private bool CanStart() => State == RecordingState.Idle && IsEngineConnected;
+    private bool CanStart() => State == RecordingState.Idle && (IsEngineConnected || CanUseRecorder);
+
+    private bool CanUseRecorder => _recorder is not null && IsRecorderConnected;
 
     private bool CanStop() => IsRecording;
 
@@ -449,7 +473,11 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         var resume = IsPaused;
         try
         {
-            if (resume)
+            if (_viaRecorder && _recorder is not null)
+            {
+                await (resume ? _recorder.ResumeAsync(_cancellation) : _recorder.PauseAsync(_cancellation));
+            }
+            else if (resume)
             {
                 await _client.ResumeSessionAsync(_cancellation);
             }
@@ -479,6 +507,12 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         _recordingLive = LiveTranscription; // this page started it: never looked up
         try
         {
+            if (CanUseRecorder)
+            {
+                await StartWithRecorderAsync();
+                return;
+            }
+
             var terms = VocabularyViewModel.ParseTerms(SessionTerms);
             var title = NormalizeTitle(Title);
             var request = new StartSessionRequest(
@@ -504,6 +538,39 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         }
     }
 
+    /// <summary>
+    /// Start through the recorder process (phase 61): it records at once; the meeting's options go with
+    /// the recording and the engine applies them when it attaches (also after an engine restart).
+    /// </summary>
+    private async Task StartWithRecorderAsync()
+    {
+        var terms = VocabularyViewModel.ParseTerms(SessionTerms);
+        var title = NormalizeTitle(Title);
+        var options = new Dictionary<string, object?>
+        {
+            ["language"] = SelectedLanguage.Value,
+            ["template"] = SelectedTemplate?.Id,
+            ["vocabulary"] = terms.Count > 0 ? terms : null,
+            ["translate_to"] = LiveTranscription && SelectedTranslation.Value != _defaultTranslation
+                ? SelectedTranslation.Value
+                : null,
+            ["title"] = title,
+            ["live_transcription"] = LiveTranscription,
+        };
+        var started = await _recorder!.StartAsync(
+            new StartRecordingRequest(Devices.MicDeviceId, Devices.SystemDeviceId, options), _cancellation);
+        _viaRecorder = true;
+        _recorderRecordingId = started.Id;
+        _sentTitle = title;
+        Session.SessionId = started.Id;
+        Session.Title = title;
+        SetState(RecordingState.Recording);
+        if (NormalizeTitle(Title) != _sentTitle)
+        {
+            ScheduleTitleSave(); // edited while the recorder was starting
+        }
+    }
+
     /// <summary>Enter in the title box: starts when idle (like Toggl); while recording, sends the title now.</summary>
     [RelayCommand]
     private async Task EnterAsync()
@@ -524,7 +591,15 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         try
         {
             await SaveTitleNowAsync(); // a title still being typed belongs to this meeting
-            await _client.StopSessionAsync(_cancellation);
+            if (_viaRecorder && _recorder is not null)
+            {
+                await _recorder.StopAsync(_cancellation); // every sample is on disk when it returns
+            }
+            else
+            {
+                await _client.StopSessionAsync(_cancellation);
+            }
+
             SetState(RecordingState.Idle); // the engine finishes the meeting in the background (phase 40)
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
@@ -587,6 +662,12 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             return;
         }
 
+        if (_viaRecorder && _recorder is not null)
+        {
+            await SaveRecorderTitleAsync(sessionId, title);
+            return;
+        }
+
         try
         {
             var saved = await _client.UpdateSessionTitleAsync(sessionId, title, _cancellation);
@@ -601,6 +682,118 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             _notify(ErrorText(error));
         }
     }
+
+    /// <summary>
+    /// The title of a recorder recording: kept with the recording (the engine reads it when it attaches
+    /// or rebuilds), and given to the engine's meeting when the engine already follows it.
+    /// </summary>
+    private async Task SaveRecorderTitleAsync(string sessionId, string? title)
+    {
+        try
+        {
+            await _recorder!.UpdateOptionsAsync(new Dictionary<string, object?> { ["title"] = title }, _cancellation);
+            _sentTitle = title;
+            if (Session.SessionId == sessionId)
+            {
+                Session.Title = title;
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            _notify(ErrorText(error));
+            return;
+        }
+
+        if (!IsEngineConnected)
+        {
+            return;
+        }
+
+        try
+        {
+            await _client.UpdateSessionTitleAsync(sessionId, title, _cancellation);
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            // not attached yet: it takes the title from the recording when it attaches
+        }
+    }
+
+    /// <summary>The recorder's events (phase 61): connection, the recording's state and time, levels.</summary>
+    public bool HandleRecorder(RecorderEvent recorderEvent)
+    {
+        switch (recorderEvent)
+        {
+            case RecorderConnectionChangedEvent connection:
+                IsRecorderConnected = connection.Connected;
+                return true;
+            case RecorderStatusEvent { Recording: var recording }:
+                OnRecorderStatus(recording);
+                return true;
+            case RecorderLevelEvent { Channel: "mic" } level when _viaRecorder:
+                MicMeter.OnLevel(level.RmsDb);
+                return true;
+            case RecorderLevelEvent { Channel: "system" } level when _viaRecorder:
+                SystemMeter.OnLevel(level.RmsDb);
+                return true;
+            case RecorderErrorEvent error:
+                _notify(_localization.Format("RecorderProblem", error.Message));
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void OnRecorderStatus(RecordingSummary recording)
+    {
+        _recorderRecordingId = recording.IsActive ? recording.Id : null;
+        if (!recording.IsActive)
+        {
+            if (_viaRecorder && State is RecordingState.Recording or RecordingState.Paused)
+            {
+                SetState(RecordingState.Idle); // stopped elsewhere (another app window, a script)
+            }
+
+            return;
+        }
+
+        if (!_viaRecorder)
+        {
+            if (State != RecordingState.Idle || recording.Id == _lastStoppedId)
+            {
+                return; // the engine records this one itself, or it is the one just stopped
+            }
+
+            _viaRecorder = true; // it records already (the app was closed or crashed): adopt it
+            Session.SessionId = recording.Id;
+            _recorderRecordingId = recording.Id;
+            _recordingLive = OptionFlag(recording, "live_transcription") ?? LiveTranscription;
+            _sentTitle = OptionText(recording, "title");
+            Session.Title = _sentTitle;
+            Title = _sentTitle ?? "";
+        }
+
+        if (!(IsPaused && recording.Status == "paused"))
+        {
+            Session.Elapsed = TranscriptLine.FormatTime(recording.DurationSeconds);
+        }
+
+        SetState(recording.Status == "paused" ? RecordingState.Paused : RecordingState.Recording);
+    }
+
+    private static string? OptionText(RecordingSummary recording, string key) =>
+        recording.Options?.TryGetValue(key, out var value) == true && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static bool? OptionFlag(RecordingSummary recording, string key) =>
+        recording.Options?.TryGetValue(key, out var value) == true
+            ? value.ValueKind switch { JsonValueKind.True => true, JsonValueKind.False => false, _ => null }
+            : null;
+
+    /// <summary>The engine's view of a recorder recording: its transcript counts, not its state or levels.</summary>
+    private bool IsRecorderSession(string? sessionId) =>
+        _viaRecorder || (sessionId is not null && sessionId == _recorderRecordingId);
 
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs args)
     {
@@ -807,6 +1000,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         UpdateMeters(wasRecording);
         if (state == RecordingState.Idle)
         {
+            _viaRecorder = false;
             _recordingLive = null;
             IsModelLoading = false;
             Partials.Clear();

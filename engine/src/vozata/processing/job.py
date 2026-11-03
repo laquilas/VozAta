@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 
 class StepKind(StrEnum):
     REPAIR = "repair"
+    INGEST = "ingest"  # phase 61: the recorder's files checked against the store, then removed
     TRANSCRIBE = "transcribe"
     FINALIZE = "finalize"
     MIX = "mix"
@@ -24,7 +25,7 @@ class StepKind(StrEnum):
 
 
 # `finalize` and `mix` are silent: events report the shown step that follows them.
-HIDDEN_KINDS = frozenset({StepKind.FINALIZE, StepKind.MIX})
+HIDDEN_KINDS = frozenset({StepKind.FINALIZE, StepKind.MIX, StepKind.INGEST})
 
 
 class AbortJob(Exception):
