@@ -61,6 +61,7 @@ class Segment:
 
 @dataclass
 class Gap:
+    channel: str
     start_frame: int
     end_frame: int
     reason: str = REASON_RESTART

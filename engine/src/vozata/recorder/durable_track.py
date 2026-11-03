@@ -2,9 +2,10 @@
 
 `write(samples, at)` runs on the capture thread: it only aligns the block on the frame timeline
 (gaps become silence, paused blocks are written as silence, like `AlignedWavWriter`) and appends
-the PCM to an in-memory buffer, which is never dropped. `flush_once()` (the writer thread)
-appends the buffer to the open segment file and, every `fsync_seconds`, patches the WAV header,
-fsyncs and records the durable frame count in the segment.
+the PCM to an in-memory buffer, which is never dropped. `flush_once()` (the writer thread, every
+0.1 s) appends the buffer to the open segment file and flushes it to the OS, so a killed process
+loses at most that last step; every `fsync_seconds` it also patches the WAV header, fsyncs (a
+power cut loses at most that much) and records the durable frame count in the segment.
 
 Bytes leave the buffer only once they are durable (fsynced). When a write, flush or fsync
 fails (a full disk, a OneDrive lock), the segment is closed at its last durable frame and the
@@ -219,6 +220,7 @@ class DurableTrack:
                 continue
             part = bytes(self._staging[:room])
             self._file.write(part)  # type: ignore[union-attr]
+            self._file.flush()  # type: ignore[union-attr]  # in the OS cache: survives a kill
             del self._staging[: len(part)]
             self._unsynced += part
             self._file_frames += len(part) // FRAME_BYTES

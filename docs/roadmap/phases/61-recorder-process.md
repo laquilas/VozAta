@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:13
-- **Next step:** write `recorder/recording.py` (devices, sources, tracks, levels, pause, heartbeat, resume after a crash) with fakes
+- **Updated:** 2026-11-03 17:16
+- **Next step:** write the recorder HTTP API (`recorder/http.py`, `app.py`, `lock.py`, `__main__.py`) with tests on port 0, an import-budget test, and the `RECORDER_*` config keys
 
 ### Steps
 
@@ -141,7 +141,7 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] `wav_repair` header helpers public; `resolve_devices` moved
 - [x] `recorder/manifest.py` + `segment_reader.py`
 - [x] `recorder/durable_track.py` (no-loss writer)
-- [ ] `recorder/recording.py`
+- [x] `recorder/recording.py`
 - [ ] Recorder HTTP API (`http.py`, `app.py`, `lock.py`, `__main__.py`), config keys
 - [ ] Engine ports, `TailingFileSource`, `RecorderClock`
 - [ ] `create(session_id=)`, append writers, segment ids continue

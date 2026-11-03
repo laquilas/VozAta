@@ -34,7 +34,7 @@ def _manifest() -> Manifest:
             Segment("mic-0002.wav", 1500, 200, reason=REASON_RESTART),
         ]
     )
-    manifest.gaps.append(Gap(1000, 1500))
+    manifest.gaps.append(Gap("mic", 1000, 1500))
     manifest.options = {"language": "pt", "title": "Weekly"}
     return manifest
 
