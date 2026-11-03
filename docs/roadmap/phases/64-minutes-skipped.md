@@ -1,0 +1,69 @@
+# Phase 64 — Minutes skipped at Stop, and the "minutes not generated" marker
+
+## Goal
+
+Back-to-back meetings never wait for minutes. A per-meeting "Generate minutes when finished"
+option (editable during the recording); at Stop, when the engine core is not ready or the option
+is off, the meeting is processed without minutes and marked **"Minutes not generated"**, with a
+button to generate them later.
+
+Requested by the user on 2026-11-03.
+
+## Depends on
+
+61
+
+## Read first
+
+- `engine/CLAUDE.md`, `ui/CLAUDE.md`, [phase 40](40-background-processing.md),
+  [phase 61](61-recorder-process.md) (`LiveRecordingImporter`)
+- `bootstrap_processing.py`, `processing/session_job.py`, `api/minutes_job.py`,
+  `api/payloads.py`, `MeetingRows.cs`, `MeetingsPage.axaml`, the meeting page's minutes tab
+
+## Scope
+
+**Engine**
+
+| File | Content |
+|------|---------|
+| `api/schemas.py`, `session_manager.py`, `bootstrap.py`, `session_meta.py` | `generate_minutes` at start (null = `GENERATE_MINUTES`) and in `PATCH`, stored in `session.json` |
+| `processing/readiness.py` | `MinutesReadiness`: is the language model reachable when the job is built |
+| `bootstrap_processing.py`, `processing/session_job.py` | minutes (and action items) only when the setting, the meeting option and readiness allow it; otherwise `minutes_skipped: not_ready \| by_user` and a `minutes_skipped` event |
+| `storage/live_import.py` | a recording imported because the engine was down is `not_ready` |
+| `api/payloads.py`, `schemas.SessionSummary` | `minutes_state`: `generated`, `pending`, `skipped_not_ready`, `skipped_by_user`, `none` |
+| `api/minutes_job.py` | generated minutes clear the marker |
+
+**UI**
+
+| File | Content |
+|------|---------|
+| `VozAta.Client` | `MinutesState`, `GenerateMinutes`, `MinutesSkippedEvent` |
+| `RecorderPageViewModel.cs`, `RecorderPage.axaml` | the "Generate minutes when finished" chip, remembered in `ui.json` |
+| Meetings rows, meeting page | "Minutes not generated" badge (the reason in its tooltip) and a "Generate minutes" button |
+| `MainViewModel.cs` | the event updates the row and shows a notification |
+| Resources | strings in en / pt-BR / es |
+
+## Acceptance criteria
+
+- [ ] Stop with the language model unreachable: the meeting ends `done` with transcript and
+      speakers, marked `skipped_not_ready`; the badge and button show; the button produces the
+      minutes and clears the badge.
+- [ ] The option off: `skipped_by_user`, same badge and button.
+- [ ] A recording imported after an engine outage is `skipped_not_ready`.
+- [ ] The next meeting can start at once after Stop.
+- [ ] en / pt-BR / es parity; coverage ≥ 80 %.
+
+## Tests
+
+`tests/test_bootstrap_processing.py`, `tests/processing/test_session_job.py`,
+`tests/api/test_minutes_state.py`, `MeetingsPageViewModelTests.cs`,
+`RecorderPageViewModelTests.cs`.
+
+## Out of scope
+
+Generating the skipped minutes automatically when the language model comes back.
+
+## Kickoff prompt
+
+> Execute phase 64 of the roadmap (`docs/roadmap/phases/64-minutes-skipped.md`), following
+> `docs/roadmap/README.md`.

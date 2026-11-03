@@ -110,12 +110,16 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 58 | [GPU support (CUDA) downloaded on the PC](phases/58-cuda-on-demand.md) | 13, 56, 57 | done |
 | 59 | [Voice command status in the menu; request history per meeting](phases/59-voice-status-and-history.md) | 48, 49, 50 | done |
 | 60 | [Import an audio file as a meeting](phases/60-audio-import.md) | 39, 40, 41 | done |
+| 61 | [Recorder process: record first, never lose audio](phases/61-recorder-process.md) | 40, 41, 60 | in progress (`feature/61-recorder-process`) |
+| 62 | [Engine gate, retry connection, reattach after a crash](phases/62-engine-gate.md) | 61 | todo |
+| 63 | [Options editable during the recording](phases/63-live-options.md) | 61 | todo |
+| 64 | [Minutes skipped at Stop and the marker](phases/64-minutes-skipped.md) | 61 | todo |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·
-32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43 · 45 / 47 / 48 · 49 / 50.
+32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43 · 45 / 47 / 48 · 49 / 50 · 62 / 63 / 64.
 
 **Milestones**
 - **M1 — CLI MVP** (00–05): record, live transcript in the terminal, three WAVs, minutes.
@@ -143,6 +147,10 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 - **M11 — Choice and tuning** (53–55): minutes on an OpenAI-compatible server or Anthropic,
   a suggestion to record when Teams / Zoom is in a call, and a WER benchmark to tune the
   transcription defaults.
+- **M12 — Resilient recording** (61–64): a small recorder process records from the first second
+  and never loses audio, even when the engine or the app crashes; only the parts that need the
+  engine wait for it, with a retry; options editable during the recording; minutes skipped and
+  marked when the engine is not ready.
 
 ## Dependency graph
 
@@ -243,6 +251,12 @@ graph LR
   P39 --> P60[60 Audio file import]
   P40 --> P60
   P41 --> P60
+  P40 --> P61[61 Recorder process]
+  P41 --> P61
+  P60 --> P61
+  P61 --> P62[62 Engine gate]
+  P61 --> P63[63 Live options]
+  P61 --> P64[64 Minutes skipped]
 ```
 
 ## Backlog (not scheduled)
