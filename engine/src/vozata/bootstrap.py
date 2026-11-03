@@ -28,6 +28,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.migration_job import MigrationJob
 from vozata.api.minutes_job import MinutesJob
 from vozata.api.partial_minutes_job import PartialMinutesJob
+from vozata.api.recorder_link import RecorderLink
 from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
 from vozata.api.system_info import query_gpu
@@ -82,7 +83,7 @@ from vozata.meeting.detector import MeetingDetector
 from vozata.minutes.action_items import ActionItemExtractor
 from vozata.minutes.generator import MinutesGenerator
 from vozata.minutes.session_minutes import stored_template, stored_vocabulary
-from vozata.minutes.template_repository import bundled_templates
+from vozata.minutes.template_repository import UnknownTemplateError, bundled_templates
 from vozata.models.cli_progress import cli_downloader
 from vozata.models.download import HubDownloader
 from vozata.models.tracker import DownloadTracker
@@ -118,6 +119,7 @@ from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.meeting_so_far import MeetingSoFarAnswerer
 from vozata.qa.retriever import Retriever
 from vozata.recorder.attach import RecordingAttach
+from vozata.recorder_client import HttpRecorderClient
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_finisher import SessionFinisher
 from vozata.session_title import stored_title
@@ -1261,6 +1263,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             downloader=downloader,
             worker_moved=worker_moved,
             voice_dispatch=voice_dispatch,
+            attach=options.attach,
         )
 
     def llm_reachable() -> bool:
@@ -1284,6 +1287,17 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         recovery=recovery,
         queue=queue,
         job_factory=job_factory,
+    )
+    recorder_link = (
+        RecorderLink(
+            settings.output_dir,
+            manager,
+            store,
+            HttpRecorderClient(settings.recorder_port),
+            check_template=_known_template,
+        )
+        if settings.recorder_enabled
+        else None
     )
 
     def free_whisper() -> None:
@@ -1430,4 +1444,13 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         discover_workers=lambda current: discover_workers(
             current.worker_discovery_port, lan_addresses()
         ),
+        recorder_link=recorder_link,
     )
+
+
+def _known_template(template: str) -> bool:
+    try:
+        MINUTES_TEMPLATES.get(template)
+    except UnknownTemplateError:
+        return False
+    return True

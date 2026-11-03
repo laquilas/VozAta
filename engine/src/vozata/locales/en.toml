@@ -30,6 +30,7 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
+recorder_failed = "The recorder did not do it ({reason}). The recording is safe on disk."
 voice_command_busy = "Voice commands are being processed already; try again in a moment."
 voice_command_repeated = "Already on it: the same voice command was said again within a few seconds."
 voice_command_unavailable = "This voice command cannot run in this engine."

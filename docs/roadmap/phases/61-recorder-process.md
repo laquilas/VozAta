@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:34
-- **Next step:** `RecorderLink` in `api/recorder_link.py` (attach / follow / replay / rebuild, `engine.json`), with tests over a fake recorder client and real recording folders
+- **Updated:** 2026-11-03 17:45
+- **Next step:** `ingest` step in the processing job: stored frames vs the manifest, then delete `live/<id>/` (keep it on a mismatch, `error ingest_mismatch`)
 
 ### Steps
 
@@ -146,7 +146,7 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] Engine `TailingFileSource` and `RecorderClock`
 - [x] Attach: `build_session(attach=)`, the session started on the recording's `started_at`,
       `capture_source` / `recorder_id` in `session.json`
-- [ ] `RecorderLink` (watcher): attach live recordings, follow pause / resume / stop, replay
+- [x] `RecorderLink` (watcher): attach live recordings, follow pause / resume / stop, replay
       stopped ones audio-only, rebuild after an engine restart; `engine.json` marker; recovery
       exclusions; `POST /sessions` and the controls forwarded to the recorder
 - [ ] `ingest` step: stored frames checked against the manifest, then `live/<id>/` deleted

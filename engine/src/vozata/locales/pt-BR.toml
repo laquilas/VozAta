@@ -30,6 +30,7 @@ action_items_failed = "Não foi possível extrair os itens de ação ({reason}).
 translation_failed = "A tradução ao vivo parou ({reason}). A transcrição continua."
 
 [errors.api]
+recorder_failed = "O gravador não conseguiu ({reason}). A gravação está segura no disco."
 voice_command_busy = "Um comando de voz já está sendo atendido; tente de novo daqui a pouco."
 voice_command_repeated = "Já estou fazendo: o mesmo comando de voz foi dito de novo em poucos segundos."
 voice_command_unavailable = "Este comando de voz não pode rodar neste motor."

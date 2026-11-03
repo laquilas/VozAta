@@ -24,6 +24,7 @@ from vozata.labels import SpeakerLabeler
 from vozata.ports import SessionObserver, SessionRepository
 from vozata.processing.job import ProcessingJob
 from vozata.processing.queue import ProcessingQueue
+from vozata.recorder.attach import RecordingAttach
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
@@ -78,6 +79,11 @@ class Session(Protocol):
 
     def set_title(self, title: str | None) -> None: ...
 
+    @property
+    def recorder_id(self) -> str | None: ...
+
+    def end_at(self, seconds: float) -> None: ...
+
 
 @dataclass(frozen=True)
 class StartOptions:
@@ -91,6 +97,7 @@ class StartOptions:
     )
     title: str | None = None  # meeting title (phase 35), already normalized; None = untitled
     live_transcription: bool | None = None  # phase 41; None = LIVE_TRANSCRIPTION
+    attach: RecordingAttach | None = None  # phase 61: follow this recorder recording
 
 
 SessionFactory = Callable[[SessionObserver, StartOptions], Session]

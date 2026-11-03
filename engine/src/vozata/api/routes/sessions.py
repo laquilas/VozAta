@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from typing import Annotated, Any
 
@@ -11,6 +12,7 @@ from vozata.api.container import ApiContainer
 from vozata.api.deps import container
 from vozata.api.errors import ApiError
 from vozata.api.payloads import segment_payload, session_summary
+from vozata.api.recorder_link import RecorderLink
 from vozata.api.request_log import record, refused
 from vozata.api.routes.templates import check_template
 from vozata.api.schemas import (
@@ -27,6 +29,7 @@ from vozata.api.schemas import (
 from vozata.api.session_days import EPOCH, group_by_day, local_bounds
 from vozata.api.session_manager import StartOptions
 from vozata.domain import AudioTrack, ConversationLanguage, TranslationTarget
+from vozata.recorder_client import RecorderApiError, RecorderUnavailableError
 from vozata.session_title import TitleTooLongError, normalize_title
 
 router = APIRouter(tags=["sessions"])
@@ -47,6 +50,17 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
         title=title,
         live_transcription=body.live_transcription,
     )
+    link = c.recorder_link
+    if link is not None and link.recorder_available():  # phase 61: the recorder records
+        request = body.model_dump(exclude_none=True)
+        if title is not None:
+            request["title"] = title
+        try:
+            return link.start_recording(request)
+        except RecorderApiError as error:
+            raise _recorder_error(error) from None
+        except RecorderUnavailableError:
+            pass  # it went away meanwhile: the engine records itself
     try:
         return c.manager.start(options)
     except LookupError as error:  # an unknown device id
@@ -55,11 +69,17 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
 
 @router.post("/sessions/current/pause", response_model=SessionSummary)
 def pause_session(c: Container) -> dict[str, Any]:
+    if (link := _following(c)) is not None:
+        _to_recorder(link.pause)
+        return c.manager.summary(c.manager.current)
     return c.manager.pause()
 
 
 @router.post("/sessions/current/resume", response_model=SessionSummary)
 def resume_session(c: Container) -> dict[str, Any]:
+    if (link := _following(c)) is not None:
+        _to_recorder(link.resume)
+        return c.manager.summary(c.manager.current)
     return c.manager.resume()
 
 
@@ -67,7 +87,37 @@ def resume_session(c: Container) -> dict[str, Any]:
     "/sessions/current/stop", status_code=status.HTTP_202_ACCEPTED, response_model=SessionSummary
 )
 def stop_session(c: Container) -> dict[str, Any]:
+    if (link := _following(c)) is not None:
+        session = c.manager.current
+        summary = c.manager.summary(session)
+        _to_recorder(link.stop)
+        return {**summary, "status": "finalizing"}
     return c.manager.stop()
+
+
+def _following(c: ApiContainer) -> RecorderLink | None:
+    """The recorder link when the current session follows a recorder recording (phase 61)."""
+    link = c.recorder_link
+    return link if link is not None and link.following() is not None else None
+
+
+def _to_recorder(control: Callable[[], None]) -> None:
+    try:
+        control()
+    except RecorderApiError as error:
+        raise _recorder_error(error) from None
+    except RecorderUnavailableError as error:
+        raise ApiError(503, "recorder_failed", reason=error) from None
+
+
+def _recorder_error(error: RecorderApiError) -> ApiError:
+    if error.code == "device_not_found":
+        return ApiError(404, "device_not_found", reason=error)
+    if error.code in ("recording_already_active", "recording_active"):
+        return ApiError(409, "session_already_active")
+    if error.code == "no_active_recording":
+        return ApiError(409, "no_active_session")
+    return ApiError(503, "recorder_failed", reason=f"{error.code}: {error}")
 
 
 @router.get("/sessions", response_model=SessionList | SessionDays)
@@ -114,7 +164,14 @@ def _audio(c: ApiContainer, session_id: str) -> dict[str, float]:
 @router.patch("/sessions/{session_id}", response_model=SessionSummary)
 def update_session(session_id: str, body: UpdateSession, c: Container) -> dict[str, Any]:
     """Rename a meeting (phase 35), also while it is being recorded."""
-    return c.manager.rename(session_id, _title(body.title))
+    title = _title(body.title)
+    summary = c.manager.rename(session_id, title)
+    link = c.recorder_link
+    session = c.manager.current
+    following = link is not None and link.following() is not None
+    if following and session is not None and session.id == session_id:
+        link.mirror_title(title)  # type: ignore[union-attr]  # kept by a rebuild (phase 61)
+    return summary
 
 
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -354,8 +354,12 @@ def test_build_api_container_wires_real_providers(
             "title": None,
             "live_transcription": None,
             "gpu_usage": GpuUsage(speech=True, speakers=False, llm=False),  # LLM "fake"
+            "attach": None,  # phase 61: the engine records itself unless a recording is followed
         }
     ]
+    from vozata.api.recorder_link import RecorderLink
+
+    assert isinstance(container.recorder_link, RecorderLink)  # RECORDER_ENABLED defaults on
     generator = container.regenerate_minutes._build_generator()
     assert generator._llm is llm
     monkeypatch.chdir(tmp_path)  # the container's `.env` is relative: never the real one
