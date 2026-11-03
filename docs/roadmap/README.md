@@ -112,7 +112,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 60 | [Import an audio file as a meeting](phases/60-audio-import.md) | 39, 40, 41 | done |
 | 61 | [Recorder process: record first, never lose audio](phases/61-recorder-process.md) | 40, 41, 60 | done |
 | 62 | [Engine gate, retry connection, reattach after a crash](phases/62-engine-gate.md) | 61 | done |
-| 63 | [Options editable during the recording](phases/63-live-options.md) | 61 | todo |
+| 63 | [Options editable during the recording](phases/63-live-options.md) | 61 | in progress (`feature/63-live-options`) |
 | 64 | [Minutes skipped at Stop and the marker](phases/64-minutes-skipped.md) | 61 | todo |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.

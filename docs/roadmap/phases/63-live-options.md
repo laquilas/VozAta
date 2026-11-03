@@ -74,3 +74,33 @@ Changing devices during a recording.
 
 > Execute phase 63 of the roadmap (`docs/roadmap/phases/63-live-options.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/63-live-options` (stacked on `feature/62-engine-gate`, PR #80)
+- **Status:** in progress
+- **Updated:** 2026-11-03 22:00
+- **Next step:** translation on / off / changed during the recording (`CompositeSink.add/remove`)
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [x] Engine: `PATCH /sessions/{id}` options, `SessionManager.update`, `RecordingSession.apply`
+      (language, terms, template, title, minutes flag), `session_updated`, options mirrored to
+      the recording
+- [ ] Engine: translation on / off / changed during the recording
+- [ ] Engine: live transcription off and on during the recording
+- [ ] UI: chips editable while recording, debounced `PATCH`, `session_updated`
+- [ ] Docs, full suites, PR
+
+### Decisions and notes
+
+- `PATCH` with only `title` keeps the phase 35 path (`rename`); an empty body is `422`.
+- `auto` set during the recording clears `session.json.language` (`language_source: auto`) until
+  the language is detected again.
+- Live transcription turned **on** during a recording follows the recording's files from the
+  transcript's resume point (a second `TailingFileSource` per channel feeding only the chunkers):
+  the earlier audio is transcribed live in order, so the transcript has no hole and no
+  duplicate. This needs the recorder (phase 61); an engine-only recording answers
+  `409 live_transcription_needs_recorder`. Turned **off**, the live part drains (queued windows
+  are transcribed) and the rest is transcribed after Stop from the resume point.

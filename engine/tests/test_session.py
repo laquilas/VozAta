@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import threading
+import time
 import wave
 from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
@@ -44,7 +45,7 @@ from vozata.ports import (
 from vozata.processing.gpu_gate import GpuGate, GpuUsage
 from vozata.processing.job import run_job_inline
 from vozata.processing.live_lease import LiveModelTurn
-from vozata.session import RecordingSession, SessionComponents, SessionStartError
+from vozata.session import RecordingSession, SessionChanges, SessionComponents, SessionStartError
 from vozata.session_pipeline import ChunkerFactory
 from vozata.storage.files.audio import FileAudioStore
 from vozata.storage.files.layout import SessionPaths
@@ -1097,3 +1098,58 @@ def test_audio_only_stop_sets_closed_at_once_and_the_job_transcribes_from_zero(
     assert all(segment.start < 0.5 for segment in segments)  # fed from 0.0
     assert rig.log.entries.count("transcriber.load") == 1  # the offline model only
     assert rig.session.status is SessionStatus.DONE
+
+
+def _wait_for(condition: Callable[[], bool], timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, "timed out"
+        time.sleep(0.01)
+
+
+def test_language_and_terms_change_during_the_recording(tmp_path: Path) -> None:
+    """Phase 63: from the next window on, and saved in session.json."""
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 4, vocabulary=("Avalonia",))
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 1)
+
+    changed = rig.session.apply(
+        SessionChanges(language=ConversationLanguage.PT, vocabulary=("VozAta",), template="daily")
+    )
+    rig.mic.push(_voice(1.0), 1.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 2)
+
+    first, second = rig.transcriber.calls[0], rig.transcriber.calls[-1]
+    assert (first[1], first[2]) == ("en", "Avalonia")
+    assert (second[1], second[2]) == ("pt", "VozAta")  # without vocabulary_for: the terms alone
+    meta = rig.store.read_meta(rig.session.id)
+    assert (meta["language"], meta["language_source"]) == ("pt", "selected")
+    assert (meta["vocabulary"], meta["template"]) == (["VozAta"], "daily")
+    assert changed == {"language": "pt", "vocabulary": ["VozAta"], "template": "daily"}
+
+
+def test_auto_detects_again_and_title_and_minutes_flag_are_saved(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+
+    changed = rig.session.apply(
+        SessionChanges(
+            language=ConversationLanguage.AUTO,
+            title_set=True,
+            title="Daily",
+            generate_minutes=False,
+        )
+    )
+
+    meta = rig.store.read_meta(rig.session.id)
+    assert meta["language"] is None and meta["language_source"] == "auto"
+    assert (meta["title"], meta["generate_minutes"]) == ("Daily", False)
+    assert changed == {"language": "auto", "title": "Daily", "generate_minutes": False}
+
+
+def test_nothing_to_change_changes_nothing(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    rig.session.start()
+
+    assert rig.session.apply(SessionChanges()) == {}

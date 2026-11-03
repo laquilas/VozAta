@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -91,6 +91,23 @@ class SessionComponents:
     # None = the session opens the devices itself
     started_at: datetime | None = None
     recorder_id: str | None = None
+    # phase 63: this meeting's terms merged with the glossary (and the wake word), as at start
+    vocabulary_for: Callable[[Sequence[str]], tuple[str, ...]] | None = None
+
+
+@dataclass(frozen=True)
+class SessionChanges:
+    """Options changed during the recording (phase 63); None = unchanged. `title` applies
+    when `title_set` (None clears it)."""
+
+    title_set: bool = False
+    title: str | None = None
+    language: ConversationLanguage | None = None
+    vocabulary: tuple[str, ...] | None = None
+    template: str | None = None
+    translate_to: str | None = None  # "off" turns it off
+    live_transcription: bool | None = None
+    generate_minutes: bool | None = None
 
 
 class SessionStartError(RuntimeError):
@@ -215,6 +232,34 @@ class RecordingSession:
     def set_title(self, title: str | None) -> None:
         """Rename the meeting (phase 35), while recording or finalizing; None clears the title."""
         self._meta.set_title(title)
+
+    def apply(self, changes: SessionChanges) -> dict[str, object]:
+        """Apply options changed during the recording (phase 63); returns what changed.
+
+        Language and terms apply from the next transcribed window; template and the minutes
+        flag are read by the processing job; everything is saved in `session.json`.
+        """
+        changed: dict[str, object] = {}
+        if changes.title_set:
+            self._meta.set_title(changes.title)
+            changed["title"] = changes.title
+        if changes.language is not None:
+            self._lock.set(changes.language)
+            self._meta.change_language(changes.language)
+            changed["language"] = changes.language.value
+        if changes.vocabulary is not None:
+            merge = self._c.vocabulary_for or tuple
+            terms = tuple(merge(changes.vocabulary))
+            self._pipeline.set_hints(build_hints(terms))
+            self._meta.set_vocabulary(terms)
+            changed["vocabulary"] = list(changes.vocabulary)
+        if changes.template is not None:
+            self._meta.set_template(changes.template)
+            changed["template"] = changes.template
+        if changes.generate_minutes is not None:
+            self._meta.set_generate_minutes(changes.generate_minutes)
+            changed["generate_minutes"] = changes.generate_minutes
+        return changed
 
     @property
     def recorder_id(self) -> str | None:

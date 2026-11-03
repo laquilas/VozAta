@@ -139,7 +139,7 @@ class LiveTranscription:
         self.sink: TranscriptSink = self.echo or tagged
         self.transcriber = _DeferredTranscriber(transcriber_factory, observer, on_load_failed)
         ids = SegmentIds()
-        stitchers = {
+        self._stitchers = stitchers = {
             channel: CarryOverStitcher(
                 channel,
                 self.transcriber,
@@ -168,6 +168,10 @@ class LiveTranscription:
             partials=partials,
             tick=self.echo.tick if self.echo else lambda: None,
         )
+
+    def set_hints(self, hints: str | None) -> None:
+        for stitcher in self._stitchers.values():
+            stitcher.set_hints(hints)
 
     def start(self) -> None:
         self.worker.start()

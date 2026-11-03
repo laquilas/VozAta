@@ -212,10 +212,14 @@ class RecorderLink:
 
     def mirror_title(self, title: str | None) -> None:
         """Keep the recording's options in step with a rename (a rebuild carries them over)."""
+        self.mirror_options({"title": title})
+
+    def mirror_options(self, options: dict[str, Any]) -> None:
+        """Keep the recording's options in step with changes made during it (phase 63)."""
         try:
-            self._recorder.update_options({"title": title})
+            self._recorder.update_options(options)
         except (RecorderUnavailableError, RecorderApiError):
-            _log.info("The recorder did not take the new title")
+            _log.info("The recorder did not take the new options")
 
     # -- the work -----------------------------------------------------------------------------
 

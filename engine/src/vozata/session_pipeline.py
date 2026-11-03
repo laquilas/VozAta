@@ -123,6 +123,11 @@ class CapturePipeline:
     def accept(self) -> None:
         self._accepting = True
 
+    def set_hints(self, hints: str | None) -> None:
+        """The meeting terms changed (phase 63): every later transcription uses them."""
+        if self._live is not None:
+            self._live.set_hints(hints)
+
     def start_transcription(self) -> None:
         """Load the transcriber on the worker thread, then transcribe the queued chunks."""
         if self._live is None:
