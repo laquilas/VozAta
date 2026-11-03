@@ -36,8 +36,18 @@ internal sealed class FakeEngineProcess : IEngineProcess
 
     public int Stops { get; private set; }
 
-    public Task<EngineStartResult> EnsureRunningAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result);
+    public int Ensures { get; private set; }
+
+    public bool HasExited { get; set; }
+
+    /// <summary>Results of the next calls, then <see cref="Result"/>.</summary>
+    public Queue<EngineStartResult> NextResults { get; } = new();
+
+    public Task<EngineStartResult> EnsureRunningAsync(CancellationToken cancellationToken = default)
+    {
+        Ensures++;
+        return Task.FromResult(NextResults.Count > 0 ? NextResults.Dequeue() : Result);
+    }
 
     public void StopIfStarted() => Stops++;
 
@@ -71,6 +81,19 @@ internal sealed class FakeDialogs : IDialogService
         Messages.Add(message);
         Buttons.Add((confirm, cancel));
         return Task.FromResult(Answers is { Count: > 0 } ? Answers.Dequeue() : Answer);
+    }
+
+    /// <summary>The index <see cref="ChooseAsync"/> returns.</summary>
+    public int Choice { get; set; }
+
+    public List<IReadOnlyList<string>> Choices { get; } = [];
+
+    public Task<int> ChooseAsync(string title, string message, IReadOnlyList<string> choices)
+    {
+        Asked.Add(title);
+        Messages.Add(message);
+        Choices.Add(choices);
+        return Task.FromResult(Choice);
     }
 }
 

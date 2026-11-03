@@ -56,6 +56,7 @@ class FakeSession:
         self.observer = observer
         self.options = options
         self.stop_gate = stop_gate
+        self.applied: list[Any] = []
         self.start_error = start_error
         self.moment = moment
         self.status: SessionStatus | None = None
@@ -95,6 +96,28 @@ class FakeSession:
     def resume(self) -> None:
         self.calls.append("resume")
         self._set(SessionStatus.RECORDING)
+
+    def apply(self, changes: Any) -> dict[str, object]:
+        """Phase 63: the changed options go to `session.json` like the real session's."""
+        changed: dict[str, object] = {}
+        if changes.title_set:
+            changed["title"] = changes.title
+        if changes.language is not None:
+            changed["language"] = changes.language.value
+        if changes.vocabulary is not None:
+            changed["vocabulary"] = list(changes.vocabulary)
+        if changes.template is not None:
+            changed["template"] = changes.template
+        if changes.translate_to is not None:
+            changed["translate_to"] = changes.translate_to
+        if changes.live_transcription is not None:
+            changed["live_transcription"] = changes.live_transcription
+        if changes.generate_minutes is not None:
+            changed["generate_minutes"] = changes.generate_minutes
+        self.applied.append(changes)
+        meta = self.store.read_meta(self.id)
+        self.store.write_meta(self.id, {**meta, **changed})
+        return changed
 
     def set_title(self, title: str | None) -> None:
         self.calls.append("set_title")

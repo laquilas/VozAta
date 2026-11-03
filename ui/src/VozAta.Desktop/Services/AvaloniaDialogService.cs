@@ -48,4 +48,54 @@ public sealed class AvaloniaDialogService(IClassicDesktopStyleApplicationLifetim
         };
         return lifetime.MainWindow is { } owner && await dialog.ShowDialog<bool>(owner);
     }
+
+    public async Task<int> ChooseAsync(string title, string message, IReadOnlyList<string> choices)
+    {
+        var dialog = new Window
+        {
+            Title = title,
+            Icon = lifetime.MainWindow?.Icon,
+            Width = 520,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 8,
+        };
+        for (var index = choices.Count - 1; index >= 0; index--)
+        {
+            var choice = index;
+            var button = new Button { Content = choices[index], IsDefault = index == 0 };
+            if (index == 0)
+            {
+                button.Classes.Add("accent");
+            }
+
+            if (index == choices.Count - 1)
+            {
+                button.IsCancel = true;
+            }
+
+            AutomationProperties.SetName(button, choices[index]);
+            AutomationProperties.SetAutomationId(button, $"Choice{index}");
+            button.Click += (_, _) => dialog.Close(choice);
+            buttons.Children.Add(button);
+        }
+
+        dialog.Content = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(20),
+            Spacing = 16,
+            Children =
+            {
+                new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                buttons,
+            },
+        };
+        return lifetime.MainWindow is { } owner ? await dialog.ShowDialog<int?>(owner) ?? -1 : -1;
+    }
 }

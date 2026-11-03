@@ -87,6 +87,27 @@
   <data name="EngineDisconnected" xml:space="preserve">
     <value>Motor desconectado, reconectando…</value>
   </data>
+  <data name="EngineReconnecting" xml:space="preserve">
+    <value>Iniciando o motor de novo…</value>
+  </data>
+  <data name="EngineRetry" xml:space="preserve">
+    <value>Tentar reconectar</value>
+  </data>
+  <data name="EngineGateStarting" xml:space="preserve">
+    <value>O motor está iniciando</value>
+  </data>
+  <data name="EngineGateDisconnected" xml:space="preserve">
+    <value>O motor parou de responder</value>
+  </data>
+  <data name="EngineGateFailed" xml:space="preserve">
+    <value>O motor não iniciou</value>
+  </data>
+  <data name="EngineGateDetail" xml:space="preserve">
+    <value>Esta página precisa do motor. A gravação funciona sem ele: o gravador guarda cada segundo, e o motor processa tudo quando voltar.</value>
+  </data>
+  <data name="EngineRestartWhileRecording" xml:space="preserve">
+    <value>Pare a gravação antes de reiniciar o motor.</value>
+  </data>
   <data name="RecorderConnected" xml:space="preserve">
     <value>Gravador pronto</value>
   </data>
@@ -1376,6 +1397,15 @@
   </data>
   <data name="Close_Cancel" xml:space="preserve">
     <value>Cancelar</value>
+  </data>
+  <data name="Close_KeepRecording" xml:space="preserve">
+    <value>Continuar gravando em segundo plano</value>
+  </data>
+  <data name="Close_StopAndClose" xml:space="preserve">
+    <value>Parar e fechar</value>
+  </data>
+  <data name="Close_KeepRecordingMessage" xml:space="preserve">
+    <value>O VozAta está gravando. Ele pode continuar gravando com a janela fechada: abra o VozAta de novo para ver e parar a gravação.</value>
   </data>
   <data name="DownloadKindSpeech" xml:space="preserve">
     <value>de fala</value>

@@ -74,6 +74,10 @@ class CarryOverStitcher:
         self._pending = np.zeros(0, dtype=np.float32)
         self._pending_start = 0.0
 
+    def set_hints(self, hints: str | None) -> None:
+        """New meeting terms during the recording (phase 63): used from the next window on."""
+        self._hints = hints
+
     def on_chunk(self, chunk: AudioChunk) -> list[TranscriptSegment]:
         has_pending = len(self._pending) > 0
         audio = np.concatenate((self._pending, chunk.samples)) if has_pending else chunk.samples

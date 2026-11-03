@@ -5,13 +5,14 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
 from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
+from vozata.audio.tail_source import TailingFileSource
 from vozata.config import ConfigError, Settings
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.heartbeat import Heartbeat
@@ -43,6 +44,8 @@ from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.offline import OfflineTranscription
+from vozata.transcription.resume import resume_points
+from vozata.transcription.stitcher import SegmentIds
 from vozata.translation.live import live_translation
 from vozata.translation.worker import TranslationWorker
 from vozata.vocabulary import build_hints
@@ -91,6 +94,34 @@ class SessionComponents:
     # None = the session opens the devices itself
     started_at: datetime | None = None
     recorder_id: str | None = None
+    recorder_folder: Path | None = None  # its files: live transcription turned on replays them
+    # phase 63: this meeting's terms merged with the glossary (and the wake word), as at start
+    vocabulary_for: Callable[[Sequence[str]], tuple[str, ...]] | None = None
+    # phase 63: (target, translator factory) for a language chosen during the recording
+    translators: Callable[[str], tuple[str | None, Callable[[], Translator] | None]] | None = None
+
+
+@dataclass(frozen=True)
+class SessionChanges:
+    """Options changed during the recording (phase 63); None = unchanged. `title` applies
+    when `title_set` (None clears it)."""
+
+    title_set: bool = False
+    title: str | None = None
+    language: ConversationLanguage | None = None
+    vocabulary: tuple[str, ...] | None = None
+    template: str | None = None
+    translate_to: str | None = None  # "off" turns it off
+    live_transcription: bool | None = None
+    generate_minutes: bool | None = None
+
+
+class SessionOptionError(RuntimeError):
+    """An option that cannot change now (phase 63); `code` is the API error code."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
 
 
 class SessionStartError(RuntimeError):
@@ -132,6 +163,8 @@ class RecordingSession:
         self._pipeline: CapturePipeline | None = None  # None until `start()`
         self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
         self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
+        self._translation: TranslationWorker | None = None  # phase 29 / 63: the live translation
+        self._chunk_sources: list[AudioSource] = []  # phase 63: replaying into turned-on chunkers
 
     def hold_speech_fallback(self) -> None:
         """The VozAta worker did not answer: hold the GPU before the local Whisper loads."""
@@ -172,7 +205,7 @@ class RecordingSession:
         if self._c.recorder_id is not None:
             self._meta.set_capture_source("recorder", self._c.recorder_id)
         self._lock = LanguageLock(self._language, self._on_language_detected)
-        translation = self._live_translation()
+        translation = self._translation = self._live_translation()
         self._pipeline = CapturePipeline(
             self._c.sources,
             lambda channel: self._audio.open_writer(self.id, channel),
@@ -216,6 +249,106 @@ class RecordingSession:
         """Rename the meeting (phase 35), while recording or finalizing; None clears the title."""
         self._meta.set_title(title)
 
+    def apply(self, changes: SessionChanges) -> dict[str, object]:
+        """Apply options changed during the recording (phase 63); returns what changed.
+
+        Language and terms apply from the next transcribed window; template and the minutes
+        flag are read by the processing job; everything is saved in `session.json`.
+        """
+        changed: dict[str, object] = {}
+        if changes.title_set:
+            self._meta.set_title(changes.title)
+            changed["title"] = changes.title
+        if changes.language is not None:
+            self._lock.set(changes.language)
+            self._meta.change_language(changes.language)
+            changed["language"] = changes.language.value
+        if changes.vocabulary is not None:
+            merge = self._c.vocabulary_for or tuple
+            terms = tuple(merge(changes.vocabulary))
+            self._pipeline.set_hints(build_hints(terms))
+            self._meta.set_vocabulary(terms)
+            changed["vocabulary"] = list(changes.vocabulary)
+        if changes.template is not None:
+            self._meta.set_template(changes.template)
+            changed["template"] = changes.template
+        if changes.generate_minutes is not None:
+            self._meta.set_generate_minutes(changes.generate_minutes)
+            changed["generate_minutes"] = changes.generate_minutes
+        if changes.live_transcription is not None:
+            self._change_live(changes.live_transcription)
+            changed["live_transcription"] = changes.live_transcription
+        if changes.translate_to is not None:
+            self._change_translation(changes.translate_to)
+            changed["translate_to"] = changes.translate_to
+        return changed
+
+    def _change_live(self, on: bool) -> None:
+        """Live transcription on or off during the recording (phase 63).
+
+        Off: the live part drains on a thread and the GPU is released; the rest of the meeting is
+        transcribed after Stop from where the transcript ends. On: the recorder's files are
+        replayed from that same point into new chunkers, then followed, so the earlier audio is
+        transcribed now and in order; it needs the recorder (`live_transcription_needs_recorder`).
+        """
+        if on == self._pipeline.live:
+            return
+        if not on:
+            for source in self._chunk_sources:
+                source.stop()
+            self._chunk_sources = []
+            if self._translation is not None:  # a sink of the live part: it closes with it
+                self._translation = None
+                self._meta.set_translate_to("off")
+            self._pipeline.disable_live(self._gpu.release)
+        else:
+            folder = self._c.recorder_folder
+            if folder is None:
+                raise SessionOptionError("live_transcription_needs_recorder")
+            existing = self._store.load_raw_transcript(self.id)
+            points = resume_points(existing, list(self._c.sources))
+            feeds = self._pipeline.enable_live(
+                SegmentIds({channel: point.next_index for channel, point in points.items()})
+            )
+            rate = self._settings.sample_rate
+            for channel, feed in feeds.items():
+                source = TailingFileSource(
+                    folder, channel, rate, start_frame=round(points[channel].start * rate)
+                )
+                source.start(feed)
+                self._chunk_sources.append(source)
+        self._meta.set_live_transcription(on)
+
+    def _change_translation(self, target: str) -> None:
+        """Turn live translation on, off or to another language (phase 63); the old worker
+        translates what it holds and closes on its own thread."""
+        current = self._translation
+        if target != "off" and not self._pipeline.live:
+            raise SessionOptionError("translation_needs_live_transcription")
+        if (current.target if current is not None else "off") == target:
+            return
+        if current is not None:
+            self._pipeline.remove_sink(current)
+            self._translation = None
+            threading.Thread(target=current.close, name="translation-close", daemon=True).start()
+        if target != "off":
+            built = self._c.translators(target) if self._c.translators is not None else (None, None)
+            language, factory = built
+            if language is None or factory is None:
+                raise SessionOptionError("translation_unavailable")
+            worker = live_translation(
+                language,
+                factory,
+                self._store.open_translations(self.id),
+                self._lock.current,
+                self._observer,
+                lambda error: self._error("translation_failed", reason=str(error)),
+            )
+            worker.start()
+            self._pipeline.add_sink(worker)
+            self._translation = worker
+        self._meta.set_translate_to(target)
+
     @property
     def recorder_id(self) -> str | None:
         """The recorder recording this session follows (phase 61); None when it records itself."""
@@ -254,6 +387,7 @@ class RecordingSession:
         if paused:
             parts.append(("Closing the open pause", lambda: self._meta.pause_ended(captured)))
         parts += [("Stopping a source", source.stop) for source in self._c.sources.values()]
+        parts += [("Stopping a live source", source.stop) for source in self._chunk_sources]
         parts += [
             ("Flushing the chunkers", self._pipeline.stop_capture),
             (

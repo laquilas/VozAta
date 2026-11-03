@@ -25,6 +25,7 @@ from vozata.ports import SessionObserver, SessionRepository
 from vozata.processing.job import ProcessingJob
 from vozata.processing.queue import ProcessingQueue
 from vozata.recorder.attach import RecordingAttach
+from vozata.session import SessionChanges, SessionOptionError  # noqa: F401  (re-exported)
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
@@ -37,6 +38,14 @@ _log = logging.getLogger(__name__)
 class SessionConflictError(RuntimeError):
     """A session is already recording, paused or still stopping its capture
     (`409 session_already_active`)."""
+
+
+class SessionNotLiveError(RuntimeError):
+    """An option that only a meeting being recorded can change (phase 63)."""
+
+    def __init__(self, session_id: str) -> None:
+        super().__init__(session_id)
+        self.session_id = session_id
 
 
 class NoActiveSessionError(RuntimeError):
@@ -78,6 +87,8 @@ class Session(Protocol):
     def stop_capture(self) -> threading.Event: ...
 
     def set_title(self, title: str | None) -> None: ...
+
+    def apply(self, changes: SessionChanges) -> dict[str, object]: ...
 
     @property
     def recorder_id(self) -> str | None: ...
@@ -287,6 +298,43 @@ class SessionManager:
                 return self.summary(session)
             meta = self._store.read_meta(session_id)
             self._store.write_meta(session_id, {**meta, "title": title})
+        return session_summary(self._store, session_id, processing=self.processing(session_id))
+
+    def update(self, session_id: str, changes: SessionChanges) -> dict[str, Any]:
+        """Change a meeting's options (phase 63) and return its summary; `session_updated` follows.
+
+        The meeting being recorded applies every option at once (language and terms from its next
+        window). Any other meeting takes only the title, template and minutes flag
+        (`SessionNotLiveError` for the rest); an unknown one raises `SessionNotFoundError`.
+        """
+        with self._lock:
+            session = self._session
+            if session is not None and _started_id([session]) == session_id:
+                changed = session.apply(changes)
+                summary = self.summary(session)
+            else:
+                live_only = (
+                    changes.language,
+                    changes.vocabulary,
+                    changes.translate_to,
+                    changes.live_transcription,
+                )
+                if any(value is not None for value in live_only):
+                    raise SessionNotLiveError(session_id)
+                meta = self._store.read_meta(session_id)
+                changed = {}
+                if changes.title_set:
+                    changed["title"] = changes.title
+                if changes.template is not None:
+                    changed["template"] = changes.template
+                if changes.generate_minutes is not None:
+                    changed["generate_minutes"] = changes.generate_minutes
+                self._store.write_meta(session_id, {**meta, **changed})
+                summary = None
+        if changed:
+            self._broadcaster.publish("session_updated", session_id, changed)
+        if summary is not None:
+            return summary
         return session_summary(self._store, session_id, processing=self.processing(session_id))
 
     def delete(self, session_id: str) -> None:

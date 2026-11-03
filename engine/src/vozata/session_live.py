@@ -126,8 +126,10 @@ class LiveTranscription:
         hints: str | None = None,
         speaker_embedder: Callable[[], SpeakerEmbedder] | None = None,
         extra_sinks: Sequence[TranscriptSink] = (),
+        ids: SegmentIds | None = None,
     ) -> None:
-        sinks = CompositeSink([transcript, _ObserverSink(observer), *extra_sinks])
+        """`ids` continue a transcript (live transcription turned on again, phase 63)."""
+        self.sinks = sinks = CompositeSink([transcript, _ObserverSink(observer), *extra_sinks])
         self.history: AudioHistory | None = None
         self.speakers: LiveSpeakerSink | None = None
         if speaker_embedder is not None and Channel.SYSTEM in channels:
@@ -138,8 +140,8 @@ class LiveTranscription:
         )
         self.sink: TranscriptSink = self.echo or tagged
         self.transcriber = _DeferredTranscriber(transcriber_factory, observer, on_load_failed)
-        ids = SegmentIds()
-        stitchers = {
+        ids = ids or SegmentIds()
+        self._stitchers = stitchers = {
             channel: CarryOverStitcher(
                 channel,
                 self.transcriber,
@@ -168,6 +170,10 @@ class LiveTranscription:
             partials=partials,
             tick=self.echo.tick if self.echo else lambda: None,
         )
+
+    def set_hints(self, hints: str | None) -> None:
+        for stitcher in self._stitchers.values():
+            stitcher.set_hints(hints)
 
     def start(self) -> None:
         self.worker.start()

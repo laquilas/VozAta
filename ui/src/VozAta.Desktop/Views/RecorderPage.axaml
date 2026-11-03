@@ -53,7 +53,7 @@
       </Grid>
     </Border>
 
-    <!-- Options of the recording: chips that open small flyouts; locked while recording -->
+    <!-- Options of the recording: chips that open small flyouts; the devices are locked while recording -->
     <WrapPanel DockPanel.Dock="Top" Margin="0,10,0,0" ItemSpacing="8" LineSpacing="8">
       <!-- Live transcription (phase 41): a toggle; unchecked, the meeting only records audio -->
       <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
@@ -69,7 +69,7 @@
 
       <!-- Microphone, with its level meter inside the chip -->
       <Panel>
-        <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+        <Button Classes="chip" IsEnabled="{Binding CanEditDevices}"
                 ToolTip.Tip="{Binding L[Microphone]}"
                 AutomationProperties.Name="{Binding L[Microphone]}">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -102,7 +102,7 @@
 
       <!-- System audio (loopback), with its level meter -->
       <Panel>
-        <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+        <Button Classes="chip" IsEnabled="{Binding CanEditDevices}"
                 ToolTip.Tip="{Binding L[SystemOutput]}"
                 AutomationProperties.Name="{Binding L[SystemOutput]}">
           <StackPanel Orientation="Horizontal" Spacing="6">

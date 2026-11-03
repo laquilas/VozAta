@@ -1248,3 +1248,12 @@ graph LR
   drive the state and elapsed time and its `level` events the meters; the engine's events of the
   same id add the transcript. A recording that went on while the app was closed is adopted when
   the app starts. Without a recorder the engine records as before.
+- **Engine gate (phase 62).** While the engine is starting, gone or failed, one panel covers the
+  page area (never the Recorder page) with the reason and **Retry connection** (start it again;
+  its data loads when the event stream connects). The event loop runs even after a failed start,
+  every reconnection reloads settings, templates and devices, an engine this app started that
+  exits is started again once, and Restart engine is refused while recording. An adopted
+  recording shows its options (from the recording) and its lines so far
+  (`GET /sessions/{id}/transcript`, merged with the live ones). Closing while the recorder
+  records offers *keep recording in the background* (window closed, recorder and engine go on),
+  *stop and close*, or *cancel*.

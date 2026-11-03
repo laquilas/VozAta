@@ -242,3 +242,84 @@ public sealed class RecorderProcessRecordingTests
         Assert.Contains("40 s wait for the disk", _notified.Single());
     }
 }
+
+/// <summary>A recording the page adopts shows its options and its lines so far (phase 62).</summary>
+public sealed class ReattachTests
+{
+    private const string Id = "20261103_090000";
+
+    private readonly FakeEngineClient _engine = new();
+    private readonly FakeRecorderClient _recorder = new();
+    private readonly RecordingSessionService _session = new();
+
+    private RecorderPageViewModel Create(bool engine) =>
+        new(_engine, new LocalizationService(), new FakePreferences(), new FakeClock(), new FakeTimer(),
+            new MinutesTemplatesViewModel(_engine), _session, _ => { }, recorder: _recorder)
+        {
+            IsEngineConnected = engine,
+            IsRecorderConnected = true,
+        };
+
+    private static Segment Line(string id, double start, string text) =>
+        new(id, "mic", "mic", "Me", start, start + 1, text, false, []);
+
+    private static RecorderStatusEvent Running(string options) =>
+        new(new RecordingSummary(Id, "recording", null, 600, FakeRecorderClient.Options(options)));
+
+    [Fact]
+    public async Task The_options_and_the_lines_so_far_come_back()
+    {
+        _engine.Transcripts[Id] = new Transcript("raw", [Line("mic-000001", 1, "Bom dia"), Line("mic-000002", 5, "Vamos")]);
+        var page = Create(engine: true);
+        await page.LoadTemplatesAsync();
+
+        page.HandleRecorder(Running(
+            """{"language":"pt","template":"daily","translate_to":"es","vocabulary":["VozAta","JBL"],"live_transcription":true}"""));
+        await page.TranscriptRestore;
+
+        Assert.Equal("pt", page.SelectedLanguage.Value);
+        Assert.Equal("daily", page.SelectedTemplate?.Id);
+        Assert.Equal("es", page.SelectedTranslation.Value);
+        Assert.Equal("VozAta, JBL", page.SessionTerms);
+        Assert.Equal(["Bom dia", "Vamos"], page.Segments.Select(line => line.Text));
+    }
+
+    [Fact]
+    public async Task Lines_that_arrived_live_meanwhile_are_kept_once()
+    {
+        _engine.Transcripts[Id] = new Transcript("raw", [Line("mic-000001", 1, "Earlier"), Line("mic-000002", 5, "Live")]);
+        var page = Create(engine: false);
+        page.HandleRecorder(Running("{}"));
+        page.Handle(new SegmentEvent(Id, Line("mic-000002", 5, "Live")));
+
+        page.IsEngineConnected = true; // the engine comes up: the earlier lines are read now
+        await page.TranscriptRestore;
+
+        Assert.Equal(["Earlier", "Live"], page.Segments.Select(line => line.Text));
+    }
+
+    [Fact]
+    public async Task A_meeting_the_engine_has_not_attached_yet_keeps_the_live_lines()
+    {
+        _engine.TranscriptError = FakeEngineClient.ApiError("session_not_found", "not yet");
+        var page = Create(engine: true);
+        page.HandleRecorder(Running("{}"));
+        page.Handle(new SegmentEvent(Id, Line("mic-000001", 1, "Live")));
+
+        await page.TranscriptRestore;
+
+        Assert.Equal(["Live"], page.Segments.Select(line => line.Text));
+    }
+
+    [Fact]
+    public async Task A_recording_the_engine_makes_is_adopted_with_its_lines()
+    {
+        _engine.Transcripts[Id] = new Transcript("raw", [Line("mic-000001", 1, "Earlier")]);
+        var page = Create(engine: true);
+
+        page.Handle(new StatusEvent(Id, "recording", 30));
+        await page.TranscriptRestore;
+
+        Assert.Equal(["Earlier"], page.Segments.Select(line => line.Text));
+    }
+}

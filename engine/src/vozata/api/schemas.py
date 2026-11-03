@@ -325,11 +325,18 @@ class RegenerateMinutes(BaseModel):
 
 
 class UpdateSession(BaseModel):
-    """`PATCH /sessions/{id}` (phase 35): the meeting title; null or blank clears it."""
+    """`PATCH /sessions/{id}`: the title (phase 35; null or blank clears it) and, during the
+    recording, its options (phase 63). Only the keys sent change."""
 
     model_config = ConfigDict(extra="forbid")
 
-    title: str | None
+    title: str | None = None
+    language: ConversationLanguageValue | None = None
+    translate_to: TranslationTargetValue | None = None
+    template: str | None = None
+    vocabulary: list[str] | None = None
+    live_transcription: bool | None = None
+    generate_minutes: bool | None = None
 
 
 class ActionItemModel(BaseModel):

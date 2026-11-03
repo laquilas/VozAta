@@ -230,6 +230,7 @@
             </StackPanel>
           </Border>
 
+          <Grid>
           <ContentControl Content="{Binding Shell.CurrentPage}">
             <ContentControl.DataTemplates>
               <DataTemplate DataType="vm:RecorderPageViewModel">
@@ -249,6 +250,17 @@
               </DataTemplate>
             </ContentControl.DataTemplates>
           </ContentControl>
+          <!-- Phase 62: a page that needs the engine says why it waits; recording never waits -->
+          <Border IsVisible="{Binding IsEngineGateVisible}"
+                  Background="{DynamicResource Brush.Surface}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="440">
+              <TextBlock Text="{Binding EngineGateTitle}" Classes="h2" TextWrapping="Wrap" TextAlignment="Center" />
+              <TextBlock Text="{Binding L[EngineGateDetail]}" Classes="secondary" TextWrapping="Wrap" TextAlignment="Center" />
+              <Button HorizontalAlignment="Center" Classes="primary" Content="{Binding L[EngineRetry]}"
+                      Command="{Binding RetryConnectionCommand}" />
+            </StackPanel>
+          </Border>
+          </Grid>
         </DockPanel>
 
         <!-- Notifications (engine errors, minutes ready): dismissable toasts -->

@@ -48,6 +48,12 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private readonly IRecorderClient? _recorder; // the recorder process (phase 61); null = engine only
     private bool _viaRecorder; // the recording on screen is the recorder's (its events drive the state)
     private string? _recorderRecordingId; // what the recorder records now, from its status events
+    private string? _transcriptRestored; // the recording whose earlier lines were read (phase 62)
+    private readonly Dictionary<string, object?> _pendingOptions = []; // changed while recording (63)
+    private readonly Dictionary<string, object?> _confirmedOptions = []; // what the meeting has
+    private CancellationTokenSource? _optionsTyping;
+    private bool _applyingOptions; // the chips are set from the meeting: nothing to send
+    private bool _adopted; // the page took over a recording it did not start (phase 62)
 
     /// <param name="titleDelay">Waits out the title debounce (tests pass a controllable one).</param>
     public RecorderPageViewModel(
@@ -184,8 +190,17 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     /// <summary>The title box is editable before and during a recording (not while it starts or finalizes).</summary>
     public bool CanEditTitle => State is RecordingState.Idle or RecordingState.Recording or RecordingState.Paused;
 
-    /// <summary>Devices, languages, template and terms (the chips) apply to the next recording only.</summary>
-    public bool CanEditOptions => State == RecordingState.Idle;
+    /// <summary>
+    /// Languages, template, terms and live transcription (the chips): before and during the recording
+    /// (phase 63: a change while recording is sent at once). Devices stay fixed while recording.
+    /// </summary>
+    public bool CanEditOptions => State is RecordingState.Idle or RecordingState.Recording or RecordingState.Paused;
+
+    /// <summary>The microphone and system audio chips: the next recording only.</summary>
+    public bool CanEditDevices => State == RecordingState.Idle;
+
+    /// <summary>The last send of options changed while recording (tests await it).</summary>
+    public Task OptionsSave { get; private set; } = Task.CompletedTask;
 
     /// <summary>"Terms for this meeting": comma or newline separated (phase 19).</summary>
     [ObservableProperty]
@@ -214,7 +229,14 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         {
             if (CanEditOptions && SetLiveTranscription(value))
             {
-                _preferences.Save(_preferences.Load() with { LiveTranscription = value });
+                if (IsRecording)
+                {
+                    ScheduleOptionSave("live_transcription", value); // phase 63; not remembered
+                }
+                else
+                {
+                    _preferences.Save(_preferences.Load() with { LiveTranscription = value });
+                }
             }
         }
     }
@@ -615,6 +637,190 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         return words.Length == 0 ? null : string.Join(' ', words);
     }
 
+    partial void OnSelectedLanguageChanged(ChoiceOption value) => OnOptionChanged("language", value.Value);
+
+    partial void OnSelectedTranslationChanged(ChoiceOption value) => OnOptionChanged("translate_to", value.Value);
+
+    partial void OnSelectedTemplateChanged(TemplateOption? value)
+    {
+        if (value is not null)
+        {
+            OnOptionChanged("template", value.Id);
+        }
+    }
+
+    partial void OnSessionTermsChanged(string value) =>
+        OnOptionChanged("vocabulary", VocabularyViewModel.ParseTerms(value));
+
+    private void OnOptionChanged(string key, object? value)
+    {
+        if (IsRecording && !_applyingOptions)
+        {
+            ScheduleOptionSave(key, value);
+        }
+    }
+
+    /// <summary>Send an option changed while recording once the user pauses (the title's debounce).</summary>
+    private void ScheduleOptionSave(string key, object? value)
+    {
+        _pendingOptions[key] = value;
+        _optionsTyping?.Cancel();
+        _optionsTyping = new CancellationTokenSource();
+        OptionsSave = SaveOptionsAfterTypingAsync(_optionsTyping.Token);
+    }
+
+    private async Task SaveOptionsAfterTypingAsync(CancellationToken typing)
+    {
+        try
+        {
+            await _titleDelay(TitleDebounce, typing);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await SaveOptionsAsync();
+    }
+
+    /// <summary>
+    /// The engine's meeting gets the changes (it applies them at once); a recorder recording keeps them
+    /// too, so the engine applies them when it attaches. A refused change puts the chip back.
+    /// </summary>
+    private async Task SaveOptionsAsync()
+    {
+        if (Session.SessionId is not { } sessionId || _pendingOptions.Count == 0)
+        {
+            return;
+        }
+
+        var changes = new Dictionary<string, object?>(_pendingOptions);
+        _pendingOptions.Clear();
+        try
+        {
+            if (_viaRecorder && _recorder is not null)
+            {
+                await _recorder.UpdateOptionsAsync(changes, _cancellation);
+            }
+
+            if (IsEngineConnected || !_viaRecorder)
+            {
+                await _client.UpdateSessionAsync(sessionId, changes, _cancellation);
+            }
+
+            foreach (var (key, value) in changes)
+            {
+                _confirmedOptions[key] = value;
+            }
+        }
+        catch (EngineApiException error) when (_viaRecorder && error.Code == "session_not_found")
+        {
+            // the engine has not attached yet: it reads them from the recording when it does
+            foreach (var (key, value) in changes)
+            {
+                _confirmedOptions[key] = value;
+            }
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            _notify(ErrorText(error));
+            if (Session.SessionId == sessionId)
+            {
+                RevertOptions(changes.Keys);
+            }
+        }
+    }
+
+    /// <summary>Put the chips of refused changes back to what the meeting has.</summary>
+    private void RevertOptions(IEnumerable<string> keys)
+    {
+        _applyingOptions = true;
+        try
+        {
+            foreach (var key in keys)
+            {
+                if (_confirmedOptions.TryGetValue(key, out var value))
+                {
+                    ShowOption(key, value);
+                }
+            }
+        }
+        finally
+        {
+            _applyingOptions = false;
+        }
+    }
+
+    private void ShowOption(string key, object? value)
+    {
+        switch (key)
+        {
+            case "language" when ConversationLanguages.FirstOrDefault(o => o.Value == value as string) is { } language:
+                SelectedLanguage = language;
+                break;
+            case "translate_to" when TranslationLanguages.FirstOrDefault(o => o.Value == value as string) is { } translation:
+                SelectedTranslation = translation;
+                break;
+            case "template" when Templates.Find(value as string) is { } template:
+                SelectedTemplate = template;
+                break;
+            case "vocabulary" when value is IEnumerable<string> terms:
+                SessionTerms = string.Join(", ", terms);
+                break;
+            case "live_transcription" when value is bool live:
+                SetLiveTranscription(live);
+                break;
+        }
+    }
+
+    /// <summary>A <c>session_updated</c> of the followed meeting (another client changed it): show it.</summary>
+    public void OnSessionUpdated(SessionUpdatedEvent updated)
+    {
+        if (updated.SessionId is null || updated.SessionId != Session.SessionId)
+        {
+            return;
+        }
+
+        _applyingOptions = true;
+        try
+        {
+            foreach (var (key, element) in updated.Changes)
+            {
+                object? value = element.ValueKind switch
+                {
+                    JsonValueKind.String => element.GetString(),
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.Array => element.EnumerateArray()
+                        .Where(term => term.ValueKind == JsonValueKind.String)
+                        .Select(term => term.GetString()!).ToList(),
+                    _ => null,
+                };
+                _confirmedOptions[key] = value;
+                if (!_pendingOptions.ContainsKey(key))
+                {
+                    ShowOption(key, value);
+                }
+            }
+        }
+        finally
+        {
+            _applyingOptions = false;
+        }
+    }
+
+    /// <summary>What the chips showed when the recording started (a refused first change goes back there).</summary>
+    private void RememberStartOptions()
+    {
+        _pendingOptions.Clear();
+        _confirmedOptions.Clear();
+        _confirmedOptions["language"] = SelectedLanguage.Value;
+        _confirmedOptions["translate_to"] = SelectedTranslation.Value;
+        _confirmedOptions["template"] = SelectedTemplate?.Id;
+        _confirmedOptions["vocabulary"] = VocabularyViewModel.ParseTerms(SessionTerms);
+        _confirmedOptions["live_transcription"] = LiveTranscription;
+    }
+
     partial void OnTitleChanged(string value)
     {
         if (IsRecording)
@@ -771,6 +977,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             _sentTitle = OptionText(recording, "title");
             Session.Title = _sentTitle;
             Title = _sentTitle ?? "";
+            ApplyRecordingOptions(recording); // phase 62: the chips show this meeting's options
+            TranscriptRestore = RestoreTranscriptAsync(recording.Id!);
         }
 
         if (!(IsPaused && recording.Status == "paused"))
@@ -779,6 +987,87 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         }
 
         SetState(recording.Status == "paused" ? RecordingState.Paused : RecordingState.Recording);
+    }
+
+    /// <summary>The last restore of an adopted recording's transcript (tests await it).</summary>
+    public Task TranscriptRestore { get; private set; } = Task.CompletedTask;
+
+    /// <summary>The options a recording was started with: language, template, translation, terms, mode.</summary>
+    private void ApplyRecordingOptions(RecordingSummary recording)
+    {
+        if (ConversationLanguages.FirstOrDefault(o => o.Value == OptionText(recording, "language")) is { } language)
+        {
+            SelectedLanguage = language;
+        }
+
+        if (Templates.Find(OptionText(recording, "template")) is { } template)
+        {
+            SelectedTemplate = template;
+        }
+
+        SelectedTranslation = TranslationLanguages.FirstOrDefault(
+            o => o.Value == (OptionText(recording, "translate_to") ?? _defaultTranslation)) ?? SelectedTranslation;
+        if (recording.Options?.TryGetValue("vocabulary", out var terms) == true && terms.ValueKind == JsonValueKind.Array)
+        {
+            SessionTerms = string.Join(", ", terms.EnumerateArray()
+                .Where(term => term.ValueKind == JsonValueKind.String).Select(term => term.GetString()));
+        }
+
+        if (OptionFlag(recording, "live_transcription") is { } live)
+        {
+            SetLiveTranscription(live);
+        }
+    }
+
+    /// <summary>
+    /// The lines said before the page followed the recording (the app was closed or restarted): read
+    /// from the engine once it is connected; the live lines that came meanwhile are kept.
+    /// </summary>
+    private async Task RestoreTranscriptAsync(string sessionId)
+    {
+        if (!IsEngineConnected)
+        {
+            return; // tried again when the engine connects
+        }
+
+        try
+        {
+            var transcript = await _client.GetTranscriptAsync(sessionId, _cancellation);
+            if (Session.SessionId != sessionId)
+            {
+                return;
+            }
+
+            var live = Segments.ToList();
+            var liveIds = _lineOfSegment.Keys.ToHashSet();
+            Segments.Clear();
+            _lineOfSegment.Clear();
+            foreach (var segment in transcript.Segments.Where(segment => !liveIds.Contains(segment.SegmentId)))
+            {
+                AddLine(segment);
+            }
+
+            foreach (var line in live)
+            {
+                Segments.Add(line);
+            }
+
+            _liveSessionId = sessionId;
+            _transcriptRestored = sessionId;
+        }
+        catch (Exception error) when (error is EngineApiException or EngineUnavailableException)
+        {
+            // not attached yet (404) or gone: the live lines still come
+        }
+    }
+
+    partial void OnIsEngineConnectedChanged(bool value)
+    {
+        if (value && IsRecording && Session.SessionId is { } sessionId && _transcriptRestored != sessionId
+            && (_viaRecorder || _adopted))
+        {
+            TranscriptRestore = RestoreTranscriptAsync(sessionId);
+        }
     }
 
     private static string? OptionText(RecordingSummary recording, string key) =>
@@ -802,6 +1091,18 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             case nameof(RecordingSessionService.State):
                 OnPropertyChanged(nameof(CanEditTitle));
                 OnPropertyChanged(nameof(CanEditOptions));
+                OnPropertyChanged(nameof(CanEditDevices));
+                if (Session.State is RecordingState.Recording && _confirmedOptions.Count == 0)
+                {
+                    RememberStartOptions();
+                }
+                else if (Session.State is RecordingState.Idle)
+                {
+                    _optionsTyping?.Cancel();
+                    _pendingOptions.Clear();
+                    _confirmedOptions.Clear();
+                }
+
                 OnPropertyChanged(nameof(CanChooseTranslation));
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(IsRecording));
@@ -951,7 +1252,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             if (_recordingLive is null)
             {
                 _recordingLive = true; // started elsewhere: live until its session.json says otherwise
+                _adopted = true;
                 RecordingModeLookup = ReadRecordingModeAsync(sessionId);
+                TranscriptRestore = RestoreTranscriptAsync(sessionId); // phase 62: its lines so far
             }
         }
 
@@ -1001,6 +1304,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         if (state == RecordingState.Idle)
         {
             _viaRecorder = false;
+            _adopted = false;
+            _transcriptRestored = null;
             _recordingLive = null;
             IsModelLoading = false;
             Partials.Clear();

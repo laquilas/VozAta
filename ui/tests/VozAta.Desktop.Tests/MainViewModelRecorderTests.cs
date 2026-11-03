@@ -96,3 +96,71 @@ public sealed class MainViewModelRecorderTests
         Assert.Null(viewModel.RecorderEventLoop);
     }
 }
+
+/// <summary>Closing the window while the recorder records (phase 62).</summary>
+public sealed class CloseWhileRecordingTests
+{
+    private readonly FakeEngineClient _client = new();
+    private readonly FakeEngineProcess _process = new();
+    private readonly FakeRecorderClient _recorder = new();
+    private readonly FakeDialogs _dialogs = new();
+    private readonly LocalizationService _localization = new();
+
+    private async Task<MainViewModel> RecordingAsync()
+    {
+        var viewModel = new MainViewModel(
+            _client, new FakeEngineEvents(), _process, new ImmediateDispatcher(), _localization, _dialogs,
+            new FakePreferences(), new FakeClock(), new FakeTimer(), new FakeShell(), new FakeFileSaver(),
+            new FakeThemeService(), recorder: _recorder, recorderEvents: new FakeRecorderEvents(),
+            recorderProcess: new FakeRecorderProcess());
+        await viewModel.InitializeAsync();
+        viewModel.Recorder.IsRecorderConnected = true;
+        await viewModel.Recorder.StartCommand.ExecuteAsync(null);
+        return viewModel;
+    }
+
+    [Fact]
+    public async Task Keep_recording_closes_the_window_and_leaves_the_recorder_and_the_engine_running()
+    {
+        var viewModel = await RecordingAsync();
+        _dialogs.Choice = 0;
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+        await viewModel.ShutdownAsync(TimeSpan.FromMilliseconds(10));
+
+        Assert.True(viewModel.KeepsRecording);
+        Assert.DoesNotContain("stop", _recorder.Calls);
+        Assert.Equal(0, _process.Stops);
+        Assert.Equal(
+            [_localization["Close_KeepRecording"], _localization["Close_StopAndClose"], _localization["Close_Cancel"]],
+            _dialogs.Choices.Single());
+    }
+
+    [Fact]
+    public async Task Stop_and_close_stops_the_recording_first()
+    {
+        var viewModel = await RecordingAsync();
+        _dialogs.Choice = 1;
+
+        Assert.True(await viewModel.ConfirmCloseAsync());
+        await viewModel.ShutdownAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Contains("stop", _recorder.Calls);
+        Assert.False(viewModel.KeepsRecording);
+        Assert.Equal(1, _process.Stops);
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(-1)]
+    public async Task Cancel_or_closing_the_dialog_changes_nothing(int choice)
+    {
+        var viewModel = await RecordingAsync();
+        _dialogs.Choice = choice;
+
+        Assert.False(await viewModel.ConfirmCloseAsync());
+
+        Assert.Equal(RecordingState.Recording, viewModel.Session.State);
+        Assert.DoesNotContain("stop", _recorder.Calls);
+    }
+}

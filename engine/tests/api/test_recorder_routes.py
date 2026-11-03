@@ -62,8 +62,8 @@ class FakeLink:
     def stop(self) -> None:
         self._control("stop")
 
-    def mirror_title(self, title: str | None) -> None:
-        self.calls.append(("title", title))
+    def mirror_options(self, options: dict[str, Any]) -> None:
+        self.calls.append(("options", options))
 
     def linked_sessions(self) -> set[str]:
         return self.linked
@@ -166,8 +166,8 @@ def test_controls_of_a_followed_recording_go_to_the_recorder(
     api.client.patch(f"/sessions/{session_id}", json={"title": "Renamed"})
 
     assert (stopped.status_code, stopped.json()["status"]) == (202, "finalizing")
-    assert [name for name, _ in link.calls[1:]] == ["pause", "resume", "stop", "title"]
-    assert link.calls[-1] == ("title", "Renamed")
+    assert [name for name, _ in link.calls[1:]] == ["pause", "resume", "stop", "options"]
+    assert link.calls[-1] == ("options", {"title": "Renamed"})
     link.follows = False
 
 
@@ -211,3 +211,16 @@ def test_health_says_whether_the_recorder_answers(linked: tuple[Api, FakeLink]) 
 
 def test_health_without_the_recorder(api: Api) -> None:
     assert api.client.get("/health").json()["recorder"] is None
+
+
+def test_the_current_meeting_is_read_with_its_options(api: Api) -> None:
+    assert api.client.get("/sessions/current").status_code == 404
+
+    started = api.client.post("/sessions", json={"title": "Weekly", "template": "daily"}).json()
+    detail = api.client.get("/sessions/current").json()
+
+    assert detail["id"] == started["id"]
+    assert detail["status"] == "recording"
+    assert detail["title"] == "Weekly"
+    api.client.post("/sessions/current/pause")
+    assert api.client.get("/sessions/current").json()["status"] == "paused"

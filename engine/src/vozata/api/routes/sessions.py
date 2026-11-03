@@ -27,9 +27,10 @@ from vozata.api.schemas import (
     UpdateSession,
 )
 from vozata.api.session_days import EPOCH, group_by_day, local_bounds
-from vozata.api.session_manager import StartOptions
-from vozata.domain import AudioTrack, ConversationLanguage, TranslationTarget
+from vozata.api.session_manager import SessionNotLiveError, StartOptions
+from vozata.domain import AudioTrack, ConversationLanguage, SessionStatus, TranslationTarget
 from vozata.recorder_client import RecorderApiError, RecorderUnavailableError
+from vozata.session import SessionChanges, SessionOptionError
 from vozata.session_title import TitleTooLongError, normalize_title
 
 router = APIRouter(tags=["sessions"])
@@ -139,6 +140,16 @@ def list_sessions(
     }
 
 
+@router.get("/sessions/current", response_model=SessionDetail)
+def current_session(c: Container) -> dict[str, Any]:
+    """The meeting being recorded or paused, with its options (phase 62: a reopened app shows it
+    as it is); `404 no_active_session` otherwise."""
+    session = c.manager.current
+    if session is None or session.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+        raise ApiError(404, "no_active_session")
+    return session_detail(session.id, c)
+
+
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
 def session_detail(session_id: str, c: Container) -> dict[str, Any]:
     meta = c.store.read_meta(session_id)
@@ -164,13 +175,39 @@ def _audio(c: ApiContainer, session_id: str) -> dict[str, float]:
 @router.patch("/sessions/{session_id}", response_model=SessionSummary)
 def update_session(session_id: str, body: UpdateSession, c: Container) -> dict[str, Any]:
     """Rename a meeting (phase 35), also while it is being recorded."""
-    title = _title(body.title)
-    summary = c.manager.rename(session_id, title)
+    sent = body.model_fields_set
+    if not sent:
+        raise ApiError(422, "invalid_request", details="nothing to change")
+    title = _title(body.title) if "title" in sent else None
+    if body.template is not None:
+        check_template(c, body.template)
+    if sent <= {"title"}:
+        summary = c.manager.rename(session_id, title)
+    else:
+        changes = SessionChanges(
+            title_set="title" in sent,
+            title=title,
+            language=ConversationLanguage(body.language) if body.language else None,
+            vocabulary=tuple(body.vocabulary) if body.vocabulary is not None else None,
+            template=body.template,
+            translate_to=body.translate_to,
+            live_transcription=body.live_transcription,
+            generate_minutes=body.generate_minutes,
+        )
+        try:
+            summary = c.manager.update(session_id, changes)
+        except SessionNotLiveError:
+            raise ApiError(409, "session_not_live", id=session_id) from None
+        except SessionOptionError as error:
+            raise ApiError(409, error.code) from None
     link = c.recorder_link
     session = c.manager.current
     following = link is not None and link.following() is not None
     if following and session is not None and session.id == session_id:
-        link.mirror_title(title)  # type: ignore[union-attr]  # kept by a rebuild (phase 61)
+        options = {key: getattr(body, key) for key in sent}  # a rebuild keeps them (phase 61)
+        if "title" in options:
+            options["title"] = title
+        link.mirror_options(options)  # type: ignore[union-attr]
     return summary
 
 

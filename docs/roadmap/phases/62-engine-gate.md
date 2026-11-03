@@ -45,17 +45,17 @@ Requested by the user on 2026-11-03.
 
 ## Acceptance criteria
 
-- [ ] With an engine that fails to start, the app opens, Start records, and the engine pages
+- [x] With an engine that fails to start, the app opens, Start records, and the engine pages
       show the gate with "Retry connection"; after fixing the cause Retry connects and loads
-      settings, templates and meetings.
-- [ ] Killing the engine during a recording shows "Connection lost"; recording goes on; the
-      engine is started again once automatically.
-- [ ] Killing the app during a recording and reopening it shows the recording, its options and
-      the transcript so far.
-- [ ] Closing while recording offers Keep / Stop / Cancel; Keep leaves recorder and engine
+      settings, templates and meetings. *(tests; the real run is in `__pendent__`)*
+- [x] Killing the engine during a recording shows "Connection lost"; recording goes on; the
+      engine is started again once automatically. *(tests; real run in `__pendent__`)*
+- [x] Killing the app during a recording and reopening it shows the recording, its options and
+      the transcript so far. *(tests; real run in `__pendent__`)*
+- [x] Closing while recording offers Keep / Stop / Cancel; Keep leaves recorder and engine
       running.
-- [ ] Restart engine is disabled while recording.
-- [ ] en / pt-BR / es parity; coverage ≥ 80 %.
+- [x] Restart engine is disabled while recording.
+- [x] en / pt-BR / es parity; coverage ≥ 80 %.
 
 ## Tests
 
@@ -70,3 +70,33 @@ Options edited during the recording (63); the minutes marker (64).
 
 > Execute phase 62 of the roadmap (`docs/roadmap/phases/62-engine-gate.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/62-engine-gate` (stacked on `feature/61-recorder-process`, PR #79)
+- **Status:** ready for PR
+- **Updated:** 2026-11-03 18:29
+- **Next step:** open the PR (base `feature/61-recorder-process`); then phase 63.
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [x] Engine: `GET /sessions/current`
+- [x] UI: `EngineGateViewModel`, `RetryConnectionAsync`, data reloaded on reconnect, one automatic
+      engine respawn, the event loop even after a failed start
+- [x] UI: the gate panel on the engine pages; Restart engine disabled while recording
+- [x] UI: reattach: transcript and options of a recording restored
+- [x] UI: close while recording: keep recording in background / stop and close / cancel
+- [x] Docs, full suites
+- [ ] PR
+
+### Decisions and notes
+
+- Built in the phase 61 worktree (`E:\VozAta-work\wt61`), branch stacked on phase 61.
+- The "dead recorder" card is not needed: the recorder continues a recording whose heartbeat is
+  under 2 minutes old when it starts again (the app starts it), and closes older ones as
+  `recorder_died` for the engine to import (phase 61). Nothing waits for the user.
+- "Keep recording in the background" is offered only for a recorder recording: an engine-only
+  recording (no recorder) keeps the old Stop-and-close question.
+- The gate is one panel over the page area (MainViewModel.IsEngineGateVisible), not a
+  separate view per page; the Recorder page is never covered.

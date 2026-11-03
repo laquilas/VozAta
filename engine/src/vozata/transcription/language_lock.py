@@ -29,6 +29,12 @@ class LanguageLock:
         self._min_speech = min_speech_seconds
         self._seconds: Counter[str] = Counter()
 
+    def set(self, language: ConversationLanguage) -> None:
+        """Change the language during the recording (phase 63): fixed from the next window on;
+        `auto` detects again."""
+        self.language = language
+        self._seconds.clear()
+
     def current(self) -> str | None:
         return None if self.language is ConversationLanguage.AUTO else self.language.value
 
