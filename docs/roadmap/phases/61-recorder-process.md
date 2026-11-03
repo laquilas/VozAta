@@ -132,14 +132,13 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:30
-- **Next step:** make `wav_repair` header helpers public and move `bootstrap._devices` to
-  `audio/devices.resolve_devices` (with tests)
+- **Updated:** 2026-11-03 17:09
+- **Next step:** write `recorder/manifest.py` and `recorder/segment_reader.py` with tests (`tests/recorder/`)
 
 ### Steps
 
 - [x] Start the phase (README rows 61–64, phase files, Progress)
-- [ ] `wav_repair` header helpers public; `resolve_devices` moved
+- [x] `wav_repair` header helpers public; `resolve_devices` moved
 - [ ] `recorder/manifest.py` + `segment_reader.py`
 - [ ] `recorder/durable_track.py` (no-loss writer)
 - [ ] `recorder/recording.py`

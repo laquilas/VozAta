@@ -15,6 +15,7 @@ from tests.fakes import (
     FakeTranscriber,
 )
 from vozata import bootstrap
+from vozata.audio import devices as devices_module
 from vozata.audio.capture import WasapiSource
 from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.devices import DeviceInfo
@@ -80,9 +81,9 @@ def devices(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     _FakeAudioThread.instances = []
     _FakeAudioThread.fail = None
     monkeypatch.setattr(bootstrap, "PortAudioThread", _FakeAudioThread)
-    monkeypatch.setattr(bootstrap, "default_input", lambda pa: MIC)
-    monkeypatch.setattr(bootstrap, "default_loopback", lambda pa: LOOPBACK)
-    monkeypatch.setattr(bootstrap, "find_device", find)
+    monkeypatch.setattr(devices_module, "default_input", lambda pa: MIC)
+    monkeypatch.setattr(devices_module, "default_loopback", lambda pa: LOOPBACK)
+    monkeypatch.setattr(devices_module, "find_device", find)
     return looked_up
 
 

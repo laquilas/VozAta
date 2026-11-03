@@ -38,7 +38,7 @@ from vozata.audio.catalog import WasapiCatalog
 from vozata.audio.chunker import FixedWindowChunker
 from vozata.audio.clock import SessionClock
 from vozata.audio.decode import PyAvDecoder
-from vozata.audio.devices import DeviceInfo, default_input, default_loopback, find_device
+from vozata.audio.devices import resolve_devices
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.portaudio import PortAudioThread
 from vozata.audio.silero import SileroSpeechDetector
@@ -900,7 +900,7 @@ def build_session(
         message = localizer.t("errors.session.audio_unavailable")
         raise SessionStartError("audio_unavailable", message) from None
     try:
-        devices = _devices(audio, mic_device, system_device)
+        devices = resolve_devices(audio.call, audio.pa, mic_device, system_device)
     except BaseException:
         audio.close()
         raise
@@ -1094,19 +1094,6 @@ def build_recovery(
 def cli_stale_after(settings: Settings) -> float:
     """How old a heartbeat must be before the CLI treats a session as interrupted (phase 17)."""
     return 2 * settings.autosave_seconds + 5
-
-
-def _devices(
-    audio: PortAudioThread, mic_device: int | None, system_device: int | None
-) -> dict[Channel, DeviceInfo]:
-    pa = audio.pa
-    mic = audio.call(
-        lambda: default_input(pa) if mic_device is None else find_device(mic_device, pa)
-    )
-    system = audio.call(
-        lambda: default_loopback(pa) if system_device is None else find_device(system_device, pa)
-    )
-    return {Channel.MIC: mic, Channel.SYSTEM: system}
 
 
 def hf_hub_cache() -> Path:

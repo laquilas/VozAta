@@ -6,10 +6,12 @@ instance is created and terminated.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
+
+from vozata.domain import Channel
 
 PA_WASAPI = 13  # PortAudio host API type id for WASAPI
 
@@ -92,3 +94,21 @@ def find_device(device_id: int, pa: Any | None = None) -> DeviceInfo:
         if info["maxInputChannels"] <= 0:
             raise LookupError(f"Audio device {device_id} cannot capture")
         return _to_device(info)
+
+
+def resolve_devices(
+    call: Callable[[Callable[[], DeviceInfo]], DeviceInfo],
+    pa: Any,
+    mic_device: int | None,
+    system_device: int | None,
+) -> dict[Channel, DeviceInfo]:
+    """The devices of a recording: the chosen ids, or the defaults when None.
+
+    `call` runs each lookup on the thread that owns `pa` (`PortAudioThread.call`); shared by the
+    engine and the recorder process (phase 61). `LookupError` when a chosen id is gone.
+    """
+    mic = call(lambda: default_input(pa) if mic_device is None else find_device(mic_device, pa))
+    system = call(
+        lambda: default_loopback(pa) if system_device is None else find_device(system_device, pa)
+    )
+    return {Channel.MIC: mic, Channel.SYSTEM: system}
