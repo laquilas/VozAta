@@ -1213,3 +1213,105 @@ def test_translation_needs_live_transcription_and_a_provider(tmp_path: Path) -> 
 
     assert off.value.code == "translation_needs_live_transcription"
     assert missing.value.code == "translation_unavailable"
+
+
+def _recorder_files(folder: Path, seconds: float) -> None:
+    """A stopped recording of the recorder process with `seconds` of voice on both channels."""
+    from vozata.recorder.durable_track import DurableTrack
+    from vozata.recorder.manifest import STOPPED, Manifest, write_manifest
+
+    folder.mkdir(parents=True)
+    manifest = Manifest(id="rec", started_at="2026-10-15T20:23:58-03:00", sample_rate=RATE)
+    lock = threading.RLock()
+    for channel in (Channel.MIC, Channel.SYSTEM):
+        track = DurableTrack(folder, channel, RATE, manifest.segments(channel), lock, lambda: None)
+        track.write(_voice(seconds), 0.0)
+        track.close()
+    manifest.status = STOPPED
+    write_manifest(folder, manifest)
+
+
+def _with_recorder(rig: _Rig, folder: Path) -> None:
+    import dataclasses
+
+    rig.session._c = dataclasses.replace(rig.session._c, recorder_folder=folder)  # type: ignore[misc]
+
+
+def test_live_transcription_off_drains_and_releases_the_model(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 4)
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 1)
+
+    rig.session.apply(SessionChanges(live_transcription=False))
+    _wait_for(lambda: "transcriber.close" in rig.log.entries)
+    calls = len(rig.transcriber.calls)
+    rig.mic.push(_voice(1.0), 1.0)  # recorded, not transcribed live
+
+    assert rig.store.read_meta(rig.session.id)["live_transcription"] is False
+    assert len(rig.transcriber.calls) == calls
+    assert len(rig.store.load_raw_transcript(rig.session.id)) >= 1
+    rig.session.apply(SessionChanges(live_transcription=False))  # already off: nothing
+
+
+def test_live_transcription_on_replays_the_recording_from_where_the_transcript_ends(
+    tmp_path: Path,
+) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 12, live_transcription=False)
+    _recorder_files(tmp_path / "live" / "rec", 3.0)
+    _with_recorder(rig, tmp_path / "live" / "rec")
+    rig.session.start()
+    rig.mic.push(_voice(3.0), 0.0)
+
+    rig.session.apply(SessionChanges(live_transcription=True))
+    _wait_for(lambda: len(rig.transcriber.calls) >= 6)  # 3 s of both channels, from the start
+    rig.session.apply(SessionChanges(live_transcription=True))  # already on: nothing
+    rig.clock.time = 3.0
+    rig.session.stop_capture().wait(10)
+
+    segments = rig.store.load_raw_transcript(rig.session.id)
+    assert rig.store.read_meta(rig.session.id)["live_transcription"] is True
+    for channel in (Channel.MIC, Channel.SYSTEM):
+        starts = [segment.start for segment in segments if segment.channel is channel]
+        assert starts == sorted(starts)  # in order, from the start of the recording
+    assert min(segment.start for segment in segments) < 1.0
+    ids = [segment.segment_id for segment in segments]
+    assert len(ids) == len(set(ids))
+
+
+def test_live_transcription_on_again_continues_the_ids_and_skips_what_was_said(
+    tmp_path: Path,
+) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 12)
+    _recorder_files(tmp_path / "live" / "rec", 3.0)
+    _with_recorder(rig, tmp_path / "live" / "rec")
+    rig.session.start()
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(rig.store.load_raw_transcript(rig.session.id)) >= 1)
+    rig.session.apply(SessionChanges(live_transcription=False))
+    _wait_for(lambda: "transcriber.close" in rig.log.entries)
+    first = rig.store.load_raw_transcript(rig.session.id)
+
+    rig.session.apply(SessionChanges(live_transcription=True))
+    _wait_for(lambda: len(rig.store.load_raw_transcript(rig.session.id)) > len(first))
+    rig.session.stop_capture().wait(10)
+
+    later = rig.store.load_raw_transcript(rig.session.id)[len(first) :]
+    for channel in {segment.channel for segment in first}:
+        said = max(segment.end for segment in first if segment.channel is channel)
+        again = [segment.start for segment in later if segment.channel is channel]
+        assert all(start >= said - 0.01 for start in again)  # nothing said is transcribed twice
+    ids = [segment.segment_id for segment in rig.store.load_raw_transcript(rig.session.id)]
+    assert len(ids) == len(set(ids))
+
+
+def test_live_transcription_on_needs_the_recorder(tmp_path: Path) -> None:
+    from vozata.session import SessionOptionError
+
+    rig = _Rig(tmp_path, live_transcription=False)
+    rig.session.start()
+
+    with pytest.raises(SessionOptionError) as error:
+        rig.session.apply(SessionChanges(live_transcription=True))
+
+    assert error.value.code == "live_transcription_needs_recorder"

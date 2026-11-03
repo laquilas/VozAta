@@ -121,6 +121,10 @@ class SessionMeta:
         """Phase 63: the live translation language (`off` = none)."""
         self._update(translate_to=target)
 
+    def set_live_transcription(self, live: bool) -> None:
+        """Phase 63: live transcription turned on or off during the recording."""
+        self._update(live_transcription=live)
+
     def set_template(self, template: str) -> None:
         self._update(template=template)
 

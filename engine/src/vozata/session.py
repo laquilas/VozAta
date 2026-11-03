@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Protocol
 
 from vozata.audio.opener import SourceOpenTimeoutError, open_with_timeout
+from vozata.audio.tail_source import TailingFileSource
 from vozata.config import ConfigError, Settings
 from vozata.domain import Channel, ConversationLanguage, SessionStatus
 from vozata.heartbeat import Heartbeat
@@ -43,6 +44,8 @@ from vozata.session_meta import SessionMeta
 from vozata.session_pipeline import CapturePipeline, ChunkerFactory
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.offline import OfflineTranscription
+from vozata.transcription.resume import resume_points
+from vozata.transcription.stitcher import SegmentIds
 from vozata.translation.live import live_translation
 from vozata.translation.worker import TranslationWorker
 from vozata.vocabulary import build_hints
@@ -91,6 +94,7 @@ class SessionComponents:
     # None = the session opens the devices itself
     started_at: datetime | None = None
     recorder_id: str | None = None
+    recorder_folder: Path | None = None  # its files: live transcription turned on replays them
     # phase 63: this meeting's terms merged with the glossary (and the wake word), as at start
     vocabulary_for: Callable[[Sequence[str]], tuple[str, ...]] | None = None
     # phase 63: (target, translator factory) for a language chosen during the recording
@@ -160,6 +164,7 @@ class RecordingSession:
         self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
         self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
         self._translation: TranslationWorker | None = None  # phase 29 / 63: the live translation
+        self._chunk_sources: list[AudioSource] = []  # phase 63: replaying into turned-on chunkers
 
     def hold_speech_fallback(self) -> None:
         """The VozAta worker did not answer: hold the GPU before the local Whisper loads."""
@@ -270,10 +275,47 @@ class RecordingSession:
         if changes.generate_minutes is not None:
             self._meta.set_generate_minutes(changes.generate_minutes)
             changed["generate_minutes"] = changes.generate_minutes
+        if changes.live_transcription is not None:
+            self._change_live(changes.live_transcription)
+            changed["live_transcription"] = changes.live_transcription
         if changes.translate_to is not None:
             self._change_translation(changes.translate_to)
             changed["translate_to"] = changes.translate_to
         return changed
+
+    def _change_live(self, on: bool) -> None:
+        """Live transcription on or off during the recording (phase 63).
+
+        Off: the live part drains on a thread and the GPU is released; the rest of the meeting is
+        transcribed after Stop from where the transcript ends. On: the recorder's files are
+        replayed from that same point into new chunkers, then followed, so the earlier audio is
+        transcribed now and in order; it needs the recorder (`live_transcription_needs_recorder`).
+        """
+        if on == self._pipeline.live:
+            return
+        if not on:
+            for source in self._chunk_sources:
+                source.stop()
+            self._chunk_sources = []
+            self._translation = None  # a sink of the live part: it closes with it
+            self._pipeline.disable_live(self._gpu.release)
+        else:
+            folder = self._c.recorder_folder
+            if folder is None:
+                raise SessionOptionError("live_transcription_needs_recorder")
+            existing = self._store.load_raw_transcript(self.id)
+            points = resume_points(existing, list(self._c.sources))
+            feeds = self._pipeline.enable_live(
+                SegmentIds({channel: point.next_index for channel, point in points.items()})
+            )
+            rate = self._settings.sample_rate
+            for channel, feed in feeds.items():
+                source = TailingFileSource(
+                    folder, channel, rate, start_frame=round(points[channel].start * rate)
+                )
+                source.start(feed)
+                self._chunk_sources.append(source)
+        self._meta.set_live_transcription(on)
 
     def _change_translation(self, target: str) -> None:
         """Turn live translation on, off or to another language (phase 63); the old worker
@@ -343,6 +385,7 @@ class RecordingSession:
         if paused:
             parts.append(("Closing the open pause", lambda: self._meta.pause_ended(captured)))
         parts += [("Stopping a source", source.stop) for source in self._c.sources.values()]
+        parts += [("Stopping a live source", source.stop) for source in self._chunk_sources]
         parts += [
             ("Flushing the chunkers", self._pipeline.stop_capture),
             (

@@ -965,6 +965,7 @@ def build_session(
         else live_transcription,
         started_at=attach.started_at if attach is not None else None,
         recorder_id=attach.recording_id if attach is not None else None,
+        recorder_folder=attach.folder if attach is not None else None,
         translators=lambda target: build_translator_factory(
             settings, TranslationTarget(target), downloader, notices
         ),

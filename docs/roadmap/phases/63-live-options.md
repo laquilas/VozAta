@@ -79,8 +79,8 @@ Changing devices during a recording.
 
 - **Branch:** `feature/63-live-options` (stacked on `feature/62-engine-gate`, PR #80)
 - **Status:** in progress
-- **Updated:** 2026-11-03 18:46
-- **Next step:** live transcription off / on during the recording (`CapturePipeline.disable_live/enable_live`, a second `TailingFileSource` for the chunkers from the resume point)
+- **Updated:** 2026-11-03 18:57
+- **Next step:** UI: the chips editable while recording or paused (devices only when idle), each change sent debounced (`PATCH /sessions/{id}`, or the recorder options before the engine attaches), a failed change reverts the chip, `session_updated` refreshes them
 
 ### Steps
 
@@ -89,7 +89,7 @@ Changing devices during a recording.
       (language, terms, template, title, minutes flag), `session_updated`, options mirrored to
       the recording
 - [x] Engine: translation on / off / changed during the recording
-- [ ] Engine: live transcription off and on during the recording
+- [x] Engine: live transcription off and on during the recording
 - [ ] UI: chips editable while recording, debounced `PATCH`, `session_updated`
 - [ ] Docs, full suites, PR
 
