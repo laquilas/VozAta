@@ -30,7 +30,7 @@ action_items_failed = "The action items could not be extracted ({reason}). The m
 translation_failed = "Live translation stopped ({reason}). The transcription continues."
 
 [errors.api]
-live_transcription_off = "Turn live transcription on to translate during the meeting."
+translation_needs_live_transcription = "Turn live transcription on to translate during the meeting."
 live_transcription_needs_recorder = "Live transcription can be turned on during a meeting only when the VozAta recorder records it."
 translation_unavailable = "Live translation is not available in this engine."
 session_not_live = "Meeting \"{id}\" is not being recorded: only its title, template and minutes option can change."

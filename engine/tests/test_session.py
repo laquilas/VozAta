@@ -1211,5 +1211,5 @@ def test_translation_needs_live_transcription_and_a_provider(tmp_path: Path) -> 
     with pytest.raises(SessionOptionError) as missing:
         no_provider.session.apply(SessionChanges(translate_to="pt"))
 
-    assert off.value.code == "live_transcription_off"
+    assert off.value.code == "translation_needs_live_transcription"
     assert missing.value.code == "translation_unavailable"

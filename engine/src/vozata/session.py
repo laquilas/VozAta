@@ -280,7 +280,7 @@ class RecordingSession:
         translates what it holds and closes on its own thread."""
         current = self._translation
         if target != "off" and not self._pipeline.live:
-            raise SessionOptionError("live_transcription_off")
+            raise SessionOptionError("translation_needs_live_transcription")
         if (current.target if current is not None else "off") == target:
             return
         if current is not None:
