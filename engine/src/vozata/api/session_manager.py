@@ -108,6 +108,8 @@ class StartOptions:
     )
     title: str | None = None  # meeting title (phase 35), already normalized; None = untitled
     live_transcription: bool | None = None  # phase 41; None = LIVE_TRANSCRIPTION
+    generate_minutes: bool | None = None  # phase 64; None = write them (GENERATE_MINUTES)
+    minutes_not_ready: bool = False  # phase 64: the engine was not following when it stopped
     attach: RecordingAttach | None = None  # phase 61: follow this recorder recording
 
 
@@ -131,6 +133,10 @@ class _EventObserver:
         self._session_id = session_id
         self._clock = clock
         self._level_at: dict[Channel, float] = {}
+
+    def on_minutes_skipped(self, reason: str) -> None:
+        """Phase 64: this meeting is processed without minutes (`not_ready` / `by_user`)."""
+        self._send("minutes_skipped", {"session_id": self._session_id(), "reason": reason})
 
     def on_status(self, status: SessionStatus, duration_seconds: float) -> None:
         self._send("status", {"status": status.value, "duration_seconds": duration_seconds})

@@ -41,7 +41,23 @@ def session_summary(
         "has_action_items": bool(store.read_action_items(session_id)),
         "template": meta.get("template") if isinstance(meta.get("template"), str) else None,
         "processing": processing,  # phase 40; None when not queued or processed
+        "minutes_state": minutes_state(store.has_minutes(session_id), meta, processing),  # 64
     }
+
+
+def minutes_state(
+    has_minutes: bool, meta: dict[str, Any], processing: dict[str, Any] | None
+) -> str:
+    """`generated`, `skipped_not_ready`, `skipped_by_user`, `pending` (queued or processed) or
+    `none` (phase 64)."""
+    if has_minutes:
+        return "generated"
+    skipped = meta.get("minutes_skipped")
+    if skipped in ("not_ready", "by_user"):
+        return f"skipped_{skipped}"
+    if processing is not None:
+        return "pending"
+    return "none"
 
 
 def _duration(meta: dict[str, Any]) -> float | None:

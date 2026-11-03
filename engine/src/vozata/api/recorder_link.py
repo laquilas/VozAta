@@ -102,6 +102,7 @@ def start_options(options: dict[str, Any], live: bool) -> StartOptions:
     vocabulary = tuple(t for t in terms if isinstance(t, str)) if isinstance(terms, list) else ()
     template = options.get("template")
     wants_live = options.get("live_transcription")
+    minutes = options.get("generate_minutes")
     return StartOptions(
         language=choice(ConversationLanguage, "language"),
         template=template if isinstance(template, str) and template else None,
@@ -111,6 +112,8 @@ def start_options(options: dict[str, Any], live: bool) -> StartOptions:
         live_transcription=(wants_live if isinstance(wants_live, bool) else None)
         if live
         else False,
+        generate_minutes=minutes if isinstance(minutes, bool) else None,
+        minutes_not_ready=not live,  # stopped before the engine followed it (phase 64)
     )
 
 

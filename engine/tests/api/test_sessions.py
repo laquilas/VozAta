@@ -166,6 +166,7 @@ def test_list_sessions_newest_first_with_paging(api: Api) -> None:
         "has_action_items": False,
         "template": None,
         "processing": None,
+        "minutes_state": "none",  # phase 64
     }
 
 

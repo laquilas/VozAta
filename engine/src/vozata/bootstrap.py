@@ -858,6 +858,8 @@ def build_session(
     worker_moved: Callable[[str], None] = lambda url: None,
     voice_dispatch: VoiceDispatch | None = None,
     attach: RecordingAttach | None = None,
+    generate_minutes: bool | None = None,
+    minutes_not_ready: bool = False,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
 
@@ -966,6 +968,8 @@ def build_session(
         started_at=attach.started_at if attach is not None else None,
         recorder_id=attach.recording_id if attach is not None else None,
         recorder_folder=attach.folder if attach is not None else None,
+        generate_minutes=generate_minutes,
+        minutes_not_ready=minutes_not_ready,
         translators=lambda target: build_translator_factory(
             settings, TranslationTarget(target), downloader, notices
         ),
@@ -1250,6 +1254,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             shared=shared,
             downloader=downloader,
             worker_moved=worker_moved,
+            model_ready=llm_reachable,  # phase 64: no minutes, and a marker, when it is down
         )
 
     def session_factory(observer: SessionObserver, options: StartOptions) -> RecordingSession:
@@ -1274,6 +1279,8 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             worker_moved=worker_moved,
             voice_dispatch=voice_dispatch,
             attach=options.attach,
+            generate_minutes=options.generate_minutes,
+            minutes_not_ready=options.minutes_not_ready,
         )
 
     def llm_reachable() -> bool:

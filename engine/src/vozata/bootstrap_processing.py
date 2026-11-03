@@ -31,6 +31,7 @@ from vozata.processing.cancel import CancelToken
 from vozata.processing.gpu_gate import GpuUsage
 from vozata.processing.ingest_check import check_ingest
 from vozata.processing.job import AbortJob, ProcessingJob, StepKind
+from vozata.processing.minutes_decision import minutes_skip_reason
 from vozata.processing.session_job import JobParts, session_job, transcribe_weight
 from vozata.session_finisher import SessionFinisher
 from vozata.storage.recovery import SessionRecovery
@@ -55,8 +56,13 @@ def build_processing_job(
     shared: SharedTranscriber | None = None,
     downloader: ModelDownloader | None = None,
     worker_moved: Callable[[str], None] = lambda url: None,
+    model_ready: Callable[[], bool] = lambda: True,
 ) -> ProcessingJob:
     """The processing job of a stopped (or crashed, `repair`) meeting (phase 40).
+
+    Minutes (and action items) are skipped and the meeting marked `minutes_skipped` when the
+    meeting's option is off or the engine was not ready (phase 64, `minutes_skip_reason`;
+    `model_ready` asks the language model).
 
     It starts once the abandoned live pipeline set `closed`. Each step builds its own providers
     when it runs, from `settings` and the meeting's `session.json`: a redone step never reuses a
@@ -69,6 +75,13 @@ def build_processing_job(
     downloader = root._downloader(settings, downloader)
     meta = store.read_meta(session_id)
     duration = float(meta.get("duration_seconds") or 0.0)
+    skipped = minutes_skip_reason(settings.generate_minutes, meta, model_ready)
+    minutes = settings.generate_minutes and skipped is None
+    if skipped is not None:
+        store.write_meta(session_id, {**meta, "minutes_skipped": skipped})
+        notify = getattr(observer, "on_minutes_skipped", None)
+        if notify is not None:
+            notify(skipped)
     after = settings.generate_minutes or settings.diarization_enabled  # VRAM rule
 
     @contextlib.contextmanager
@@ -105,8 +118,8 @@ def build_processing_job(
         finisher=finisher,
         transcription=transcription,
         diarize=settings.diarization_enabled,
-        minutes=settings.generate_minutes,
-        action_items=settings.generate_minutes and settings.extract_action_items,
+        minutes=minutes,
+        action_items=minutes and settings.extract_action_items,
         repair=functools.partial(_repair, settings, store, audio, observer, session_id)
         if repair
         else None,

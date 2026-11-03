@@ -374,3 +374,11 @@ def test_a_done_meeting_whose_folder_stayed_is_cleaned_up_again(tmp_path: Path) 
 
     assert cleaned == ["20261103_101500"]
     assert rig.manager.started == []
+
+
+def test_the_minutes_option_travels_and_a_replayed_recording_is_not_ready() -> None:
+    live = start_options({"generate_minutes": False}, live=True)
+    replayed = start_options({"generate_minutes": "yes"}, live=False)
+
+    assert (live.generate_minutes, live.minutes_not_ready) == (False, False)
+    assert (replayed.generate_minutes, replayed.minutes_not_ready) == (None, True)

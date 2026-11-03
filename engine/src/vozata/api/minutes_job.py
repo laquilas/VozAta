@@ -100,5 +100,15 @@ class MinutesJob(QueuedModelJob):
             return False
         finally:
             cancels.close()
+        self._clear_skipped(session_id)  # phase 64: the meeting has minutes now
         self._broadcaster.publish("minutes_ready", session_id, {"session_id": session_id})
         return True
+
+    def _clear_skipped(self, session_id: str) -> None:
+        try:
+            meta = self._store.read_meta(session_id)
+            if "minutes_skipped" in meta:
+                meta.pop("minutes_skipped")
+                self._store.write_meta(session_id, meta)
+        except Exception:
+            _log.exception("Clearing the minutes marker of %s failed", session_id)

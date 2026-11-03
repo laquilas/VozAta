@@ -79,3 +79,16 @@ def test_an_unknown_meeting_is_not_found(api: Api) -> None:
     reply = api.client.patch("/sessions/20200101_000000", json={"template": "daily"})
 
     assert reply.status_code == 404
+
+
+def test_the_minutes_option_is_a_start_option_and_skips_are_announced(api: Api) -> None:
+    from vozata.api.session_manager import session_observer
+
+    api.client.post("/sessions", json={"generate_minutes": False})
+    observer = session_observer(api.broadcaster, api.labeler, "20261103_101500")
+    observer.on_minutes_skipped("by_user")  # type: ignore[attr-defined]
+
+    assert api.factory.sessions[-1].options.generate_minutes is False
+    assert api.broadcaster.of("minutes_skipped") == [
+        ("20261103_101500", {"session_id": "20261103_101500", "reason": "by_user"})
+    ]

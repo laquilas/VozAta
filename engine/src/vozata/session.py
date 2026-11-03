@@ -95,6 +95,8 @@ class SessionComponents:
     started_at: datetime | None = None
     recorder_id: str | None = None
     recorder_folder: Path | None = None  # its files: live transcription turned on replays them
+    generate_minutes: bool | None = None  # phase 64: the meeting's option; None = write them
+    minutes_not_ready: bool = False  # phase 64: replayed after the engine was down at Stop
     # phase 63: this meeting's terms merged with the glossary (and the wake word), as at start
     vocabulary_for: Callable[[Sequence[str]], tuple[str, ...]] | None = None
     # phase 63: (target, translator factory) for a language chosen during the recording
@@ -204,6 +206,10 @@ class RecordingSession:
         self._meta.set_language(self._language, "selected")
         if self._c.recorder_id is not None:
             self._meta.set_capture_source("recorder", self._c.recorder_id)
+        if self._c.generate_minutes is not None:
+            self._meta.set_generate_minutes(self._c.generate_minutes)
+        if self._c.minutes_not_ready:
+            self._meta.mark_minutes_not_ready()
         self._lock = LanguageLock(self._language, self._on_language_detected)
         translation = self._translation = self._live_translation()
         self._pipeline = CapturePipeline(
