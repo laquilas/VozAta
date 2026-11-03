@@ -211,3 +211,16 @@ def test_health_says_whether_the_recorder_answers(linked: tuple[Api, FakeLink]) 
 
 def test_health_without_the_recorder(api: Api) -> None:
     assert api.client.get("/health").json()["recorder"] is None
+
+
+def test_the_current_meeting_is_read_with_its_options(api: Api) -> None:
+    assert api.client.get("/sessions/current").status_code == 404
+
+    started = api.client.post("/sessions", json={"title": "Weekly", "template": "daily"}).json()
+    detail = api.client.get("/sessions/current").json()
+
+    assert detail["id"] == started["id"]
+    assert detail["status"] == "recording"
+    assert detail["title"] == "Weekly"
+    api.client.post("/sessions/current/pause")
+    assert api.client.get("/sessions/current").json()["status"] == "paused"

@@ -75,13 +75,13 @@ Options edited during the recording (63); the minutes marker (64).
 
 - **Branch:** `feature/62-engine-gate` (stacked on `feature/61-recorder-process`, PR #79)
 - **Status:** in progress
-- **Updated:** 2026-11-03 20:30
-- **Next step:** engine `GET /sessions/current` with tests
+- **Updated:** 2026-11-03 18:13
+- **Next step:** UI: `EngineGateViewModel` + `RetryConnectionAsync` in `MainViewModel` (event loop even after a failed start, data reloaded on reconnect, one automatic respawn)
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
-- [ ] Engine: `GET /sessions/current`
+- [x] Engine: `GET /sessions/current`
 - [ ] UI: `EngineGateViewModel`, `RetryConnectionAsync`, data reloaded on reconnect, one automatic
       engine respawn, the event loop even after a failed start
 - [ ] UI: the gate panel on the engine pages; Restart engine disabled while recording

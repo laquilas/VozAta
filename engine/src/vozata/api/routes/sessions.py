@@ -28,7 +28,7 @@ from vozata.api.schemas import (
 )
 from vozata.api.session_days import EPOCH, group_by_day, local_bounds
 from vozata.api.session_manager import StartOptions
-from vozata.domain import AudioTrack, ConversationLanguage, TranslationTarget
+from vozata.domain import AudioTrack, ConversationLanguage, SessionStatus, TranslationTarget
 from vozata.recorder_client import RecorderApiError, RecorderUnavailableError
 from vozata.session_title import TitleTooLongError, normalize_title
 
@@ -137,6 +137,16 @@ def list_sessions(
         "items": [_summary(c, session_id) for session_id in ids[offset : offset + limit]],
         "total": len(ids),
     }
+
+
+@router.get("/sessions/current", response_model=SessionDetail)
+def current_session(c: Container) -> dict[str, Any]:
+    """The meeting being recorded or paused, with its options (phase 62: a reopened app shows it
+    as it is); `404 no_active_session` otherwise."""
+    session = c.manager.current
+    if session is None or session.status not in (SessionStatus.RECORDING, SessionStatus.PAUSED):
+        raise ApiError(404, "no_active_session")
+    return session_detail(session.id, c)
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
