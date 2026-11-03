@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:56
-- **Next step:** UI: `VozAta.Client` recorder client (`IRecorderClient`, `RecorderClient`, DTOs), SSE events (`IRecorderEvents`), `Services/RecorderProcess.cs`, fakes and tests
+- **Updated:** 2026-11-03 18:05
+- **Next step:** docs: architecture §2/§5/§6/§8/§9 and a new "Recorder process" section; api-contract "Recorder HTTP API" table, `POST /sessions` forwarding, `/health.recorder`, `capture_source`/`recorder_id`; then the manual check (after the user stops their recording)
 
 ### Steps
 
@@ -151,8 +151,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
       exclusions; `POST /sessions` and the controls forwarded to the recorder
 - [x] `ingest` step: stored frames checked against the manifest, then `live/<id>/` deleted
 - [x] CLI guard, bootstrap wiring, health, packaging
-- [ ] UI client, SSE events, recorder process, fakes
-- [ ] UI view models and views, strings
+- [x] UI client, SSE events, recorder process, fakes
+- [x] UI view models and views, strings
 - [ ] Docs (architecture, api-contract), full suites, manual check, PR
 
 ### Decisions and notes

@@ -87,6 +87,18 @@
   <data name="EngineDisconnected" xml:space="preserve">
     <value>Motor desconectado, reconectando…</value>
   </data>
+  <data name="RecorderConnected" xml:space="preserve">
+    <value>Gravador pronto</value>
+  </data>
+  <data name="RecorderDisconnected" xml:space="preserve">
+    <value>Gravador não responde</value>
+  </data>
+  <data name="RecorderStartFailed" xml:space="preserve">
+    <value>O gravador não iniciou. O motor grava sozinho assim que estiver pronto.</value>
+  </data>
+  <data name="RecorderProblem" xml:space="preserve">
+    <value>Gravador: {0}. O áudio é mantido.</value>
+  </data>
   <data name="EngineStartFailed" xml:space="preserve">
     <value>Não foi possível iniciar o motor. Verifique Engine:PythonPath e Engine:WorkingDirectory no appsettings.json.</value>
   </data>

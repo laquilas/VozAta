@@ -74,6 +74,18 @@ public partial class App : Application
             provider.GetRequiredService<IProcessRunner>(),
             options,
             provider.GetRequiredService<PathResolver>()));
+        var recorderOptions = configuration.GetSection("Recorder").Get<RecorderOptions>() ?? new RecorderOptions();
+        var recorderUri = new Uri(recorderOptions.BaseUrl);
+        services.AddSingleton(recorderOptions);
+        services.AddSingleton<IRecorderClient>(_ => new RecorderClient(
+            new HttpClient { BaseAddress = recorderUri, Timeout = TimeSpan.FromSeconds(30) }));
+        services.AddSingleton<IRecorderEvents>(_ => new RecorderEvents(new HttpEventStreamSource(
+            new HttpClient { BaseAddress = recorderUri, Timeout = Timeout.InfiniteTimeSpan })));
+        services.AddSingleton<IRecorderProcess>(provider => new RecorderProcess(
+            provider.GetRequiredService<IRecorderClient>(),
+            provider.GetRequiredService<IProcessRunner>(),
+            recorderOptions,
+            provider.GetRequiredService<PathResolver>()));
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IDialogService>(_ => new AvaloniaDialogService(desktop));

@@ -22,6 +22,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly IEngineClient _client;
     private readonly IEngineEvents _events;
     private readonly IEngineProcess _process;
+    private readonly IRecorderEvents? _recorderEvents; // phase 61; null = no recorder process
+    private readonly IRecorderProcess? _recorderProcess;
     private readonly IUiDispatcher _dispatcher;
     private readonly ILocalizationService _localization;
     private readonly IDialogService _dialogs;
@@ -48,12 +50,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Uri? engineUri = null,
         IProcessingMarkers? markers = null,
         ISoundPlayer? sound = null,
-        Func<TimeSpan, CancellationToken, Task>? voiceDelay = null)
+        Func<TimeSpan, CancellationToken, Task>? voiceDelay = null,
+        IRecorderClient? recorder = null,
+        IRecorderEvents? recorderEvents = null,
+        IRecorderProcess? recorderProcess = null)
     {
         markers ??= new ProcessingMarkers();
         _client = client;
         _events = events;
         _process = process;
+        _recorderEvents = recorder is null ? null : recorderEvents;
+        _recorderProcess = recorder is null ? null : recorderProcess;
         _dispatcher = dispatcher;
         _dialogs = dialogs;
         _localization = localization;
@@ -61,7 +68,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Session = new RecordingSessionService();
         var templates = new MinutesTemplatesViewModel(client);
         Recorder = new RecorderPageViewModel(
-            client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token, shell: shell);
+            client, localization, preferences, clock, timer, templates, Session, Notify, cancellation: _stop.Token, shell: shell,
+            recorder: recorder);
         History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs, markers: markers);
         Health = new HealthViewModel(client, localization);
         Processing = new ProcessingIndicatorViewModel(localization);
@@ -176,6 +184,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>The running event loop (null until initialized).</summary>
     public Task? EventLoop { get; private set; }
 
+    /// <summary>The recorder's event loop (phase 61; null without a recorder or until initialized).</summary>
+    public Task? RecorderEventLoop { get; private set; }
+
+    /// <summary>The recorder process answers (green dot in the sidebar).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecorderText), nameof(HasRecorder))]
+    public partial bool IsRecorderConnected { get; private set; }
+
+    /// <summary>The app uses a recorder process (the sidebar shows its state).</summary>
+    public bool HasRecorder => _recorderEvents is not null;
+
+    public string RecorderText => _localization[IsRecorderConnected ? "RecorderConnected" : "RecorderDisconnected"];
+
     /// <summary>Events handled so far (lets tests wait for asynchronous delivery).</summary>
     public int HandledEvents { get; private set; }
 
@@ -216,6 +237,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Connect to (or start) the engine, load its settings, then follow its events.</summary>
     public async Task InitializeAsync()
     {
+        await StartRecorderAsync(); // first: recording works before the engine is up (phase 61)
         EngineStatus = EngineStatus.Starting;
         if (await _process.EnsureRunningAsync(_stop.Token) == EngineStartResult.Failed)
         {
@@ -410,6 +432,46 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (Session.IsRecording && !wasRecording || Session.IsIdle && !wasIdle)
         {
             HistoryRefresh = Task.WhenAll(History.LoadAsync(), Meetings.LoadAsync());
+        }
+    }
+
+    /// <summary>Start (or find) the recorder process, then follow its events; never blocks the engine start.</summary>
+    private async Task StartRecorderAsync()
+    {
+        if (_recorderProcess is null || _recorderEvents is null)
+        {
+            return;
+        }
+
+        if (await _recorderProcess.EnsureRunningAsync(_stop.Token) == RecorderStartResult.Failed)
+        {
+            Notify(_localization["RecorderStartFailed"]); // the engine still records by itself
+        }
+
+        RecorderEventLoop = FollowRecorderEventsAsync(); // reconnects by itself
+    }
+
+    private async Task FollowRecorderEventsAsync()
+    {
+        try
+        {
+            await foreach (var recorderEvent in _recorderEvents!.ReadAllAsync(_stop.Token))
+            {
+                _dispatcher.Post(() =>
+                {
+                    if (recorderEvent is RecorderConnectionChangedEvent connection)
+                    {
+                        IsRecorderConnected = connection.Connected;
+                    }
+
+                    Recorder.HandleRecorder(recorderEvent);
+                    HandledEvents++;
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutting down.
         }
     }
 

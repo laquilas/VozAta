@@ -87,6 +87,18 @@
   <data name="EngineDisconnected" xml:space="preserve">
     <value>Engine disconnected, reconnecting…</value>
   </data>
+  <data name="RecorderConnected" xml:space="preserve">
+    <value>Recorder ready</value>
+  </data>
+  <data name="RecorderDisconnected" xml:space="preserve">
+    <value>Recorder not answering</value>
+  </data>
+  <data name="RecorderStartFailed" xml:space="preserve">
+    <value>The recorder did not start. The engine records by itself once it is up.</value>
+  </data>
+  <data name="RecorderProblem" xml:space="preserve">
+    <value>Recorder: {0}. The audio is kept.</value>
+  </data>
   <data name="EngineStartFailed" xml:space="preserve">
     <value>The engine could not be started. Check Engine:PythonPath and Engine:WorkingDirectory in appsettings.json.</value>
   </data>
