@@ -7,6 +7,7 @@ import logging
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
@@ -86,6 +87,10 @@ class SessionComponents:
     live_transcription: bool = True  # phase 41; False = audio only, transcribed after stop
     # phase 50: the voice command listener of the session (its id); None = no commands
     voice_commands: Callable[[str], TranscriptSink] | None = None
+    # phase 61: a recording of the recorder process the session follows (its start and id);
+    # None = the session opens the devices itself
+    started_at: datetime | None = None
+    recorder_id: str | None = None
 
 
 class SessionStartError(RuntimeError):
@@ -160,10 +165,12 @@ class RecordingSession:
         """
         if self._id is not None:
             raise RuntimeError("A session can only be started once")
-        started_at = self._store.now()
+        started_at = self._c.started_at or self._store.now()
         self._id = self._store.create(started_at)
         self._meta = SessionMeta(self._store, self.id, started_at, self._settings, self._c)
         self._meta.set_language(self._language, "selected")
+        if self._c.recorder_id is not None:
+            self._meta.set_capture_source("recorder", self._c.recorder_id)
         self._lock = LanguageLock(self._language, self._on_language_detected)
         translation = self._live_translation()
         self._pipeline = CapturePipeline(
@@ -208,6 +215,17 @@ class RecordingSession:
     def set_title(self, title: str | None) -> None:
         """Rename the meeting (phase 35), while recording or finalizing; None clears the title."""
         self._meta.set_title(title)
+
+    @property
+    def recorder_id(self) -> str | None:
+        """The recorder recording this session follows (phase 61); None when it records itself."""
+        return self._c.recorder_id
+
+    def end_at(self, seconds: float) -> None:
+        """The followed recording stopped at `seconds`: the capture is that long (phase 61)."""
+        stop_at = getattr(self._c.clock, "stop_at", None)
+        if stop_at is not None:
+            stop_at(seconds)
 
     def stop(self) -> None:
         """Stop capture, then run the meeting's processing job on this thread (CLI)."""

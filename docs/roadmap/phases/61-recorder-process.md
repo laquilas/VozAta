@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:31
-- **Next step:** attach: `build_session(attach=)` with `TailingFileSource` + `RecorderClock`, the session started on the recording's `started_at`, `recorder_id` in `session.json`
+- **Updated:** 2026-11-03 17:34
+- **Next step:** `RecorderLink` in `api/recorder_link.py` (attach / follow / replay / rebuild, `engine.json`), with tests over a fake recorder client and real recording folders
 
 ### Steps
 
@@ -144,7 +144,7 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] `recorder/recording.py`
 - [x] Recorder HTTP API (`http.py`, `app.py`, `lock.py`, `__main__.py`), config keys
 - [x] Engine `TailingFileSource` and `RecorderClock`
-- [ ] Attach: `build_session(attach=)`, the session started on the recording's `started_at`,
+- [x] Attach: `build_session(attach=)`, the session started on the recording's `started_at`,
       `capture_source` / `recorder_id` in `session.json`
 - [ ] `RecorderLink` (watcher): attach live recordings, follow pause / resume / stop, replay
       stopped ones audio-only, rebuild after an engine restart; `engine.json` marker; recovery

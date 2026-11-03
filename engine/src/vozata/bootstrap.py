@@ -41,7 +41,9 @@ from vozata.audio.decode import PyAvDecoder
 from vozata.audio.devices import resolve_devices
 from vozata.audio.mixer import MonoMixer, StereoMixer
 from vozata.audio.portaudio import PortAudioThread
+from vozata.audio.recorder_clock import RecorderClock
 from vozata.audio.silero import SileroSpeechDetector
+from vozata.audio.tail_source import TailingFileSource
 from vozata.audio.vad_chunker import VadChunker
 from vozata.commands.detector import VoiceCommandSink
 from vozata.commands.matcher import CommandMatcher
@@ -88,6 +90,7 @@ from vozata.net import remote_llm_host
 from vozata.ports import (
     AudioMixer,
     AudioSessionMonitor,
+    AudioSource,
     BundleImporter,
     Chunker,
     Diarizer,
@@ -114,6 +117,7 @@ from vozata.processing.queue import ProcessingQueue, ProcessingState
 from vozata.qa.answerer import MeetingAnswerer
 from vozata.qa.meeting_so_far import MeetingSoFarAnswerer
 from vozata.qa.retriever import Retriever
+from vozata.recorder.attach import RecordingAttach
 from vozata.session import RecordingSession, SessionComponents, SessionStartError
 from vozata.session_finisher import SessionFinisher
 from vozata.session_title import stored_title
@@ -851,8 +855,13 @@ def build_session(
     downloader: ModelDownloader | None = None,
     worker_moved: Callable[[str], None] = lambda url: None,
     voice_dispatch: VoiceDispatch | None = None,
+    attach: RecordingAttach | None = None,
 ) -> RecordingSession:
     """A ready-to-start session; no stream is opened and no folder created until `start()`.
+
+    With `attach` (phase 61) the session opens no device: it follows that recording of the
+    recorder process from its files (from the first frame), on the recording's timeline, and is
+    created on the recording's start time (so it gets the recording's id).
 
     Devices default to the WASAPI default microphone and the default output's loopback. Every
     PortAudio call runs on one `PortAudioThread`, closed by the session when capture ends. With a
@@ -894,25 +903,15 @@ def build_session(
     translation_target, translator_factory = build_translator_factory(
         settings, translate_to, downloader, notices
     )
-    try:
-        audio = PortAudioThread()
-    except TimeoutError:
-        message = localizer.t("errors.session.audio_unavailable")
-        raise SessionStartError("audio_unavailable", message) from None
-    try:
-        devices = resolve_devices(audio.call, audio.pa, mic_device, system_device)
-    except BaseException:
-        audio.close()
-        raise
-    clock = SessionClock()
+    if attach is not None:
+        sources, device_names, clock, release = _attached_capture(settings, attach)
+    else:
+        sources, device_names, clock, release = _device_capture(
+            settings, localizer, mic_device, system_device
+        )
     components = SessionComponents(
-        sources={
-            channel: WasapiSource(
-                device, clock, settings.sample_rate, pa=audio.pa, call_audio=audio.call
-            )
-            for channel, device in devices.items()
-        },
-        device_names={channel: device.name for channel, device in devices.items()},
+        sources=sources,
+        device_names=device_names,
         clock=clock,
         transcriber_factory=(
             (
@@ -927,7 +926,7 @@ def build_session(
         minutes=minutes,
         localizer=localizer,
         labeler=build_labeler(settings, localizer),
-        release=audio.close,
+        release=release,
         chunker_factory=functools.partial(CHUNKERS[settings.chunk_mode], settings),
         diarizer_factory=diarizer_factory,
         search_index=build_search_index(settings),
@@ -962,6 +961,8 @@ def build_session(
         live_transcription=settings.live_transcription
         if live_transcription is None
         else live_transcription,
+        started_at=attach.started_at if attach is not None else None,
+        recorder_id=attach.recording_id if attach is not None else None,
     )
     session = RecordingSession(
         settings,
@@ -972,6 +973,45 @@ def build_session(
         language or settings.transcription_language,
     )
     return session
+
+
+Capture = tuple[Mapping[Channel, AudioSource], dict[Channel, str], Any, Callable[[], None]]
+
+
+def _device_capture(
+    settings: Settings,
+    localizer: Localizer,
+    mic_device: int | None,
+    system_device: int | None,
+) -> Capture:
+    """The session opens the devices itself, on one `PortAudioThread` (closed by `release`)."""
+    try:
+        audio = PortAudioThread()
+    except TimeoutError:
+        message = localizer.t("errors.session.audio_unavailable")
+        raise SessionStartError("audio_unavailable", message) from None
+    try:
+        devices = resolve_devices(audio.call, audio.pa, mic_device, system_device)
+    except BaseException:
+        audio.close()
+        raise
+    clock = SessionClock()
+    sources = {
+        channel: WasapiSource(
+            device, clock, settings.sample_rate, pa=audio.pa, call_audio=audio.call
+        )
+        for channel, device in devices.items()
+    }
+    return sources, {c: d.name for c, d in devices.items()}, clock, audio.close
+
+
+def _attached_capture(settings: Settings, attach: RecordingAttach) -> Capture:
+    """The recorder process captures; the session follows its files (phase 61)."""
+    sources = {
+        channel: TailingFileSource(attach.folder, channel, settings.sample_rate)
+        for channel in (Channel.MIC, Channel.SYSTEM)
+    }
+    return sources, dict(attach.device_names), RecorderClock(attach.started_at), lambda: None
 
 
 class _CaptureOver:
