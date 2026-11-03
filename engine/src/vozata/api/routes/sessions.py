@@ -30,7 +30,7 @@ from vozata.api.session_days import EPOCH, group_by_day, local_bounds
 from vozata.api.session_manager import SessionNotLiveError, StartOptions
 from vozata.domain import AudioTrack, ConversationLanguage, SessionStatus, TranslationTarget
 from vozata.recorder_client import RecorderApiError, RecorderUnavailableError
-from vozata.session import SessionChanges
+from vozata.session import SessionChanges, SessionOptionError
 from vozata.session_title import TitleTooLongError, normalize_title
 
 router = APIRouter(tags=["sessions"])
@@ -198,6 +198,8 @@ def update_session(session_id: str, body: UpdateSession, c: Container) -> dict[s
             summary = c.manager.update(session_id, changes)
         except SessionNotLiveError:
             raise ApiError(409, "session_not_live", id=session_id) from None
+        except SessionOptionError as error:
+            raise ApiError(409, error.code) from None
     link = c.recorder_link
     session = c.manager.current
     following = link is not None and link.following() is not None

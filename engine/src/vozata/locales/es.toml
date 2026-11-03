@@ -30,6 +30,9 @@ action_items_failed = "No se pudieron extraer las tareas ({reason}). Se conserv�
 translation_failed = "La traducción en vivo se detuvo ({reason}). La transcripción continúa."
 
 [errors.api]
+live_transcription_off = "Activa la transcripción simultánea para traducir durante la reunión."
+live_transcription_needs_recorder = "La transcripción simultánea solo se activa durante la reunión cuando el grabador de VozAta la graba."
+translation_unavailable = "La traducción simultánea no está disponible en este motor."
 session_not_live = "La reunión \"{id}\" no se está grabando: solo cambian su título, su plantilla y la opción de acta."
 recorder_failed = "El grabador no pudo hacerlo ({reason}). La grabación está a salvo en el disco."
 voice_command_busy = "Ya se está atendiendo un comando de voz; inténtalo de nuevo en un momento."

@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TextIO
@@ -74,6 +75,17 @@ class CompositeSink:
 
     def __init__(self, sinks: Sequence[TranscriptSink]) -> None:
         self._sinks = list(sinks)
+        self._lock = threading.Lock()
+
+    def add(self, sink: TranscriptSink) -> None:
+        """A sink that gets the segments from now on (phase 63: translation turned on)."""
+        with self._lock:
+            self._sinks = [*self._sinks, sink]
+
+    def remove(self, sink: TranscriptSink) -> None:
+        """Stop sending to `sink` (it is not closed here)."""
+        with self._lock:
+            self._sinks = [kept for kept in self._sinks if kept is not sink]
 
     def emit(self, segment: TranscriptSegment) -> None:
         for sink in self._sinks:

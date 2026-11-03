@@ -1153,3 +1153,63 @@ def test_nothing_to_change_changes_nothing(tmp_path: Path) -> None:
     rig.session.start()
 
     assert rig.session.apply(SessionChanges()) == {}
+
+
+def _with_translators(rig: _Rig, translator: FakeTranslator) -> None:
+    import dataclasses
+
+    rig.session._c = dataclasses.replace(  # type: ignore[misc]
+        rig.session._c, translators=lambda target: (target, lambda: translator)
+    )
+
+
+def test_translation_turned_on_and_off_during_the_recording(tmp_path: Path) -> None:
+    """Phase 63: segments after the change are translated; turned off, no more."""
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 6)
+    translator = FakeTranslator()
+    _with_translators(rig, translator)
+    rig.session.start()
+
+    rig.session.apply(SessionChanges(translate_to="pt"))
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: len(translator.calls) >= 1)
+    rig.session.apply(SessionChanges(translate_to="off"))
+    _wait_for(lambda: translator.closed)
+    rig.mic.push(_voice(1.0), 1.0)
+    _wait_for(lambda: len(rig.transcriber.calls) >= 2)
+
+    assert translator.calls[0][2] == "pt"
+    assert len(translator.calls) == 1
+    assert rig.store.read_meta(rig.session.id)["translate_to"] == "off"
+
+
+def test_translation_moves_to_another_language(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path, results=[_words("Hello", " world.")] * 4)
+    translator = FakeTranslator()
+    _with_translators(rig, translator)
+    rig.session.start()
+
+    rig.session.apply(SessionChanges(translate_to="pt"))
+    rig.session.apply(SessionChanges(translate_to="pt"))  # the same: nothing happens
+    rig.session.apply(SessionChanges(translate_to="es"))
+    rig.mic.push(_voice(1.0), 0.0)
+    _wait_for(lambda: any(call[2] == "es" for call in translator.calls))
+
+    assert {call[2] for call in translator.calls} == {"es"}
+    assert rig.store.read_meta(rig.session.id)["translate_to"] == "es"
+
+
+def test_translation_needs_live_transcription_and_a_provider(tmp_path: Path) -> None:
+    from vozata.session import SessionOptionError
+
+    audio_only = _Rig(tmp_path / "a", live_transcription=False)
+    audio_only.session.start()
+    with pytest.raises(SessionOptionError) as off:
+        audio_only.session.apply(SessionChanges(translate_to="pt"))
+    no_provider = _Rig(tmp_path / "b")
+    no_provider.session.start()
+    with pytest.raises(SessionOptionError) as missing:
+        no_provider.session.apply(SessionChanges(translate_to="pt"))
+
+    assert off.value.code == "live_transcription_off"
+    assert missing.value.code == "translation_unavailable"

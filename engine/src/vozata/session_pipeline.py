@@ -123,6 +123,21 @@ class CapturePipeline:
     def accept(self) -> None:
         self._accepting = True
 
+    @property
+    def live(self) -> bool:
+        """Live transcription runs (phase 63: it can be turned off during the recording)."""
+        return self._live is not None
+
+    def add_sink(self, sink: TranscriptSink) -> None:
+        """Send the committed segments to `sink` too from now on (e.g. a translation worker)."""
+        if self._live is None:
+            raise RuntimeError("The pipeline records audio only")
+        self._live.sinks.add(sink)
+
+    def remove_sink(self, sink: TranscriptSink) -> None:
+        if self._live is not None:
+            self._live.sinks.remove(sink)
+
     def set_hints(self, hints: str | None) -> None:
         """The meeting terms changed (phase 63): every later transcription uses them."""
         if self._live is not None:

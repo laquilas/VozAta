@@ -93,6 +93,8 @@ class SessionComponents:
     recorder_id: str | None = None
     # phase 63: this meeting's terms merged with the glossary (and the wake word), as at start
     vocabulary_for: Callable[[Sequence[str]], tuple[str, ...]] | None = None
+    # phase 63: (target, translator factory) for a language chosen during the recording
+    translators: Callable[[str], tuple[str | None, Callable[[], Translator] | None]] | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +110,14 @@ class SessionChanges:
     translate_to: str | None = None  # "off" turns it off
     live_transcription: bool | None = None
     generate_minutes: bool | None = None
+
+
+class SessionOptionError(RuntimeError):
+    """An option that cannot change now (phase 63); `code` is the API error code."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
 
 
 class SessionStartError(RuntimeError):
@@ -149,6 +159,7 @@ class RecordingSession:
         self._pipeline: CapturePipeline | None = None  # None until `start()`
         self._gpu = LiveGpuLease(components.gate, components.gpu_usage)
         self._abandoned = threading.Event()  # set at Stop: a live model not loaded yet never loads
+        self._translation: TranslationWorker | None = None  # phase 29 / 63: the live translation
 
     def hold_speech_fallback(self) -> None:
         """The VozAta worker did not answer: hold the GPU before the local Whisper loads."""
@@ -189,7 +200,7 @@ class RecordingSession:
         if self._c.recorder_id is not None:
             self._meta.set_capture_source("recorder", self._c.recorder_id)
         self._lock = LanguageLock(self._language, self._on_language_detected)
-        translation = self._live_translation()
+        translation = self._translation = self._live_translation()
         self._pipeline = CapturePipeline(
             self._c.sources,
             lambda channel: self._audio.open_writer(self.id, channel),
@@ -259,7 +270,40 @@ class RecordingSession:
         if changes.generate_minutes is not None:
             self._meta.set_generate_minutes(changes.generate_minutes)
             changed["generate_minutes"] = changes.generate_minutes
+        if changes.translate_to is not None:
+            self._change_translation(changes.translate_to)
+            changed["translate_to"] = changes.translate_to
         return changed
+
+    def _change_translation(self, target: str) -> None:
+        """Turn live translation on, off or to another language (phase 63); the old worker
+        translates what it holds and closes on its own thread."""
+        current = self._translation
+        if target != "off" and not self._pipeline.live:
+            raise SessionOptionError("live_transcription_off")
+        if (current.target if current is not None else "off") == target:
+            return
+        if current is not None:
+            self._pipeline.remove_sink(current)
+            self._translation = None
+            threading.Thread(target=current.close, name="translation-close", daemon=True).start()
+        if target != "off":
+            built = self._c.translators(target) if self._c.translators is not None else (None, None)
+            language, factory = built
+            if language is None or factory is None:
+                raise SessionOptionError("translation_unavailable")
+            worker = live_translation(
+                language,
+                factory,
+                self._store.open_translations(self.id),
+                self._lock.current,
+                self._observer,
+                lambda error: self._error("translation_failed", reason=str(error)),
+            )
+            worker.start()
+            self._pipeline.add_sink(worker)
+            self._translation = worker
+        self._meta.set_translate_to(target)
 
     @property
     def recorder_id(self) -> str | None:

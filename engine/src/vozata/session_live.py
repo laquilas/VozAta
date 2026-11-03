@@ -127,7 +127,7 @@ class LiveTranscription:
         speaker_embedder: Callable[[], SpeakerEmbedder] | None = None,
         extra_sinks: Sequence[TranscriptSink] = (),
     ) -> None:
-        sinks = CompositeSink([transcript, _ObserverSink(observer), *extra_sinks])
+        self.sinks = sinks = CompositeSink([transcript, _ObserverSink(observer), *extra_sinks])
         self.history: AudioHistory | None = None
         self.speakers: LiveSpeakerSink | None = None
         if speaker_embedder is not None and Channel.SYSTEM in channels:

@@ -25,7 +25,7 @@ from vozata.ports import SessionObserver, SessionRepository
 from vozata.processing.job import ProcessingJob
 from vozata.processing.queue import ProcessingQueue
 from vozata.recorder.attach import RecordingAttach
-from vozata.session import SessionChanges
+from vozata.session import SessionChanges, SessionOptionError  # noqa: F401  (re-exported)
 
 LEVEL_INTERVAL = 0.1  # ~10 Hz per channel
 STATUS_INTERVAL = 1.0  # `status` heartbeat while recording or paused
