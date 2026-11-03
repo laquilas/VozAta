@@ -59,6 +59,7 @@ def test_start_returns_the_summary_and_passes_the_options(
         "has_action_items": False,
         "template": None,
         "processing": None,
+        "minutes_state": "none",  # phase 64
     }
     assert factory.sessions[0].options == OPTIONS
     manager.stop()

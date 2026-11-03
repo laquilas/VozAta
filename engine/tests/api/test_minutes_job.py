@@ -377,3 +377,14 @@ def _wait_for(condition, timeout: float = 5.0) -> bool:  # type: ignore[no-untyp
             return True
         time.sleep(0.01)
     return False
+
+
+def test_generated_minutes_clear_the_not_generated_marker(tmp_path: Path, rigs: list[_Rig]) -> None:
+    """Phase 64: a meeting processed without minutes gets them later from its page."""
+    rig = _rig(rigs, tmp_path, FakeLanguageModel(["# Minutes"]))
+    meta = rig.repo.read_meta(rig.paths.id)
+    rig.repo.write_meta(rig.paths.id, {**meta, "minutes_skipped": "not_ready"})
+
+    rig.run()
+
+    assert "minutes_skipped" not in rig.repo.read_meta(rig.paths.id)

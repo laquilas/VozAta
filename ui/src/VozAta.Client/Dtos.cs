@@ -55,7 +55,9 @@ public sealed record StartSessionRequest(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     string? Title = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    bool? LiveTranscription = null);
+    bool? LiveTranscription = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? GenerateMinutes = null);
 
 /// <summary><c>GET|PUT /vocabulary</c> (phase 19): the glossary terms, one per entry.</summary>
 public sealed record VocabularyTerms(IReadOnlyList<string> Terms);
@@ -79,7 +81,12 @@ public sealed record SessionSummary(
     int SpeakerCount = 0,
     bool HasActionItems = false,
     string? Template = null,
-    ProcessingInfo? Processing = null);
+    ProcessingInfo? Processing = null,
+    string MinutesState = "none") // phase 64: generated | skipped_not_ready | skipped_by_user | pending | none
+{
+    /// <summary>The meeting was processed without minutes (phase 64): not ready, or its option was off.</summary>
+    public bool MinutesSkipped => MinutesState.StartsWith("skipped_", StringComparison.Ordinal);
+}
 
 public sealed record SessionPage(IReadOnlyList<SessionSummary> Items, int Total);
 

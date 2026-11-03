@@ -222,6 +222,21 @@
   <data name="NoMinutes" xml:space="preserve">
     <value>No minutes yet. Use “Regenerate minutes” to write them.</value>
   </data>
+  <data name="GenerateMinutesWhenFinished" xml:space="preserve">
+    <value>Minutes when finished</value>
+  </data>
+  <data name="GenerateMinutesWhenFinishedHelp" xml:space="preserve">
+    <value>Write the minutes when the meeting is processed. Off, the meeting is marked and its page writes them later, so back-to-back meetings never wait.</value>
+  </data>
+  <data name="MinutesNotGenerated" xml:space="preserve">
+    <value>Minutes not generated</value>
+  </data>
+  <data name="MinutesSkippedNotReady" xml:space="preserve">
+    <value>Minutes not generated: the engine was not ready when the meeting ended. Use “Regenerate minutes” on its page to write them now.</value>
+  </data>
+  <data name="MinutesSkippedByUser" xml:space="preserve">
+    <value>Minutes not generated: they were turned off for this meeting. Use “Regenerate minutes” on its page to write them now.</value>
+  </data>
   <data name="NoTranscript" xml:space="preserve">
     <value>This session has no transcript.</value>
   </data>

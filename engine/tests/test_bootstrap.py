@@ -355,6 +355,8 @@ def test_build_api_container_wires_real_providers(
             "live_transcription": None,
             "gpu_usage": GpuUsage(speech=True, speakers=False, llm=False),  # LLM "fake"
             "attach": None,  # phase 61: the engine records itself unless a recording is followed
+            "generate_minutes": None,  # phase 64
+            "minutes_not_ready": False,
         }
     ]
     from vozata.api.recorder_link import RecorderLink

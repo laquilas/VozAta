@@ -27,6 +27,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     private readonly IEngineClient _client;
     private readonly IUiPreferences _preferences;
     private bool _liveTranscription = true;
+    private bool _generateMinutes = true;
     private bool? _recordingLive; // live transcription of the followed recording; null while none
     private readonly ILocalizationService _localization;
     private readonly IUiTimer _timer;
@@ -75,6 +76,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         _recorder = recorder;
         _preferences = preferences;
         _liveTranscription = preferences.Load().LiveTranscription ?? true;
+        _generateMinutes = preferences.Load().GenerateMinutes;
         _localization = localization;
         _timer = timer;
         _notify = notify;
@@ -244,6 +246,29 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     /// <summary>The chip: flips the option (ignored while recording).</summary>
     [RelayCommand]
     private void ToggleLiveTranscription() => LiveTranscription = !LiveTranscription;
+
+    /// <summary>
+    /// Write the minutes when the meeting is processed (phase 64). Off, the meeting is marked "minutes
+    /// not generated" and its page offers them later; the choice is remembered; it can change while
+    /// recording.
+    /// </summary>
+    public bool GenerateMinutes
+    {
+        get => _generateMinutes;
+        set
+        {
+            if (!SetProperty(ref _generateMinutes, value))
+            {
+                return;
+            }
+
+            _preferences.Save(_preferences.Load() with { GenerateMinutes = value });
+            OnOptionChanged("generate_minutes", value);
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleGenerateMinutes() => GenerateMinutes = !GenerateMinutes;
 
     /// <summary>Translation needs live transcription.</summary>
     public bool CanChooseTranslation => CanEditOptions && LiveTranscription;
@@ -542,7 +567,8 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
                 terms.Count > 0 ? terms : null,
                 LiveTranscription && SelectedTranslation.Value != _defaultTranslation ? SelectedTranslation.Value : null,
                 title,
-                LiveTranscription);
+                LiveTranscription,
+                GenerateMinutes ? null : false);
             var started = await _client.StartSessionAsync(request, _cancellation);
             _sentTitle = started.Title;
             Session.SessionId = started.Id;
@@ -578,6 +604,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
                 : null,
             ["title"] = title,
             ["live_transcription"] = LiveTranscription,
+            ["generate_minutes"] = GenerateMinutes,
         };
         var started = await _recorder!.StartAsync(
             new StartRecordingRequest(Devices.MicDeviceId, Devices.SystemDeviceId, options), _cancellation);
@@ -770,6 +797,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             case "live_transcription" when value is bool live:
                 SetLiveTranscription(live);
                 break;
+            case "generate_minutes" when value is bool minutes:
+                SetProperty(ref _generateMinutes, minutes, nameof(GenerateMinutes));
+                break;
         }
     }
 
@@ -819,6 +849,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         _confirmedOptions["template"] = SelectedTemplate?.Id;
         _confirmedOptions["vocabulary"] = VocabularyViewModel.ParseTerms(SessionTerms);
         _confirmedOptions["live_transcription"] = LiveTranscription;
+        _confirmedOptions["generate_minutes"] = GenerateMinutes;
     }
 
     partial void OnTitleChanged(string value)

@@ -740,6 +740,11 @@ session was cut short while recording).
 recorder process (its files stay in `OUTPUT_DIR/live/<recorder_id>/` until the `ingest` step);
 `recorder_ingest_missing` (`{channel: frames}`) is set when the store held fewer frames than the
 recording, whose files were then kept.
+`generate_minutes` (64) is the meeting's "minutes when finished" option (absent = write them);
+`minutes_not_ready` (64) marks a recording replayed after the engine was down at Stop;
+`minutes_skipped` (`not_ready` / `by_user`, 64) says the meeting was processed without minutes
+(`processing/minutes_decision.py`), until they are written.
+`translate_to` (63) is the live translation language, also when changed during the recording.
 `duration_seconds` is the recorded length (session time when capture stopped, pauses included),
 written at stop (after a crash: the length of the repaired WAVs); `ended_at` is later, after
 finalization. `language` / `language_source` are written only when known: at start for a fixed language

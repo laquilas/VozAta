@@ -38,6 +38,14 @@ public sealed partial class MeetingRow : ObservableObject
 
     public SessionSummary Summary { get; }
 
+    /// <summary>Why the meeting has no minutes (phase 64); empty when it has them or none were skipped.</summary>
+    public string MinutesSkippedText { get; init; } = "";
+
+    /// <summary>The "minutes not generated" tag of the row.</summary>
+    public string MinutesNotGeneratedText { get; init; } = "";
+
+    public bool MinutesNotGenerated => MinutesSkippedText.Length > 0;
+
     public string Id => Summary.Id;
 
     /// <summary>The title, or "Untitled meeting" (shown as secondary text).</summary>

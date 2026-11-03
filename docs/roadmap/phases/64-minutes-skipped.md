@@ -45,13 +45,14 @@ Requested by the user on 2026-11-03.
 
 ## Acceptance criteria
 
-- [ ] Stop with the language model unreachable: the meeting ends `done` with transcript and
+- [x] Stop with the language model unreachable: the meeting ends `done` with transcript and
       speakers, marked `skipped_not_ready`; the badge and button show; the button produces the
       minutes and clears the badge.
-- [ ] The option off: `skipped_by_user`, same badge and button.
-- [ ] A recording imported after an engine outage is `skipped_not_ready`.
-- [ ] The next meeting can start at once after Stop.
-- [ ] en / pt-BR / es parity; coverage ≥ 80 %.
+- [x] The option off: `skipped_by_user`, same badge and button.
+- [x] A recording imported after an engine outage is `skipped_not_ready`.
+- [x] The next meeting can start at once after Stop. *(unchanged since phase 40; the recorder
+      records the next one even while the engine processes)*
+- [x] en / pt-BR / es parity; coverage ≥ 80 %.
 
 ## Tests
 
@@ -67,3 +68,33 @@ Generating the skipped minutes automatically when the language model comes back.
 
 > Execute phase 64 of the roadmap (`docs/roadmap/phases/64-minutes-skipped.md`), following
 > `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/64-minutes-skipped` (stacked on `feature/63-live-options`, PR #81)
+- **Status:** ready for PR
+- **Updated:** 2026-11-03 19:23
+- **Next step:** open the PR (base `feature/63-live-options`); then the manual checks in `__pendent__`.
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [x] Engine: `generate_minutes` start option and `PATCH` field, `minutes_not_ready` for a
+      recording replayed after the engine was down, `minutes_skip_reason`, the job without minutes
+      and the `minutes_skipped` marker + event, `minutes_state` in the summary, the marker cleared
+      by generated minutes
+- [x] UI: the chip, the row badge, the meeting page notice, the notification
+- [x] Docs, full suites
+- [ ] PR
+
+### Decisions and notes
+
+- "Engine not ready" is decided when the job is built: the recording stopped before the engine
+  followed it (replayed later: `minutes_not_ready`), or the language model does not answer
+  (`llm_reachable`). Then the meeting is processed (transcript, speakers, search) without minutes
+  or action items, so the next meeting never waits.
+- `GENERATE_MINUTES=false` turns minutes off for every meeting: no marker (`minutes_state: none`).
+- No new readiness module: `processing/minutes_decision.py` holds the rule; the event goes through
+  the job's observer (`on_minutes_skipped`, the API observer only).
+- The "Generate minutes" button is the meeting page's existing **Regenerate minutes**; the
+  page text points to it.

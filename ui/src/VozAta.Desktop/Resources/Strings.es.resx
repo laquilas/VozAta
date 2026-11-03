@@ -222,6 +222,21 @@
   <data name="NoMinutes" xml:space="preserve">
     <value>Aún no hay acta. Usa “Generar acta de nuevo” para escribirla.</value>
   </data>
+  <data name="GenerateMinutesWhenFinished" xml:space="preserve">
+    <value>Acta al terminar</value>
+  </data>
+  <data name="GenerateMinutesWhenFinishedHelp" xml:space="preserve">
+    <value>Escribe el acta cuando la reunión se procesa. Desactivado, la reunión queda marcada y su página escribe el acta después, para que las reuniones seguidas nunca esperen.</value>
+  </data>
+  <data name="MinutesNotGenerated" xml:space="preserve">
+    <value>Acta no generada</value>
+  </data>
+  <data name="MinutesSkippedNotReady" xml:space="preserve">
+    <value>Acta no generada: el motor no estaba listo cuando terminó la reunión. Usa “Generar acta de nuevo” en su página para escribirla ahora.</value>
+  </data>
+  <data name="MinutesSkippedByUser" xml:space="preserve">
+    <value>Acta no generada: se desactivó para esta reunión. Usa “Generar acta de nuevo” en su página para escribirla ahora.</value>
+  </data>
   <data name="NoTranscript" xml:space="preserve">
     <value>Esta sesión no tiene transcripción.</value>
   </data>

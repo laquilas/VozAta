@@ -126,6 +126,7 @@ class StartSession(BaseModel):
     translate_to: TranslationTargetValue | None = None  # phase 29; None = TRANSLATE_TO
     title: str | None = None  # phase 35; trimmed, at most 200 characters; blank = untitled
     live_transcription: bool | None = None  # phase 41; None = LIVE_TRANSCRIPTION
+    generate_minutes: bool | None = None  # phase 64; None = write them (GENERATE_MINUTES)
 
 
 class SessionSummary(BaseModel):
@@ -143,6 +144,8 @@ class SessionSummary(BaseModel):
     template: str | None = None
     # phase 40: {state, percent, step, position?} while queued or processed; None otherwise
     processing: dict[str, Any] | None = None
+    # phase 64: generated | skipped_not_ready | skipped_by_user | pending | none
+    minutes_state: str = "none"
 
 
 class SessionDetail(SessionSummary):

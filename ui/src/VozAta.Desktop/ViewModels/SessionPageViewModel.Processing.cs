@@ -34,7 +34,12 @@ public sealed partial class SessionPageViewModel
     public bool SpeakersPending => ProcessingStates.SpeakersPending(Processing) && !Speakers.HasRows;
 
     /// <summary>"No minutes yet" is only true once nothing is still producing them.</summary>
-    public bool ShowsNoMinutes => !HasMinutes && !MinutesPending;
+    public bool ShowsNoMinutes => !HasMinutes && !MinutesPending && !ShowsMinutesSkipped;
+
+    /// <summary>Phase 64: processed without minutes; the text says why and that they can be written now.</summary>
+    public bool ShowsMinutesSkipped => !HasMinutes && !MinutesPending && Summary.MinutesSkipped;
+
+    public string MinutesSkippedText => MeetingsPageViewModel.MinutesSkippedText(localization, Summary);
 
     private void ApplyDetailProcessing(ProcessingInfo? info, int versionAtStart)
     {

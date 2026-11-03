@@ -1328,3 +1328,16 @@ def test_live_transcription_on_needs_the_recorder(tmp_path: Path) -> None:
         rig.session.apply(SessionChanges(live_transcription=True))
 
     assert error.value.code == "live_transcription_needs_recorder"
+
+
+def test_the_minutes_option_and_the_not_ready_mark_are_stored_at_start(tmp_path: Path) -> None:
+    import dataclasses
+
+    rig = _Rig(tmp_path)
+    rig.session._c = dataclasses.replace(  # type: ignore[misc]
+        rig.session._c, generate_minutes=False, minutes_not_ready=True
+    )
+    rig.session.start()
+
+    meta = rig.store.read_meta(rig.session.id)
+    assert (meta["generate_minutes"], meta["minutes_not_ready"]) == (False, True)

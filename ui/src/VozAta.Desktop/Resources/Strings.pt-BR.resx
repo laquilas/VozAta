@@ -222,6 +222,21 @@
   <data name="NoMinutes" xml:space="preserve">
     <value>Ainda não há ata. Use “Gerar ata novamente” para escrevê-la.</value>
   </data>
+  <data name="GenerateMinutesWhenFinished" xml:space="preserve">
+    <value>Ata ao terminar</value>
+  </data>
+  <data name="GenerateMinutesWhenFinishedHelp" xml:space="preserve">
+    <value>Escreve a ata quando a reunião é processada. Desligado, a reunião fica marcada e a página dela escreve a ata depois, para reuniões seguidas nunca esperarem.</value>
+  </data>
+  <data name="MinutesNotGenerated" xml:space="preserve">
+    <value>Ata não gerada</value>
+  </data>
+  <data name="MinutesSkippedNotReady" xml:space="preserve">
+    <value>Ata não gerada: o motor não estava pronto quando a reunião terminou. Use “Gerar ata novamente” na página dela para escrever agora.</value>
+  </data>
+  <data name="MinutesSkippedByUser" xml:space="preserve">
+    <value>Ata não gerada: ela foi desligada para esta reunião. Use “Gerar ata novamente” na página dela para escrever agora.</value>
+  </data>
   <data name="NoTranscript" xml:space="preserve">
     <value>Esta sessão não tem transcrição.</value>
   </data>

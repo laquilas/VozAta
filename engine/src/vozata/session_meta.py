@@ -132,6 +132,10 @@ class SessionMeta:
         """Phase 63 / 64: whether this meeting's minutes are written when it is processed."""
         self._update(generate_minutes=generate)
 
+    def mark_minutes_not_ready(self) -> None:
+        """Phase 64: the engine was not following when the recording stopped: no minutes."""
+        self._update(minutes_not_ready=True)
+
     def set_capture_source(self, source: str, recorder_id: str) -> None:
         """Recorded by the recorder process (phase 61): its recording id, kept with the meeting."""
         self._update(capture_source=source, recorder_id=recorder_id)

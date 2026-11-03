@@ -55,6 +55,17 @@
 
     <!-- Options of the recording: chips that open small flyouts; the devices are locked while recording -->
     <WrapPanel DockPanel.Dock="Top" Margin="0,10,0,0" ItemSpacing="8" LineSpacing="8">
+      <!-- Generate minutes when finished (phase 64): off, the meeting is marked and offers them later -->
+      <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
+              Command="{Binding ToggleGenerateMinutesCommand}"
+              ToolTip.Tip="{Binding L[GenerateMinutesWhenFinishedHelp]}"
+              AutomationProperties.Name="{Binding L[GenerateMinutesWhenFinished]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Classes="inline" Data="{StaticResource Icon.Check}"
+                    IsVisible="{Binding GenerateMinutes}" />
+          <TextBlock Text="{Binding L[GenerateMinutesWhenFinished]}" />
+        </StackPanel>
+      </Button>
       <!-- Live transcription (phase 41): a toggle; unchecked, the meeting only records audio -->
       <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
               Command="{Binding ToggleLiveTranscriptionCommand}"

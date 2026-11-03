@@ -50,6 +50,7 @@ def start_session(body: StartSession, c: Container) -> dict[str, Any]:
         translate_to=TranslationTarget(body.translate_to) if body.translate_to else None,
         title=title,
         live_transcription=body.live_transcription,
+        generate_minutes=body.generate_minutes,
     )
     link = c.recorder_link
     if link is not None and link.recorder_available():  # phase 61: the recorder records

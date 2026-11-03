@@ -95,6 +95,11 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <!-- Phase 64: processed without minutes; its page offers them -->
+                <Border Classes="tag" VerticalAlignment="Center" IsVisible="{Binding MinutesNotGenerated}"
+                        ToolTip.Tip="{Binding MinutesSkippedText}">
+                  <TextBlock Text="{Binding MinutesNotGeneratedText}" />
+                </Border>
                 <!-- Background processing (phase 40): Queued (n) / Processing 42 % / Paused, then a green check -->
                 <Border Classes="tag" Classes.running="{Binding IsRunning}" VerticalAlignment="Center"
                         IsVisible="{Binding IsProcessing}">
