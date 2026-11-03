@@ -19,7 +19,8 @@ public sealed record UiPreferencesData(
     string Theme = "system",
     bool SidebarCollapsed = false,
     bool? LiveTranscription = null,
-    bool VoiceCommandSound = true);
+    bool VoiceCommandSound = true,
+    bool GenerateMinutes = true); // phase 64: the "generate minutes when finished" chip
 
 public interface IUiPreferences
 {

@@ -140,6 +140,8 @@
             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[NoMinutes]}"
                        Classes="secondary" Margin="8" TextWrapping="Wrap"
                        IsVisible="{Binding ShowsNoMinutes}" />
+            <TextBlock Text="{Binding MinutesSkippedText}" Classes="secondary" Margin="8" TextWrapping="Wrap"
+                       IsVisible="{Binding ShowsMinutesSkipped}" />
             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).L[Processing_TabPending]}"
                        Classes="secondary" Margin="8" TextWrapping="Wrap" IsVisible="{Binding MinutesPending}" />
             <ScrollViewer>

@@ -72,9 +72,8 @@ Generating the skipped minutes automatically when the language model comes back.
 
 - **Branch:** `feature/64-minutes-skipped` (stacked on `feature/63-live-options`, PR #81)
 - **Status:** in progress
-- **Updated:** 2026-11-04 00:30
-- **Next step:** UI: the "Generate minutes when finished" chip, `MinutesState`, the row badge and
-  the meeting page notice, `minutes_skipped` notification
+- **Updated:** 2026-11-03 19:22
+- **Next step:** docs (api-contract `minutes_state`, `minutes_skipped`, `generate_minutes`; architecture §8 / §12), acceptance criteria, full suites, PR (base `feature/63-live-options`)
 
 ### Steps
 
@@ -83,7 +82,7 @@ Generating the skipped minutes automatically when the language model comes back.
       recording replayed after the engine was down, `minutes_skip_reason`, the job without minutes
       and the `minutes_skipped` marker + event, `minutes_state` in the summary, the marker cleared
       by generated minutes
-- [ ] UI: the chip, the row badge, the meeting page notice, the notification
+- [x] UI: the chip, the row badge, the meeting page notice, the notification
 - [ ] Docs, full suites, PR
 
 ### Decisions and notes

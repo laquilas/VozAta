@@ -62,6 +62,9 @@ public sealed record UnknownEvent(string? SessionId, string Type) : EngineEvent(
 public sealed record SessionUpdatedEvent(string? SessionId, IReadOnlyDictionary<string, JsonElement> Changes)
     : EngineEvent(SessionId);
 
+/// <summary>A meeting is processed without minutes (phase 64): <c>not_ready</c> or <c>by_user</c>.</summary>
+public sealed record MinutesSkippedEvent(string? SessionId, string Reason) : EngineEvent(SessionId);
+
 /// <summary>Not sent by the engine: the stream reports (re)connections and drops.</summary>
 public sealed record ConnectionChangedEvent(bool Connected) : EngineEvent((string?)null);
 
@@ -90,6 +93,7 @@ public static class EngineEventParser
                 "language_detected" => new LanguageDetectedEvent(
                     sessionId, data.GetProperty("language").GetString() ?? ""),
                 "minutes_ready" => new MinutesReadyEvent(sessionId),
+                "minutes_skipped" => new MinutesSkippedEvent(sessionId, data.GetProperty("reason").GetString() ?? ""),
                 "session_updated" => new SessionUpdatedEvent(
                     sessionId,
                     data.Deserialize<Dictionary<string, JsonElement>>(EngineJson.Options) ?? throw new JsonException()),

@@ -685,6 +685,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case RecoveryAvailableEvent offer:
                 RecoveryRefresh = Recovery.OfferAsync(offer.SessionIds);
                 break;
+            case MinutesSkippedEvent skipped:
+                Notify(_localization[skipped.Reason == "by_user" ? "MinutesSkippedByUser" : "MinutesSkippedNotReady"]);
+                HistoryRefresh = Meetings.LoadAsync(); // the row shows "minutes not generated" (phase 64)
+                break;
             case MinutesReadyEvent minutes:
                 Notify(_localization["MinutesReady"]);
                 HistoryRefresh = Task.WhenAll(History.OnMinutesReadyAsync(minutes.SessionId), Meetings.LoadAsync());

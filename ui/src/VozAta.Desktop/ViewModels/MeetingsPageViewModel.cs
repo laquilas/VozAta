@@ -282,6 +282,15 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
         OnPropertyChanged(nameof(IsEmpty));
     }
 
+    /// <summary>Why a meeting has no minutes (phase 64), localized; empty when none were skipped.</summary>
+    public static string MinutesSkippedText(ILocalizationService localization, SessionSummary summary) =>
+        summary.MinutesState switch
+        {
+            "skipped_not_ready" => localization["MinutesSkippedNotReady"],
+            "skipped_by_user" => localization["MinutesSkippedByUser"],
+            _ => "",
+        };
+
     private MeetingRow NewRow(SessionSummary summary)
     {
         var tags = new List<string>();
@@ -305,6 +314,8 @@ public sealed partial class MeetingsPageViewModel : ObservableObject, IDisposabl
             [.. ExportFormats.Select(export => (export.Format, _localization[export.LabelKey]))])
         {
             DoneText = _localization["Processing_Done"],
+            MinutesSkippedText = MinutesSkippedText(_localization, summary),
+            MinutesNotGeneratedText = _localization["MinutesNotGenerated"],
         };
         var info = ProcessingOf(summary);
         row.ApplyProcessing(info, ProcessingText(info));
