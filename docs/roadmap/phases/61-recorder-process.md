@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:45
-- **Next step:** `ingest` step in the processing job: stored frames vs the manifest, then delete `live/<id>/` (keep it on a mismatch, `error ingest_mismatch`)
+- **Updated:** 2026-11-03 17:50
+- **Next step:** CLI `record` guard (refuse while the recorder records), `/health` `recorder` field, packaging (`packaging/recorder.spec`, `build.ps1`, `installer.iss`)
 
 ### Steps
 
@@ -149,7 +149,7 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] `RecorderLink` (watcher): attach live recordings, follow pause / resume / stop, replay
       stopped ones audio-only, rebuild after an engine restart; `engine.json` marker; recovery
       exclusions; `POST /sessions` and the controls forwarded to the recorder
-- [ ] `ingest` step: stored frames checked against the manifest, then `live/<id>/` deleted
+- [x] `ingest` step: stored frames checked against the manifest, then `live/<id>/` deleted
 - [ ] CLI guard, bootstrap wiring, health, packaging
 - [ ] UI client, SSE events, recorder process, fakes
 - [ ] UI view models and views, strings

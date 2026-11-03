@@ -6,16 +6,11 @@ from typing import Any
 
 import pytest
 
-from vozata.api.recorder_link import (
-    LINK_FILE,
-    RecorderLink,
-    read_link,
-    start_options,
-    write_link,
-)
+from vozata.api.recorder_link import RecorderLink, start_options
 from vozata.api.session_manager import NoActiveSessionError, SessionConflictError, StartOptions
 from vozata.domain import ConversationLanguage, SessionStatus, TranslationTarget
 from vozata.ports import SessionNotFoundError
+from vozata.recorder.engine_link import LINK_FILE, read_link, write_link
 from vozata.recorder.manifest import PAUSED, RECORDING, STOPPED, Manifest, live_dir, write_manifest
 
 ZONE = timezone(timedelta(hours=-3))
@@ -365,3 +360,17 @@ def test_the_background_thread_ticks_until_closed(rig: Rig) -> None:
     rig.link.close()
 
     assert rig.manager.started
+
+
+def test_a_done_meeting_whose_folder_stayed_is_cleaned_up_again(tmp_path: Path) -> None:
+    cleaned: list[str] = []
+    rig = Rig(tmp_path)
+    rig.link._cleanup = cleaned.append
+    folder = recording(rig.live, "20261103_101500", STOPPED)
+    write_link(folder, "20261103_101500", NOW)
+    rig.store.metas["20261103_101500"] = {"status": "done", "capture_ended_at": "x"}
+
+    rig.link.tick()
+
+    assert cleaned == ["20261103_101500"]
+    assert rig.manager.started == []

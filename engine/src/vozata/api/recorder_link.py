@@ -18,7 +18,6 @@ link to the recording in `live/<id>/engine.json`.
 
 from __future__ import annotations
 
-import json
 import logging
 import threading
 from collections.abc import Callable
@@ -34,6 +33,7 @@ from vozata.api.session_manager import (
 from vozata.domain import ConversationLanguage, SessionStatus, TranslationTarget
 from vozata.ports import SessionRepository
 from vozata.recorder.attach import RecordingAttach
+from vozata.recorder.engine_link import read_link, write_link
 from vozata.recorder.manifest import (
     PAUSED,
     RECORDING,
@@ -47,7 +47,6 @@ from vozata.session_title import TitleTooLongError, normalize_title
 
 _log = logging.getLogger(__name__)
 
-LINK_FILE = "engine.json"
 TICK_SECONDS = 1.0
 _PARTIAL = {SessionStatus.RECORDING.value, SessionStatus.PAUSED.value, "interrupted"}
 
@@ -81,22 +80,6 @@ class Recorder(Protocol):
     def stop(self) -> dict[str, Any]: ...
 
     def update_options(self, options: dict[str, Any]) -> dict[str, Any]: ...
-
-
-def read_link(folder: Path) -> str | None:
-    """The engine session that followed this recording, or None."""
-    try:
-        data = json.loads((folder / LINK_FILE).read_text(encoding="utf-8"))
-        return str(data["session_id"])
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
-
-
-def write_link(folder: Path, session_id: str, at: datetime) -> None:
-    (folder / LINK_FILE).write_text(
-        json.dumps({"session_id": session_id, "attached_at": at.isoformat(timespec="seconds")}),
-        encoding="utf-8",
-    )
 
 
 def start_options(options: dict[str, Any], live: bool) -> StartOptions:
@@ -139,6 +122,7 @@ class RecorderLink:
         store: SessionRepository,
         recorder: Recorder,
         check_template: Callable[[str], bool] = lambda template: True,
+        cleanup: Callable[[str], object] = lambda session_id: None,
         wall_clock: Callable[[], datetime] = lambda: datetime.now().astimezone(),
         tick_seconds: float = TICK_SECONDS,
     ) -> None:
@@ -147,6 +131,7 @@ class RecorderLink:
         self._store = store
         self._recorder = recorder
         self._check_template = check_template
+        self._cleanup = cleanup
         self._wall = wall_clock
         self._tick_seconds = tick_seconds
         self._lock = threading.RLock()
@@ -271,6 +256,9 @@ class RecorderLink:
                         "Recording %s: its meeting %s is gone; left alone", manifest.id, linked
                     )
                     self._skipped.add(manifest.id)
+                return
+            if meta.get("status") == SessionStatus.DONE.value:
+                self._cleanup(linked)  # its `ingest` step could not remove the folder: again
                 return
             if meta.get("status") not in _PARTIAL or meta.get("capture_ended_at"):
                 return  # stored: the queue processes it, its `ingest` step clears the folder

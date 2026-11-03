@@ -1295,6 +1295,7 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             store,
             HttpRecorderClient(settings.recorder_port),
             check_template=_known_template,
+            cleanup=lambda session_id: _ingest(settings, store, audio, session_id),
         )
         if settings.recorder_enabled
         else None
@@ -1446,6 +1447,14 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
         ),
         recorder_link=recorder_link,
     )
+
+
+def _ingest(
+    settings: Settings, store: SessionRepository, audio: SessionAudio, session_id: str
+) -> bool:
+    from vozata.bootstrap_processing import ingest_recording  # imports this module
+
+    return ingest_recording(settings, store, audio, session_id)
 
 
 def _known_template(template: str) -> bool:

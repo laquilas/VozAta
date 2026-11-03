@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -515,3 +516,52 @@ def test_an_unreachable_ollama_does_not_stop_the_queue(
         assert not store.paths(session_id).minutes_md.exists()
         errors = observer.of("error")
         assert errors and {code for code, _ in errors} == {"llm_unreachable"}
+
+
+def test_a_meeting_of_the_recorder_checks_its_files_first_then_runs(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, generate_minutes=False)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, mic_seconds=1.0, duration_seconds=1.0)
+    meta = store.read_meta(session_id)
+    store.write_meta(session_id, {**meta, "recorder_id": "20261103_101500"})
+
+    job = _job(settings, store, session_id)
+
+    assert [step.kind for step in job.steps][:2] == [StepKind.INGEST, StepKind.TRANSCRIBE]
+    assert job.steps[0].gpu is False
+    job.steps[0].run(None, lambda progress: None)  # type: ignore[arg-type]  # no folder: no-op
+
+
+def test_ingest_recording_saves_the_missing_frames(tmp_path: Path) -> None:
+    import threading
+
+    import numpy as np
+
+    from vozata.domain import Channel
+    from vozata.recorder.durable_track import DurableTrack
+    from vozata.recorder.engine_link import write_link
+    from vozata.recorder.manifest import STOPPED, Manifest, live_dir, write_manifest
+
+    settings = _settings(tmp_path)
+    store = bootstrap.build_store(settings)
+    session_id = make_session_folder(store, mic_seconds=0.5, duration_seconds=0.5)
+    meta = store.read_meta(session_id)
+    store.write_meta(session_id, {**meta, "recorder_id": "rec"})
+    folder = live_dir(settings.output_dir) / "rec"
+    folder.mkdir(parents=True)
+    manifest = Manifest(id="rec", started_at="2026-11-03T10:00:00-03:00", sample_rate=16000)
+    manifest.status = STOPPED
+    lock = threading.RLock()
+    for channel in (Channel.MIC, Channel.SYSTEM):
+        track = DurableTrack(folder, channel, 16000, manifest.segments(channel), lock, lambda: None)
+        track.write(np.zeros(16000 * 5, dtype=np.float32), 0.0)  # 5 s, more than stored
+        track.close()
+    write_manifest(folder, manifest)
+    write_link(folder, session_id, datetime(2026, 11, 3, 10, 0))
+
+    removed = bootstrap_processing.ingest_recording(
+        settings, store, bootstrap.build_audio_store(settings), session_id
+    )
+
+    assert not removed and folder.exists()
+    assert set(store.read_meta(session_id)["recorder_ingest_missing"]) == {"mic", "system"}
