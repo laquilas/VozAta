@@ -79,8 +79,8 @@ Changing devices during a recording.
 
 - **Branch:** `feature/63-live-options` (stacked on `feature/62-engine-gate`, PR #80)
 - **Status:** in progress
-- **Updated:** 2026-11-03 18:57
-- **Next step:** UI: the chips editable while recording or paused (devices only when idle), each change sent debounced (`PATCH /sessions/{id}`, or the recorder options before the engine attaches), a failed change reverts the chip, `session_updated` refreshes them
+- **Updated:** 2026-11-03 19:02
+- **Next step:** docs (api-contract PATCH fields and session_updated, architecture), acceptance criteria, full suites, PR (base `feature/62-engine-gate`)
 
 ### Steps
 
@@ -90,7 +90,7 @@ Changing devices during a recording.
       the recording
 - [x] Engine: translation on / off / changed during the recording
 - [x] Engine: live transcription off and on during the recording
-- [ ] UI: chips editable while recording, debounced `PATCH`, `session_updated`
+- [x] UI: chips editable while recording, debounced `PATCH`, `session_updated`
 - [ ] Docs, full suites, PR
 
 ### Decisions and notes

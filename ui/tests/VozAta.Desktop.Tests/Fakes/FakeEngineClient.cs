@@ -68,6 +68,20 @@ internal sealed partial class FakeEngineClient : IEngineClient
 
     public Exception? TitleError { get; set; }
 
+    public List<(string Id, IReadOnlyDictionary<string, object?> Changes)> SessionUpdates { get; } = [];
+
+    public Exception? SessionUpdateError { get; set; }
+
+    public Task<SessionSummary> UpdateSessionAsync(
+        string id, IReadOnlyDictionary<string, object?> changes, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("update");
+        SessionUpdates.Add((id, changes));
+        return SessionUpdateError is null
+            ? Task.FromResult(Summary("recording") with { Id = id })
+            : Task.FromException<SessionSummary>(SessionUpdateError);
+    }
+
     public Task<SessionSummary> UpdateSessionTitleAsync(
         string id, string? title, CancellationToken cancellationToken = default)
     {

@@ -195,15 +195,15 @@ public sealed class LiveTranscriptionOptionTests
     }
 
     [Fact]
-    public async Task Option_is_read_only_while_recording()
+    public async Task Option_changes_this_recording_without_being_remembered()
     {
         var recorder = Create();
         await recorder.StartCommand.ExecuteAsync(null);
 
-        recorder.LiveTranscription = false;
+        recorder.LiveTranscription = false; // phase 63: sent to the meeting, not the next default
 
-        Assert.True(recorder.LiveTranscription);
-        Assert.False(recorder.CanEditOptions);
+        Assert.False(recorder.LiveTranscription);
+        Assert.True(recorder.CanEditOptions);
         Assert.Null(_preferences.Data.LiveTranscription);
     }
 }

@@ -1305,6 +1305,19 @@ def test_live_transcription_on_again_continues_the_ids_and_skips_what_was_said(
     assert len(ids) == len(set(ids))
 
 
+def test_live_transcription_off_also_ends_the_translation(tmp_path: Path) -> None:
+    rig = _Rig(tmp_path)
+    translator = FakeTranslator()
+    _with_translators(rig, translator)
+    rig.session.start()
+    rig.session.apply(SessionChanges(translate_to="pt"))
+
+    rig.session.apply(SessionChanges(live_transcription=False))
+    _wait_for(lambda: "transcriber.close" in rig.log.entries or rig.session._pipeline.live is False)
+
+    assert rig.store.read_meta(rig.session.id)["translate_to"] == "off"
+
+
 def test_live_transcription_on_needs_the_recorder(tmp_path: Path) -> None:
     from vozata.session import SessionOptionError
 

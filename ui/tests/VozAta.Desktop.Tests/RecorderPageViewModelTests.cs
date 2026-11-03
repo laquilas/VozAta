@@ -195,23 +195,23 @@ public sealed class RecorderPageViewModelTests
     }
 
     [Fact]
-    public async Task The_options_are_locked_while_recording_but_the_title_is_not()
+    public async Task Only_the_devices_are_locked_while_recording()
     {
         var recorder = Create();
-        Assert.True((recorder.CanEditOptions, recorder.CanEditTitle) == (true, true));
+        Assert.True((recorder.CanEditOptions, recorder.CanEditTitle, recorder.CanEditDevices) == (true, true, true));
         var changed = new List<string?>();
         recorder.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
 
         await recorder.StartCommand.ExecuteAsync(null);
-        Assert.Equal((false, true), (recorder.CanEditOptions, recorder.CanEditTitle));
+        Assert.Equal((true, true, false), (recorder.CanEditOptions, recorder.CanEditTitle, recorder.CanEditDevices));
         Assert.False(recorder.Devices.IsEnabled);
-        Assert.Contains(nameof(RecorderPageViewModel.CanEditOptions), changed);
+        Assert.Contains(nameof(RecorderPageViewModel.CanEditDevices), changed);
 
         await recorder.PauseResumeCommand.ExecuteAsync(null);
-        Assert.Equal((false, true), (recorder.CanEditOptions, recorder.CanEditTitle));
+        Assert.Equal((true, true, false), (recorder.CanEditOptions, recorder.CanEditTitle, recorder.CanEditDevices));
 
         await recorder.StopCommand.ExecuteAsync(null);
-        Assert.Equal((true, true), (recorder.CanEditOptions, recorder.CanEditTitle)); // free again at once
+        Assert.Equal((true, true, true), (recorder.CanEditOptions, recorder.CanEditTitle, recorder.CanEditDevices));
     }
 
     [Fact]

@@ -621,6 +621,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
 
                 break;
+            case SessionUpdatedEvent updated:
+                Recorder.OnSessionUpdated(updated); // phase 63: another client changed the options
+                break;
             case VoiceCommandEvent voice:
                 Notify(_localization.Format("VoiceCommandHeard", voice.Phrase));
                 Recorder.OnVoiceCommand(voice);

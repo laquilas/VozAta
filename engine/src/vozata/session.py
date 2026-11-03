@@ -297,7 +297,9 @@ class RecordingSession:
             for source in self._chunk_sources:
                 source.stop()
             self._chunk_sources = []
-            self._translation = None  # a sink of the live part: it closes with it
+            if self._translation is not None:  # a sink of the live part: it closes with it
+                self._translation = None
+                self._meta.set_translate_to("off")
             self._pipeline.disable_live(self._gpu.release)
         else:
             folder = self._c.recorder_folder
