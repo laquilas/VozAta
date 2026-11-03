@@ -34,7 +34,7 @@ class RecorderSettings:
     output_dir: Path = Path("recordings")
     sample_rate: int = 16000
     autosave_seconds: float = 10.0
-    port: int = 8766
+    port: int = 8769
     fsync_seconds: float = 2.0
     max_segment_mb: int = 2000
     buffer_warn_seconds: float = 30.0
@@ -61,7 +61,7 @@ def load_recorder_settings(
         output_dir=Path(raw.get("OUTPUT_DIR", "recordings")),
         sample_rate=int(_number(raw, "SAMPLE_RATE", 16000, 8000, 48000)),
         autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, 1, 300),
-        port=int(_number(raw, "RECORDER_PORT", 8766, 1024, 65535)),
+        port=int(_number(raw, "RECORDER_PORT", 8769, 1024, 65535)),
         fsync_seconds=_number(raw, "RECORDER_FSYNC_SECONDS", 2.0, 0.5, 30),
         max_segment_mb=int(_number(raw, "RECORDER_MAX_SEGMENT_MB", 2000, 100, 3900)),
         buffer_warn_seconds=_number(raw, "RECORDER_BUFFER_WARN_SECONDS", 30.0, 5, 3600),

@@ -132,8 +132,8 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:16
-- **Next step:** write the recorder HTTP API (`recorder/http.py`, `app.py`, `lock.py`, `__main__.py`) with tests on port 0, an import-budget test, and the `RECORDER_*` config keys
+- **Updated:** 2026-11-03 17:28
+- **Next step:** engine side: ports (`LiveRecordings`, `RecorderControl`), `audio/tail_source.py` (`TailingFileSource`) and `audio/recorder_clock.py`, with tests
 
 ### Steps
 
@@ -142,7 +142,7 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 - [x] `recorder/manifest.py` + `segment_reader.py`
 - [x] `recorder/durable_track.py` (no-loss writer)
 - [x] `recorder/recording.py`
-- [ ] Recorder HTTP API (`http.py`, `app.py`, `lock.py`, `__main__.py`), config keys
+- [x] Recorder HTTP API (`http.py`, `app.py`, `lock.py`, `__main__.py`), config keys
 - [ ] Engine ports, `TailingFileSource`, `RecorderClock`
 - [ ] `create(session_id=)`, append writers, segment ids continue
 - [ ] Attach / reattach, follower, recovery exclusions

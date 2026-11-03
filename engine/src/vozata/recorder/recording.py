@@ -423,3 +423,30 @@ class Recording:
 
 def _device(device: DeviceInfo) -> dict[str, Any]:
     return {"id": device.id, "name": device.name}
+
+
+def heartbeat_age(manifest: Manifest, now: datetime) -> float:
+    """Seconds since the recording last showed life (its heartbeat, else its start)."""
+    last = manifest.last_heartbeat_at or manifest.started_at
+    return (now - datetime.fromisoformat(last)).total_seconds()
+
+
+def mark_stopped(folder: Path, reason: str, now: datetime) -> Manifest:
+    """Close a recording nobody records any more: open segments end at their file size."""
+    manifest = read_manifest(folder)
+    if not manifest.active:
+        return manifest
+    for channel in CHANNELS:
+        segment = manifest.open_segment(channel)
+        if segment is not None:
+            segment.frames = segment_frames(folder / segment.file)
+            segment.closed = True
+    if manifest.pauses and manifest.pauses[-1].get("end") is None:
+        manifest.pauses[-1]["end"] = manifest.duration_seconds
+    frames = max((manifest.frames_total(channel) for channel in CHANNELS), default=0)
+    manifest.status = STOPPED
+    manifest.stop_reason = reason
+    manifest.stopped_at = manifest.last_heartbeat_at or now.isoformat(timespec="seconds")
+    manifest.duration_seconds = round(frames / manifest.sample_rate, 3)
+    write_manifest(folder, manifest)
+    return manifest

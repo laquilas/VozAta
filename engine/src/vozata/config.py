@@ -168,6 +168,12 @@ class Settings:
     # API (phase 06)
     api_host: str = "127.0.0.1"
     api_port: int = 8765
+    # Recorder process (phase 61): captures the audio; the engine attaches to its recordings
+    recorder_enabled: bool = True
+    recorder_port: int = 8769
+    recorder_fsync_seconds: float = 2.0
+    recorder_max_segment_mb: int = 2000
+    recorder_buffer_warn_seconds: float = 30.0
     # Worker on another PC (phase 44): the engine's `WORKER_URL`, both sides' `WORKER_TOKEN`, and
     # where `vozata worker` listens on the worker PC
     worker_url: str | None = None
@@ -302,6 +308,15 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         autosave_seconds=_number(raw, "AUTOSAVE_SECONDS", 10.0, minimum=1, maximum=300),
         api_host=raw.get("API_HOST", "127.0.0.1"),
         api_port=int(_integer(raw, "API_PORT", 8765, minimum=1, maximum=65535)),
+        recorder_enabled=_flag(raw, "RECORDER_ENABLED", True),
+        recorder_port=_integer(raw, "RECORDER_PORT", 8769, minimum=1024, maximum=65535),
+        recorder_fsync_seconds=_number(raw, "RECORDER_FSYNC_SECONDS", 2.0, minimum=0.5, maximum=30),
+        recorder_max_segment_mb=_integer(
+            raw, "RECORDER_MAX_SEGMENT_MB", 2000, minimum=100, maximum=3900
+        ),
+        recorder_buffer_warn_seconds=_number(
+            raw, "RECORDER_BUFFER_WARN_SECONDS", 30.0, minimum=5, maximum=3600
+        ),
         worker_url=raw.get("WORKER_URL"),
         worker_token=raw.get("WORKER_TOKEN"),
         worker_host=raw.get("WORKER_HOST", "0.0.0.0"),

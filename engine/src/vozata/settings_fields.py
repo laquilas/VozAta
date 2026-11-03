@@ -228,6 +228,30 @@ FIELDS: tuple[Field, ...] = (
     Field("GENERATE_MINUTES", "generate_minutes", "bool", group="general"),
     # Crash recovery (phase 17)
     Field("AUTOSAVE_SECONDS", "autosave_seconds", "number", group="general"),
+    # Recorder process (phase 61): read by the recorder when it starts
+    Field("RECORDER_ENABLED", "recorder_enabled", "bool", group="audio", applies="restart"),
+    Field("RECORDER_PORT", "recorder_port", "integer", group="audio", applies="restart"),
+    Field(
+        "RECORDER_FSYNC_SECONDS",
+        "recorder_fsync_seconds",
+        "number",
+        group="audio",
+        applies="restart",
+    ),
+    Field(
+        "RECORDER_MAX_SEGMENT_MB",
+        "recorder_max_segment_mb",
+        "integer",
+        group="audio",
+        applies="restart",
+    ),
+    Field(
+        "RECORDER_BUFFER_WARN_SECONDS",
+        "recorder_buffer_warn_seconds",
+        "number",
+        group="audio",
+        applies="restart",
+    ),
     # API (phase 06)
     # Worker on another PC (phase 44): URL and token on this PC, host and port on the worker PC
     Field("WORKER_URL", "worker_url", "url", group="worker"),

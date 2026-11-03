@@ -327,6 +327,36 @@
   <data name="SettingHelp_AUTOSAVE_SECONDS" xml:space="preserve">
     <value>How often the session file is saved while recording (1 to 300 s). After a crash the interrupted session is found and can be recovered on the next start.</value>
   </data>
+  <data name="Setting_RECORDER_ENABLED" xml:space="preserve">
+    <value>Separate recorder</value>
+  </data>
+  <data name="SettingHelp_RECORDER_ENABLED" xml:space="preserve">
+    <value>Record in a small separate process that starts at once and keeps recording when the engine or the app fails. Off: the engine records itself, as before.</value>
+  </data>
+  <data name="Setting_RECORDER_PORT" xml:space="preserve">
+    <value>Recorder port</value>
+  </data>
+  <data name="SettingHelp_RECORDER_PORT" xml:space="preserve">
+    <value>Port of the recorder's local API (1024 to 65535).</value>
+  </data>
+  <data name="Setting_RECORDER_FSYNC_SECONDS" xml:space="preserve">
+    <value>Recording save interval (seconds)</value>
+  </data>
+  <data name="SettingHelp_RECORDER_FSYNC_SECONDS" xml:space="preserve">
+    <value>How often the recording files are forced to disk (0.5 to 30 s): at most this much audio is lost in a power cut.</value>
+  </data>
+  <data name="Setting_RECORDER_MAX_SEGMENT_MB" xml:space="preserve">
+    <value>Largest recording file (MB)</value>
+  </data>
+  <data name="SettingHelp_RECORDER_MAX_SEGMENT_MB" xml:space="preserve">
+    <value>A longer meeting continues in a new file (100 to 3900 MB); the files are joined when the meeting is stored.</value>
+  </data>
+  <data name="Setting_RECORDER_BUFFER_WARN_SECONDS" xml:space="preserve">
+    <value>Disk delay warning (seconds)</value>
+  </data>
+  <data name="SettingHelp_RECORDER_BUFFER_WARN_SECONDS" xml:space="preserve">
+    <value>Warn when this much audio waits in memory because the disk does not take it (5 to 3600 s). The audio is kept until it is written.</value>
+  </data>
   <data name="Setting_SAMPLE_RATE" xml:space="preserve">
     <value>Sample rate (Hz)</value>
   </data>

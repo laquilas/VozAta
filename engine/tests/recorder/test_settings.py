@@ -28,7 +28,7 @@ def test_values_come_from_the_env_file_and_the_environment_wins(tmp_path: Path) 
 
 @pytest.mark.parametrize("value", ["abc", "70000", "-1"])
 def test_a_bad_value_falls_back_to_the_default(value: str) -> None:
-    assert load_recorder_settings({"RECORDER_PORT": value}).port == 8766
+    assert load_recorder_settings({"RECORDER_PORT": value}).port == 8769
 
 
 def test_the_size_guard_is_in_bytes() -> None:
