@@ -63,7 +63,11 @@ public sealed partial class SettingGroupViewModel(string id, IReadOnlyList<Setti
 /// changed keys; keys read at engine start-up end in a restart prompt.
 /// </summary>
 public sealed partial class SettingsViewModel(
-    IEngineClient client, IEngineProcess process, ILocalizationService localization, IPathPicker? paths = null)
+    IEngineClient client,
+    IEngineProcess process,
+    ILocalizationService localization,
+    IPathPicker? paths = null,
+    RecordingSessionService? session = null)
     : ObservableObject
 {
     public static readonly string[] GroupOrder = ["general", "audio", "segmentation", "transcription", "speakers", "minutes", "tasks", "worker", "voice", "api"];
@@ -322,11 +326,18 @@ public sealed partial class SettingsViewModel(
         UpdateDirty();
     }
 
-    private bool CanRestart() => RestartKeys.Count > 0 && !IsBusy;
+    /// <summary>Never while recording (phase 62): a restart would end the engine's side of it.</summary>
+    private bool CanRestart() => RestartKeys.Count > 0 && !IsBusy && session?.IsRecording != true;
 
     [RelayCommand(CanExecute = nameof(CanRestart))]
     private async Task RestartEngineAsync()
     {
+        if (session?.IsRecording == true)
+        {
+            Error = localization["EngineRestartWhileRecording"];
+            return;
+        }
+
         IsBusy = true;
         Message = Error = null;
         try

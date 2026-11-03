@@ -75,16 +75,16 @@ Options edited during the recording (63); the minutes marker (64).
 
 - **Branch:** `feature/62-engine-gate` (stacked on `feature/61-recorder-process`, PR #79)
 - **Status:** in progress
-- **Updated:** 2026-11-03 18:13
-- **Next step:** UI: `EngineGateViewModel` + `RetryConnectionAsync` in `MainViewModel` (event loop even after a failed start, data reloaded on reconnect, one automatic respawn)
+- **Updated:** 2026-11-03 18:17
+- **Next step:** UI: reattach: restore the transcript (`GET /sessions/{id}/transcript`) and the options (from the recording / `GET /sessions/current`) of a recording the page adopts
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
 - [x] Engine: `GET /sessions/current`
-- [ ] UI: `EngineGateViewModel`, `RetryConnectionAsync`, data reloaded on reconnect, one automatic
+- [x] UI: `EngineGateViewModel`, `RetryConnectionAsync`, data reloaded on reconnect, one automatic
       engine respawn, the event loop even after a failed start
-- [ ] UI: the gate panel on the engine pages; Restart engine disabled while recording
+- [x] UI: the gate panel on the engine pages; Restart engine disabled while recording
 - [ ] UI: reattach: transcript and options of a recording restored
 - [ ] UI: close while recording: keep recording in background / stop and close / cancel
 - [ ] Docs, full suites, PR

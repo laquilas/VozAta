@@ -87,6 +87,27 @@
   <data name="EngineDisconnected" xml:space="preserve">
     <value>Engine disconnected, reconnecting…</value>
   </data>
+  <data name="EngineReconnecting" xml:space="preserve">
+    <value>Starting the engine again…</value>
+  </data>
+  <data name="EngineRetry" xml:space="preserve">
+    <value>Retry connection</value>
+  </data>
+  <data name="EngineGateStarting" xml:space="preserve">
+    <value>The engine is starting</value>
+  </data>
+  <data name="EngineGateDisconnected" xml:space="preserve">
+    <value>The engine stopped answering</value>
+  </data>
+  <data name="EngineGateFailed" xml:space="preserve">
+    <value>The engine did not start</value>
+  </data>
+  <data name="EngineGateDetail" xml:space="preserve">
+    <value>This page needs the engine. Recording works without it: the recorder keeps every second, and the engine processes it when it is back.</value>
+  </data>
+  <data name="EngineRestartWhileRecording" xml:space="preserve">
+    <value>Stop the recording before restarting the engine.</value>
+  </data>
   <data name="RecorderConnected" xml:space="preserve">
     <value>Recorder ready</value>
   </data>

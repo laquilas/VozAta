@@ -30,6 +30,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly IUiPreferences _preferences;
     private readonly CancellationTokenSource _stop = new();
     private bool _ready;
+    private bool _reloadOnConnect; // the engine was down: reload its data when it connects (phase 62)
+    private bool _respawned; // the engine this app started was started again once already
     private RecordingState _shownState = RecordingState.Idle; // the last state the history saw
 
     public MainViewModel(
@@ -73,7 +75,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         History = new HistoryViewModel(client, shell, localization, saver, templates, dialogs: dialogs, markers: markers);
         Health = new HealthViewModel(client, localization);
         Processing = new ProcessingIndicatorViewModel(localization);
-        Settings = new SettingsViewModel(client, process, localization, paths);
+        Settings = new SettingsViewModel(client, process, localization, paths, Session);
         Vocabulary = new VocabularyViewModel(client, localization);
         Tray = new TrayViewModel(Recorder, localization, preferences);
         Appearance = new AppearanceViewModel(preferences, theme, localization);
@@ -99,6 +101,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             localization,
             preferences);
         Shell.SessionLeft += OnSessionLeft;
+        Shell.PropertyChanged += OnShellChanged;
         Settings.Saved += OnSettingsSaved;
         Session.PropertyChanged += OnSessionChanged;
         var saved = preferences.Load();
@@ -201,8 +204,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public int HandledEvents { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(EngineText), nameof(IsEngineConnected), nameof(IsEngineDown))]
+    [NotifyPropertyChangedFor(nameof(EngineText), nameof(IsEngineConnected), nameof(IsEngineDown),
+        nameof(IsEngineGateVisible), nameof(EngineGateTitle))]
+    [NotifyCanExecuteChangedFor(nameof(RetryConnectionCommand))]
     public partial EngineStatus EngineStatus { get; private set; } = EngineStatus.Starting;
+
+    /// <summary>
+    /// The page needs the engine and it is not connected (phase 62): the page is covered by a panel
+    /// that says why, with Retry connection. The Recorder page is never covered: recording works
+    /// through the recorder process.
+    /// </summary>
+    public bool IsEngineGateVisible => !IsEngineConnected && Shell?.CurrentPage is not RecorderPageViewModel;
+
+    public string EngineGateTitle => EngineStatus switch
+    {
+        EngineStatus.Failed => _localization["EngineGateFailed"],
+        EngineStatus.Disconnected => _localization["EngineGateDisconnected"],
+        EngineStatus.Reconnecting => _localization["EngineReconnecting"],
+        _ => _localization["EngineGateStarting"],
+    };
+
+    /// <summary>The last retry started by the button or by an engine that stopped (tests await it).</summary>
+    public Task RetryRefresh { get; private set; } = Task.CompletedTask;
+
+    /// <summary>The last reload of the engine's data after a reconnection (tests await it).</summary>
+    public Task EngineDataRefresh { get; private set; } = Task.CompletedTask;
 
     public bool IsEngineConnected => EngineStatus == EngineStatus.Connected;
 
@@ -214,6 +240,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         EngineStatus.Connected => _localization["EngineConnected"],
         EngineStatus.Disconnected => _localization["EngineDisconnected"],
         EngineStatus.Failed => _localization["EngineStartFailed"],
+        EngineStatus.Reconnecting => _localization["EngineReconnecting"],
         _ => _localization["EngineStarting"],
     };
 
@@ -243,9 +270,45 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             EngineStatus = EngineStatus.Failed;
             Notify(_localization["EngineStartFailed"]);
+            _reloadOnConnect = true; // an engine started later (Retry, by hand) is picked up
+            RefreshTexts();
+            _ready = true;
+            EventLoop = FollowEventsAsync();
             return;
         }
 
+        await LoadEngineDataAsync();
+        RefreshTexts();
+        _ready = true;
+        EventLoop = FollowEventsAsync();
+    }
+
+    /// <summary>Retry connection (phase 62): start the engine again if needed, then reload its data.</summary>
+    [RelayCommand(CanExecute = nameof(CanRetryConnection))]
+    private Task RetryConnectionAsync() => RetryRefresh = RetryAsync();
+
+    private bool CanRetryConnection() => EngineStatus is EngineStatus.Failed or EngineStatus.Disconnected;
+
+    private async Task RetryAsync()
+    {
+        EngineStatus = EngineStatus.Reconnecting;
+        if (await _process.EnsureRunningAsync(_stop.Token) == EngineStartResult.Failed)
+        {
+            EngineStatus = EngineStatus.Failed;
+            Notify(_localization["EngineStartFailed"]);
+            return;
+        }
+
+        _reloadOnConnect = true; // the data loads when the event stream connects
+        if (EventLoop is null)
+        {
+            EventLoop = FollowEventsAsync();
+        }
+    }
+
+    /// <summary>Health, settings, templates, devices, meetings and config: what the pages show from the engine.</summary>
+    private async Task LoadEngineDataAsync()
+    {
         await Health.LoadAsync(_stop.Token);
         if (Health.Error is { } healthError)
         {
@@ -270,10 +333,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await Meetings.LoadAsync(_stop.Token);
         await Config.LoadAsync(_stop.Token); // settings, option lists, storage
         await Vocabulary.LoadAsync(_stop.Token);
-
-        RefreshTexts();
-        _ready = true;
-        EventLoop = FollowEventsAsync();
     }
 
     /// <summary>Whether the window may close: asks about unsaved transcript edits, while recording asks and stops the session first, and warns once when meetings are still being processed.</summary>
@@ -325,6 +384,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _localization.PropertyChanged -= OnLanguageChanged;
         Session.PropertyChanged -= OnSessionChanged;
+        Shell.PropertyChanged -= OnShellChanged;
         Recorder.Dispose();
         Meetings.Dispose();
         Shell.Dispose();
@@ -335,6 +395,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void DismissNotification(string message) => Notifications.Remove(message);
 
     partial void OnEngineStatusChanged(EngineStatus value) => Recorder.IsEngineConnected = value == EngineStatus.Connected;
+
+    private void OnShellChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(ShellViewModel.CurrentPage))
+        {
+            OnPropertyChanged(nameof(IsEngineGateVisible));
+        }
+    }
 
     partial void OnSelectedAppLanguageChanged(ChoiceOption? value)
     {
@@ -426,6 +494,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        Settings.RestartEngineCommand.NotifyCanExecuteChanged(); // never while recording (phase 62)
         var wasRecording = _shownState is RecordingState.Recording or RecordingState.Paused;
         var wasIdle = _shownState == RecordingState.Idle;
         _shownState = Session.State;
@@ -496,8 +565,21 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             case ConnectionChangedEvent connection:
                 EngineStatus = connection.Connected ? EngineStatus.Connected : EngineStatus.Disconnected;
+                if (connection.Connected && _reloadOnConnect)
+                {
+                    _reloadOnConnect = false;
+                    EngineDataRefresh = LoadEngineDataAsync(); // settings, templates, devices may have changed
+                }
+
                 if (!connection.Connected)
                 {
+                    _reloadOnConnect = true;
+                    if (_process.HasExited && !_respawned)
+                    {
+                        _respawned = true; // once: an engine that keeps crashing waits for Retry
+                        RetryRefresh = RetryAsync();
+                    }
+
                     Processing.Clear(); // the snapshot on reconnect rebuilds it
                     Meetings.OnConnectionLost(); // the rows' badges too
                     History.Ask.OnConnectionLost();

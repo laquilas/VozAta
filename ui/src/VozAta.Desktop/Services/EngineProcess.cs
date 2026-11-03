@@ -58,6 +58,9 @@ public interface IEngineProcess
     /// <summary>Stop the engine, but only if this app started it.</summary>
     void StopIfStarted();
 
+    /// <summary>The engine this app started has exited (it crashed or was ended).</summary>
+    bool HasExited { get; }
+
     /// <summary>Stop the engine this app started, wait for it to exit and start it again.</summary>
     Task<EngineRestartResult> RestartAsync(CancellationToken cancellationToken = default);
 }
@@ -73,6 +76,8 @@ public sealed class EngineProcess(
 
     private readonly Func<TimeSpan, CancellationToken, Task> _delay = delay ?? Task.Delay;
     private IRunningProcess? _process;
+
+    public bool HasExited => _process is { HasExited: true };
 
     public async Task<EngineStartResult> EnsureRunningAsync(CancellationToken cancellationToken = default)
     {

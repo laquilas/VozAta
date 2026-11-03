@@ -19,6 +19,9 @@ public enum EngineStatus
     Connected,
     Disconnected,
     Failed,
+
+    /// <summary>Retry connection was pressed, or the engine is started again after it stopped (phase 62).</summary>
+    Reconnecting,
 }
 
 /// <summary>One transcript line: `[hh:mm:ss] Label: text`, coloured by speaker.</summary>
