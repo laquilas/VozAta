@@ -183,6 +183,10 @@ class RecorderLink:
     def recorder_available(self) -> bool:
         return self._recorder.health() is not None
 
+    def recorder_health(self) -> dict[str, Any] | None:
+        """The recorder's `/health`, or None when it does not answer."""
+        return self._recorder.health()
+
     def start_recording(self, body: dict[str, Any]) -> dict[str, Any]:
         """`POST /sessions` with the recorder: it records, the engine attaches at once."""
         devices = {k: body.pop(k) for k in ("mic_device_id", "system_device_id") if k in body}

@@ -135,3 +135,21 @@ def test_the_lock_file_round_trips_and_only_its_owner_removes_it(tmp_path: Path)
 
     (tmp_path / "recorder.lock").write_text("garbage")
     assert read_lock(tmp_path) is None
+
+
+def test_stop_asks_a_running_recorder_to_quit_unless_it_records(tmp_path: Path) -> None:
+    from tests.recorder.test_app import Rig
+
+    rig = Rig(tmp_path)
+    try:
+        rig.client.request("POST", "/recordings", {})
+        assert recorder_main.main(["--stop", "--port", str(rig.server.port)]) == 3
+        rig.client.request("POST", "/recordings/current/stop")
+        assert recorder_main.main(["--stop", "--port", str(rig.server.port)]) == 0
+        assert rig.app.shutdown_requested.is_set()
+    finally:
+        rig.close()
+
+
+def test_stop_without_a_recorder_is_fine() -> None:
+    assert recorder_main.stop(1) == 0

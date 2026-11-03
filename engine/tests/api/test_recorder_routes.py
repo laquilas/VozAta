@@ -25,6 +25,11 @@ class FakeLink:
     def recorder_available(self) -> bool:
         return self.available
 
+    def recorder_health(self) -> dict[str, Any] | None:
+        if not self.available:
+            return None
+        return {"recorder": "ok", "recording": {"id": "20261103_101500", "status": "paused"}}
+
     def following(self) -> str | None:
         current = self.api.manager.current
         return current.id if self.follows and current is not None else None
@@ -191,3 +196,18 @@ def test_unlinked_controls_and_renames_stay_in_the_engine(linked: tuple[Api, Fak
     assert api.client.post("/sessions/current/pause").json()["status"] == "paused"
 
     assert [name for name, _ in link.calls] == ["thread"]
+
+
+def test_health_says_whether_the_recorder_answers(linked: tuple[Api, FakeLink]) -> None:
+    api, link = linked
+
+    up = api.client.get("/health").json()["recorder"]
+    link.available = False
+    down = api.client.get("/health").json()["recorder"]
+
+    assert up == {"reachable": True, "port": 8769, "recording_id": "20261103_101500"}
+    assert down == {"reachable": False, "port": 8769, "recording_id": None}
+
+
+def test_health_without_the_recorder(api: Api) -> None:
+    assert api.client.get("/health").json()["recorder"] is None

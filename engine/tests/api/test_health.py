@@ -36,6 +36,7 @@ def test_health_reports_engine_gpu_stt_and_llm(api: Api) -> None:
             "audio_cache_bytes": 0,
         },
         "worker": None,
+        "recorder": None,  # phase 61: no recorder link in these tests
     }
 
 

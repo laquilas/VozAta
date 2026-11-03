@@ -14,6 +14,7 @@ from vozata.api.schemas import (
     GpuStatus,
     Health,
     LlmStatus,
+    RecorderHealth,
     StorageStatus,
     SttStatus,
     WorkerHealth,
@@ -55,6 +56,21 @@ def health(c: Annotated[ApiContainer, Depends(container)]) -> Health:
         )
         if worker is not None and current.worker_url
         else None,
+        recorder=_recorder(c),
+    )
+
+
+def _recorder(c: ApiContainer) -> RecorderHealth | None:
+    link = c.recorder_link
+    if link is None:
+        return None
+    answer = link.recorder_health()
+    recording = (answer or {}).get("recording") or {}
+    active = recording.get("status") in ("recording", "paused")
+    return RecorderHealth(
+        reachable=answer is not None,
+        port=c.settings.recorder_port,
+        recording_id=recording.get("id") if active else None,
     )
 
 

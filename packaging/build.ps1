@@ -41,6 +41,19 @@ foreach ($heavy in "torch", "nvidia") {  # downloaded on the PC (phases 56, 58),
     if (Test-Path (Join-Path $out "dist/vozata-engine/_internal/$heavy")) { throw "$heavy got into the build" }
 }
 
+Write-Host "== Recorder (PyInstaller, phase 61)"
+& $Python -m PyInstaller (Join-Path $root "packaging/recorder.spec") --noconfirm `
+    --distpath (Join-Path $out "dist") --workpath (Join-Path $out "work-recorder")
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller (recorder) failed" }
+$recorder = Join-Path $out "dist/vozata-recorder/vozata-recorder.exe"
+$watch = [Diagnostics.Stopwatch]::StartNew()
+& $recorder --version
+if ($LASTEXITCODE -ne 0) { throw "vozata-recorder.exe --version failed" }
+Write-Host ("vozata-recorder.exe --version took {0:N1} s" -f $watch.Elapsed.TotalSeconds)
+foreach ($heavy in "ctranslate2", "onnxruntime", "av", "torch", "fastapi", "faster_whisper") {
+    if (Test-Path (Join-Path $out "dist/vozata-recorder/_internal/$heavy")) { throw "$heavy got into the recorder" }
+}
+
 Write-Host "== Speaker runtime tools (phase 56: uv.exe and the engine source, for speakers install)"
 $speakers = Join-Path $out "dist/vozata-engine/speakers"
 New-Item -ItemType Directory -Force $speakers | Out-Null

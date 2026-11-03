@@ -13,6 +13,7 @@ import logging
 import signal
 import sys
 import threading
+import urllib.error
 import urllib.request
 from collections.abc import Sequence
 from pathlib import Path
@@ -24,6 +25,7 @@ _log = logging.getLogger("vozata.recorder")
 
 ALREADY_RUNNING = 0
 FAILED = 1
+RECORDING = 3
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -31,6 +33,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--port", type=int, help="API port (default RECORDER_PORT, 8769)")
     parser.add_argument("--output-dir", type=Path, help="recordings folder (default OUTPUT_DIR)")
     parser.add_argument("--version", action="version", version=f"vozata-recorder {__version__}")
+    parser.add_argument(
+        "--stop", action="store_true", help="stop a running recorder unless it is recording"
+    )
     return parser
 
 
@@ -53,7 +58,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         overrides["output_dir"] = args.output_dir
     if overrides:
         settings = RecorderSettings(**{**settings.__dict__, **overrides})
+    if args.stop:
+        return stop(settings.port)
     return serve(settings)
+
+
+def stop(port: int) -> int:
+    """Ask a running recorder to quit: 0 when it quit or none runs, RECORDING while recording."""
+    request = urllib.request.Request(f"http://127.0.0.1:{port}/shutdown", method="POST")
+    try:
+        urllib.request.urlopen(request, timeout=5).close()
+    except urllib.error.HTTPError as error:
+        if error.code == 409:
+            print("The recorder is recording; it keeps running")
+            return RECORDING
+        return FAILED
+    except OSError:
+        pass  # none runs
+    return 0
 
 
 def serve(settings: RecorderSettings) -> int:

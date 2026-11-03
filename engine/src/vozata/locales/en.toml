@@ -167,6 +167,7 @@ unreachable = "{target} could not be reached ({reason})."
 invalid_reply = "{target} returned an unexpected reply."
 
 [cli]
+recorder_active = "The VozAta recorder is recording right now. Stop that recording first (in the app), then run record again."
 serving = "Engine API listening on {url} (Ctrl+C to stop)."
 worker_listening = "VozAta worker listening on {url} (Ctrl+C to stop)."
 worker_token_created = "New worker token, saved in {file}: {token}. Enter it in VozAta on the other PC (Config → Worker)."

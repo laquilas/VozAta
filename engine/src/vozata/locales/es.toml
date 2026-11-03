@@ -167,6 +167,7 @@ unreachable = "No se pudo contactar con {target} ({reason})."
 invalid_reply = "{target} devolvió una respuesta inesperada."
 
 [cli]
+recorder_active = "El grabador de VozAta está grabando ahora. Detén esa grabación primero (en la app) y vuelve a ejecutar record."
 serving = "API del motor escuchando en {url} (Ctrl+C para detener)."
 worker_listening = "Worker de VozAta escuchando en {url} (Ctrl+C para detener)."
 worker_token_created = "Nuevo token del worker, guardado en {file}: {token}. Indícalo en el VozAta del otro PC (Config → Worker)."
