@@ -132,15 +132,15 @@ reattach UX (phase 62); options edited during the recording (63); skipped minute
 
 - **Branch:** `feature/61-recorder-process`
 - **Status:** in progress
-- **Updated:** 2026-11-03 17:11
-- **Next step:** write `recorder/durable_track.py` (no-loss writer: buffer, writer thread, fsync cadence, rollover on OSError / size) with tests
+- **Updated:** 2026-11-03 17:13
+- **Next step:** write `recorder/recording.py` (devices, sources, tracks, levels, pause, heartbeat, resume after a crash) with fakes
 
 ### Steps
 
 - [x] Start the phase (README rows 61–64, phase files, Progress)
 - [x] `wav_repair` header helpers public; `resolve_devices` moved
 - [x] `recorder/manifest.py` + `segment_reader.py`
-- [ ] `recorder/durable_track.py` (no-loss writer)
+- [x] `recorder/durable_track.py` (no-loss writer)
 - [ ] `recorder/recording.py`
 - [ ] Recorder HTTP API (`http.py`, `app.py`, `lock.py`, `__main__.py`), config keys
 - [ ] Engine ports, `TailingFileSource`, `RecorderClock`
