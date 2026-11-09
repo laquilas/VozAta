@@ -7,10 +7,10 @@ multi-speaker conversations in near real time, and uses AI to generate structure
 minutes (*atas*). Runs locally by default: speech-to-text on your GPU and minutes from a
 local LLM.
 
-> **Status: planning.** The roadmap and architecture are defined and no application code exists
-> yet. Implementation starts with [phase 00 — Foundation](docs/roadmap/phases/00-foundation.md).
+> **Status: usable (v0.3.1).** Every roadmap phase is done; progress is tracked in
+> [docs/roadmap/README.md](docs/roadmap/README.md). Installation: [docs/INSTALL.md](docs/INSTALL.md).
 
-## Planned features
+## Features
 
 - Records the **microphone and system audio** (whatever the meeting app plays) at the same time
 - **Near-real-time transcription** with [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
@@ -63,7 +63,7 @@ See [architecture.md](docs/roadmap/architecture.md) and
 
 Phase status and dependencies are tracked in [docs/roadmap/README.md](docs/roadmap/README.md).
 
-## Requirements (target)
+## Requirements
 
 - Windows 11 (system audio is captured through WASAPI loopback)
 - Python 3.13
