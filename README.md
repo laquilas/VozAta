@@ -72,6 +72,78 @@ Phase status and dependencies are tracked in [docs/roadmap/README.md](docs/roadm
 - [Ollama](https://ollama.com) for local minutes generation
 - .NET 10 SDK for the desktop UI
 
+## Run, build and package
+
+Commands are for PowerShell 7 (`pwsh`), from the repository root unless noted. End users only
+need the installer: see [docs/INSTALL.md](docs/INSTALL.md).
+
+### One-time setup (development)
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\python -m pip install -e "engine[dev,translation]"   # engine + tests
+.venv\Scripts\python -m pip install -e "engine[cuda]"              # optional: NVIDIA GPU (cuBLAS, cuDNN)
+```
+
+Without the `cuda` extra (or without an NVIDIA GPU) speech recognition runs on the CPU model
+(`WHISPER_CPU_MODEL`). Install [Ollama](https://ollama.com) and `ollama pull qwen2.5:7b` for the
+minutes.
+
+### Open VozAta from the command line
+
+```powershell
+cd ui
+dotnet run --project src/VozAta.Desktop          # builds if needed, then opens the app
+```
+
+Run it from `ui/`: the app starts its engine (`python -m vozata serve`) and recorder
+(`python -m vozata.recorder`) through `../.venv` and `../engine`, as set in
+`ui/src/VozAta.Desktop/appsettings.json`. Without the window:
+
+```powershell
+cd engine
+..\.venv\Scripts\python -m vozata serve         # engine API only, on http://127.0.0.1:8765
+..\.venv\Scripts\python -m vozata record        # record in the terminal (Ctrl+C stops)
+```
+
+An installed copy opens with `& "$env:LOCALAPPDATA\Programs\VozAta\VozAta.Desktop.exe"`.
+
+### Build and test
+
+```powershell
+dotnet build ui/VozAta.sln                       # desktop + worker apps
+dotnet test ui/VozAta.sln
+cd engine; ..\.venv\Scripts\python -m pytest     # engine tests
+```
+
+Close a running Debug app before `dotnet test` because it locks `bin\Debug`.
+
+### Build the installers
+
+```powershell
+.venv\Scripts\python -m pip install -e "engine[translation,package]"   # PyInstaller and uv
+pwsh packaging/build.ps1 -Version 1.0.0 -Python .venv\Scripts\python.exe
+```
+
+This needs the .NET 10 SDK and [Inno Setup](https://jrsoftware.org/isinfo.php) 6 or 7 (`iscc` on
+`PATH`, or installed per user under `%LOCALAPPDATA%\Programs`). Without Inno Setup the script
+stops after preparing `build/`. Output: `build/installer/VozAta-Setup-<v>.exe` and
+`VozAta-Worker-Setup-<v>.exe`. The standard build takes about 10–12 minutes. Use `-Out <folder>`
+to build outside a synced folder such as OneDrive.
+
+**With or without CUDA.** There is a single installer: the NVIDIA CUDA libraries (and speaker
+identification) are never bundled, and the build fails if `torch` or `nvidia` gets into it. CUDA
+is chosen when installing:
+
+- **With CUDA:** on a PC with an NVIDIA driver, the setup shows *Download GPU support for speech
+  recognition*, ticked. It downloads about 1.2 GB into `%LOCALAPPDATA%\VozAta\cuda`.
+- **Without CUDA:** untick that option, or install on a PC without an NVIDIA driver, and the
+  CPU is used.
+- **Later:** run `& "$env:LOCALAPPDATA\Programs\VozAta\engine\vozata-engine.exe" cuda install`
+  (`cuda status` and `cuda remove` also work).
+
+See [docs/INSTALL.md](docs/INSTALL.md#gpu-support) for details.
+
 ## Contributing
 
 Work follows the roadmap one phase at a time. Start at
