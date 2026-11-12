@@ -120,6 +120,10 @@ public sealed class RecorderProcessTests : IDisposable
         public Task<RecordingSummary> StopAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<RecordingSummary> UpdateOptionsAsync(IReadOnlyDictionary<string, object?> options, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<RecordingSources> GetSourcesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<RecordingSources> SetSourceModeAsync(string sourceId, string mode, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class Runner : IProcessRunner

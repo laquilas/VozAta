@@ -1887,4 +1887,49 @@
   <data name="RequestReason_session_still_active" xml:space="preserve">
     <value>the meeting was still being processed</value>
   </data>
+  <data name="SourcesTitle" xml:space="preserve">
+    <value>Audio sources</value>
+  </data>
+  <data name="SourcesHint" xml:space="preserve">
+    <value>Every microphone and output is recorded; the ones with speech are used for the meeting. Auto decides by itself, On always uses a source, Off never.</value>
+  </data>
+  <data name="SourcesSummary" xml:space="preserve">
+    <value>{0} of {1} in use</value>
+  </data>
+  <data name="SourceKindInput" xml:space="preserve">
+    <value>Microphone</value>
+  </data>
+  <data name="SourceKindOutput" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="SourceInUse" xml:space="preserve">
+    <value>In use</value>
+  </data>
+  <data name="SourceNotInUse" xml:space="preserve">
+    <value>Not in use</value>
+  </data>
+  <data name="SourceSilent" xml:space="preserve">
+    <value>No signal</value>
+  </data>
+  <data name="SourceFailed" xml:space="preserve">
+    <value>Could not open: {0}</value>
+  </data>
+  <data name="SourceModeAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="SourceModeOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="SourceModeOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="SourceModeFailed" xml:space="preserve">
+    <value>Could not change {0}: {1}</value>
+  </data>
+  <data name="SourceFailedNotice" xml:space="preserve">
+    <value>An audio device was skipped: {0}</value>
+  </data>
+  <data name="SourcesAllSilentNotice" xml:space="preserve">
+    <value>Every microphone and output gives only silence: check that the microphone is not muted or blocked in Windows privacy settings.</value>
+  </data>
 </root>

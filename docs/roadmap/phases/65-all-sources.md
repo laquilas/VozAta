@@ -76,7 +76,7 @@ flowchart LR
 | File | Content |
 |------|---------|
 | `VozAta.Client/Recorder.cs`, `Dtos.cs` | `RecordingSource`, `SourcesEvent`, `SetSourceModeAsync` |
-| `SourceRowViewModel.cs`, `RecorderPageViewModel.cs`, `RecorderPage.axaml` | the source list: name, kind, meter, selected badge, Auto / On / Off |
+| `RecordingSourcesViewModel.cs`, `RecorderPageViewModel.cs`, `RecorderPage.axaml` | the source list: name, kind, meter, selected badge, Auto / On / Off |
 | Resources | strings in en / pt-BR / es |
 
 ## Acceptance criteria
@@ -95,7 +95,7 @@ flowchart LR
 
 `tests/recorder/test_sources.py`, `tests/recorder/test_source_mix.py`,
 `tests/recorder/test_recording_sources.py`, `tests/recorder/test_app.py`,
-`RecorderPageViewModelTests.cs`, `SourceRowViewModelTests.cs`.
+`RecordingSourcesTests.cs`.
 
 ## Out of scope
 
@@ -112,7 +112,7 @@ devices plugged in during a recording.
 - **Branch:** `feature/65-all-sources`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** UI: `VozAta.Client/Recorder.cs` (`RecordingSource`, the `sources` SSE event, `GetSourcesAsync`, `SetSourceModeAsync`), then `SourceRowViewModel` and the source list in `RecorderPage.axaml`.
+- **Next step:** docs: `architecture.md` (§6 data flow, §9 `CAPTURE_SOURCES` / `CAPTURE_EXCLUDE`, §18 recorder), `api-contract.md` (sources routes and event), `.env.example`, `config.py` / `settings_fields.py`; then the full suites and a manual check on this PC.
 
 ### Steps
 
@@ -121,7 +121,7 @@ devices plugged in during a recording.
 - [x] Engine: `source_mix.py` (buffer, automix, scorer, selector, mixer)
 - [x] Engine: `Recording` with every source (raw tracks, mix thread, resume, manifest)
 - [x] Engine: recorder API (`sources` routes and event)
-- [ ] UI: the source list
+- [x] UI: the source list
 - [ ] Docs (architecture, api-contract, config keys), full suites
 - [ ] PR
 
