@@ -362,6 +362,15 @@ class SessionManager:
         if live or self._queue.contains(session_id):
             raise SessionStillActiveError(session_id)
 
+    def reprocess(self, session_id: str, prepare: Callable[[str], None]) -> None:
+        """Run `prepare` on a finished meeting and queue its job again (phase 66: other audio
+        sources), under the rule and lock of `delete`: the session being recorded, finalized,
+        queued or processed raises `SessionStillActiveError`, and nothing is changed."""
+        with self._lock:
+            self._check_not_live(session_id)
+            prepare(session_id)
+            self._queue.enqueue(self._job_factory(session_id, False, None))
+
     def discard_audio(self, session_id: str, discard: Callable[[str], None]) -> None:
         """Remove a finished session's audio with `discard` (phase 39), under the same rule and
         lock as `delete`: the session being recorded, finalized, queued or processed raises

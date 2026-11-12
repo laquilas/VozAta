@@ -12,6 +12,7 @@ from vozata.api.partial_minutes_job import PartialMinutesJob
 from vozata.api.recorder_link import RecorderLink
 from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager
+from vozata.api.session_sources import SessionSources
 from vozata.api.system_info import GpuInfo
 from vozata.api.ws import EventBroadcaster
 from vozata.audio.devices import DeviceInfo
@@ -127,3 +128,5 @@ class ApiContainer:
     # The recorder process (61): attaches its recordings, gets Start / Pause / Stop; None: the
     # engine records itself (`RECORDER_ENABLED=false`).
     recorder_link: RecorderLink | None = None
+    # The kept audio sources of the meetings (66): `/sessions/{id}/sources`; None: 503.
+    sources: SessionSources | None = None

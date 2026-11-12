@@ -27,7 +27,7 @@ Unselected sources are pruned after `SOURCES_KEEP_DAYS` (default 7), or at once 
 | `storage/source_archive.py` | `OUTPUT_DIR/sources/<meeting>/`: the source files and `sources.json` (kind, name, selection, segments) |
 | ingest, `ingest_check.py` | `live/<id>/sources/` moved to the archive before `live/<id>` is deleted |
 | `processing/source_remix.py` | the selected sources re-mixed (phase 65 `automix`) into `audio_chunks` |
-| `api/routes/sessions.py` | `GET /sessions/{id}/sources`, `POST /sessions/{id}/sources`, `GET /sessions/{id}/sources/{source_id}/audio` |
+| `api/routes/sources.py`, `api/session_sources.py` | `GET` / `POST /sessions/{id}/sources`, `POST .../sources/keep-selected`, `GET .../sources/{source_id}/audio` |
 | job | re-run from `transcribe` after a new selection |
 | prune | unselected sources after `SOURCES_KEEP_DAYS`; `POST /sessions/{id}/sources/prune` |
 
@@ -55,13 +55,13 @@ Transcribing each source on its own track.
 - **Branch:** `feature/66-sources-after-meeting`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** `api/session_sources.py` (list, apply = remix + reset transcript + queue the job, keep only the selected), routes and `SOURCES_KEEP_DAYS` prune at start.
+- **Next step:** UI: `IEngineClient` sources calls, `MeetingSourcesViewModel` on the meeting page (checkboxes, play, Apply and regenerate, Keep only the selected).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
 - [x] Engine: `SourceArchive`, `remix`, `TranscriptReset`, sources kept at ingest
-- [ ] Engine: `SessionSources`, routes, prune, delete with the meeting
+- [x] Engine: `SessionSources`, routes, prune, delete with the meeting
 - [ ] UI: the meeting page's audio sources panel
 - [ ] Docs, full suites, PR
 

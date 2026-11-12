@@ -547,6 +547,7 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "RECORDER_BUFFER_WARN_SECONDS",
         "CAPTURE_SOURCES",
         "CAPTURE_EXCLUDE",
+        "SOURCES_KEEP_DAYS",
     }
 
 

@@ -1944,4 +1944,10 @@
   <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
     <value>Parts of device names, separated by commas (for example Stereo Mix), left out when every device is recorded.</value>
   </data>
+  <data name="Setting_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Keep every device's audio (days)</value>
+  </data>
+  <data name="SettingHelp_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Days the audio of every recorded device is kept after a meeting, to choose other sources for its minutes; 0 keeps it until the meeting is deleted.</value>
+  </data>
 </root>

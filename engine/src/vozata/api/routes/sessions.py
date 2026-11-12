@@ -222,6 +222,8 @@ def delete_session(session_id: str, c: Container) -> None:
         raise ApiError(500, "session_delete_failed", id=session_id, reason=error) from None
     if c.audio is not None:
         c.audio.delete(session_id)  # sqlite: cached WAVs, space reclaimed in the background (32)
+    if c.sources is not None:
+        c.sources.remove(session_id)  # its kept audio sources (66)
     if c.search_index is not None:
         c.search_index.index_session(session_id, [])
 

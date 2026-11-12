@@ -31,6 +31,7 @@ from vozata.api.partial_minutes_job import PartialMinutesJob
 from vozata.api.recorder_link import RecorderLink
 from vozata.api.request_log import RequestLog
 from vozata.api.session_manager import SessionManager, StartOptions, session_observer
+from vozata.api.session_sources import SessionSources
 from vozata.api.system_info import query_gpu
 from vozata.api.voice_dispatch import VoiceCommandDispatcher, VoiceDispatch
 from vozata.api.ws import EventBroadcaster
@@ -100,6 +101,7 @@ from vozata.ports import (
     LanguageModel,
     Localizer,
     ModelDownloader,
+    PcmImport,
     RecoverableStore,
     SessionAudio,
     SessionObserver,
@@ -137,6 +139,7 @@ from vozata.storage.recovery import SessionRecovery
 from vozata.storage.search_index import SearchIndex
 from vozata.storage.session_folder import SessionFolder
 from vozata.storage.session_store import SessionStore
+from vozata.storage.source_archive import SourceArchive
 from vozata.storage.sqlite.audio import SqliteAudioStore
 from vozata.storage.sqlite.bundle_import import SqliteBundleImporter
 from vozata.storage.sqlite.db import Database
@@ -1463,6 +1466,23 @@ def build_api_container(settings: Settings, env_file: Path | None = None) -> Api
             current.worker_discovery_port, lan_addresses()
         ),
         recorder_link=recorder_link,
+        sources=build_session_sources(settings, store, audio, manager),
+    )
+
+
+def build_session_sources(
+    settings: Settings, store: SessionRepository, audio: SessionAudio, manager: SessionManager
+) -> SessionSources | None:
+    """The meetings' kept audio sources (phase 66); None when the store cannot take a remix."""
+    if not isinstance(audio, PcmImport):
+        return None
+    return SessionSources(
+        SourceArchive(settings.output_dir),
+        store,
+        audio,
+        manager,
+        settings.sample_rate,
+        settings.sources_keep_days,
     )
 
 
