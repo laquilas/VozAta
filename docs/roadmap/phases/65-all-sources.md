@@ -112,13 +112,13 @@ devices plugged in during a recording.
 - **Branch:** `feature/65-all-sources`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** engine: `recorder/source_mix.py` (buffer, automix, scorer, selector, mixer).
+- **Next step:** engine: `recorder/source_capture.py` + `Recording` with every source (raw tracks under `sources/`, the mix thread, resume, manifest `sources` / `selection_log`).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress; phase files 66 and 67 written)
 - [x] Engine: sources and their ids, `CAPTURE_SOURCES` / `CAPTURE_EXCLUDE`
-- [ ] Engine: `source_mix.py` (buffer, automix, scorer, selector, mixer)
+- [x] Engine: `source_mix.py` (buffer, automix, scorer, selector, mixer)
 - [ ] Engine: `Recording` with every source (raw tracks, mix thread, resume, manifest)
 - [ ] Engine: recorder API (`sources` routes and event)
 - [ ] UI: the source list
@@ -129,5 +129,7 @@ devices plugged in during a recording.
 
 - Diagnosis of 2026-11-12: `live/20261112_140724` has only zeros on both channels (mic
   "JBL Quantum Stream", loopback "Realtek"); the Windows default output is the JBL headset.
+- Cross-kind duplicates (a mic that hears the speakers) are left to the echo dedupe of phase 18:
+  dropping such a mic would also lose the user's own words.
 - `mic` / `system` stay the logical channels: the recorder mixes the selected sources into them,
   so the engine, the database and the minutes need no change in this phase.
