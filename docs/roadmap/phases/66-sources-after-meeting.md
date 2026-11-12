@@ -31,8 +31,8 @@ Unselected sources are pruned after `SOURCES_KEEP_DAYS` (default 7), or at once 
 | job | re-run from `transcribe` after a new selection |
 | prune | unselected sources after `SOURCES_KEEP_DAYS`; `POST /sessions/{id}/sources/prune` |
 
-**UI**: the meeting page "Audio sources" panel (checkboxes, score, preview, "Apply and
-regenerate", "Keep only the selected"); strings in en / pt-BR / es.
+**UI**: the meeting page's "Audio sources" tab (checkboxes, kind and length, "Apply and
+regenerate" after a confirmation, "Keep only the ticked ones"); strings in en / pt-BR / es.
 
 ## Acceptance criteria
 
@@ -55,14 +55,14 @@ Transcribing each source on its own track.
 - **Branch:** `feature/66-sources-after-meeting`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** UI: `IEngineClient` sources calls, `MeetingSourcesViewModel` on the meeting page (checkboxes, play, Apply and regenerate, Keep only the selected).
+- **Next step:** docs (architecture §18, api-contract, `SOURCES_KEEP_DAYS` in §9), then the PR.
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
 - [x] Engine: `SourceArchive`, `remix`, `TranscriptReset`, sources kept at ingest
 - [x] Engine: `SessionSources`, routes, prune, delete with the meeting
-- [ ] UI: the meeting page's audio sources panel
+- [x] UI: the meeting page's audio sources panel
 - [ ] Docs, full suites, PR
 
 ### Decisions and notes
@@ -70,6 +70,7 @@ Transcribing each source on its own track.
 - The sources stay **files** (`OUTPUT_DIR/sources/<meeting>/`), not `source_chunks` rows: five
   devices add ~0.5 GB an hour, and the database is already 2 GB on the reference PC; files are
   pruned by deleting a folder.
+- The tab has no player: `GET .../sources/{id}/audio` serves each source as WAV for a later one.
 - A new choice rewrites both channels (`PcmImport.import_pcm`), drops every transcript
   (`TranscriptReset.reset_transcript`: edits are lost, the UI says so) and queues the meeting's
   usual job (`SessionManager.process_imported`), which transcribes, mixes, identifies speakers

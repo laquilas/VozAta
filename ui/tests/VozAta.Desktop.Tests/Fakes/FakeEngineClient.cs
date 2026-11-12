@@ -319,6 +319,32 @@ internal sealed partial class FakeEngineClient : IEngineClient
         return RegenerateError is null ? Task.CompletedTask : Task.FromException(RegenerateError);
     }
 
+    public MeetingSources SessionSources { get; set; } = new([], null);
+
+    public Exception? SourcesError { get; set; }
+
+    public List<(string Id, IReadOnlyList<string> Selected)> SourceChoices { get; } = [];
+
+    public List<string> SourcesTrimmed { get; } = [];
+
+    public Task<MeetingSources> GetSessionSourcesAsync(string id, CancellationToken cancellationToken = default) =>
+        SourcesError is null ? Task.FromResult(SessionSources) : Task.FromException<MeetingSources>(SourcesError);
+
+    public Task ChooseSessionSourcesAsync(
+        string id, IReadOnlyList<string> selected, CancellationToken cancellationToken = default)
+    {
+        SourceChoices.Add((id, selected));
+        return SourcesError is null ? Task.CompletedTask : Task.FromException(SourcesError);
+    }
+
+    public Task<IReadOnlyList<string>> KeepSelectedSessionSourcesAsync(string id, CancellationToken cancellationToken = default)
+    {
+        SourcesTrimmed.Add(id);
+        var removed = SessionSources.Items.Where(item => !item.Selected).Select(item => item.Id).ToList();
+        SessionSources = SessionSources with { Items = [.. SessionSources.Items.Where(item => item.Selected)] };
+        return Task.FromResult<IReadOnlyList<string>>(removed);
+    }
+
     /// <summary>Every <c>POST /sessions/{id}/recover</c>, in order (phase 17).</summary>
     public List<string> Recovered { get; } = [];
 

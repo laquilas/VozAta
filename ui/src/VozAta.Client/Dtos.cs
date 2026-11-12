@@ -201,3 +201,15 @@ public sealed record EngineSettings(
 /// set only while queued (1 = next).
 /// </summary>
 public sealed record ProcessingInfo(string State, int Percent, string? Step, int? Position = null);
+
+/// <summary>One audio source a meeting keeps (phase 66): a microphone (<c>kind</c> "mic") or an output.</summary>
+public sealed record MeetingSource(
+    string Id,
+    string Kind,
+    string Name,
+    bool Selected,
+    bool Preferred = false,
+    double DurationSeconds = 0);
+
+/// <summary><c>GET /sessions/{id}/sources</c>: the sources and when they are pruned (null: kept).</summary>
+public sealed record MeetingSources(IReadOnlyList<MeetingSource> Items, DateTimeOffset? KeptUntil);
