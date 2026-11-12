@@ -101,14 +101,27 @@ def resolve_devices(
     pa: Any,
     mic_device: int | None,
     system_device: int | None,
-) -> dict[Channel, DeviceInfo]:
+    optional: bool = False,
+) -> dict[Channel, Any]:
     """The devices of a recording: the chosen ids, or the defaults when None.
 
     `call` runs each lookup on the thread that owns `pa` (`PortAudioThread.call`); shared by the
-    engine and the recorder process (phase 61). `LookupError` when a chosen id is gone.
+    engine and the recorder process (phase 61). `LookupError` when a chosen id is gone. With
+    `optional`, a missing *default* gives None instead of an error (phase 65: other sources may
+    still record).
     """
-    mic = call(lambda: default_input(pa) if mic_device is None else find_device(mic_device, pa))
-    system = call(
-        lambda: default_loopback(pa) if system_device is None else find_device(system_device, pa)
-    )
-    return {Channel.MIC: mic, Channel.SYSTEM: system}
+
+    def pick(chosen: int | None, default: Callable[[Any], DeviceInfo]) -> DeviceInfo | None:
+        if chosen is not None:
+            return call(lambda: find_device(chosen, pa))
+        if not optional:
+            return call(lambda: default(pa))
+        try:
+            return call(lambda: default(pa))
+        except (LookupError, OSError):
+            return None
+
+    return {
+        Channel.MIC: pick(mic_device, default_input),
+        Channel.SYSTEM: pick(system_device, default_loopback),
+    }

@@ -137,6 +137,56 @@
         </Panel>
       </Panel>
 
+      <!-- Every audio source of the recording (phase 65): which ones are used, Auto / On / Off -->
+      <Button Classes="chip" IsVisible="{Binding Sources.HasItems}"
+              ToolTip.Tip="{Binding L[SourcesHint]}"
+              AutomationProperties.Name="{Binding L[SourcesTitle]}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource Icon.People}" />
+          <TextBlock Text="{Binding Sources.Summary}" />
+          <PathIcon Classes="inline" Data="{StaticResource Icon.Dismiss}" IsVisible="{Binding Sources.AllSilent}"
+                    ToolTip.Tip="{Binding L[SourcesAllSilentNotice]}" />
+        </StackPanel>
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <StackPanel Spacing="8" MinWidth="420" MaxWidth="560">
+              <TextBlock Text="{Binding L[SourcesTitle]}" Classes="subtitle" />
+              <TextBlock Text="{Binding L[SourcesHint]}" Classes="caption" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding Sources.Items}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SourceRowViewModel">
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" Margin="0,4">
+                      <PathIcon Grid.RowSpan="2" Margin="0,0,8,0" VerticalAlignment="Center"
+                                Data="{StaticResource Icon.Speaker}" IsVisible="{Binding IsOutput}" />
+                      <PathIcon Grid.RowSpan="2" Margin="0,0,8,0" VerticalAlignment="Center"
+                                Data="{StaticResource Icon.Record}" IsVisible="{Binding !IsOutput}" />
+                      <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="caption">
+                          <Run Text="{Binding KindText}" />
+                          <Run Text=" · " />
+                          <Run Text="{Binding StatusText}" />
+                        </TextBlock>
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <Button Content="{Binding AutoText}" Command="{Binding SetAutoCommand}" Classes.accent="{Binding IsAuto}"
+                                AutomationProperties.Name="{Binding AutoText}" />
+                        <Button Content="{Binding OnText}" Command="{Binding SetOnCommand}" Classes.accent="{Binding IsOn}"
+                                AutomationProperties.Name="{Binding OnText}" />
+                        <Button Content="{Binding OffText}" Command="{Binding SetOffCommand}" Classes.accent="{Binding IsOff}"
+                                AutomationProperties.Name="{Binding OffText}" />
+                      </StackPanel>
+                      <ProgressBar Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,4,0,0"
+                                   Classes="slim meter-mic" Minimum="0" Maximum="1" Value="{Binding Level}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+
       <!-- Conversation language -->
       <Button Classes="chip" IsEnabled="{Binding CanEditOptions}"
               ToolTip.Tip="{Binding L[ConversationLanguage]}"

@@ -135,3 +135,19 @@ def test_resolve_devices_runs_every_lookup_through_call() -> None:
 def test_resolve_devices_reports_a_missing_device() -> None:
     with pytest.raises(LookupError):
         resolve_devices(_direct, FakePyAudio(), 99, None)
+
+
+class _NoDefaults(FakePyAudio):
+    def get_default_wasapi_loopback(self) -> dict[str, Any]:
+        raise LookupError("no default output")
+
+
+def test_resolve_devices_optional_gives_none_for_a_missing_default() -> None:
+    devices = resolve_devices(_direct, _NoDefaults(), None, None, optional=True)
+    assert devices[Channel.MIC].id == 2
+    assert devices[Channel.SYSTEM] is None
+
+
+def test_resolve_devices_optional_still_raises_for_a_missing_chosen_id() -> None:
+    with pytest.raises(LookupError):
+        resolve_devices(_direct, FakePyAudio(), 99, None, optional=True)

@@ -55,6 +55,34 @@ internal sealed class FakeRecorderClient : IRecorderClient
             : Task.FromResult(new RecordingSummary(RecordingId, "recording"));
     }
 
+    public List<(string SourceId, string Mode)> ModeChanges { get; } = [];
+
+    public Exception? SourcesError { get; set; }
+
+    public List<RecordingSource> SourceItems { get; } = [];
+
+    public Task<RecordingSources> GetSourcesAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new RecordingSources(RecordingId, [.. SourceItems]));
+
+    public Task<RecordingSources> SetSourceModeAsync(
+        string sourceId, string mode, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("source_mode");
+        ModeChanges.Add((sourceId, mode));
+        if (SourcesError is { } error)
+        {
+            return Task.FromException<RecordingSources>(error);
+        }
+
+        var index = SourceItems.FindIndex(item => item.Id == sourceId);
+        if (index >= 0)
+        {
+            SourceItems[index] = SourceItems[index] with { Mode = mode, Selected = mode == "on" || (mode == "auto" && SourceItems[index].Selected) };
+        }
+
+        return Task.FromResult(new RecordingSources(RecordingId, [.. SourceItems]));
+    }
+
     private Task<RecordingSummary> Control(string call, string status)
     {
         Calls.Add(call);

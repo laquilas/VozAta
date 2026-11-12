@@ -849,6 +849,8 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `RECORDER_FSYNC_SECONDS` | `2` | 61 | seconds between two fsyncs of the recording files (0.5–30): what a power cut can lose |
 | `RECORDER_MAX_SEGMENT_MB` | `2000` | 61 | largest recording file (100–3900 MB, below the WAV 4 GB limit); a longer meeting goes on in a new file |
 | `RECORDER_BUFFER_WARN_SECONDS` | `30` | 61 | an `error disk_backlog` event when this much audio waits in memory for the disk (5–3600 s) |
+| `CAPTURE_SOURCES` | `all` | 65 | `all`: the recorder records every input and loopback and mixes the selected ones into `mic` / `system`; `pair`: one device per channel, as before |
+| `CAPTURE_EXCLUDE` | (empty) | 65 | comma-separated parts of device names never recorded in `all` mode (e.g. `Stereo Mix`); the preferred device is kept |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
 | `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
 | `ECHO_HOLD_SECONDS` | *(empty)* = `CHUNK_SECONDS + 3` | 18 | how long mic segments wait for a matching system segment (1–60 s); mic lines are delayed by it |
@@ -1253,6 +1255,34 @@ graph LR
   drive the state and elapsed time and its `level` events the meters; the engine's events of the
   same id add the transcript. A recording that went on while the app was closed is adopted when
   the app starts. Without a recorder the engine records as before.
+- **Every device (phase 65).** With `CAPTURE_SOURCES=all` every WASAPI input and loopback is a
+  *source* (`recorder/sources.py`), named from its device (`in-<slug>`, `out-<slug>`: a stable
+  id, not the PortAudio index), each written by its own `DurableTrack` to
+  `live/<id>/sources/<source_id>.wav`. The preferred source of each kind (the UI's choice or the
+  Windows default) opens first, the others in the background; one that fails or hangs is
+  skipped (`state: failed`, `error source_failed`), and only a start where nothing opens fails.
+  `mic.wav` / `system.wav` stay the channels the engine follows: a mix thread
+  (`recorder/source_mix.py`) scores the newest audio (20 ms frames over 10 s: active above
+  -50 dBFS and 12 dB over the window's floor; only exact zeros = digital silence; level
+  envelopes correlated above 0.9 = duplicates, the best one kept), selects the automatic
+  sources (after 0.5 s of activity, dropped 60 s after the last), and mixes the selected ones
+  2 s behind with gain sharing (each gets its share of the frame's power). A kind with nothing
+  selected keeps its previous selection. Auto / On / Off per source come from the UI
+  (`PUT /recordings/current/sources/{id}`); `recording.json` keeps `sources` (kind, name, mode,
+  selected, preferred, state, segments) and `selection_log`. Every open source silent raises
+  `error all_sources_silent` once. After a recorder crash the saved sources still plugged in
+  continue (by name), the others are `gone`; the last 2 s mixed before the crash are only in
+  the source files.
+
+```mermaid
+flowchart LR
+  I[inputs] & O[loopbacks] --> RAW[sources/*.wav]
+  I & O --> SC[scorer] --> SEL{Auto / On / Off}
+  SEL --> MIX[gain-sharing mix, 2 s behind]
+  MIX --> MIC[mic.wav] & SYS[system.wav]
+  MIC & SYS --> ENG[engine, unchanged]
+```
+
 - **Engine gate (phase 62).** While the engine is starting, gone or failed, one panel covers the
   page area (never the Recorder page) with the reason and **Retry connection** (start it again;
   its data loads when the event stream connects). The event loop runs even after a failed start,

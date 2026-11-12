@@ -27,7 +27,6 @@ from typing import BinaryIO
 import numpy as np
 
 from vozata.audio.wav_writer import to_pcm16
-from vozata.domain import Channel
 from vozata.recorder.manifest import (
     REASON_SIZE_LIMIT,
     REASON_START,
@@ -80,7 +79,7 @@ class DurableTrack:
     def __init__(
         self,
         folder: Path,
-        channel: Channel,
+        name: str,
         sample_rate: int,
         segments: list[Segment],
         lock: threading.RLock,
@@ -93,11 +92,12 @@ class DurableTrack:
         now: Callable[[], float] = time.monotonic,
         create: Callable[[Path], BinaryIO] = _create,
     ) -> None:
-        """`segments` is the channel's list in the manifest; it is changed under `lock`, and
+        """`name` is the file stem: a channel (`mic`) or a source id (phase 65). `segments` is
+        the track's list in the manifest; it is changed under `lock`, and
         `on_durable` (which saves the manifest) is called after each change, under `lock` too.
         `start_frame` is where this track's timeline continues (after a recorder restart)."""
         self._folder = folder
-        self._channel = channel
+        self._name = str(name)
         self._rate = sample_rate
         self._segments = segments
         self._lock = lock
@@ -161,9 +161,7 @@ class DurableTrack:
 
     def start(self) -> None:
         """Run `flush_once` on a writer thread until `close`."""
-        self._thread = threading.Thread(
-            target=self._run, name=f"track-{self._channel.value}", daemon=True
-        )
+        self._thread = threading.Thread(target=self._run, name=f"track-{self._name}", daemon=True)
         self._thread.start()
 
     def close(self, timeout: float = 30.0) -> None:
@@ -185,7 +183,7 @@ class DurableTrack:
             self._thread.join(timeout)
         if not self._closed.is_set():
             raise TrackWriteError(
-                f"{self._channel.value}: {self.pending_seconds:.1f} s of audio not yet on disk"
+                f"{self._name}: {self.pending_seconds:.1f} s of audio not yet on disk"
             )
 
     def flush_once(self) -> None:
@@ -228,7 +226,7 @@ class DurableTrack:
     def _open(self) -> None:
         index = len(self._segments) + 1
         while True:
-            path = self._folder / segment_file(self._channel, index)
+            path = self._folder / segment_file(self._name, index)
             try:
                 file = self._create(path)
                 break
@@ -285,7 +283,7 @@ class DurableTrack:
         self.write_errors += 1
         _log.warning(
             "Writing %s failed (%s); the audio is kept and goes to a new file",
-            self._channel.value,
+            self._name,
             error,
         )
         self._staging[:0] = self._unsynced

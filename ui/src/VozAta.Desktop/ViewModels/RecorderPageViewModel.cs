@@ -86,6 +86,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         Devices = new DevicesViewModel(client, preferences);
         MicMeter = new LevelMeterViewModel(clock, watchSilence: false);
         SystemMeter = new LevelMeterViewModel(clock, watchSilence: true);
+        Sources = new RecordingSourcesViewModel(recorder, localization, notify);
         ConversationLanguages =
         [
             new("en", "LanguageEn"), new("pt", "LanguagePt"), new("es", "LanguageEs"), new("auto", "LanguageAuto"),
@@ -207,6 +208,9 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
     /// <summary>"Terms for this meeting": comma or newline separated (phase 19).</summary>
     [ObservableProperty]
     public partial string SessionTerms { get; set; } = "";
+
+    /// <summary>Every device the recorder records and which ones are mixed (phase 65).</summary>
+    public RecordingSourcesViewModel Sources { get; }
 
     public LevelMeterViewModel MicMeter { get; }
 
@@ -496,6 +500,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
         RefreshDetectedLanguage();
         MicMeter.Label = _micLabel ?? _localization["SpeakerMic"];
         SystemMeter.Label = _systemLabel ?? _localization["SpeakerSystem"];
+        Sources.RefreshTexts();
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(PauseResumeText));
     }
@@ -973,6 +978,19 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             case RecorderLevelEvent { Channel: "system" } level when _viaRecorder:
                 SystemMeter.OnLevel(level.RmsDb);
                 return true;
+            case RecorderSourcesEvent sources:
+                if (_viaRecorder)
+                {
+                    Sources.Update(sources.Sources); // another app's recording is not shown
+                }
+
+                return true;
+            case RecorderErrorEvent { Code: "all_sources_silent" }:
+                _notify(_localization["SourcesAllSilentNotice"]);
+                return true;
+            case RecorderErrorEvent { Code: "source_failed" } error:
+                _notify(_localization.Format("SourceFailedNotice", error.Message));
+                return true;
             case RecorderErrorEvent error:
                 _notify(_localization.Format("RecorderProblem", error.Message));
                 return true;
@@ -1340,6 +1358,7 @@ public sealed partial class RecorderPageViewModel : ObservableObject, IDisposabl
             _recordingLive = null;
             IsModelLoading = false;
             Partials.Clear();
+            Sources.Clear();
             if (hadSession)
             {
                 EndTitle(); // the next meeting starts untitled; this one is renamed from history

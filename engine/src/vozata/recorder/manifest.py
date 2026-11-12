@@ -5,6 +5,10 @@ segment files on one frame timeline (`start_frame` = the frame of the segment's 
 Normally a channel has one segment, `mic.wav` / `system.wav`, for the whole meeting; a new
 segment is opened only when writing fails, the size guard is reached or the recorder restarts.
 The frames between two segments (a recorder restart) are silence and are listed in `gaps`.
+
+Since phase 65 the recorder also records every device as a *source* under `sources/`: `sources`
+holds each one (kind, name, mode, selected, state, segments) and `selection_log` every change of
+the selection; `mic` / `system` are then the mix of the selected sources.
 """
 
 from __future__ import annotations
@@ -21,6 +25,7 @@ from vozata.domain import Channel
 SCHEMA_VERSION = 1
 MANIFEST = "recording.json"
 LIVE_FOLDER = "live"
+SOURCES_FOLDER = "sources"
 
 RECORDING = "recording"
 PAUSED = "paused"
@@ -41,9 +46,10 @@ def live_dir(output_dir: Path) -> Path:
     return output_dir / LIVE_FOLDER
 
 
-def segment_file(channel: Channel, index: int) -> str:
-    """`mic.wav` for the first segment of a channel, then `mic-0002.wav`, `mic-0003.wav`..."""
-    return f"{channel.value}.wav" if index == 1 else f"{channel.value}-{index:04d}.wav"
+def segment_file(name: str, index: int) -> str:
+    """`mic.wav` for the first segment of a track, then `mic-0002.wav`, `mic-0003.wav`..."""
+    stem = str(name)
+    return f"{stem}.wav" if index == 1 else f"{stem}-{index:04d}.wav"
 
 
 @dataclass
@@ -85,6 +91,8 @@ class Manifest:
     stopped_at: str | None = None
     stop_reason: str | None = None
     engine: dict[str, Any] | None = None
+    sources: dict[str, dict[str, Any]] = field(default_factory=dict)
+    selection_log: list[dict[str, Any]] = field(default_factory=list)
     schema_version: int = SCHEMA_VERSION
 
     @property
@@ -102,6 +110,13 @@ class Manifest:
         """The channel's timeline length by the durable frames of its segments."""
         return max((segment.end_frame for segment in self.segments(channel)), default=0)
 
+    def source_segments(self, source_id: str) -> list[Segment]:
+        return self.sources[source_id].setdefault("segments", [])
+
+    def source_frames_total(self, source_id: str) -> int:
+        segments = self.source_segments(source_id)
+        return max((segment.end_frame for segment in segments), default=0)
+
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -113,6 +128,13 @@ class Manifest:
             for name, segments in (data.get("channels") or {}).items()
         }
         values["gaps"] = [Gap(**gap) for gap in data.get("gaps") or []]
+        values["sources"] = {
+            source_id: {
+                **entry,
+                "segments": [Segment(**segment) for segment in entry.get("segments") or []],
+            }
+            for source_id, entry in (data.get("sources") or {}).items()
+        }
         known = {name for name in cls.__dataclass_fields__}
         return cls(**{key: value for key, value in values.items() if key in known})
 

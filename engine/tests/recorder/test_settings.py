@@ -45,3 +45,15 @@ def test_the_process_environment_and_dot_env_are_read_by_default(
     settings = load_recorder_settings()
 
     assert (settings.fsync_seconds, settings.buffer_warn_seconds) == (4, 60)
+
+
+def test_capture_sources_and_exclusions() -> None:
+    settings = load_recorder_settings(
+        {"CAPTURE_SOURCES": "PAIR", "CAPTURE_EXCLUDE": "Stereo Mix, ,Intel"}
+    )
+    assert settings.capture_sources == "pair"
+    assert settings.capture_exclude == ("Stereo Mix", "Intel")
+
+
+def test_a_bad_capture_sources_value_falls_back_to_all() -> None:
+    assert load_recorder_settings({"CAPTURE_SOURCES": "some"}).capture_sources == "all"

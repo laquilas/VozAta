@@ -1887,4 +1887,61 @@
   <data name="RequestReason_session_still_active" xml:space="preserve">
     <value>a reunião ainda estava sendo processada</value>
   </data>
+  <data name="SourcesTitle" xml:space="preserve">
+    <value>Fontes de áudio</value>
+  </data>
+  <data name="SourcesHint" xml:space="preserve">
+    <value>Todos os microfones e saídas são gravados; os que têm fala entram na reunião. Auto decide sozinho, Ligado usa sempre a fonte, Desligado nunca.</value>
+  </data>
+  <data name="SourcesSummary" xml:space="preserve">
+    <value>{0} de {1} em uso</value>
+  </data>
+  <data name="SourceKindInput" xml:space="preserve">
+    <value>Microfone</value>
+  </data>
+  <data name="SourceKindOutput" xml:space="preserve">
+    <value>Saída</value>
+  </data>
+  <data name="SourceInUse" xml:space="preserve">
+    <value>Em uso</value>
+  </data>
+  <data name="SourceNotInUse" xml:space="preserve">
+    <value>Fora de uso</value>
+  </data>
+  <data name="SourceSilent" xml:space="preserve">
+    <value>Sem sinal</value>
+  </data>
+  <data name="SourceFailed" xml:space="preserve">
+    <value>Não abriu: {0}</value>
+  </data>
+  <data name="SourceModeAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="SourceModeOn" xml:space="preserve">
+    <value>Ligado</value>
+  </data>
+  <data name="SourceModeOff" xml:space="preserve">
+    <value>Desligado</value>
+  </data>
+  <data name="SourceModeFailed" xml:space="preserve">
+    <value>Não foi possível mudar {0}: {1}</value>
+  </data>
+  <data name="SourceFailedNotice" xml:space="preserve">
+    <value>Um dispositivo de áudio foi ignorado: {0}</value>
+  </data>
+  <data name="SourcesAllSilentNotice" xml:space="preserve">
+    <value>Todos os microfones e saídas estão em silêncio: verifique se o microfone não está mudo ou bloqueado nas configurações de privacidade do Windows.</value>
+  </data>
+  <data name="Setting_CAPTURE_SOURCES" xml:space="preserve">
+    <value>Dispositivos gravados</value>
+  </data>
+  <data name="SettingHelp_CAPTURE_SOURCES" xml:space="preserve">
+    <value>all grava todos os microfones e todas as saídas e usa os que têm fala; pair grava só o microfone e a saída escolhidos.</value>
+  </data>
+  <data name="Setting_CAPTURE_EXCLUDE" xml:space="preserve">
+    <value>Dispositivos nunca gravados</value>
+  </data>
+  <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
+    <value>Partes dos nomes dos dispositivos, separadas por vírgulas (por exemplo Stereo Mix), deixadas de fora quando todos são gravados.</value>
+  </data>
 </root>

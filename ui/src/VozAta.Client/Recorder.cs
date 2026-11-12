@@ -29,6 +29,27 @@ public sealed record StartRecordingRequest(
     IReadOnlyDictionary<string, object?> Options);
 
 /// <summary>
+/// One audio source of a recording that records every device (phase 65): an input
+/// (<c>kind</c> "mic") or a loopback ("system"), its mode (auto, on, off), whether it is mixed,
+/// and its level, score (0..1) and digital silence.
+/// </summary>
+public sealed record RecordingSource(
+    string Id,
+    string Kind,
+    string Name,
+    string Mode = "auto",
+    bool Selected = false,
+    bool Preferred = false,
+    string State = "open",
+    string? Error = null,
+    double RmsDb = -90,
+    double Score = 0,
+    bool Silent = false);
+
+/// <summary><c>GET /recordings/current/sources</c> and the <c>sources</c> event.</summary>
+public sealed record RecordingSources(string? Id, IReadOnlyList<RecordingSource> Items);
+
+/// <summary>
 /// The recorder process API (phase 61): it records from the first second, with or without the
 /// engine. Errors use the engine's exceptions (<see cref="EngineApiException"/>,
 /// <see cref="EngineUnavailableException"/>), so callers handle both the same way.
@@ -50,6 +71,12 @@ public interface IRecorderClient
     /// <summary><c>PATCH /recordings/current</c>: merge options (e.g. the title) into the recording.</summary>
     Task<RecordingSummary> UpdateOptionsAsync(
         IReadOnlyDictionary<string, object?> options, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /recordings/current/sources</c> (phase 65); empty in pair mode.</summary>
+    Task<RecordingSources> GetSourcesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary><c>PUT /recordings/current/sources/{id}</c>: <c>auto</c>, <c>on</c> or <c>off</c>.</summary>
+    Task<RecordingSources> SetSourceModeAsync(string sourceId, string mode, CancellationToken cancellationToken = default);
 }
 
 public sealed class RecorderClient(HttpClient http) : IRecorderClient
@@ -75,6 +102,14 @@ public sealed class RecorderClient(HttpClient http) : IRecorderClient
     public Task<RecordingSummary> UpdateOptionsAsync(
         IReadOnlyDictionary<string, object?> options, CancellationToken cancellationToken = default) =>
         SendAsync<RecordingSummary>(HttpMethod.Patch, "recordings/current", new { options }, cancellationToken);
+
+    public Task<RecordingSources> GetSourcesAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<RecordingSources>(HttpMethod.Get, "recordings/current/sources", null, cancellationToken);
+
+    public Task<RecordingSources> SetSourceModeAsync(
+        string sourceId, string mode, CancellationToken cancellationToken = default) =>
+        SendAsync<RecordingSources>(
+            HttpMethod.Put, $"recordings/current/sources/{Uri.EscapeDataString(sourceId)}", new { mode }, cancellationToken);
 
     private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
@@ -137,6 +172,9 @@ public sealed record RecorderStatusEvent(RecordingSummary Recording) : RecorderE
 
 public sealed record RecorderLevelEvent(string Channel, double RmsDb) : RecorderEvent;
 
+/// <summary>Every source of the recording (phase 65), about twice a second and on every change.</summary>
+public sealed record RecorderSourcesEvent(RecordingSources Sources) : RecorderEvent;
+
 /// <summary>A problem the recording survives (<c>write_failed</c>, <c>disk_backlog</c>, <c>manifest_write_failed</c>).</summary>
 public sealed record RecorderErrorEvent(string Code, string Message) : RecorderEvent;
 
@@ -157,6 +195,9 @@ public static class RecorderEventParser
                     : null,
                 "level" => JsonSerializer.Deserialize<LevelData>(data, EngineJson.Options) is { } level
                     ? new RecorderLevelEvent(level.Channel, level.RmsDb)
+                    : null,
+                "sources" => JsonSerializer.Deserialize<RecordingSources>(data, EngineJson.Options) is { Items: not null } sources
+                    ? new RecorderSourcesEvent(sources)
                     : null,
                 "error" => JsonSerializer.Deserialize<ErrorData>(data, EngineJson.Options) is { } error
                     ? new RecorderErrorEvent(error.Code, error.Message)

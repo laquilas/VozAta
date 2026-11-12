@@ -136,3 +136,22 @@ def test_list_recordings_finds_the_folders_with_a_manifest(tmp_path: Path) -> No
     (live_dir(tmp_path) / "stray").mkdir()
 
     assert list_recordings(tmp_path) == ["20261103_101500", "20261103_120000"]
+
+
+def test_sources_and_the_selection_log_round_trip(tmp_path: Path) -> None:
+    from vozata.recorder.manifest import Manifest, Segment
+
+    manifest = Manifest(
+        id="20261112_140724", started_at="2026-11-12T14:07:24-03:00", sample_rate=16000
+    )
+    manifest.sources["in-jbl"] = {"kind": "mic", "name": "JBL", "selected": True}
+    manifest.source_segments("in-jbl").append(Segment("in-jbl.wav", 0, 160))
+    manifest.selection_log.append({"at": 1.5, "source": "in-jbl", "selected": True, "by": "auto"})
+    write_manifest(tmp_path, manifest)
+
+    loaded = read_manifest(tmp_path)
+
+    assert loaded.sources["in-jbl"]["segments"] == [Segment("in-jbl.wav", 0, 160)]
+    assert loaded.source_frames_total("in-jbl") == 160
+    assert loaded.selection_log == manifest.selection_log
+    assert segment_file("in-jbl", 2) == "in-jbl-0002.wav"
