@@ -114,12 +114,15 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 62 | [Engine gate, retry connection, reattach after a crash](phases/62-engine-gate.md) | 61 | done |
 | 63 | [Options editable during the recording](phases/63-live-options.md) | 61 | done |
 | 64 | [Minutes skipped at Stop and the marker](phases/64-minutes-skipped.md) | 61 | done |
+| 65 | [Record every audio device, choose the sources automatically](phases/65-all-sources.md) | 61, 63 | in progress (`feature/65-all-sources`) |
+| 66 | [Sources kept per meeting; change the selection after the meeting](phases/66-sources-after-meeting.md) | 65 | todo |
+| 67 | [Installer maintenance: Update, Reinstall, Remove](phases/67-installer-maintenance.md) | 13, 57, 58 | todo |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
 **Parallel groups** (independent once their dependencies are done): 02 / 03 / 04 · 08 / 09 / 10 ·
 12 / 14 / 17 / 18 · 20 / 21 / 22 · 25 / 26 / 27 · 28 / 29 · 30 / 34 · 31 / 35 ·
-32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43 · 45 / 47 / 48 · 49 / 50 · 62 / 63 / 64.
+32 / 36 / 38 · 33 / 37 · 40 / 42 · 41 / 43 · 45 / 47 / 48 · 49 / 50 · 62 / 63 / 64 · 65 / 67.
 
 **Milestones**
 - **M1 — CLI MVP** (00–05): record, live transcript in the terminal, three WAVs, minutes.
@@ -151,6 +154,9 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
   and never loses audio, even when the engine or the app crashes; only the parts that need the
   engine wait for it, with a retry; options editable during the recording; minutes skipped and
   marked when the engine is not ready.
+- **M13 — Every device, safe updates** (65–67): every microphone and output recorded at once,
+  the sources with speech chosen automatically (changeable during and after the meeting); an
+  installer that updates, reinstalls or removes, keeping the data unless asked.
 
 ## Dependency graph
 
@@ -257,6 +263,12 @@ graph LR
   P61 --> P62[62 Engine gate]
   P61 --> P63[63 Live options]
   P61 --> P64[64 Minutes skipped]
+  P61 --> P65[65 Every audio device]
+  P63 --> P65
+  P65 --> P66[66 Sources after the meeting]
+  P13 --> P67[67 Installer maintenance]
+  P57 --> P67
+  P58 --> P67
 ```
 
 ## Backlog (not scheduled)
