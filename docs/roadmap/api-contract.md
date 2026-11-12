@@ -92,7 +92,7 @@ The recorder process (`python -m vozata.recorder`, `vozata-recorder.exe`) listen
 `snake_case`, errors in the engine's envelope with English messages (the desktop app shows them
 as they are). `RecordingSummary = {id, status: "recording"|"paused"|"stopped", started_at,
 duration_seconds, devices: {mic: {id, name}, system: {id, name}}, incarnation, segments: {mic: n,
-system: n}, options}`; `options` is opaque to the recorder (the engine reads `language`,
+system: n}, options, capture?: "all"}`; `options` is opaque to the recorder (the engine reads `language`,
 `template`, `vocabulary`, `translate_to`, `title`, `live_transcription` when it attaches).
 
 | Method | Path | Request | Response |
@@ -103,12 +103,19 @@ system: n}, options}`; `options` is opaque to the recorder (the engine reads `la
 | GET | `/recordings/current` | — | `RecordingSummary`; `404 no_active_recording` |
 | PATCH | `/recordings/current` | `{options: object}` (merged) | `RecordingSummary` |
 | POST | `/recordings/current/pause` · `/resume` · `/stop` | — | `RecordingSummary`; stop returns once every sample is on disk (fsynced, headers patched, `stopped`) |
+| GET | `/recordings/current/sources` | — | (65) `{id, items: [RecordingSource]}`, `[]` when the recording has one device per channel; `404 no_active_recording` |
+| PUT | `/recordings/current/sources/{source_id}` | `{mode: "auto"\|"on"\|"off"}` | (65) `{id, items}`; `404 source_not_found` / `no_active_recording`, `409 sources_not_recorded`, `422 invalid_mode` |
 | GET | `/recordings` | — | `{items: [RecordingSummary + stop_reason]}`: every recording under `OUTPUT_DIR/live/` |
 | GET | `/recordings/{id}` | — | its `recording.json`; `404 recording_not_found` |
 | POST | `/recordings/{id}/resume` | — | continue a recording whose recorder died: a gap, then new segment files; `409 recording_already_active` / `recording_stopped` |
 | DELETE | `/recordings/{id}` | — | `204`; `409 recording_active` |
-| GET | `/events` | — | Server-Sent Events: `status` (a `RecordingSummary`, `{id: null, status: "idle"}` when idle; on connect, on every change and every 1 s while recording), `level` (`{channel, rms_db}`, ~10 Hz per channel), `error` (`{code, message}`: `write_failed`, `disk_backlog`, `manifest_write_failed`); a `: keep-alive` comment every 15 s |
+| GET | `/events` | — | Server-Sent Events: `status` (a `RecordingSummary`, `{id: null, status: "idle"}` when idle; on connect, on every change and every 1 s while recording), `level` (`{channel, rms_db}`, ~10 Hz per channel), `error` (`{code, message}`: `write_failed`, `disk_backlog`, `manifest_write_failed`, `source_failed` and `all_sources_silent` (65)), `sources` (65: `{id, items: [RecordingSource]}`, every 0.5 s and on every change); a `: keep-alive` comment every 15 s |
 | POST | `/shutdown` | — | `202`; `409 recording_active` |
+
+`RecordingSource` (65) `= {id, kind: "mic"|"system", name, mode: "auto"|"on"|"off", selected,
+preferred, state: "pending"|"open"|"failed"|"gone", error, rms_db, score (0..1), silent}`. With
+`CAPTURE_SOURCES=all`, `mic_device_id` / `system_device_id` of `POST /recordings` choose the
+preferred sources, and the `level` events of a channel come from its selected sources.
 
 `SessionSummary.minutes_state` (64): `generated` (it has minutes), `skipped_not_ready` /
 `skipped_by_user` (processed without them; `session.json.minutes_skipped`, cleared when

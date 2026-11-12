@@ -1932,4 +1932,16 @@
   <data name="SourcesAllSilentNotice" xml:space="preserve">
     <value>Every microphone and output gives only silence: check that the microphone is not muted or blocked in Windows privacy settings.</value>
   </data>
+  <data name="Setting_CAPTURE_SOURCES" xml:space="preserve">
+    <value>Devices to record</value>
+  </data>
+  <data name="SettingHelp_CAPTURE_SOURCES" xml:space="preserve">
+    <value>all records every microphone and every output and uses the ones with speech; pair records only the chosen microphone and output.</value>
+  </data>
+  <data name="Setting_CAPTURE_EXCLUDE" xml:space="preserve">
+    <value>Devices never recorded</value>
+  </data>
+  <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
+    <value>Parts of device names, separated by commas (for example Stereo Mix), left out when every device is recorded.</value>
+  </data>
 </root>

@@ -18,6 +18,7 @@ from dotenv import dotenv_values
 
 from vozata.domain import (
     AppLanguage,
+    CaptureSources,
     ChunkMode,
     ConversationLanguage,
     MixMode,
@@ -174,6 +175,8 @@ class Settings:
     recorder_fsync_seconds: float = 2.0
     recorder_max_segment_mb: int = 2000
     recorder_buffer_warn_seconds: float = 30.0
+    capture_sources: CaptureSources = CaptureSources.ALL  # read by the recorder (phase 65)
+    capture_exclude: str = ""  # comma-separated device-name parts the recorder skips
     # Worker on another PC (phase 44): the engine's `WORKER_URL`, both sides' `WORKER_TOKEN`, and
     # where `vozata worker` listens on the worker PC
     worker_url: str | None = None
@@ -314,6 +317,8 @@ def load_settings(env: Mapping[str, str] | None = None, env_file: Path | None = 
         recorder_max_segment_mb=_integer(
             raw, "RECORDER_MAX_SEGMENT_MB", 2000, minimum=100, maximum=3900
         ),
+        capture_sources=_choice(raw, "CAPTURE_SOURCES", CaptureSources, CaptureSources.ALL),
+        capture_exclude=raw.get("CAPTURE_EXCLUDE", ""),
         recorder_buffer_warn_seconds=_number(
             raw, "RECORDER_BUFFER_WARN_SECONDS", 30.0, minimum=5, maximum=3600
         ),

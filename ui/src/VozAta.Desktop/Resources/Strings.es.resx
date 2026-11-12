@@ -1932,4 +1932,16 @@
   <data name="SourcesAllSilentNotice" xml:space="preserve">
     <value>Todos los micrófonos y salidas están en silencio: comprueba que el micrófono no esté silenciado ni bloqueado en la privacidad de Windows.</value>
   </data>
+  <data name="Setting_CAPTURE_SOURCES" xml:space="preserve">
+    <value>Dispositivos grabados</value>
+  </data>
+  <data name="SettingHelp_CAPTURE_SOURCES" xml:space="preserve">
+    <value>all graba todos los micrófonos y todas las salidas y usa los que tienen voz; pair graba solo el micrófono y la salida elegidos.</value>
+  </data>
+  <data name="Setting_CAPTURE_EXCLUDE" xml:space="preserve">
+    <value>Dispositivos que nunca se graban</value>
+  </data>
+  <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
+    <value>Partes de los nombres de los dispositivos, separadas por comas (por ejemplo Stereo Mix), que se omiten al grabar todos.</value>
+  </data>
 </root>

@@ -545,6 +545,8 @@ def test_every_key_belongs_to_a_known_group_and_restart_keys_are_explicit() -> N
         "RECORDER_FSYNC_SECONDS",
         "RECORDER_MAX_SEGMENT_MB",
         "RECORDER_BUFFER_WARN_SECONDS",
+        "CAPTURE_SOURCES",
+        "CAPTURE_EXCLUDE",
     }
 
 
@@ -901,3 +903,15 @@ def test_the_cuda_runtime_lives_next_to_the_speaker_runtime() -> None:
     settings = load_settings(env={"LOCALAPPDATA": r"C:\Users\me\AppData\Local"})
 
     assert settings.cuda_runtime_dir == Path(r"C:\Users\me\AppData\Local") / "VozAta" / "cuda"
+
+
+def test_capture_sources_and_exclusions_are_read() -> None:
+    from vozata.domain import CaptureSources
+
+    settings = load_settings(
+        {"CAPTURE_SOURCES": "pair", "CAPTURE_EXCLUDE": "Stereo Mix"}, env_file=None
+    )
+
+    assert settings.capture_sources == CaptureSources.PAIR
+    assert settings.capture_exclude == "Stereo Mix"
+    assert load_settings({}, env_file=None).capture_sources == CaptureSources.ALL

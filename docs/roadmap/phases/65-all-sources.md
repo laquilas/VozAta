@@ -112,7 +112,7 @@ devices plugged in during a recording.
 - **Branch:** `feature/65-all-sources`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** docs: `architecture.md` (§6 data flow, §9 `CAPTURE_SOURCES` / `CAPTURE_EXCLUDE`, §18 recorder), `api-contract.md` (sources routes and event), `.env.example`, `config.py` / `settings_fields.py`; then the full suites and a manual check on this PC.
+- **Next step:** manual check on this PC: a scratch recorder (`RECORDER_PORT=8779`, scratch `OUTPUT_DIR`) recording every device while audio plays on the JBL headset; then the PR.
 
 ### Steps
 

@@ -67,6 +67,11 @@ class MixMode(StrEnum):
     STEREO = "stereo"
 
 
+class CaptureSources(StrEnum):
+    ALL = "all"  # every input and loopback, the speaking ones mixed (phase 65)
+    PAIR = "pair"  # one microphone and one loopback (phases 02-64)
+
+
 class StorageBackend(StrEnum):
     """Where sessions are stored (phase 31): one SQLite database, or one folder per session."""
 
