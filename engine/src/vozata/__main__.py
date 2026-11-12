@@ -1,6 +1,6 @@
 """Command line: `python -m vozata record | serve | minutes <dir> | diarize <dir> | reindex |
 recover [<dir> | --all] | migrate [--dry-run] | transcribe <id> | speakers install |
-cuda install`."""
+cuda install | data paths | data erase --yes`."""
 
 from __future__ import annotations
 
@@ -37,6 +37,8 @@ from vozata.bootstrap_processing import build_resume_job, build_transcribe_comma
 from vozata.cli.console import ConsoleObserver
 from vozata.cli.cuda import ACTIONS as CUDA_ACTIONS
 from vozata.cli.cuda import run_cuda
+from vozata.cli.data import ACTIONS as DATA_ACTIONS
+from vozata.cli.data import run_data
 from vozata.cli.diarize import run_diarize
 from vozata.cli.migrate import run_migrate
 from vozata.cli.minutes import run_minutes
@@ -101,6 +103,11 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     cuda = commands.add_parser("cuda", help=t("cli.help.cuda"))
     cuda.add_argument("action", choices=CUDA_ACTIONS, help=t("cli.help.cuda_action"))
     cuda.add_argument("--json", action="store_true", help=t("cli.help.cuda_json"))
+    data = commands.add_parser("data", help=t("cli.help.data"))
+    data.add_argument("action", choices=DATA_ACTIONS, help=t("cli.help.data_action"))
+    data.add_argument("--yes", action="store_true", help=t("cli.help.data_yes"))
+    data.add_argument("--json", action="store_true", help=t("cli.help.data_json"))
+    data.add_argument("--keep-runtimes", action="store_true", help=t("cli.help.data_keep_runtimes"))
     return parser
 
 
@@ -178,6 +185,16 @@ def main(
                 console,
                 localizer,
                 json_output=args.json,
+            )
+        if args.command == "data":
+            return run_data(
+                args.action,
+                settings,
+                console,
+                localizer,
+                yes=args.yes,
+                json_output=args.json,
+                keep_runtimes=args.keep_runtimes,
             )
         if args.command == "reindex":
             return run_reindex(

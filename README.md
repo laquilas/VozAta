@@ -7,7 +7,7 @@ multi-speaker conversations in near real time, and uses AI to generate structure
 minutes (*atas*). Runs locally by default: speech-to-text on your GPU and minutes from a
 local LLM.
 
-> **Status: usable (v0.3.1).** Every roadmap phase is done; progress is tracked in
+> **Status: usable (v0.4.0).** Every roadmap phase is done; progress is tracked in
 > [docs/roadmap/README.md](docs/roadmap/README.md). Installation: [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Features
@@ -130,6 +130,10 @@ This needs the .NET 10 SDK and [Inno Setup](https://jrsoftware.org/isinfo.php) 6
 stops after preparing `build/`. Output: `build/installer/VozAta-Setup-<v>.exe` and
 `VozAta-Worker-Setup-<v>.exe`. The standard build takes about 10–12 minutes. Use `-Out <folder>`
 to build outside a synced folder such as OneDrive.
+
+**Updating.** Running a newer setup on a PC that has VozAta updates it in place: meetings,
+recordings and settings stay. The setup also offers *Reinstall* and *Remove* (with an unticked
+*Also delete my data*); see [docs/INSTALL.md](docs/INSTALL.md#update-reinstall-or-remove).
 
 **With or without CUDA.** There is a single installer: the NVIDIA CUDA libraries (and speaker
 identification) are never bundled, and the build fails if `torch` or `nvidia` gets into it. CUDA

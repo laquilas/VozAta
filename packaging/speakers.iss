@@ -5,6 +5,11 @@
 ; The including script defines SpeakersWorkDir (where the engine reads its .env) and OtherAppId (the
 ; other product's AppId), and the SpeakersTask message (how to download it later differs).
 
+; the downloaded runtimes; a test build points it elsewhere (maintenance-test.ps1)
+#ifndef RuntimesDir
+  #define RuntimesDir "{localappdata}\VozAta"
+#endif
+
 [CustomMessages]
 en.SpeakersStatus=Downloading speaker identification (see the console window)...
 ptbr.SpeakersStatus=Baixando a identificação de participantes (veja a janela do console)...
@@ -32,7 +37,7 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usPostUninstall) and not OtherProductInstalled() then
   begin
-    DelTree(ExpandConstant('{localappdata}\VozAta\speakers'), True, True, True);
-    DelTree(ExpandConstant('{localappdata}\VozAta\cuda'), True, True, True);
+    DelTree(ExpandConstant('{#RuntimesDir}\speakers'), True, True, True);
+    DelTree(ExpandConstant('{#RuntimesDir}\cuda'), True, True, True);
   end;
 end;

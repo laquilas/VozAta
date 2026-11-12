@@ -22,6 +22,19 @@ Python and .NET are **not** needed: both are inside the installer.
 2. Run it. It installs for your user only, in `%LOCALAPPDATA%\Programs\VozAta`, and adds VozAta to
    the Start menu.
 
+### Update, reinstall or remove
+
+Run the setup of the version you want on a PC that already has VozAta. It says which version is
+installed and offers:
+
+- **Update to version X** (a newer setup) or **Reinstall version X** (the same one): the program
+  is replaced, and every meeting, recording and setting is kept.
+- **Remove VozAta from this PC**, with **Also delete my data** (unticked; it asks you to confirm
+  when ticked).
+
+An older setup asks before replacing a newer version (your data is kept). For scripts:
+`/VERYSILENT` updates in place; an older version is refused unless `/ALLOWDOWNGRADE` is given.
+
 A GPU PC that transcribes for the other PCs of the network gets its own installer,
 `VozAta-Worker-Setup-<version>.exe` (VozAta Worker and the engine, without the meeting app; it
 installs in `%LOCALAPPDATA%\Programs\VozAta Worker`): see
@@ -50,16 +63,20 @@ recording meeting calls", "Meeting apps").
 
 | What | Where | Kept when uninstalling |
 |------|-------|------------------------|
-| Recordings (audio, transcript, minutes) | `Documents\VozAta` | yes |
-| Engine settings (`.env`) | `%APPDATA%\VozAta\.env` | yes |
-| Desktop preferences (devices, window, tray) | `%APPDATA%\VozAta\ui.json` | yes |
+| Recordings (audio, transcript, minutes) | `Documents\VozAta` (or `OUTPUT_DIR`, `DATABASE_PATH`) | yes, unless you ask to delete your data |
+| Engine settings (`.env`) | `%APPDATA%\VozAta\.env` | yes, unless you ask to delete your data |
+| Desktop preferences (devices, window, tray) | `%APPDATA%\VozAta\ui.json` | yes, unless you ask to delete your data |
 | Program files | `%LOCALAPPDATA%\Programs\VozAta` | removed |
 | Speech model cache | `%USERPROFILE%\.cache\huggingface` | yes (delete it to free ~1.6 GB) |
 
 ## Uninstall
 
-Windows Settings → Apps → VozAta → Uninstall. Recordings and settings stay; delete the folders above
-to remove them too.
+Windows Settings → Apps → VozAta → Uninstall (or run the setup and choose **Remove**). It asks
+whether to delete your data too; **No** (the default) keeps meetings, recordings and settings for a
+later installation. Yes deletes the database, the recordings folder, the settings and the
+downloaded components (`vozata-engine data paths` lists them; a folder that holds more than
+VozAta's data, such as Documents itself, is never deleted). Silent uninstalls (`/VERYSILENT`) keep
+the data unless `/DELETEDATA` is given.
 
 ## GPU support
 
@@ -113,5 +130,7 @@ them downloads them, see [GPU support](#gpu-support) and
 [Speaker identification](#speaker-identification).
 
 Both installers (`VozAta-Setup-<v>.exe` and `VozAta-Worker-Setup-<v>.exe`) land in
-`build/installer/`. The GitHub workflow `Release` builds it on every `v*` tag
+`build/installer/`. `packaging/maintenance-test.ps1` checks update, reinstall, downgrade and
+remove (keep / delete the data) with two test builds whose settings and runtime folders point at a
+scratch folder (`iscc /DSpeakersWorkDir=... /DRuntimesDir=...`). The GitHub workflow `Release` builds it on every `v*` tag
 and can be run by hand.

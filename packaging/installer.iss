@@ -1,7 +1,8 @@
 ﻿; VozAta installer (Inno Setup 6 or 7), the meeting app for every PC. Built by packaging/build.ps1:
 ;   iscc /DAppVersion=1.0.0 /DBuildDir=<repo>\build packaging\installer.iss
 ; Per-user install (no administrator rights). The uninstaller removes the program files and keeps
-; %APPDATA%\VozAta\.env (settings) and Documents\VozAta (recordings). Speaker identification is
+; %APPDATA%\VozAta\.env (settings) and Documents\VozAta (recordings) unless the user asks to delete
+; them; running the setup again offers Update / Reinstall / Remove (maintenance.iss, phase 67). Speaker identification is
 ; downloaded on this PC (phase 56). VozAta Worker, for the GPU PC, has its own installer
 ; (installer-worker.iss, phase 57).
 
@@ -11,7 +12,14 @@
 #ifndef BuildDir
   #define BuildDir "..\build"
 #endif
-#define SpeakersWorkDir "{userappdata}\VozAta"
+; the settings folder; a test build points it elsewhere (maintenance-test.ps1)
+#ifndef SpeakersWorkDir
+  #define SpeakersWorkDir "{userappdata}\VozAta"
+#endif
+#define ThisAppId "{6E0B9F4A-2C5D-4E8B-9A1F-3D7C5B2E8A61}"
+#define ProductName "VozAta"
+; %APPDATA%\VozAta\worker belongs to VozAta Worker
+#define SettingsHoldsOther
 ; installer-worker.iss
 #define OtherAppId "{2BA26749-AC77-48E5-8189-E8B4F542489D}"
 
@@ -53,6 +61,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 #include "gpu.iss"
 #include "speakers.iss"
+#include "maintenance.iss"
 
 [InstallDelete]
 ; up to 0.1.0 this installer also carried VozAta Worker (phase 57 split it out)

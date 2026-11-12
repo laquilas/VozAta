@@ -116,7 +116,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 64 | [Minutes skipped at Stop and the marker](phases/64-minutes-skipped.md) | 61 | done |
 | 65 | [Record every audio device, choose the sources automatically](phases/65-all-sources.md) | 61, 63 | done |
 | 66 | [Sources kept per meeting; change the selection after the meeting](phases/66-sources-after-meeting.md) | 65 | todo |
-| 67 | [Installer maintenance: Update, Reinstall, Remove](phases/67-installer-maintenance.md) | 13, 57, 58 | todo |
+| 67 | [Installer maintenance: Update, Reinstall, Remove](phases/67-installer-maintenance.md) | 13, 57, 58 | done |
 
 **Order chosen by the user (2026-10-22)**: finish 44, then 47, 48, 49, 50, then 45 and 46.
 
