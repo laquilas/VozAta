@@ -36,6 +36,7 @@ from vozata.processing.session_job import JobParts, session_job, transcribe_weig
 from vozata.session_finisher import SessionFinisher
 from vozata.storage.recovery import SessionRecovery
 from vozata.storage.session_folder import SessionFolder
+from vozata.storage.source_archive import SourceArchive
 from vozata.transcription.language_lock import LanguageLock
 from vozata.transcription.offline import OfflineTranscription
 from vozata.transcription.shared import SharedTranscriber
@@ -196,7 +197,15 @@ def ingest_recording(
         store.write_meta(session_id, {**stored, "recorder_ingest_missing": missing})
 
     meta = store.read_meta(session_id)
-    return check_ingest(settings.output_dir, audio, session_id, meta, save_mismatch)
+    archive = SourceArchive(settings.output_dir)
+    return check_ingest(
+        settings.output_dir,
+        audio,
+        session_id,
+        meta,
+        save_mismatch,
+        keep_sources=lambda folder, manifest: archive.keep(session_id, folder, manifest),
+    )
 
 
 def _repair(

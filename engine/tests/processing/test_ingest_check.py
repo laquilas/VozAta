@@ -136,3 +136,40 @@ def test_a_folder_removed_meanwhile_counts_as_removed(
 
 def test_the_ingest_step_is_hidden() -> None:
     assert StepKind.INGEST in HIDDEN_KINDS
+
+
+def test_the_sources_are_kept_before_the_folder_goes(tmp_path: Path) -> None:
+    folder = recording(tmp_path, 500)
+    kept: list[tuple[Path, str]] = []
+
+    removed = check_ingest(
+        tmp_path,
+        Stored(500, 500),
+        "20261103_101500",
+        META,
+        lambda missing: None,
+        lambda s: None,
+        keep_sources=lambda path, manifest: kept.append((path, manifest.id)) or True,
+    )
+
+    assert removed and not folder.exists()
+    assert kept == [(folder, "20261103_101500")]
+
+
+def test_sources_that_cannot_be_kept_keep_the_folder(tmp_path: Path) -> None:
+    folder = recording(tmp_path, 500)
+
+    def refuse(path: Path, manifest: Manifest) -> bool:
+        raise PermissionError("locked")
+
+    removed = check_ingest(
+        tmp_path,
+        Stored(500, 500),
+        "20261103_101500",
+        META,
+        lambda m: None,
+        lambda s: None,
+        keep_sources=refuse,
+    )
+
+    assert not removed and folder.exists()

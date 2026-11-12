@@ -163,6 +163,12 @@ class SqliteSessionRepository(SessionAnnotations):
             ).rowcount
         return deleted > 0
 
+    def reset_transcript(self, session_id: str) -> None:
+        """Drop every transcript of the meeting: its audio is transcribed again (phase 66)."""
+        self._check(session_id)
+        with self._db.write() as db:
+            db.execute("DELETE FROM segments WHERE session_id = ?", (session_id,))
+
     def folder(self, session_id: str) -> Path | None:
         """None: the session has no folder (its audio is in the database, phase 32)."""
         self._check(session_id)

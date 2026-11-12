@@ -639,6 +639,15 @@ class StoreRepairError(RuntimeError):
 
 
 @runtime_checkable
+class TranscriptReset(Protocol):
+    """A repository whose transcripts can be dropped for a new transcription (phase 66)."""
+
+    def reset_transcript(self, session_id: str) -> None:
+        """Remove the raw, diarized and edited transcripts (minutes and speakers stay)."""
+        ...
+
+
+@runtime_checkable
 class RecoverableStore(Protocol):
     """A store that can make an interrupted session's data readable again (phase 17)."""
 
