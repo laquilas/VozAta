@@ -112,12 +112,12 @@ devices plugged in during a recording.
 - **Branch:** `feature/65-all-sources`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** engine: `recorder/sources.py` (source ids, `resolve_sources`) with tests.
+- **Next step:** engine: `recorder/source_mix.py` (buffer, automix, scorer, selector, mixer).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress; phase files 66 and 67 written)
-- [ ] Engine: sources and their ids, `CAPTURE_SOURCES` / `CAPTURE_EXCLUDE`
+- [x] Engine: sources and their ids, `CAPTURE_SOURCES` / `CAPTURE_EXCLUDE`
 - [ ] Engine: `source_mix.py` (buffer, automix, scorer, selector, mixer)
 - [ ] Engine: `Recording` with every source (raw tracks, mix thread, resume, manifest)
 - [ ] Engine: recorder API (`sources` routes and event)

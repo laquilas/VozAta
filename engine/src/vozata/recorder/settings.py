@@ -26,7 +26,12 @@ KEYS = (
     "RECORDER_FSYNC_SECONDS",
     "RECORDER_MAX_SEGMENT_MB",
     "RECORDER_BUFFER_WARN_SECONDS",
+    "CAPTURE_SOURCES",
+    "CAPTURE_EXCLUDE",
 )
+
+CAPTURE_ALL = "all"  # every input and loopback, mixed by selection (phase 65)
+CAPTURE_PAIR = "pair"  # one microphone and one loopback (phases 02-64)
 
 
 @dataclass(frozen=True)
@@ -39,6 +44,8 @@ class RecorderSettings:
     max_segment_mb: int = 2000
     buffer_warn_seconds: float = 30.0
     open_timeout: float = 20.0  # a WASAPI open can hang in the driver
+    capture_sources: str = CAPTURE_ALL
+    capture_exclude: tuple[str, ...] = ()
 
     @property
     def max_segment_bytes(self) -> int:
@@ -65,7 +72,19 @@ def load_recorder_settings(
         fsync_seconds=_number(raw, "RECORDER_FSYNC_SECONDS", 2.0, 0.5, 30),
         max_segment_mb=int(_number(raw, "RECORDER_MAX_SEGMENT_MB", 2000, 100, 3900)),
         buffer_warn_seconds=_number(raw, "RECORDER_BUFFER_WARN_SECONDS", 30.0, 5, 3600),
+        capture_sources=_capture_sources(raw),
+        capture_exclude=tuple(
+            part.strip() for part in raw.get("CAPTURE_EXCLUDE", "").split(",") if part.strip()
+        ),
     )
+
+
+def _capture_sources(raw: Mapping[str, str]) -> str:
+    value = raw.get("CAPTURE_SOURCES", CAPTURE_ALL).lower()
+    if value not in (CAPTURE_ALL, CAPTURE_PAIR):
+        _log.warning("CAPTURE_SOURCES=%r is not all or pair; using all", value)
+        return CAPTURE_ALL
+    return value
 
 
 def _number(raw: Mapping[str, str], key: str, default: float, low: float, high: float) -> float:
