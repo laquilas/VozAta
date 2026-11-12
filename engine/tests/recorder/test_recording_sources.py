@@ -195,6 +195,7 @@ def test_the_others_open_when_every_preferred_source_fails(tmp_path: Path) -> No
     recording = create(tmp_path, time, devices, observer)
 
     recording.start()
+    wait_opened(devices, 2)
 
     assert devices.made[21].started and devices.made[23].started
     recording.stop()

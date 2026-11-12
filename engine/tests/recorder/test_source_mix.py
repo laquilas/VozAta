@@ -133,7 +133,10 @@ def test_correlation_finds_the_same_audio_in_two_sources() -> None:
     scorer.update("c", _speech(4.0, seed=5) * np.roll(np.arange(4000) // 300 % 2, 0), 4.0)
     scorer.update("flat", np.zeros(4000, np.float32), 4.0)
     assert scorer.correlation("a", "b") > 0.9
-    assert scorer.correlation("a", "c") < 0.9
+    assert scorer.correlation("a", "c") < 0.7
+    late = np.concatenate([np.zeros(60, np.float32), speech[:-60]])  # 60 ms later: 3 frames
+    scorer.update("late", late, 4.0)
+    assert scorer.correlation("a", "late") > 0.9
     assert scorer.correlation("a", "flat") == 0.0
     assert scorer.correlation("a", "missing") == 0.0
 
@@ -283,3 +286,52 @@ def test_mixer_writes_silence_for_a_kind_without_sources_and_user_modes() -> Non
     assert not blocks[Channel.MIC][0].any()  # switched off
     assert not blocks[Channel.SYSTEM][0].any()
     assert len(blocks[Channel.SYSTEM][0]) == 2000
+
+
+def test_a_source_that_failed_is_dropped_even_as_the_fallback() -> None:
+    specs = [_spec("in-dead", preferred=True), _spec("in-quiet")]
+    mixer = _mixer(specs)
+    mixer.mark_unavailable("in-dead")
+    mixer.push("in-quiet", _noise(3.0), 0.0)
+
+    _, changes = mixer.step(3.0)
+
+    assert [(c.source_id, c.selected) for c in changes] == [("in-dead", False)]
+    assert mixer.selected() == set()
+
+
+def test_a_digitally_silent_source_is_not_kept_as_the_fallback() -> None:
+    selector = SourceSelector([_spec("in-zeros", preferred=True), _spec("in-b")])
+    scorer = SourceScorer(RATE)
+    scorer.update("in-zeros", np.zeros(2000, np.float32), 2.0)
+    scorer.update("in-b", _noise(2.0), 2.0)
+
+    changes = selector.update(scorer, 2.0)
+
+    assert [(c.source_id, c.selected) for c in changes] == [("in-zeros", False)]
+
+
+def test_a_source_is_scored_only_from_its_first_block() -> None:
+    specs = [_spec("in-late", preferred=True), _spec("out-a", Channel.SYSTEM, preferred=True)]
+    mixer = _mixer(specs)
+    mixer.push("out-a", _speech(3.0), 0.0)
+    mixer.step(2.0)  # in-late has not delivered anything yet
+    assert mixer.scores()["in-late"].seen_seconds == 0.0
+    mixer.push("in-late", _noise(1.0), 2.5)
+
+    mixer.step(4.0, final=True)
+
+    late = mixer.scores()["in-late"]
+    assert late.seen_seconds == pytest.approx(1.0, abs=0.05)
+    assert not late.silent
+    assert mixer.selected() == {"in-late", "out-a"}  # the late, quiet mic is kept
+
+
+def test_the_first_frame_of_a_buffer() -> None:
+    buffer = SourceBuffer(start=0, tolerance=5)
+    assert buffer.first is None
+    buffer.push(np.ones(10, np.float32), 50)
+    assert buffer.first == 50
+    other = SourceBuffer(start=0, tolerance=5)
+    other.push(np.ones(10, np.float32), 3)  # within the tolerance: right at the start
+    assert other.first == 0

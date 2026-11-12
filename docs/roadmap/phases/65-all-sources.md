@@ -47,7 +47,7 @@ flowchart LR
 - **Score** over a 10 s window of 20 ms frames: active frames (above -50 dBFS and 12 dB over the
   window's noise floor); a window of exact zeros is **digital silence**. Auto selects a source
   after 0.5 s of activity and drops it after 60 s without any. Two sources of the same kind whose
-  level envelopes correlate above 0.9 are **duplicates** (two mics in one room, "Stereo Mix"):
+  level envelopes correlate above 0.7 (within ±100 ms) are **duplicates** (two mics in one room, "Stereo Mix"):
   only the best stays. A kind with nothing selected keeps its previous selection (at start: the
   preferred device: the UI's choice or the Windows default).
 - **Gain-sharing automix** (Dugan): per 20 ms, each selected source gets the share of the power
@@ -131,6 +131,16 @@ devices plugged in during a recording.
   "JBL Quantum Stream", loopback "Realtek"); the Windows default output is the JBL headset.
 - After a recorder crash the mix of the last 2 s before it (the mix delay) is not in `mic.wav` /
   `system.wav`; the raw sources hold it (phase 66 can re-mix).
+- Manual check on this PC (2026-11-12, scratch recorder on port 8779, `CAPTURE_EXCLUDE=Intel`):
+  five sources (JBL mic, NVIDIA Broadcast mic, JBL / NVIDIA / Realtek loopbacks). TTS played on
+  the JBL headset reached `system.wav` (-15 dB) from the JBL loopback; the Realtek and NVIDIA
+  loopbacks (only zeros) were never selected; the user's voice on the JBL mic reached `mic.wav`.
+  Found and fixed: a source that failed to open (the JBL mic hung once: "PortAudio did not answer
+  within 20 s") stayed "in use" through the fallback; zeros before a late open counted as digital
+  silence; the start waited for every preferred source (40 s with a hung one, over the UI's 30 s);
+  NVIDIA Broadcast's copy of the JBL mic correlates 0.78 (lag 20 ms), so the threshold is 0.7 with
+  a ±5-frame lag search. Replayed, the copy is dropped within ~10 s; until then gain sharing
+  keeps the louder original dominant.
 - The UI talks to the recorder directly for the sources (as for levels): no engine proxy route.
 - Cross-kind duplicates (a mic that hears the speakers) are left to the echo dedupe of phase 18:
   dropping such a mic would also lose the user's own words.

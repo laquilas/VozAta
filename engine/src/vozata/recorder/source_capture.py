@@ -86,6 +86,7 @@ class SourceCapture:
         self._steps = 0
         self._warned_silent = False
         self._opener: threading.Thread | None = None
+        self._first_open = threading.Event()
         folder.mkdir(parents=True, exist_ok=True)
         frames = start_frames or {}
         for spec in self._specs:
@@ -134,28 +135,24 @@ class SourceCapture:
     # -- control ------------------------------------------------------------------------------
 
     def start(self) -> None:
-        """Open the preferred sources (else the others) now, the rest in the background.
+        """Open the sources on a background thread, the preferred ones first; return as soon as
+        one is open (a hung device delays only itself and the ones after it).
 
-        `NoSourceError` when nothing opens.
+        `NoSourceError` when every source failed.
         """
         for track in self.tracks.values():
             track.start()
         self._accepting = True
-        first = [spec for spec in self._specs if spec.preferred]
-        rest = [spec for spec in self._specs if not spec.preferred]
-        opened = [spec for spec in first if self._open(spec)]
-        if not opened:
-            opened = [spec for spec in rest if self._open(spec)]
-            rest = []
-        if not opened:
+        ordered = sorted(self._specs, key=lambda spec: not spec.preferred)
+        self._opener = threading.Thread(
+            target=self._open_all, args=(ordered,), name="open-sources", daemon=True
+        )
+        self._opener.start()
+        self._first_open.wait()
+        if not self._opened:
             self._accepting = False
             raise NoSourceError("No audio device could be opened")
         self._beat.start()
-        if rest:
-            self._opener = threading.Thread(
-                target=self._open_rest, args=(rest,), name="open-sources", daemon=True
-            )
-            self._opener.start()
         self._report()
 
     def stop_sources(self) -> None:
@@ -247,15 +244,20 @@ class SourceCapture:
             self._save()
         return True
 
-    def _open_rest(self, specs: Sequence[SourceSpec]) -> None:
-        for spec in specs:
-            if not self._accepting:
-                return
-            self._open(spec)
+    def _open_all(self, specs: Sequence[SourceSpec]) -> None:
+        try:
+            for spec in specs:
+                if not self._accepting:
+                    return
+                if self._open(spec):
+                    self._first_open.set()
+        finally:
+            self._first_open.set()  # every one tried: `start` decides
         self._report()
 
     def _failed(self, spec: SourceSpec, message: str) -> None:
         _log.warning("Source %s skipped: %s", spec.source_id, message)
+        self._mixer.mark_unavailable(spec.source_id)
         with self._lock:
             entry = self._manifest.sources[spec.source_id]
             entry["state"] = FAILED

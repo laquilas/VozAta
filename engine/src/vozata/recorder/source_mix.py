@@ -25,7 +25,8 @@ SPEECH_DB = -50.0  # a frame below this is never speech
 FLOOR_MARGIN_DB = 12.0  # ...and must stand this far above the window's noise floor
 ACTIVATE_SECONDS = 0.5  # active audio in the window that selects an automatic source
 HOLD_SECONDS = 60.0  # an automatic source stays selected this long after its last activity
-DUPLICATE_CORRELATION = 0.9
+DUPLICATE_CORRELATION = 0.7  # measured: a mic and its NVIDIA Broadcast copy 0.78, unrelated 0.2
+DUPLICATE_MAX_LAG_FRAMES = 5  # a processed copy (noise removal) arrives up to ~100 ms later
 SCORE_LATENCY_SECONDS = 0.3  # capture blocks arrive up to this late
 MIX_DELAY_SECONDS = 2.0
 
@@ -41,6 +42,7 @@ class SourceBuffer:
         self._start = start
         self._tolerance = tolerance
         self._data = np.zeros(0, np.float32)
+        self.first: int | None = None  # frame of the first block: before it, nothing is known
 
     @property
     def end(self) -> int:
@@ -49,6 +51,8 @@ class SourceBuffer:
     def push(self, samples: np.ndarray, frame: int) -> None:
         """Place a block at `frame`; a small jitter appends it, a larger gap is silence."""
         gap = frame - self.end
+        if self.first is None:
+            self.first = max(frame, self.end) if gap > self._tolerance else self.end
         parts = [self._data]
         if gap > self._tolerance:
             parts.append(np.zeros(gap, np.float32))
@@ -158,16 +162,21 @@ class SourceScorer:
         return self._last_active.get(source_id)
 
     def correlation(self, first: str, second: str) -> float:
-        """Pearson correlation of the two level envelopes over the common window; 0 if flat."""
+        """Best Pearson correlation of the two level envelopes over the common window, within
+        ±`DUPLICATE_MAX_LAG_FRAMES` frames; 0 when one of them is flat."""
         a = np.asarray(self._rms.get(first, ()), np.float64)
         b = np.asarray(self._rms.get(second, ()), np.float64)
         size = min(len(a), len(b))
-        if size < 10:
+        if size < 10 + 2 * DUPLICATE_MAX_LAG_FRAMES:
             return 0.0
         a, b = a[-size:], b[-size:]
-        if a.std() < _EPSILON or b.std() < _EPSILON:
-            return 0.0
-        return float(np.corrcoef(a, b)[0, 1])
+        best = 0.0
+        for lag in range(-DUPLICATE_MAX_LAG_FRAMES, DUPLICATE_MAX_LAG_FRAMES + 1):
+            x, y = (a[lag:], b[: size - lag]) if lag >= 0 else (a[:lag], b[-lag:])
+            if x.std() < _EPSILON or y.std() < _EPSILON:
+                continue
+            best = max(best, float(np.corrcoef(x, y)[0, 1]))
+        return best
 
     @staticmethod
     def _active(rms: np.ndarray) -> np.ndarray:
@@ -208,6 +217,7 @@ class SourceSelector:
             elif mode == OFF:
                 initial.discard(source_id)
         self.selected = {source_id for source_id in initial if source_id in self._specs}
+        self.unavailable: set[str] = set()  # failed to open: never mixed
 
     def of_kind(self, kind: Channel) -> list[str]:
         return [i for i, spec in self._specs.items() if spec.kind == kind and i in self.selected]
@@ -228,10 +238,18 @@ class SourceSelector:
         return SelectionChange(source_id, wanted, "user")
 
     def update(self, scorer: SourceScorer, now: float) -> list[SelectionChange]:
-        """Re-decide the automatic sources from the scores at timeline time `now`."""
+        """Re-decide the automatic sources from the scores at timeline time `now`.
+
+        A source that failed to open is never selected; one that gives only digital silence is
+        not kept as the fallback either (the UI would call a dead device "in use").
+        """
         changes: list[SelectionChange] = []
         for kind in (Channel.MIC, Channel.SYSTEM):
-            ids = [i for i, spec in self._specs.items() if spec.kind == kind]
+            ids = [
+                i
+                for i, spec in self._specs.items()
+                if spec.kind == kind and i not in self.unavailable
+            ]
             wanted = {i for i in ids if self.modes[i] == ON}
             candidates = [i for i in ids if self.modes[i] == AUTO and self._wants(i, scorer, now)]
             candidates.sort(key=lambda i: scorer.score(i).active_seconds, reverse=True)
@@ -240,9 +258,13 @@ class SourceSelector:
                     scorer.correlation(candidate, kept) < DUPLICATE_CORRELATION for kept in wanted
                 ):
                     wanted.add(candidate)
-            if not wanted:  # nothing speaks: keep what this kind had
-                wanted = {i for i in ids if i in self.selected and self.modes[i] != OFF}
-            for i in ids:
+            if not wanted:  # nothing speaks: keep what this kind had, if it is alive
+                wanted = {
+                    i
+                    for i in ids
+                    if i in self.selected and self.modes[i] != OFF and not scorer.score(i).silent
+                }
+            for i in [*ids, *(i for i in self.unavailable if self._specs[i].kind == kind)]:
                 if (i in wanted) != (i in self.selected):
                     self._apply(i, i in wanted)
                     changes.append(SelectionChange(i, i in wanted, "auto"))
@@ -298,6 +320,11 @@ class SourceMixer:
         with self._lock:
             return self.selector.set_mode(source_id, mode)
 
+    def mark_unavailable(self, source_id: str) -> None:
+        """The source failed to open: dropped from the selection at the next step."""
+        with self._lock:
+            self.selector.unavailable.add(source_id)
+
     def selected(self) -> set[str]:
         with self._lock:
             return set(self.selector.selected)
@@ -328,8 +355,14 @@ class SourceMixer:
         if whole <= 0:
             return []
         end = self._score_cursor + whole
+        frame_size = self.scorer.frame
         for source_id, buffer in self._buffers.items():
-            self.scorer.update(source_id, buffer.read(self._score_cursor, end), end / self._rate)
+            if buffer.first is None:
+                continue  # not open yet: no score (a device that opens late is not "silent")
+            start = max(self._score_cursor, buffer.first)
+            start = end - (end - start) // frame_size * frame_size  # whole frames ending at `end`
+            if start < end:
+                self.scorer.update(source_id, buffer.read(start, end), end / self._rate)
         self._score_cursor = end
         return self.selector.update(self.scorer, end / self._rate)
 
