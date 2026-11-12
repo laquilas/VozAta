@@ -36,10 +36,10 @@ regenerate" after a confirmation, "Keep only the ticked ones"); strings in en / 
 
 ## Acceptance criteria
 
-- [ ] A recorded meeting lists its sources with the final selection.
-- [ ] Changing the selection rebuilds the tracks and regenerates transcript, speakers and minutes.
-- [ ] Unselected sources are pruned after `SOURCES_KEEP_DAYS` or on request.
-- [ ] en / pt-BR / es parity; coverage ≥ 80 %.
+- [x] A recorded meeting lists its sources with the final selection.
+- [x] Changing the selection rebuilds the tracks and regenerates transcript, speakers and minutes.
+- [x] Unselected sources are pruned after `SOURCES_KEEP_DAYS` or on request.
+- [x] en / pt-BR / es parity; coverage ≥ 80 %.
 
 ## Out of scope
 
@@ -53,9 +53,9 @@ Transcribing each source on its own track.
 ## Progress
 
 - **Branch:** `feature/66-sources-after-meeting`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-11-12
-- **Next step:** docs (architecture §18, api-contract, `SOURCES_KEEP_DAYS` in §9), then the PR.
+- **Next step:** open the PR; then the manual check in `__pendent__` (a real recording with every device, then another choice on the meeting page).
 
 ### Steps
 
@@ -63,7 +63,8 @@ Transcribing each source on its own track.
 - [x] Engine: `SourceArchive`, `remix`, `TranscriptReset`, sources kept at ingest
 - [x] Engine: `SessionSources`, routes, prune, delete with the meeting
 - [x] UI: the meeting page's audio sources panel
-- [ ] Docs, full suites, PR
+- [x] Docs, full suites
+- [ ] PR
 
 ### Decisions and notes
 
