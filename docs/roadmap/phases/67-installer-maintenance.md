@@ -42,3 +42,25 @@ Requested by the user on 2026-11-12.
 
 > Execute phase 67 of the roadmap (`docs/roadmap/phases/67-installer-maintenance.md`),
 > following `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/67-installer-maintenance`
+- **Status:** in progress
+- **Updated:** 2026-11-12
+- **Next step:** `packaging/maintenance.iss` (the maintenance page, the uninstaller's question), included by both installers.
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [x] Engine: `vozata-engine data paths | erase --yes` (`cli/data.py`)
+- [ ] Installer: `maintenance.iss` (Update / Reinstall / Remove, delete-data option, downgrade question, uninstaller question, `/DELETEDATA`)
+- [ ] `install-test.ps1` scenarios; README / `docs/INSTALL.md`
+- [ ] Build both installers, run the scenarios, PR
+
+### Decisions and notes
+
+- The uninstaller runs `vozata-engine data erase --yes` in `%APPDATA%\VozAta` (where the engine
+  reads its `.env`), so `DATABASE_PATH` and `OUTPUT_DIR` set by the user are honoured; then it
+  removes `%APPDATA%\VozAta` itself. A folder that is not VozAta's alone (a drive root, the home
+  folder, Documents, Desktop) is never deleted as a whole.
