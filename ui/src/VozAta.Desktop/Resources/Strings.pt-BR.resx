@@ -1950,4 +1950,37 @@
   <data name="SettingHelp_SOURCES_KEEP_DAYS" xml:space="preserve">
     <value>Dias em que o áudio de cada dispositivo gravado fica guardado depois da reunião, para escolher outras fontes para a ata; 0 guarda até a reunião ser apagada.</value>
   </data>
+  <data name="SourcesMeetingHint" xml:space="preserve">
+    <value>Todos os microfones e saídas gravados nesta reunião. Marque os que devem ser usados e aplique: a transcrição, os participantes e a ata são refeitos a partir deles (as edições da transcrição se perdem).</value>
+  </data>
+  <data name="SourcesApply" xml:space="preserve">
+    <value>Aplicar e refazer</value>
+  </data>
+  <data name="SourcesKeepSelected" xml:space="preserve">
+    <value>Manter só os marcados</value>
+  </data>
+  <data name="SourcesApplyTitle" xml:space="preserve">
+    <value>Usar estas fontes?</value>
+  </data>
+  <data name="SourcesApplyMessage" xml:space="preserve">
+    <value>A reunião é transcrita de novo a partir das fontes marcadas, e os participantes e a ata são refeitos. As edições da transcrição se perdem.</value>
+  </data>
+  <data name="SourcesApplyConfirm" xml:space="preserve">
+    <value>Aplicar</value>
+  </data>
+  <data name="SourcesApplied" xml:space="preserve">
+    <value>A reunião está sendo refeita com as fontes escolhidas.</value>
+  </data>
+  <data name="SourcesTrimmed" xml:space="preserve">
+    <value>{0} fonte(s) apagada(s).</value>
+  </data>
+  <data name="SourcesKeptUntil" xml:space="preserve">
+    <value>As fontes são guardadas até {0}.</value>
+  </data>
+  <data name="SourcesKeptForever" xml:space="preserve">
+    <value>As fontes são guardadas até a reunião ser apagada.</value>
+  </data>
+  <data name="SourceDetails" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
 </root>
