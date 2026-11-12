@@ -81,15 +81,15 @@ flowchart LR
 
 ## Acceptance criteria
 
-- [ ] With `CAPTURE_SOURCES=all` (default) every input and loopback is recorded to its own file.
-- [ ] A source with speech is selected automatically and its audio reaches `mic.wav` /
+- [x] With `CAPTURE_SOURCES=all` (default) every input and loopback is recorded to its own file.
+- [x] A source with speech is selected automatically and its audio reaches `mic.wav` /
       `system.wav`; a silent (zeros) source is not selected; of two duplicated sources one stays.
-- [ ] Auto / On / Off per source during the recording, saved in the manifest's `selection_log`.
-- [ ] A source that fails to open is skipped and reported; the recording goes on.
-- [ ] `CAPTURE_SOURCES=pair` records exactly as before.
-- [ ] Recorder restart continues every source (gap as before).
-- [ ] The UI lists the sources with level, selection and the mode toggle.
-- [ ] en / pt-BR / es parity; coverage ≥ 80 %.
+- [x] Auto / On / Off per source during the recording, saved in the manifest's `selection_log`.
+- [x] A source that fails to open is skipped and reported; the recording goes on.
+- [x] `CAPTURE_SOURCES=pair` records exactly as before.
+- [x] Recorder restart continues every source (gap as before).
+- [x] The UI lists the sources with level, selection and the mode toggle.
+- [x] en / pt-BR / es parity; coverage ≥ 80 %.
 
 ## Tests
 
@@ -110,9 +110,9 @@ devices plugged in during a recording.
 ## Progress
 
 - **Branch:** `feature/65-all-sources`
-- **Status:** in progress
+- **Status:** ready for PR
 - **Updated:** 2026-11-12
-- **Next step:** manual check on this PC: a scratch recorder (`RECORDER_PORT=8779`, scratch `OUTPUT_DIR`) recording every device while audio plays on the JBL headset; then the PR.
+- **Next step:** open the PR; then the manual checks in `__pendent__` (the chip in the real app, the Intel array).
 
 ### Steps
 
@@ -122,7 +122,7 @@ devices plugged in during a recording.
 - [x] Engine: `Recording` with every source (raw tracks, mix thread, resume, manifest)
 - [x] Engine: recorder API (`sources` routes and event)
 - [x] UI: the source list
-- [ ] Docs (architecture, api-contract, config keys), full suites
+- [x] Docs (architecture, api-contract, config keys), full suites
 - [ ] PR
 
 ### Decisions and notes

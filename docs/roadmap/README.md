@@ -114,7 +114,7 @@ branch and is **not** in `main` yet: never delete the branch) · **done** (merge
 | 62 | [Engine gate, retry connection, reattach after a crash](phases/62-engine-gate.md) | 61 | done |
 | 63 | [Options editable during the recording](phases/63-live-options.md) | 61 | done |
 | 64 | [Minutes skipped at Stop and the marker](phases/64-minutes-skipped.md) | 61 | done |
-| 65 | [Record every audio device, choose the sources automatically](phases/65-all-sources.md) | 61, 63 | in progress (`feature/65-all-sources`) |
+| 65 | [Record every audio device, choose the sources automatically](phases/65-all-sources.md) | 61, 63 | done |
 | 66 | [Sources kept per meeting; change the selection after the meeting](phases/66-sources-after-meeting.md) | 65 | todo |
 | 67 | [Installer maintenance: Update, Reinstall, Remove](phases/67-installer-maintenance.md) | 13, 57, 58 | todo |
 
