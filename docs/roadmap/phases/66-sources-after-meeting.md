@@ -24,8 +24,8 @@ Unselected sources are pruned after `SOURCES_KEEP_DAYS` (default 7), or at once 
 
 | File | Content |
 |------|---------|
-| `storage/sqlite/migrations/NNN_sources.sql` | `source_chunks` (like `audio_chunks`, by `source_id`), `session_sources` |
-| ingest, `ingest_check.py` | `live/<id>/sources/*` stored and checked before `live/<id>` is deleted |
+| `storage/source_archive.py` | `OUTPUT_DIR/sources/<meeting>/`: the source files and `sources.json` (kind, name, selection, segments) |
+| ingest, `ingest_check.py` | `live/<id>/sources/` moved to the archive before `live/<id>` is deleted |
 | `processing/source_remix.py` | the selected sources re-mixed (phase 65 `automix`) into `audio_chunks` |
 | `api/routes/sessions.py` | `GET /sessions/{id}/sources`, `POST /sessions/{id}/sources`, `GET /sessions/{id}/sources/{source_id}/audio` |
 | job | re-run from `transcribe` after a new selection |
@@ -49,3 +49,28 @@ Transcribing each source on its own track.
 
 > Execute phase 66 of the roadmap (`docs/roadmap/phases/66-sources-after-meeting.md`),
 > following `docs/roadmap/README.md`.
+
+## Progress
+
+- **Branch:** `feature/66-sources-after-meeting`
+- **Status:** in progress
+- **Updated:** 2026-11-12
+- **Next step:** `api/session_sources.py` (list, apply = remix + reset transcript + queue the job, keep only the selected), routes and `SOURCES_KEEP_DAYS` prune at start.
+
+### Steps
+
+- [x] Start the phase (README status, Progress)
+- [x] Engine: `SourceArchive`, `remix`, `TranscriptReset`, sources kept at ingest
+- [ ] Engine: `SessionSources`, routes, prune, delete with the meeting
+- [ ] UI: the meeting page's audio sources panel
+- [ ] Docs, full suites, PR
+
+### Decisions and notes
+
+- The sources stay **files** (`OUTPUT_DIR/sources/<meeting>/`), not `source_chunks` rows: five
+  devices add ~0.5 GB an hour, and the database is already 2 GB on the reference PC; files are
+  pruned by deleting a folder.
+- A new choice rewrites both channels (`PcmImport.import_pcm`), drops every transcript
+  (`TranscriptReset.reset_transcript`: edits are lost, the UI says so) and queues the meeting's
+  usual job (`SessionManager.process_imported`), which transcribes, mixes, identifies speakers
+  and writes the minutes again.
