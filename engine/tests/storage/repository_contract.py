@@ -183,6 +183,25 @@ class RepositoryContract:
         assert repository.load_transcript_with_source(session_id) == ("diarized", diarized)
         assert repository.load_raw_transcript(session_id) == RAW  # never rewritten
 
+    def test_reset_transcript_drops_every_transcript(self, repository: SessionRepository) -> None:
+        from vozata.ports import TranscriptReset
+
+        session_id = self._session(repository)
+        sink = repository.open_transcript(session_id, SpeakerLabeler(FakeLocalizer()))
+        for raw in RAW:
+            sink.emit(raw)
+        sink.close()
+        repository.write_diarized(session_id, RAW)
+        repository.write_edited(session_id, RAW)
+        repository.write_minutes(session_id, "# Minutes")
+
+        assert isinstance(repository, TranscriptReset)
+        repository.reset_transcript(session_id)
+
+        assert repository.load_transcript_with_source(session_id) == ("raw", [])
+        assert repository.load_raw_transcript(session_id) == []
+        assert repository.read_minutes(session_id) == "# Minutes"
+
     def test_each_transcript_source_is_readable_on_its_own(
         self, repository: SessionRepository
     ) -> None:

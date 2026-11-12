@@ -114,6 +114,12 @@ class SessionStore:
         """Replace `transcript.edited.jsonl` atomically with the full edited copy (phase 21)."""
         _write_atomic(self.paths(session_id).edited_jsonl, _jsonl(segments))
 
+    def reset_transcript(self, session_id: str) -> None:
+        """Remove the raw, diarized and edited transcript files (phase 66)."""
+        paths = self.paths(session_id)
+        for path in (paths.transcript_jsonl, paths.diarized_jsonl, paths.edited_jsonl):
+            path.unlink(missing_ok=True)
+
     def delete_edited(self, session_id: str) -> bool:
         """Remove `transcript.edited.jsonl`; False when there was none (phase 21)."""
         path = self.paths(session_id).edited_jsonl

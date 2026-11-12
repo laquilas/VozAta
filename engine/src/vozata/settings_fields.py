@@ -263,6 +263,7 @@ FIELDS: tuple[Field, ...] = (
         applies="restart",
     ),
     Field("CAPTURE_EXCLUDE", "capture_exclude", "string", group="audio", applies="restart"),
+    Field("SOURCES_KEEP_DAYS", "sources_keep_days", "integer", group="audio", applies="restart"),
     # API (phase 06)
     # Worker on another PC (phase 44): URL and token on this PC, host and port on the worker PC
     Field("WORKER_URL", "worker_url", "url", group="worker"),

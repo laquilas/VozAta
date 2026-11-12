@@ -186,6 +186,11 @@ public sealed partial class SessionPageViewModel(
     /// <summary>The "History" tab (phase 59): every request made on this meeting.</summary>
     public RequestHistoryViewModel Requests => _requests ??= new RequestHistoryViewModel(client, localization, Id);
 
+    /// <summary>The "Audio sources" tab (phase 66): the devices the recorder kept, which ones count.</summary>
+    public MeetingSourcesViewModel Sources => _sources ??= new MeetingSourcesViewModel(client, localization, dialogs, Id);
+
+    private MeetingSourcesViewModel? _sources;
+
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
 
@@ -276,6 +281,7 @@ public sealed partial class SessionPageViewModel(
             if (!IsLive)
             {
                 await ActionItems.LoadAsync(cancellationToken);
+                await Sources.LoadAsync(cancellationToken);
             }
         }
         catch (Exception error) when (error is EngineApiException or EngineUnavailableException)

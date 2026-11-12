@@ -1944,4 +1944,43 @@
   <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
     <value>Parts of device names, separated by commas (for example Stereo Mix), left out when every device is recorded.</value>
   </data>
+  <data name="Setting_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Keep every device's audio (days)</value>
+  </data>
+  <data name="SettingHelp_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Days the audio of every recorded device is kept after a meeting, to choose other sources for its minutes; 0 keeps it until the meeting is deleted.</value>
+  </data>
+  <data name="SourcesMeetingHint" xml:space="preserve">
+    <value>Every microphone and output recorded in this meeting. Tick the ones to use and apply: the transcript, the speakers and the minutes are made again from them (transcript edits are lost).</value>
+  </data>
+  <data name="SourcesApply" xml:space="preserve">
+    <value>Apply and regenerate</value>
+  </data>
+  <data name="SourcesKeepSelected" xml:space="preserve">
+    <value>Keep only the ticked ones</value>
+  </data>
+  <data name="SourcesApplyTitle" xml:space="preserve">
+    <value>Use these sources?</value>
+  </data>
+  <data name="SourcesApplyMessage" xml:space="preserve">
+    <value>The meeting is transcribed again from the ticked sources, and its speakers and minutes are made again. Edits to the transcript are lost.</value>
+  </data>
+  <data name="SourcesApplyConfirm" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="SourcesApplied" xml:space="preserve">
+    <value>The meeting is being made again from the chosen sources.</value>
+  </data>
+  <data name="SourcesTrimmed" xml:space="preserve">
+    <value>{0} source(s) deleted.</value>
+  </data>
+  <data name="SourcesKeptUntil" xml:space="preserve">
+    <value>The sources not used are kept until {0}.</value>
+  </data>
+  <data name="SourcesKeptForever" xml:space="preserve">
+    <value>The sources are kept until the meeting is deleted.</value>
+  </data>
+  <data name="SourceDetails" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
 </root>

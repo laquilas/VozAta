@@ -6,6 +6,9 @@ files (their size is the truth). Only when nothing is missing, and the folder is
 very meeting (`engine.json`), is the folder deleted. Otherwise it is kept, the mismatch is
 logged and saved in `session.json`, and the meeting is processed anyway: the audio stays safe on
 disk, and nothing is ever deleted that the store does not hold.
+
+The sources of a recording that recorded every device (phase 65) are kept first (`keep_sources`,
+phase 66); when they cannot be moved the folder is kept too.
 """
 
 from __future__ import annotations
@@ -20,7 +23,7 @@ from typing import Any
 from vozata.domain import Channel
 from vozata.ports import AudioReader
 from vozata.recorder.engine_link import read_link
-from vozata.recorder.manifest import live_dir, read_manifest
+from vozata.recorder.manifest import Manifest, live_dir, read_manifest
 from vozata.recorder.segment_reader import SegmentReader
 
 _log = logging.getLogger(__name__)
@@ -36,6 +39,7 @@ def check_ingest(
     meta: dict[str, Any],
     save_mismatch: Callable[[dict[str, int]], None],
     sleep: Callable[[float], None] = time.sleep,
+    keep_sources: Callable[[Path, Manifest], bool] | None = None,
 ) -> bool:
     """Delete the meeting's recording folder when the store holds all of it; True if deleted."""
     recording_id = meta.get("recorder_id")
@@ -68,6 +72,12 @@ def check_ingest(
         )
         save_mismatch(missing)
         return False
+    if keep_sources is not None:
+        try:
+            keep_sources(folder, manifest)
+        except OSError as error:
+            _log.warning("Could not keep the sources of %s (%s); its files are kept", folder, error)
+            return False
     for attempt in range(_DELETE_ATTEMPTS):
         try:
             shutil.rmtree(folder)

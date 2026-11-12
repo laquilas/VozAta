@@ -1944,4 +1944,43 @@
   <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
     <value>Partes de los nombres de los dispositivos, separadas por comas (por ejemplo Stereo Mix), que se omiten al grabar todos.</value>
   </data>
+  <data name="Setting_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Guardar el audio de cada dispositivo (días)</value>
+  </data>
+  <data name="SettingHelp_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Días que se guarda el audio de cada dispositivo grabado tras la reunión, para elegir otras fuentes para el acta; 0 lo guarda hasta borrar la reunión.</value>
+  </data>
+  <data name="SourcesMeetingHint" xml:space="preserve">
+    <value>Todos los micrófonos y salidas grabados en esta reunión. Marca los que se usan y aplica: la transcripción, los participantes y el acta se rehacen con ellos (se pierden las ediciones de la transcripción).</value>
+  </data>
+  <data name="SourcesApply" xml:space="preserve">
+    <value>Aplicar y rehacer</value>
+  </data>
+  <data name="SourcesKeepSelected" xml:space="preserve">
+    <value>Conservar solo los marcados</value>
+  </data>
+  <data name="SourcesApplyTitle" xml:space="preserve">
+    <value>¿Usar estas fuentes?</value>
+  </data>
+  <data name="SourcesApplyMessage" xml:space="preserve">
+    <value>La reunión se transcribe de nuevo con las fuentes marcadas, y se rehacen los participantes y el acta. Se pierden las ediciones de la transcripción.</value>
+  </data>
+  <data name="SourcesApplyConfirm" xml:space="preserve">
+    <value>Aplicar</value>
+  </data>
+  <data name="SourcesApplied" xml:space="preserve">
+    <value>La reunión se está rehaciendo con las fuentes elegidas.</value>
+  </data>
+  <data name="SourcesTrimmed" xml:space="preserve">
+    <value>{0} fuente(s) borrada(s).</value>
+  </data>
+  <data name="SourcesKeptUntil" xml:space="preserve">
+    <value>Las fuentes se guardan hasta el {0}.</value>
+  </data>
+  <data name="SourcesKeptForever" xml:space="preserve">
+    <value>Las fuentes se guardan hasta borrar la reunión.</value>
+  </data>
+  <data name="SourceDetails" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
 </root>
