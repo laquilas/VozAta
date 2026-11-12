@@ -1944,4 +1944,10 @@
   <data name="SettingHelp_CAPTURE_EXCLUDE" xml:space="preserve">
     <value>Partes dos nomes dos dispositivos, separadas por vírgulas (por exemplo Stereo Mix), deixadas de fora quando todos são gravados.</value>
   </data>
+  <data name="Setting_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Guardar o áudio de cada dispositivo (dias)</value>
+  </data>
+  <data name="SettingHelp_SOURCES_KEEP_DAYS" xml:space="preserve">
+    <value>Dias em que o áudio de cada dispositivo gravado fica guardado depois da reunião, para escolher outras fontes para a ata; 0 guarda até a reunião ser apagada.</value>
+  </data>
 </root>

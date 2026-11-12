@@ -34,6 +34,7 @@ from vozata.api.routes import bundle as bundle_routes
 from vozata.api.routes import migration as migration_routes
 from vozata.api.routes import partial_minutes as partial_minutes_routes
 from vozata.api.routes import requests as requests_routes
+from vozata.api.routes import sources as sources_routes
 from vozata.api.routes import voice_commands as voice_commands_routes
 from vozata.api.routes import worker as worker_routes
 from vozata.api.schemas import ErrorResponse
@@ -46,6 +47,8 @@ def create_app(container: ApiContainer) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         container.broadcaster.bind(asyncio.get_running_loop())
         container.manager.resume_pending()  # phase 40: unfinished meetings, before the import
+        if container.sources is not None:
+            container.sources.prune()  # phase 66: sources kept past SOURCES_KEEP_DAYS
         if container.recorder_link is not None:
             container.recorder_link.start()  # phase 61: follow the recorder's recordings
         if container.migration is not None:
@@ -91,6 +94,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     app.include_router(partial_minutes_routes.router, responses=ERROR_RESPONSES)  # phase 48
     app.include_router(requests_routes.router, responses=ERROR_RESPONSES)  # phase 59
     app.include_router(voice_commands_routes.router, responses=ERROR_RESPONSES)  # phase 50
+    app.include_router(sources_routes.router, responses=ERROR_RESPONSES)  # phase 66
     app.include_router(branding.router)
 
     @app.websocket("/ws")
