@@ -112,7 +112,7 @@ devices plugged in during a recording.
 - **Branch:** `feature/65-all-sources`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** engine: recorder API: `_start` / `_resume` build the sources with `resolve_sources` when `CAPTURE_SOURCES=all`; `GET /recordings/current/sources`, `PUT /recordings/current/sources/{source_id}`, `sources` SSE event (`RecorderApp.on_sources`).
+- **Next step:** UI: `VozAta.Client/Recorder.cs` (`RecordingSource`, the `sources` SSE event, `GetSourcesAsync`, `SetSourceModeAsync`), then `SourceRowViewModel` and the source list in `RecorderPage.axaml`.
 
 ### Steps
 
@@ -120,7 +120,7 @@ devices plugged in during a recording.
 - [x] Engine: sources and their ids, `CAPTURE_SOURCES` / `CAPTURE_EXCLUDE`
 - [x] Engine: `source_mix.py` (buffer, automix, scorer, selector, mixer)
 - [x] Engine: `Recording` with every source (raw tracks, mix thread, resume, manifest)
-- [ ] Engine: recorder API (`sources` routes and event)
+- [x] Engine: recorder API (`sources` routes and event)
 - [ ] UI: the source list
 - [ ] Docs (architecture, api-contract, config keys), full suites
 - [ ] PR
@@ -131,6 +131,7 @@ devices plugged in during a recording.
   "JBL Quantum Stream", loopback "Realtek"); the Windows default output is the JBL headset.
 - After a recorder crash the mix of the last 2 s before it (the mix delay) is not in `mic.wav` /
   `system.wav`; the raw sources hold it (phase 66 can re-mix).
+- The UI talks to the recorder directly for the sources (as for levels): no engine proxy route.
 - Cross-kind duplicates (a mic that hears the speakers) are left to the echo dedupe of phase 18:
   dropping such a mic would also lose the user's own words.
 - `mic` / `system` stay the logical channels: the recorder mixes the selected sources into them,

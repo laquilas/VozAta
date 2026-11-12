@@ -110,6 +110,9 @@ class _Handler(BaseHTTPRequestHandler):
     def do_PATCH(self) -> None:  # noqa: N802
         self._dispatch("PATCH")
 
+    def do_PUT(self) -> None:  # noqa: N802
+        self._dispatch("PUT")
+
     def do_DELETE(self) -> None:  # noqa: N802
         self._dispatch("DELETE")
 

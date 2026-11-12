@@ -34,7 +34,9 @@ from vozata.recorder.recording import (
     heartbeat_age,
     mark_stopped,
 )
-from vozata.recorder.settings import RecorderSettings
+from vozata.recorder.settings import CAPTURE_ALL, RecorderSettings
+from vozata.recorder.source_mix import MODES
+from vozata.recorder.sources import SourceSpec, match_saved, resolve_sources
 
 _log = logging.getLogger(__name__)
 
@@ -195,6 +197,12 @@ class RecorderApp:
     def on_error(self, code: str, message: str) -> None:
         self.events.publish("error", {"code": code, "message": message})
 
+    def on_sources(self, sources: list[dict[str, Any]]) -> None:
+        current = self._current
+        self.events.publish(
+            "sources", {"id": current.id if current is not None else None, "items": sources}
+        )
+
     # -- routes -------------------------------------------------------------------------------
 
     def _routes(self) -> Router:
@@ -208,6 +216,8 @@ class RecorderApp:
         router.add("POST", "/recordings/current/pause", self._pause)
         router.add("POST", "/recordings/current/resume", self._resume_capture)
         router.add("POST", "/recordings/current/stop", self._stop)
+        router.add("GET", "/recordings/current/sources", self._get_sources)
+        router.add("PUT", "/recordings/current/sources/{source_id}", self._put_source)
         router.add("GET", "/recordings/{id}", self._get)
         router.add("POST", "/recordings/{id}/resume", self._resume_route)
         router.add("DELETE", "/recordings/{id}", self._delete)
@@ -254,8 +264,17 @@ class RecorderApp:
             if self._current is not None and self._current.manifest.active:
                 raise ApiError(409, "recording_already_active", "A recording is in progress")
             audio = self._open_audio()
+            specs: list[SourceSpec] | None = None
             try:
-                devices = resolve_devices(audio.call, audio.pa, mic, system)
+                if self.settings.capture_sources == CAPTURE_ALL:
+                    specs = resolve_sources(
+                        audio.call, audio.pa, mic, system, self.settings.capture_exclude
+                    )
+                    if not specs:
+                        raise OSError("No audio device was found")
+                    devices = _main_devices(specs)
+                else:
+                    devices = resolve_devices(audio.call, audio.pa, mic, system)
             except LookupError as error:
                 audio.close()
                 raise ApiError(404, "device_not_found", str(error)) from None
@@ -271,6 +290,7 @@ class RecorderApp:
                 options=options,
                 wall_clock=self._wall,
                 time_source=self._time,
+                sources=specs,
             )
             self._begin(recording, audio)
             return Response(201, recording.summary())
@@ -326,6 +346,23 @@ class RecorderApp:
         with self._lock:
             self._active()
             return Response(body=self._stop_current("user"))
+
+    def _get_sources(self, params: dict[str, str], body: Any) -> Response:
+        recording = self._active()
+        return Response(body={"id": recording.id, "items": recording.sources() or []})
+
+    def _put_source(self, params: dict[str, str], body: Any) -> Response:
+        mode = _object(body).get("mode")
+        if mode not in MODES:
+            raise ApiError(422, "invalid_mode", f"mode must be one of {', '.join(MODES)}")
+        recording = self._active()
+        if recording.sources() is None:
+            raise ApiError(409, "sources_not_recorded", "This recording has one device per channel")
+        try:
+            recording.set_source_mode(params["source_id"], mode)
+        except LookupError:
+            raise ApiError(404, "source_not_found", f"No source {params['source_id']}") from None
+        return Response(body={"id": recording.id, "items": recording.sources() or []})
 
     def _get(self, params: dict[str, str], body: Any) -> Response:
         folder = self._folder(params["id"])
@@ -396,7 +433,12 @@ class RecorderApp:
             if not manifest.active:
                 raise ApiError(409, "recording_stopped", f"Recording {recording_id} was stopped")
             audio = self._open_audio()
-            devices = self._devices_of(audio, manifest.devices)
+            specs: list[SourceSpec] | None = None
+            if manifest.sources:
+                specs = self._sources_of(audio, manifest.sources)
+                devices = _main_devices(specs) or self._devices_of(audio, manifest.devices)
+            else:
+                devices = self._devices_of(audio, manifest.devices)
             try:
                 recording = Recording.resume(
                     folder,
@@ -406,6 +448,7 @@ class RecorderApp:
                     self,
                     wall_clock=self._wall,
                     time_source=self._time,
+                    sources=specs,
                 )
             except RecordingError as error:
                 audio.close()
@@ -425,6 +468,20 @@ class RecorderApp:
         except (LookupError, OSError, TimeoutError) as error:
             audio.close()
             raise ApiError(503, "audio_unavailable", str(error)) from None
+
+    def _sources_of(self, audio: AudioThread, saved: dict[str, Any]) -> list[SourceSpec]:
+        """The saved sources still plugged in (found by name), for a resume."""
+        try:
+            specs = resolve_sources(audio.call, audio.pa, None, None)
+        except (LookupError, OSError, TimeoutError) as error:
+            audio.close()
+            raise ApiError(503, "audio_unavailable", str(error)) from None
+        found = match_saved(saved, specs)
+        preferred = {i for i, entry in saved.items() if entry.get("preferred")}
+        return [
+            SourceSpec(spec.source_id, spec.kind, spec.device, spec.source_id in preferred)
+            for spec in found.values()
+        ]
 
     def _stop_current(self, reason: str) -> dict[str, Any]:
         recording, audio = self._current, self._audio
@@ -470,6 +527,14 @@ def _device(info: DeviceInfo) -> dict[str, Any]:
         "sample_rate": info.sample_rate,
         "channels": info.channels,
     }
+
+
+def _main_devices(specs: list[SourceSpec]) -> dict[Channel, DeviceInfo]:
+    """The device named for each channel: its preferred source, else its first one."""
+    devices: dict[Channel, DeviceInfo] = {}
+    for spec in sorted(specs, key=lambda spec: not spec.preferred):
+        devices.setdefault(spec.kind, spec.device)
+    return devices
 
 
 def _idle() -> dict[str, Any]:

@@ -103,13 +103,19 @@ def rig(tmp_path: Path) -> Iterator[Rig]:
 
 
 class Rig:
-    def __init__(self, tmp_path: Path, audio_fail: Exception | None = None) -> None:
+    def __init__(
+        self, tmp_path: Path, audio_fail: Exception | None = None, capture: str = "pair"
+    ) -> None:
         self.tmp = tmp_path
         self.sources = Sources()
         self.wall = Wall()
         self.audio_fail = audio_fail
         self.settings = RecorderSettings(
-            output_dir=tmp_path, sample_rate=RATE, autosave_seconds=60, fsync_seconds=0.5
+            output_dir=tmp_path,
+            sample_rate=RATE,
+            autosave_seconds=60,
+            fsync_seconds=0.5,
+            capture_sources=capture,
         )
         self.app = RecorderApp(
             self.settings,
