@@ -11,7 +11,12 @@
 #ifndef BuildDir
   #define BuildDir "..\build"
 #endif
-#define SpeakersWorkDir "{userappdata}\VozAta\worker"
+; the settings folder; a test build points it elsewhere (maintenance-test.ps1)
+#ifndef SpeakersWorkDir
+  #define SpeakersWorkDir "{userappdata}\VozAta\worker"
+#endif
+#define ThisAppId "{2BA26749-AC77-48E5-8189-E8B4F542489D}"
+#define ProductName "VozAta Worker"
 ; installer.iss
 #define OtherAppId "{6E0B9F4A-2C5D-4E8B-9A1F-3D7C5B2E8A61}"
 
@@ -49,6 +54,7 @@ es.SpeakersTask=Descargar la identificación de participantes ahora (unos 3 GB; 
 
 #include "gpu.iss"
 #include "speakers.iss"
+#include "maintenance.iss"
 
 [Files]
 Source: "{#BuildDir}\worker-ui\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion

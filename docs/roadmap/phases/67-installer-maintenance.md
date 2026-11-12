@@ -48,13 +48,13 @@ Requested by the user on 2026-11-12.
 - **Branch:** `feature/67-installer-maintenance`
 - **Status:** in progress
 - **Updated:** 2026-11-12
-- **Next step:** `packaging/maintenance.iss` (the maintenance page, the uninstaller's question), included by both installers.
+- **Next step:** README / `docs/INSTALL.md`; build both installers; run `packaging/maintenance-test.ps1` with two test builds (needs the user's go-ahead: it installs and removes the product on this PC).
 
 ### Steps
 
 - [x] Start the phase (README status, Progress)
 - [x] Engine: `vozata-engine data paths | erase --yes` (`cli/data.py`)
-- [ ] Installer: `maintenance.iss` (Update / Reinstall / Remove, delete-data option, downgrade question, uninstaller question, `/DELETEDATA`)
+- [x] Installer: `maintenance.iss` (Update / Reinstall / Remove, delete-data option, downgrade question, uninstaller question, `/DELETEDATA`)
 - [ ] `install-test.ps1` scenarios; README / `docs/INSTALL.md`
 - [ ] Build both installers, run the scenarios, PR
 
@@ -64,3 +64,9 @@ Requested by the user on 2026-11-12.
   reads its `.env`), so `DATABASE_PATH` and `OUTPUT_DIR` set by the user are honoured; then it
   removes `%APPDATA%\VozAta` itself. A folder that is not VozAta's alone (a drive root, the home
   folder, Documents, Desktop) is never deleted as a whole.
+- `maintenance.iss` starts with `[CustomMessages]`: it is included right after the `[Code]` of
+  `speakers.iss`, where a `;` line is not a comment (ISCC: "'BEGIN' expected").
+- Update and Reinstall empty `{app}\engine` and `{app}ecorder` first, so no file of an older
+  PyInstaller build stays next to the new one.
+- `SpeakersWorkDir` and `RuntimesDir` can be set on the `iscc` command line, so a test build never
+  touches this PC's `%APPDATA%\VozAta` or `%LOCALAPPDATA%\VozAta` (`maintenance-test.ps1`).
