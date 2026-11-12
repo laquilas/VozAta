@@ -117,6 +117,16 @@ preferred, state: "pending"|"open"|"failed"|"gone", error, rms_db, score (0..1),
 `CAPTURE_SOURCES=all`, `mic_device_id` / `system_device_id` of `POST /recordings` choose the
 preferred sources, and the `level` events of a channel come from its selected sources.
 
+**Audio sources of a meeting (66).** `GET /sessions/{id}/sources` → `{items: [{id, kind:
+"mic"|"system", name, selected, preferred, duration_seconds}], kept_until}` (`[]` for a meeting
+recorded with one device per channel; `kept_until` null: kept until deleted).
+`POST /sessions/{id}/sources` `{selected: [ids]}` → `202`: the tracks are rebuilt from those
+sources and the meeting is transcribed, diarized and summarized again (`processing` events);
+`404 sources_not_kept`, `422 no_source_selected` / `unknown_source`, `409 session_still_active`,
+`503 sources_unavailable`. `POST /sessions/{id}/sources/keep-selected` → `{removed: [ids]}`.
+`GET /sessions/{id}/sources/{source_id}/audio` → the source as 16-bit mono WAV
+(`404 source_not_found`).
+
 `SessionSummary.minutes_state` (64): `generated` (it has minutes), `skipped_not_ready` /
 `skipped_by_user` (processed without them; `session.json.minutes_skipped`, cleared when
 `POST /sessions/{id}/minutes` writes them), `pending` (queued or processed), `none`.

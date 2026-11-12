@@ -850,6 +850,7 @@ clear message. `GET/PUT /settings` (06/10) reads and writes the same keys to `.e
 | `RECORDER_MAX_SEGMENT_MB` | `2000` | 61 | largest recording file (100–3900 MB, below the WAV 4 GB limit); a longer meeting goes on in a new file |
 | `RECORDER_BUFFER_WARN_SECONDS` | `30` | 61 | an `error disk_backlog` event when this much audio waits in memory for the disk (5–3600 s) |
 | `CAPTURE_SOURCES` | `all` | 65 | `all`: the recorder records every input and loopback and mixes the selected ones into `mic` / `system`; `pair`: one device per channel, as before |
+| `SOURCES_KEEP_DAYS` | `7` | 66 | days a meeting's audio sources are kept after it (`OUTPUT_DIR/sources/<id>/`), pruned at engine start; `0` = until the meeting is deleted |
 | `CAPTURE_EXCLUDE` | (empty) | 65 | comma-separated parts of device names never recorded in `all` mode (e.g. `Stereo Mix`); the preferred device is kept |
 | `ECHO_DEDUPE_ENABLED` | `true` | 18 | drop echoed mic segments |
 | `ECHO_SIMILARITY` | `0.85` | 18 | share of a mic segment's words (0.5–1) found, in order, in the system words spoken at the same time to treat it as echo |
@@ -1282,6 +1283,16 @@ flowchart LR
   MIX --> MIC[mic.wav] & SYS[system.wav]
   MIC & SYS --> ENG[engine, unchanged]
 ```
+
+- **Sources after the meeting (phase 66).** At ingest, `live/<id>/sources/` moves to
+  `OUTPUT_DIR/sources/<meeting>/` with `sources.json` (kind, name, selection, segments,
+  `kept_at`, the selection log) before `live/<id>` is deleted (a failed move keeps the folder).
+  They stay files, not database rows (five devices add ~0.5 GB an hour). A new choice
+  (`POST /sessions/{id}/sources`) re-mixes the chosen sources with the recorder's gain sharing
+  into both channels (`PcmImport.import_pcm`), drops the transcripts
+  (`TranscriptReset.reset_transcript`), marks the meeting `finalizing` and queues its usual job
+  (`SessionManager.reprocess`, refused while it is live or queued). The engine prunes sources
+  older than `SOURCES_KEEP_DAYS` at start and deletes them with the meeting.
 
 - **Engine gate (phase 62).** While the engine is starting, gone or failed, one panel covers the
   page area (never the Recorder page) with the reason and **Retry connection** (start it again;
