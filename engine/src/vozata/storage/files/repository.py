@@ -98,6 +98,9 @@ class FileSessionRepository:
     def delete_edited(self, session_id: str) -> bool:
         return self._store.delete_edited(session_id)
 
+    def reset_transcript(self, session_id: str) -> None:
+        self._store.reset_transcript(session_id)
+
     def open_translations(self, session_id: str) -> TranslationWriter:
         return TranslationsFile(self.paths(session_id).translated_jsonl)
 

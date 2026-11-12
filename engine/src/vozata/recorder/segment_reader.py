@@ -35,6 +35,42 @@ def segment_frames(path: Path) -> int:
         return 0
 
 
+class SegmentTimeline:
+    """One track as a timeline of segment files (int16 mono): a channel or a source (65, 66)."""
+
+    def __init__(self, folder: Path, segments: list[Segment]) -> None:
+        self._folder = folder
+        self._segments = segments
+
+    def length(self) -> int:
+        """Frames of the timeline, counting what an open segment already holds."""
+        return max((span.segment.start_frame + span.frames for span in self._spans()), default=0)
+
+    def frames(self, start: int, count: int) -> np.ndarray:
+        """`count` frames from `start` (fewer at the end of the timeline); gaps are silence."""
+        end = min(start + count, self.length())
+        if end <= start:
+            return np.zeros(0, dtype=np.int16)
+        out = np.zeros(end - start, dtype=np.int16)
+        for span in self._spans():
+            first = max(start, span.segment.start_frame)
+            last = min(end, span.segment.start_frame + span.frames)
+            if last > first:
+                out[first - start : last - start] = _read(
+                    span.path, first - span.segment.start_frame, last - first
+                )
+        return out
+
+    def _spans(self) -> list[_Span]:
+        spans = []
+        for segment in self._segments:
+            path = self._folder / segment.file
+            on_disk = segment_frames(path)
+            frames = min(on_disk, segment.frames) if segment.closed else on_disk
+            spans.append(_Span(segment, path, frames))
+        return spans
+
+
 class SegmentReader:
     """Frames of a recording's channels as one timeline (int16 mono)."""
 
@@ -44,41 +80,22 @@ class SegmentReader:
 
     def length(self, channel: Channel) -> int:
         """Frames of the channel's timeline, counting what the open segment already holds."""
-        return max(
-            (span.segment.start_frame + span.frames for span in self._spans(channel)), default=0
-        )
+        return self._timeline(channel).length()
 
     def frames(self, channel: Channel, start: int, count: int) -> np.ndarray:
         """`count` frames from `start` (fewer at the end of the timeline); gaps are silence."""
-        end = min(start + count, self.length(channel))
-        if end <= start:
-            return np.zeros(0, dtype=np.int16)
-        out = np.zeros(end - start, dtype=np.int16)
-        for span in self._spans(channel):
-            first = max(start, span.segment.start_frame)
-            last = min(end, span.segment.start_frame + span.frames)
-            if last > first:
-                out[first - start : last - start] = self._read(
-                    span.path, first - span.segment.start_frame, last - first
-                )
-        return out
+        return self._timeline(channel).frames(start, count)
 
-    def _spans(self, channel: Channel) -> list[_Span]:
-        spans = []
-        for segment in self._manifest.segments(channel):
-            path = self._folder / segment.file
-            on_disk = segment_frames(path)
-            frames = min(on_disk, segment.frames) if segment.closed else on_disk
-            spans.append(_Span(segment, path, frames))
-        return spans
+    def _timeline(self, channel: Channel) -> SegmentTimeline:
+        return SegmentTimeline(self._folder, self._manifest.segments(channel))
 
-    @staticmethod
-    def _read(path: Path, offset: int, count: int) -> np.ndarray:
-        with path.open("rb") as file:
-            layout = read_layout(file, path)
-            file.seek(layout.data_offset + offset * _FRAME_BYTES)
-            data = file.read(count * _FRAME_BYTES)
-        samples = np.frombuffer(data[: len(data) // _FRAME_BYTES * _FRAME_BYTES], dtype=np.int16)
-        if len(samples) < count:  # the file shrank while reading: pad, never fail
-            samples = np.concatenate([samples, np.zeros(count - len(samples), dtype=np.int16)])
-        return samples
+
+def _read(path: Path, offset: int, count: int) -> np.ndarray:
+    with path.open("rb") as file:
+        layout = read_layout(file, path)
+        file.seek(layout.data_offset + offset * _FRAME_BYTES)
+        data = file.read(count * _FRAME_BYTES)
+    samples = np.frombuffer(data[: len(data) // _FRAME_BYTES * _FRAME_BYTES], dtype=np.int16)
+    if len(samples) < count:  # the file shrank while reading: pad, never fail
+        samples = np.concatenate([samples, np.zeros(count - len(samples), dtype=np.int16)])
+    return samples
