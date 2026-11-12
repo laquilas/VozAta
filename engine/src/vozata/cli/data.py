@@ -68,13 +68,20 @@ def run_data(
     *,
     yes: bool = False,
     json_output: bool = False,
+    keep_runtimes: bool = False,
     home: Path | None = None,
     remove_tree: Callable[[Path], None] = shutil.rmtree,
     remove_file: Callable[[Path], None] = lambda path: path.unlink(missing_ok=True),
 ) -> int:
-    """`paths` lists the data; `erase --yes` deletes it (exit 1 when something stayed)."""
+    """`paths` lists the data; `erase --yes` deletes it (exit 1 when something stayed).
+
+    `keep_runtimes` keeps the downloaded runtimes (the other product still uses them).
+    """
     t = localizer.t
     paths = data_paths(settings)
+    if keep_runtimes:
+        runtimes = settings.cuda_runtime_dir.parent.absolute()
+        paths = DataPaths(paths.database, tuple(p for p in paths.folders if p != runtimes))
     if action == "paths":
         if json_output:
             console.say(json.dumps(paths.to_json()))

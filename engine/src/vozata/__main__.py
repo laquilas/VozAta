@@ -107,6 +107,7 @@ def build_parser(localizer: Localizer) -> argparse.ArgumentParser:
     data.add_argument("action", choices=DATA_ACTIONS, help=t("cli.help.data_action"))
     data.add_argument("--yes", action="store_true", help=t("cli.help.data_yes"))
     data.add_argument("--json", action="store_true", help=t("cli.help.data_json"))
+    data.add_argument("--keep-runtimes", action="store_true", help=t("cli.help.data_keep_runtimes"))
     return parser
 
 
@@ -187,7 +188,13 @@ def main(
             )
         if args.command == "data":
             return run_data(
-                args.action, settings, console, localizer, yes=args.yes, json_output=args.json
+                args.action,
+                settings,
+                console,
+                localizer,
+                yes=args.yes,
+                json_output=args.json,
+                keep_runtimes=args.keep_runtimes,
             )
         if args.command == "reindex":
             return run_reindex(

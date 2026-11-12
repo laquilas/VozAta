@@ -287,6 +287,7 @@ data = "listar ou apagar os dados do VozAta deste usuário (reuniões, gravaçõ
 data_action = "paths | erase"
 data_yes = "com erase: apagar de fato (o desinstalador passa isto)"
 data_json = "com paths: mostrar em JSON"
+data_keep_runtimes = "com erase: manter os componentes de GPU e de participantes baixados"
 description = "Transcrição de reuniões quase em tempo real e geração de atas."
 record = "grava o microfone e o áudio do sistema com transcrição ao vivo"
 language = "idioma falado na reunião (padrão: TRANSCRIPTION_LANGUAGE)"

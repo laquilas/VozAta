@@ -287,6 +287,7 @@ data = "list or delete this user's VozAta data (meetings, recordings, downloaded
 data_action = "paths | erase"
 data_yes = "with erase: really delete (the uninstaller passes it)"
 data_json = "with paths: print them as JSON"
+data_keep_runtimes = "with erase: keep the downloaded GPU and speaker components"
 description = "Near-real-time meeting transcription and minutes."
 record = "record the microphone and the system audio with a live transcript"
 language = "language spoken in the meeting (default: TRANSCRIPTION_LANGUAGE)"

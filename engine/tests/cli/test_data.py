@@ -151,3 +151,25 @@ def test_the_cli_runs_data_paths(tmp_path: Path) -> None:
 
     assert code == 0
     assert json.loads(out.getvalue())["folders"][0] == str((tmp_path / "rec").absolute())
+
+
+def test_erase_can_keep_the_runtimes(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _fill(settings)
+
+    code, _ = _run(settings, "erase", tmp_path, yes=True, keep_runtimes=True)
+
+    assert code == 0
+    assert not settings.output_dir.exists()
+    assert settings.cuda_runtime_dir.exists()
+
+
+def test_the_cli_erases_with_yes(tmp_path: Path) -> None:
+    out = io.StringIO()
+    env = {"OUTPUT_DIR": str(tmp_path / "home" / "rec"), "LOCALAPPDATA": str(tmp_path / "local")}
+    (tmp_path / "home" / "rec").mkdir(parents=True)
+
+    code = main(["data", "erase", "--yes", "--keep-runtimes"], stdout=out, env=env)
+
+    assert code == 0
+    assert not (tmp_path / "home" / "rec").exists()
